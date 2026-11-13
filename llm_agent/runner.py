@@ -54,7 +54,11 @@ def live(context):
     except (urllib.error.URLError,TimeoutError,IndexError,TypeError,KeyError,json.JSONDecodeError) as e:
         raise ValueError('LLM provider failed or returned invalid JSON; no simulated result was substituted.') from None
 
-def run(mode='deterministic',count=14,seed=117,membership_fee=399,member_fare=70):
+def run(mode='deterministic',count=14,seed=117,membership_fee=399,member_fare=70,scenario_mode='legacy'):
+    if scenario_mode=='journey':
+        from .journey_runner import run_journey
+        return run_journey(mode,count,seed,membership_fee,member_fare)
+    if scenario_mode!='legacy':raise ValueError('Unknown scenario mode')
     if mode not in ('deterministic','live'):raise ValueError('Unknown agent mode')
     limit=5 if mode=='live' else 100
     if not isinstance(count,int) or not 1<=count<=limit:raise ValueError(f'count must be 1..{limit} for this mode')

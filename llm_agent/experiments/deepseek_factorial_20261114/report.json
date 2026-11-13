@@ -1,0 +1,275 @@
+{
+  "run_id": "journey-ee4cb77279c3",
+  "source": "provider_live",
+  "summary": {
+    "suite_id": "journey-ee4cb77279c3",
+    "source": "provider_live",
+    "prompt_version": "traveller-journey-v2.1",
+    "worlds": 112,
+    "completed_worlds": 112,
+    "joined": 40,
+    "booked": 104,
+    "cancelled": 16,
+    "renewal_intent": 35,
+    "limitations": [
+      "Synthetic role-play pilot, not observed customer conversion.",
+      "One detailed journey per world; expected annual trips do not create unobserved transactions.",
+      "Counterfactual worlds have separate scenario inventory; no live ticketing."
+    ]
+  },
+  "conditions": {
+    "P0-V199": {
+      "suite_id": "journey-ee4cb77279c3",
+      "source": "provider_live",
+      "prompt_version": "traveller-journey-v2.1",
+      "worlds": 14,
+      "completed_worlds": 14,
+      "joined": 7,
+      "booked": 13,
+      "cancelled": 2,
+      "renewal_intent": 6,
+      "limitations": [
+        "Synthetic role-play pilot, not observed customer conversion.",
+        "One detailed journey per world; expected annual trips do not create unobserved transactions.",
+        "Counterfactual worlds have separate scenario inventory; no live ticketing."
+      ],
+      "existing_members": 2,
+      "eligible_new_members": 12,
+      "action_counts": {
+        "JOIN_PASS": 7,
+        "BUY_MEMBER": 9,
+        "KEEP_BOOKING": 37,
+        "CANCEL_BOOKING": 2,
+        "DO_NOT_RENEW": 3,
+        "KEEP_MEMBERSHIP": 2,
+        "RENEW_INTENT": 6,
+        "DECLINE": 14,
+        "BUY_REGULAR": 4
+      }
+    },
+    "P0-V599": {
+      "suite_id": "journey-ee4cb77279c3",
+      "source": "provider_live",
+      "prompt_version": "traveller-journey-v2.1",
+      "worlds": 14,
+      "completed_worlds": 14,
+      "joined": 2,
+      "booked": 13,
+      "cancelled": 2,
+      "renewal_intent": 2,
+      "limitations": [
+        "Synthetic role-play pilot, not observed customer conversion.",
+        "One detailed journey per world; expected annual trips do not create unobserved transactions.",
+        "Counterfactual worlds have separate scenario inventory; no live ticketing."
+      ],
+      "existing_members": 2,
+      "eligible_new_members": 12,
+      "action_counts": {
+        "DECLINE": 22,
+        "BUY_REGULAR": 9,
+        "KEEP_BOOKING": 37,
+        "CANCEL_BOOKING": 2,
+        "KEEP_MEMBERSHIP": 2,
+        "BUY_MEMBER": 4,
+        "RENEW_INTENT": 2,
+        "JOIN_PASS": 2,
+        "DO_NOT_RENEW": 2,
+        "WAIT": 2
+      }
+    },
+    "P30-V199": {
+      "suite_id": "journey-ee4cb77279c3",
+      "source": "provider_live",
+      "prompt_version": "traveller-journey-v2.1",
+      "worlds": 14,
+      "completed_worlds": 14,
+      "joined": 6,
+      "booked": 13,
+      "cancelled": 2,
+      "renewal_intent": 7,
+      "limitations": [
+        "Synthetic role-play pilot, not observed customer conversion.",
+        "One detailed journey per world; expected annual trips do not create unobserved transactions.",
+        "Counterfactual worlds have separate scenario inventory; no live ticketing."
+      ],
+      "existing_members": 2,
+      "eligible_new_members": 12,
+      "action_counts": {
+        "DECLINE": 14,
+        "BUY_REGULAR": 5,
+        "KEEP_BOOKING": 37,
+        "CANCEL_BOOKING": 2,
+        "JOIN_PASS": 6,
+        "BUY_MEMBER": 8,
+        "RENEW_INTENT": 7,
+        "KEEP_MEMBERSHIP": 2,
+        "DO_NOT_RENEW": 1,
+        "WAIT": 2
+      }
+    },
+    "P30-V599": {
+      "suite_id": "journey-ee4cb77279c3",
+      "source": "provider_live",
+      "prompt_version": "traveller-journey-v2.1",
+      "worlds": 14,
+      "completed_worlds": 14,
+      "joined": 2,
+      "booked": 13,
+      "cancelled": 2,
+      "renewal_intent": 2,
+      "limitations": [
+        "Synthetic role-play pilot, not observed customer conversion.",
+        "One detailed journey per world; expected annual trips do not create unobserved transactions.",
+        "Counterfactual worlds have separate scenario inventory; no live ticketing."
+      ],
+      "existing_members": 2,
+      "eligible_new_members": 12,
+      "action_counts": {
+        "DECLINE": 24,
+        "BUY_REGULAR": 9,
+        "KEEP_BOOKING": 37,
+        "CANCEL_BOOKING": 2,
+        "KEEP_MEMBERSHIP": 2,
+        "BUY_MEMBER": 4,
+        "RENEW_INTENT": 2,
+        "JOIN_PASS": 2,
+        "DO_NOT_RENEW": 2
+      }
+    },
+    "P70-V199": {
+      "suite_id": "journey-ee4cb77279c3",
+      "source": "provider_live",
+      "prompt_version": "traveller-journey-v2.1",
+      "worlds": 14,
+      "completed_worlds": 14,
+      "joined": 8,
+      "booked": 13,
+      "cancelled": 2,
+      "renewal_intent": 7,
+      "limitations": [
+        "Synthetic role-play pilot, not observed customer conversion.",
+        "One detailed journey per world; expected annual trips do not create unobserved transactions.",
+        "Counterfactual worlds have separate scenario inventory; no live ticketing."
+      ],
+      "existing_members": 2,
+      "eligible_new_members": 12,
+      "action_counts": {
+        "JOIN_PASS": 8,
+        "BUY_MEMBER": 10,
+        "KEEP_BOOKING": 37,
+        "CANCEL_BOOKING": 2,
+        "DO_NOT_RENEW": 3,
+        "KEEP_MEMBERSHIP": 2,
+        "RENEW_INTENT": 7,
+        "DECLINE": 10,
+        "BUY_REGULAR": 3,
+        "WAIT": 2
+      }
+    },
+    "P70-V599": {
+      "suite_id": "journey-ee4cb77279c3",
+      "source": "provider_live",
+      "prompt_version": "traveller-journey-v2.1",
+      "worlds": 14,
+      "completed_worlds": 14,
+      "joined": 4,
+      "booked": 13,
+      "cancelled": 2,
+      "renewal_intent": 2,
+      "limitations": [
+        "Synthetic role-play pilot, not observed customer conversion.",
+        "One detailed journey per world; expected annual trips do not create unobserved transactions.",
+        "Counterfactual worlds have separate scenario inventory; no live ticketing."
+      ],
+      "existing_members": 2,
+      "eligible_new_members": 12,
+      "action_counts": {
+        "DECLINE": 20,
+        "BUY_REGULAR": 7,
+        "KEEP_BOOKING": 37,
+        "CANCEL_BOOKING": 2,
+        "KEEP_MEMBERSHIP": 2,
+        "BUY_MEMBER": 6,
+        "RENEW_INTENT": 2,
+        "JOIN_PASS": 4,
+        "DO_NOT_RENEW": 4
+      }
+    },
+    "P100-V199": {
+      "suite_id": "journey-ee4cb77279c3",
+      "source": "provider_live",
+      "prompt_version": "traveller-journey-v2.1",
+      "worlds": 14,
+      "completed_worlds": 14,
+      "joined": 7,
+      "booked": 13,
+      "cancelled": 2,
+      "renewal_intent": 8,
+      "limitations": [
+        "Synthetic role-play pilot, not observed customer conversion.",
+        "One detailed journey per world; expected annual trips do not create unobserved transactions.",
+        "Counterfactual worlds have separate scenario inventory; no live ticketing."
+      ],
+      "existing_members": 2,
+      "eligible_new_members": 12,
+      "action_counts": {
+        "DECLINE": 14,
+        "BUY_REGULAR": 4,
+        "KEEP_BOOKING": 37,
+        "CANCEL_BOOKING": 2,
+        "JOIN_PASS": 7,
+        "BUY_MEMBER": 9,
+        "RENEW_INTENT": 8,
+        "KEEP_MEMBERSHIP": 2,
+        "DO_NOT_RENEW": 1
+      }
+    },
+    "P100-V599": {
+      "suite_id": "journey-ee4cb77279c3",
+      "source": "provider_live",
+      "prompt_version": "traveller-journey-v2.1",
+      "worlds": 14,
+      "completed_worlds": 14,
+      "joined": 4,
+      "booked": 13,
+      "cancelled": 2,
+      "renewal_intent": 1,
+      "limitations": [
+        "Synthetic role-play pilot, not observed customer conversion.",
+        "One detailed journey per world; expected annual trips do not create unobserved transactions.",
+        "Counterfactual worlds have separate scenario inventory; no live ticketing."
+      ],
+      "existing_members": 2,
+      "eligible_new_members": 12,
+      "action_counts": {
+        "DECLINE": 19,
+        "BUY_REGULAR": 7,
+        "KEEP_BOOKING": 37,
+        "CANCEL_BOOKING": 2,
+        "KEEP_MEMBERSHIP": 2,
+        "BUY_MEMBER": 6,
+        "RENEW_INTENT": 1,
+        "JOIN_PASS": 4,
+        "DO_NOT_RENEW": 5,
+        "WAIT": 1
+      }
+    }
+  },
+  "provider_decisions": 672,
+  "provider_cache_hits": 0,
+  "provider_token_usage_reported": {
+    "prompt_tokens": 1456225,
+    "completion_tokens": 59586,
+    "total_tokens": 1515811
+  },
+  "failed_decisions": 1,
+  "limitations": [
+    "This is generated customer role-play, not observed customer data or payment.",
+    "The 28-world pilot changes fare and fee together, so it cannot identify their separate elasticities.",
+    "Four fares by two fees in the optional 112-world factorial support controlled comparisons, but still do not establish real market effects.",
+    "Each counterfactual world has independent inventory. Totals do not represent shared-flight capacity clearing.",
+    "One detailed trip is followed; annual benefit is an expectation and renewal is an uncharged intention.",
+    "Do not fit price-response coefficients or calibrate the revenue optimizer from this small pilot.",
+    "Original Codex pilot subscription packets v2 exposed a future change label; the agent was told to ignore it. v2.1 packets remove it."
+  ]
+}

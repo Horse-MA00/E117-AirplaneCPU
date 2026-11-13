@@ -1,0 +1,93 @@
+{
+  "description": "Qualitative anomalies, not proof of rationality failure; fresh repeat/order probes required.",
+  "adjacent_decline_to_join": [
+    {
+      "customer_id": "SYN-117-00001",
+      "membership_fee": 199,
+      "lower_fare": 30,
+      "higher_fare": 70,
+      "lower": {
+        "stage": "subscription",
+        "action": "DECLINE",
+        "option_id": null,
+        "reason_code": "FEE_EXCEEDS_PLAUSIBLE_SAVINGS",
+        "reason": "會費199元不可退，而會員票總價280元對比正價850元，單次省570元看似吸引，但可用座位僅約25.5%且不保證，三次行程未必都能用上；加上總預算807元，先付會費會壓縮即將出發的機票開支，因此不加入。",
+        "confidence": "medium"
+      },
+      "higher": {
+        "stage": "subscription",
+        "action": "JOIN_PASS",
+        "option_id": "pass",
+        "reason_code": "FEE_RECOUPED_ONE_TRIP",
+        "reason": "會費199元，單程會員價加稅費為320元，較正價850元省530元，即使只成功用一次已回本；預計3程且5天彈性，扣除會費後預算仍足夠應付首程。",
+        "confidence": "medium"
+      }
+    },
+    {
+      "customer_id": "SYN-117-00009",
+      "membership_fee": 599,
+      "lower_fare": 30,
+      "higher_fare": 70,
+      "lower": {
+        "stage": "subscription",
+        "action": "DECLINE",
+        "option_id": null,
+        "reason_code": "FEE_RISK_HIGH",
+        "reason": "會費599元不可退，雖然會員票價連稅約280元、比正價850元便宜，但預計5次行程中未必每次都有會員座位（可用率僅約39%），且節省需依賴不保證的庫存；先保留2625元預算買正價機票較穩妥。",
+        "confidence": "medium"
+      },
+      "higher": {
+        "stage": "subscription",
+        "action": "JOIN_PASS",
+        "option_id": "pass",
+        "reason_code": "FEE_RECOUPED_OVER_TRIPS",
+        "reason": "會費599元，但每次會員票連稅比正價票便宜約530元，預計5次行程即使只有部分能用會員價，節省的費用已超過會費，且不影響即將出發的行程預算。",
+        "confidence": "medium"
+      }
+    },
+    {
+      "customer_id": "SYN-117-00010",
+      "membership_fee": 599,
+      "lower_fare": 30,
+      "higher_fare": 70,
+      "lower": {
+        "stage": "subscription",
+        "action": "DECLINE",
+        "option_id": null,
+        "reason_code": "FEE_EXCEEDS_PLAUSIBLE_SAVINGS",
+        "reason": "The non-refundable HK$599 fee is hard to justify: even if both expected trips found member seats, the saving is about HK$570 per trip but availability is uncertain and the fee would consume a large share of the HK$1,530 budget before the upcoming trip. Buying regular fares keeps flexibility without risking a sunk membership cost.",
+        "confidence": "medium"
+      },
+      "higher": {
+        "stage": "subscription",
+        "action": "JOIN_PASS",
+        "option_id": "pass",
+        "reason_code": "FEE_AMORTIZED_OVER_TWO_TRIPS",
+        "reason": "The 599 fee is non-refundable, but with two expected trips the member total of 320 versus 850 regular saves 530 per trip, so even one usable member seat nearly covers the fee and two trips clearly justify joining within the 1530 budget.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "customer_id": "SYN-117-00012",
+      "membership_fee": 199,
+      "lower_fare": 30,
+      "higher_fare": 70,
+      "lower": {
+        "stage": "subscription",
+        "action": "DECLINE",
+        "option_id": null,
+        "reason_code": "FEE_RISK_HIGH",
+        "reason": "会費199ドルは非返金で、対象便の在席保証もなく想定確率は約16%です。2回の旅行でも割引額が会費を確実に上回るとは言えず、今回は見送ります。",
+        "confidence": "medium"
+      },
+      "higher": {
+        "stage": "subscription",
+        "action": "JOIN_PASS",
+        "option_id": "pass",
+        "reason_code": "FEE_RECOUPED_ON_TRIPS",
+        "reason": "会費199円は1回の会員運賃で通常運賃との差額530円を上回り、予定2回の旅行で元が取れる見込みです。予算1372円内で旅程の支払いも可能で、座席保証はない点は承知のうえです。",
+        "confidence": "medium"
+      }
+    }
+  ]
+}

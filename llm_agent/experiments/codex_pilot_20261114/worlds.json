@@ -1,0 +1,3597 @@
+{
+  "suite_id": "journey-5f10b04558f2",
+  "source": "codex_subagent_pilot",
+  "prompt_version": "traveller-journey-v2",
+  "seed": 117,
+  "counterfactual_design": {
+    "persons": 14,
+    "offers": [
+      [
+        0,
+        199
+      ],
+      [
+        100,
+        599
+      ]
+    ],
+    "same_person_across_offers": true
+  },
+  "worlds": [
+    {
+      "world_id": "SYN-117-00001-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00001",
+        "segment": "flexible_budget",
+        "segment_label": "彈性低預算旅客",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 3,
+        "total_budget": 807,
+        "flexibility_days": 5,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "zh-HK",
+        "perceived_availability": 0.255,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "cannot_travel",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 408.0,
+        "membership_active": true,
+        "membership_fee_paid": 199.0,
+        "joined_this_run": true,
+        "booking": null,
+        "booking_cancelled": true,
+        "ticket_spend": 250.0,
+        "refund_received": 50.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "JOIN_PASS",
+            "option_id": "pass",
+            "reason_code": "AFFORDABLE_FLEXIBLE_USE",
+            "reason": "The 199 fee plus a usable 250 flight would fit my 807 budget, whereas the 850 regular reference fare would not. With three intended trips and flexibility across dates and two covered destinations, I am willing to pay the fee despite the low assumed availability.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "SUITABLE_AFFORDABLE_SEAT",
+            "reason": "The 250 total covers the mandatory fees and fits my remaining 608, with a member seat on my desired Fukuoka date and time. The regular and alternative fares exceed my remaining budget, so I will secure this usable offer rather than risk it disappearing.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "My 250 Fukuoka booking is already confirmed for the desired date and no change of plans is stated, so I keep it without another purchase.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_TRIP",
+            "reason": "My 250 Fukuoka booking remains suitable and confirmed, with no stated plan change. I keep it without paying again.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "CANCEL_BOOKING",
+            "option_id": "cancel",
+            "reason_code": "CANNOT_TRAVEL_RECOVER_TAX",
+            "reason": "I now cannot travel, so keeping the Fukuoka booking has no practical value. I will cancel for the stated 50 net tax refund after the 100 cancellation fee, understanding that the 199 subscription is not refunded.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DO_NOT_RENEW",
+            "option_id": null,
+            "reason_code": "NO_COMPLETED_USE_TIGHT_FUNDS",
+            "reason": "My cancelled journey cost 399 net including the fee and produced no completed travel, even though a suitable member seat was found. With 408 remaining, another 199 fee plus a 250 flight would exceed my stated funds, so I do not intend to renew on the strength of three merely expected future trips.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": "DO_NOT_RENEW",
+        "cancelled_booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 250,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        }
+      }
+    },
+    {
+      "world_id": "SYN-117-00001-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00001",
+        "segment": "flexible_budget",
+        "segment_label": "彈性低預算旅客",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 3,
+        "total_budget": 807,
+        "flexibility_days": 5,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "zh-HK",
+        "perceived_availability": 0.255,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "cannot_travel",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 107.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": null,
+        "booking_cancelled": true,
+        "ticket_spend": 750.0,
+        "refund_received": 50.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "FEE_BLOCKS_TRIP",
+            "reason": "Paying 599 would leave only 208, less than the 350 member flight before any other travel spending. The pass cannot make the upcoming trip affordable within my 807 budget.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "alternative",
+            "reason_code": "AFFORDABLE_ACCEPTABLE_ALTERNATIVE",
+            "reason": "Osaka on May 31 at 18:30 is within my accepted destinations, five-day flexibility and departure window, and 750 fits my 807 budget. The desired Fukuoka flight costs more than I have, so I will take this available alternative despite the small remaining balance.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "The Osaka flight on May 31 remains within my acceptable route and date range, and its 750 cost is already paid. I keep that booking and preserve my remaining 57.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_TRIP",
+            "reason": "The Osaka itinerary already booked for 750 still fits my accepted destination and flexible dates. I retain it and preserve the remaining 57.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "CANCEL_BOOKING",
+            "option_id": "cancel",
+            "reason_code": "CANNOT_TRAVEL_RECOVER_TAX",
+            "reason": "I can no longer travel on the booked Osaka itinerary, so I will recover the stated 50 net refund. The non-refundable fare and other non-refundable charges are lost; cancelling does not recover the full 750 paid.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "FEE_REMAINS_UNAFFORDABLE",
+            "reason": "The cancelled regular trip left only 107 after its 50 refund, and no next-period funding is supplied. A 599 pass with separate flight charges still does not fit my resources, despite three expected future trips.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": null,
+        "cancelled_booking": {
+          "id": "alternative",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "KIX",
+          "departure_date": "2027-05-31",
+          "departure_time": "18:30",
+          "day_offset": 1,
+          "party_size": 1,
+          "price": 750,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 500,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 5,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        }
+      }
+    },
+    {
+      "world_id": "SYN-117-00002-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00002",
+        "segment": "student",
+        "segment_label": "學生與學期假期",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 853,
+        "flexibility_days": 3,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "ja",
+        "perceived_availability": 0.353,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 1,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 324.0,
+        "membership_active": true,
+        "membership_fee_paid": 199.0,
+        "joined_this_run": true,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 330,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 80
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 1,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 330.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "JOIN_PASS",
+            "option_id": "pass",
+            "reason_code": "AFFORDABLE_UPCOMING_TRIP",
+            "reason": "The fee and one member flight with my checked bag total 529, within my 853 budget; the regular reference with baggage is 930. Two intended trips, a few flexible days and two acceptable covered destinations give me a plausible use, although neither seats nor a second affordable trip are assured.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "COMPLETE_PRICE_FITS",
+            "reason": "The 330 payable total includes my checked bag and mandatory fees, leaving 324 of my remaining budget. There is a member seat at 10:30 on my desired Fukuoka date, and neither regular option is affordable now, so I will book it.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "My Fukuoka flight and checked bag were already booked for 330 and still meet the stated trip needs. I keep the booking without spending my remaining 324 again.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_TRIP",
+            "reason": "My Fukuoka ticket with one checked bag is already booked for 330 and continues to meet my trip requirements. I keep the booking.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "TRIP_STILL_USEFUL",
+            "reason": "My plans are unchanged and the booked Fukuoka flight with my checked bag remains useful. Cancelling would return only 50 and would not refund the bag or membership fee, so I keep the trip.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DO_NOT_RENEW",
+            "option_id": null,
+            "reason_code": "GOOD_USE_BUT_LIMITED_FUNDS",
+            "reason": "I completed one member trip for 529 including the fee and checked bag, so the pass did provide value on that journey. But only 324 remains, and another 199 fee would leave too little for a 330 flight; with no new budget stated, I do not intend to renew yet.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "DO_NOT_RENEW"
+      }
+    },
+    {
+      "world_id": "SYN-117-00002-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00002",
+        "segment": "student",
+        "segment_label": "學生與學期假期",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 853,
+        "flexibility_days": 3,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "ja",
+        "perceived_availability": 0.353,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 1,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 853.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": null,
+        "booking_cancelled": false,
+        "ticket_spend": 0.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "FEE_BLOCKS_TRIP",
+            "reason": "The 599 fee and 430 member flight including my bag total 1029, exceeding my 853 budget. I cannot fund the upcoming trip by subscribing.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "WAIT",
+            "option_id": null,
+            "reason_code": "PRESERVE_TIGHT_BUDGET",
+            "reason": "The only affordable option is 830 to Osaka a day later, which would leave just 23 of my 853 budget. With 28 days left and some date flexibility I will check again before committing almost everything, accepting that this fare or seat may disappear and a cheaper one may never appear.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "WAIT",
+            "option_id": null,
+            "reason_code": "NO_AFFORDABLE_CURRENT_OPTION",
+            "reason": "The Osaka total has risen to 880 and Fukuoka is 980, both above my remaining 853, so I cannot buy either now. There are still 14 days and my notice requirement is three days, so I will check again while accepting that I may have to forgo this trip.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_AFFORDABLE_LEGAL_OPTION",
+            "reason": "The 1130 Fukuoka and 1030 Osaka totals both exceed my 853 budget, while the member fare is unavailable without membership. I cannot make a legal affordable booking and decline this round.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_BOOKING_TO_CHANGE",
+            "reason": "I never obtained an affordable booking and there is no cancellation or new flight option in this packet. I retain the unspent 853 and decline this stage.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "UNAFFORDABLE_PASS_AND_FLIGHT",
+            "reason": "I completed no trip after waiting made the regular options unaffordable, but that does not make this pass affordable. Its 599 fee plus a 430 flight with my bag still exceeds my unchanged 853 budget, and the two future trips are only expectations.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": null
+      }
+    },
+    {
+      "world_id": "SYN-117-00003-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00003",
+        "segment": "fixed_holiday",
+        "segment_label": "固定假期上班族",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 1270,
+        "flexibility_days": 0,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "ja",
+        "perceived_availability": 0.624,
+        "membership_active": true,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1020.0,
+        "membership_active": true,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 250,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 250.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "KEEP_MEMBERSHIP",
+            "option_id": null,
+            "reason_code": "EXISTING_MEMBERSHIP",
+            "reason": "My membership is already active, so I keep it without paying another fee. I still need a suitable seat on my fixed travel date.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "FIXED_DATE_MEMBER_SEAT",
+            "reason": "The 250 member total buys the same suitable Fukuoka flight as the 850 regular option, and a member seat is available. My date is fixed, so I will secure it now rather than wait without a reservation.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "FIXED_DATE_ALREADY_SECURED",
+            "reason": "My fixed-date Fukuoka flight is already booked for 250 and remains suitable. I retain it; the current lack of new member inventory does not undo my booking.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_FIXED_DATE",
+            "reason": "The existing 250 member booking secures my required Fukuoka date. I retain it because no change to that trip has been stated.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "FIXED_TRIP_UNCHANGED",
+            "reason": "My fixed-date Fukuoka trip is unchanged and the booked seat still serves it. I prefer taking the trip to cancelling for only the stated 50 net refund.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "RENEW_INTENT",
+            "option_id": null,
+            "reason_code": "LOW_FEE_SUPPORTED_BY_USE",
+            "reason": "I completed a suitable fixed-date member trip for 250; no membership fee was paid in this run because I was already a member. I intend to renew at 199 given two expected future trips and 1020 remaining, while recognizing that this one success does not guarantee future fixed-date inventory.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "RENEW_INTENT"
+      }
+    },
+    {
+      "world_id": "SYN-117-00003-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00003",
+        "segment": "fixed_holiday",
+        "segment_label": "固定假期上班族",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 1270,
+        "flexibility_days": 0,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "ja",
+        "perceived_availability": 0.624,
+        "membership_active": true,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 920.0,
+        "membership_active": true,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 350,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 100,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 350.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "KEEP_MEMBERSHIP",
+            "option_id": null,
+            "reason_code": "EXISTING_MEMBERSHIP",
+            "reason": "I already hold active membership and do not need to buy it again. I will assess the full flight price and availability for my fixed date when quotes are presented.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "FIXED_DATE_MEMBER_SEAT",
+            "reason": "My existing membership lets me pay 350 including fees instead of 850 on the flight matching my fixed date and time window. I have sufficient budget and a member seat is available, so I will book now.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "FIXED_DATE_ALREADY_SECURED",
+            "reason": "I already secured the required Fukuoka date at a 350 full price and no change is presented. I keep that booking without another charge.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_FIXED_DATE",
+            "reason": "I already hold the suitable fixed-date Fukuoka booking at 350. I keep it and make no duplicate purchase.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "FIXED_TRIP_UNCHANGED",
+            "reason": "The Fukuoka booking still matches my fixed holiday and my plans have not changed. The 50 cancellation refund would give up a useful trip, so I keep the booking.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DO_NOT_RENEW",
+            "option_id": null,
+            "reason_code": "RENEWAL_FEE_CHANGES_VALUE",
+            "reason": "My completed 350 flight was useful under an existing membership, but I paid no new fee for that use. A 599 renewal plus even one 350 flight would exceed my remaining 920, and two expected trips do not establish available seats or new funding, so I do not intend to renew now.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "DO_NOT_RENEW"
+      }
+    },
+    {
+      "world_id": "SYN-117-00004-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00004",
+        "segment": "frequent_leisure",
+        "segment_label": "高頻休閒旅客",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 6,
+        "total_budget": 1258,
+        "flexibility_days": 4,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.555,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "date_uncertain",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 809.0,
+        "membership_active": true,
+        "membership_fee_paid": 199.0,
+        "joined_this_run": true,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 250,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 250.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "JOIN_PASS",
+            "option_id": "pass",
+            "reason_code": "MULTIPLE_FEASIBLE_USES",
+            "reason": "The 199 fee leaves 1059, enough for several 250 member flights if suitable seats appear, though not all six intended trips. My date flexibility and two covered destinations make at least one useful redemption plausible enough to justify the fee.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "LOWEST_USEFUL_TOTAL",
+            "reason": "The member option is 250 including mandatory fees and matches my preferred Fukuoka date, while the acceptable Osaka alternative is 750. Booking this available seat preserves more of my remaining 1059 for later travel without relying on an unknown future quote.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "The 250 Fukuoka booking still fits my intended trip, and no changed circumstances or cancellation decision are supplied. I retain it and preserve the remaining 809.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_TRIP",
+            "reason": "The 250 Fukuoka booking still matches my intended itinerary, and there is no stated change of plans. I keep it and preserve 809 for later needs.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "PRESERVE_POSSIBLE_TRIP",
+            "reason": "My date is uncertain, but I have not been told that the booked Fukuoka departure is impossible. Cancelling secures only 50 and removes the chance to use this otherwise suitable seat, so I keep it without assuming a free change or later refund.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "term_end",
+            "action": "RENEW_INTENT",
+            "option_id": null,
+            "reason_code": "FEASIBLE_REPEAT_VALUE",
+            "reason": "The supplied outcome confirms one completed trip for 449 including membership despite the earlier date uncertainty. I intend to renew at 199 because my route and date flexibility, six expected future opportunities and 809 remaining make some further use plausible, without treating all six as funded or guaranteed trips.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "RENEW_INTENT"
+      }
+    },
+    {
+      "world_id": "SYN-117-00004-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00004",
+        "segment": "frequent_leisure",
+        "segment_label": "高頻休閒旅客",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 6,
+        "total_budget": 1258,
+        "flexibility_days": 4,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.555,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "date_uncertain",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 458.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "alternative",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "KIX",
+          "departure_date": "2027-05-31",
+          "departure_time": "18:30",
+          "day_offset": 1,
+          "party_size": 1,
+          "price": 800,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 550,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 0,
+          "total_seats_available": 5,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 800.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "BUDGET_LIMITS_PAYBACK",
+            "reason": "After a 599 fee, my 1258 budget could fund only one 350 member flight, so I cannot afford the two uses needed to recover the fee against 500 savings per use. My intention to take six trips does not supply the missing travel budget or guarantee seats.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "WAIT",
+            "option_id": null,
+            "reason_code": "FLEXIBLE_BUDGET_TIMING",
+            "reason": "The cheapest legal option is 750 to Osaka, which would consume most of my 1258 budget even though I hope to make several trips. With 28 days to go and four days of date flexibility I am willing to check again, knowing that waiting guarantees neither a better fare nor a seat.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "BUY_REGULAR",
+            "option_id": "alternative",
+            "reason_code": "SECURE_ACCEPTABLE_ALTERNATIVE",
+            "reason": "The May 31 Osaka departure at 18:30 still fits my flexibility and is 800 including fees, compared with 900 for Fukuoka. My earlier wait did not bring a lower price, and with 14 days left I prefer securing this affordable seat and retaining 458 to risking another unavailable or unaffordable quote.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_ACCEPTED_ALTERNATIVE",
+            "reason": "I booked the May 31 Osaka flight for 800 at the previous round, and it remains within my route and date flexibility. I keep that confirmed itinerary and the remaining 458.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "PRESERVE_POSSIBLE_TRIP",
+            "reason": "The date is now uncertain, but no definite conflict with my accepted May 31 Osaka booking is stated. I would keep the possibility of taking the trip rather than cancel for only 50, recognizing that the fare is not refundable if the uncertainty resolves against travel.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "term_end",
+            "action": "CONSIDER_LATER",
+            "option_id": null,
+            "reason_code": "REVISIT_WITH_FUNDED_PLANS",
+            "reason": "I completed one regular Osaka trip for 800 after waiting, and I still expect several future trips on covered routes. I would reconsider the 599 pass once at least two suitable trips are realistically funded, but my current 458 cannot cover even the fee and this is not a purchase intention now.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "CONSIDER_LATER"
+      }
+    },
+    {
+      "world_id": "SYN-117-00005-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00005",
+        "segment": "family",
+        "segment_label": "家庭及學校假期",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 4387,
+        "flexibility_days": 1,
+        "party_size": 3,
+        "minimum_notice_days": 21,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.367,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 3,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1597.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "regular",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 3,
+          "price": 2790,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 600,
+            "companions_base_fare": 1200,
+            "mandatory_fees": 750,
+            "baggage": 240
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 3,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 2790.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "ARRANGEMENT_UNCERTAINTY",
+            "reason": "I need three seats to Fukuoka, only one day of date flexibility and at least 21 days to arrange the trip. With member availability merely assumed at 36.7% and only my fare discounted, I would preserve the 199 until I have a suitable family itinerary rather than pay for uncertain access.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "regular",
+            "reason_code": "NOTICE_AND_PARTY_SEATS",
+            "reason": "The 2790 full price includes all three travellers and our three checked bags, and there are enough seats on the desired Fukuoka flight. Booking with 28 days remaining meets my 21-day arrangement requirement; the Osaka alternative is unsuitable and I am not a member.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "PARTY_BOOKING_ALREADY_SECURED",
+            "reason": "Our three Fukuoka seats and three bags are already booked for 2790, with the original booking made early enough for my arrangements. I keep the suitable itinerary without buying it again.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_PARTY_ARRANGEMENTS",
+            "reason": "Our three Fukuoka seats and three checked bags are already secured for 2790. The booking was made with the needed notice, and I keep those arrangements.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "FAMILY_PLANS_UNCHANGED",
+            "reason": "Our plans are unchanged and the confirmed Fukuoka itinerary still covers all three travellers and bags. A 350 net cancellation refund would sacrifice that useful trip while leaving fares and baggage non-refundable, so I keep it.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "CONSIDER_LATER",
+            "option_id": null,
+            "reason_code": "CHECK_FAMILY_USE_BEFORE_JOINING",
+            "reason": "I completed one regular family itinerary for 2790, and a 199 personal pass could still be useful if my own 600 fare saving is actually available on another suitable group flight. I would consider it after checking three seats, my 21-day arrangement requirement and funding, since the remaining 1597 does not cover another full family itinerary.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "CONSIDER_LATER"
+      }
+    },
+    {
+      "world_id": "SYN-117-00005-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00005",
+        "segment": "family",
+        "segment_label": "家庭及學校假期",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 4387,
+        "flexibility_days": 1,
+        "party_size": 3,
+        "minimum_notice_days": 21,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.367,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 3,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1597.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "regular",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 3,
+          "price": 2790,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 600,
+            "companions_base_fare": 1200,
+            "mandatory_fees": 750,
+            "baggage": 240
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 3,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 2790.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "LIMITED_PERSONAL_SAVINGS",
+            "reason": "Only my ticket receives the 500 discount, so one successful family trip would not recover the 599 fee. Two member-priced family trips including our three bags and this fee would exceed my 4387 budget, even before considering availability and my notice requirement.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "regular",
+            "reason_code": "CONFIRM_FAMILY_ITINERARY",
+            "reason": "The regular Fukuoka itinerary at 2790 fits my 4387 budget and includes three seats, fees and three bags. I need at least 21 days to arrange this trip and have little date flexibility, so I will secure it now rather than risk losing suitable seats.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "PARTY_BOOKING_ALREADY_SECURED",
+            "reason": "The existing 2790 booking covers all three travellers and bags on the required Fukuoka flight. Nothing has changed about our needs, so I retain it.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_PARTY_ARRANGEMENTS",
+            "reason": "The existing 2790 itinerary still covers the entire three-person party and bags on the required Fukuoka flight. I retain it without another charge.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "FAMILY_PLANS_UNCHANGED",
+            "reason": "The family trip remains planned and our three seats and bags are already arranged. I keep the booking rather than cancel the whole party for a 350 net tax refund.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "PERSONAL_SAVINGS_TOO_LIMITED",
+            "reason": "One completed regular family trip does not demonstrate repeated membership savings, and companions still pay regular fares. A 599 fee needs more than one successful personal fare saving, while my remaining 1597 cannot fund even the next full group trip, so I decline the offer.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": null
+      }
+    },
+    {
+      "world_id": "SYN-117-00006-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00006",
+        "segment": "couple",
+        "segment_label": "雙人短途旅行",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 3,
+        "total_budget": 2598,
+        "flexibility_days": 2,
+        "party_size": 2,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.471,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1299.0,
+        "membership_active": true,
+        "membership_fee_paid": 199.0,
+        "joined_this_run": true,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 2,
+          "price": 1100,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 600,
+            "mandatory_fees": 500,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 1100.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "JOIN_PASS",
+            "option_id": "pass",
+            "reason_code": "AFFORDABLE_PERSONAL_SAVING",
+            "reason": "I understand that my companion still pays 850, making a member itinerary for both of us 1100 before the 199 fee. Two such trips could fit my 2598 budget, and with three intended trips and some route and date flexibility I can plausibly recover the fee even if only one succeeds.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "PARTY_TOTAL_VALUE",
+            "reason": "The 1100 total includes my member fare, my companion at the regular fare and both sets of fees, with enough seats for us on the desired date. It is cheaper than the 1500 Osaka alternative and 1700 regular Fukuoka option, so I will book it within my remaining 2399.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "PARTY_BOOKING_ALREADY_SECURED",
+            "reason": "Both of us are already booked to Fukuoka for a total of 1100, with my companion correctly paying the regular fare. I keep the itinerary and the remaining 1299 budget.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_PARTY_ARRANGEMENTS",
+            "reason": "Both travellers are already booked to Fukuoka for a total of 1100, including the companion regular fare. I keep this suitable booking.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "PARTY_TRIP_UNCHANGED",
+            "reason": "Our two-person Fukuoka trip is unchanged and the booking remains useful to both of us. Cancelling would return only 200 after the booking fee and would not refund my subscription, so I keep the itinerary.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "RENEW_INTENT",
+            "option_id": null,
+            "reason_code": "ONE_PARTY_USE_CAN_PAY_BACK",
+            "reason": "Our one completed Fukuoka trip cost 1299 including the pass, below the available regular options at booking, even with my companion paying normally. I intend to renew because another similar fee and 1100 party fare could fit the remaining 1299 and one use could recover the fee, although future seats and all three expected trips are not assured.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "RENEW_INTENT"
+      }
+    },
+    {
+      "world_id": "SYN-117-00006-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00006",
+        "segment": "couple",
+        "segment_label": "雙人短途旅行",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 3,
+        "total_budget": 2598,
+        "flexibility_days": 2,
+        "party_size": 2,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.471,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1098.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "alternative",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "KIX",
+          "departure_date": "2027-05-31",
+          "departure_time": "18:30",
+          "day_offset": 1,
+          "party_size": 2,
+          "price": 1500,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 500,
+            "companions_base_fare": 500,
+            "mandatory_fees": 500,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 5,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 1500.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "COMPANION_COST_LIMITS_USE",
+            "reason": "A member itinerary for both of us is 1200 because my companion pays the regular fare; adding the 599 fee costs more than a 1700 regular itinerary. Two member itineraries plus the fee would exceed my 2598 budget, so the potential repeat savings do not justify joining.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "alternative",
+            "reason_code": "ACCEPTABLE_PARTY_SAVING",
+            "reason": "The Osaka flight on May 31 at 18:30 fits our accepted destination, date flexibility and time window, and has five seats for our party of two. Its 1500 total saves 200 against the Fukuoka option and leaves 1098, so I will take it without relying on a future discount.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "ACCEPTABLE_ALTERNATIVE_BOOKED",
+            "reason": "Our Osaka booking on May 31 remains acceptable and the 1500 party total is already paid. There is no reason or authorized option to replace that booking here.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_ACCEPTED_ALTERNATIVE",
+            "reason": "Our two-person Osaka booking at 1500 still meets the accepted destination, date and time constraints. I keep it rather than spend the remaining budget on a duplicate trip.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "PARTY_TRIP_UNCHANGED",
+            "reason": "We still intend to take the accepted Osaka trip and our two seats are already booked. I keep the itinerary instead of cancelling it for a 200 net refund.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "COMPANION_COST_AND_FEE",
+            "reason": "We completed a regular Osaka trip for 1500 without needing this pass. With only my fare discounted, a 599 fee and the full two-person flight cost would strain the remaining 1098, while three expected trips are not demonstrated affordable uses, so I decline.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": null
+      }
+    },
+    {
+      "world_id": "SYN-117-00007-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00007",
+        "segment": "visiting_friends",
+        "segment_label": "探親訪友",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 4,
+        "total_budget": 1593,
+        "flexibility_days": 2,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "zh-HK",
+        "perceived_availability": 0.502,
+        "membership_active": true,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1343.0,
+        "membership_active": true,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 250,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 250.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "KEEP_MEMBERSHIP",
+            "option_id": null,
+            "reason_code": "EXISTING_MEMBERSHIP",
+            "reason": "My membership is already active and keeping it does not consume any of my 1593 remaining budget. I will use it only where a suitable covered flight is actually available.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "EXISTING_MEMBER_VALUE",
+            "reason": "The 250 member total is substantially below both regular options and matches my preferred Fukuoka itinerary. My existing membership is active, the seat is available and the price leaves room for later travel, so I will book now.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "My 250 member booking already secures the preferred Fukuoka itinerary. I keep it and do not spend again merely because another quote round is shown.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_TRIP",
+            "reason": "My 250 member booking still secures the preferred Fukuoka itinerary. I retain it because no changed travel needs are stated.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "TRIP_STILL_USEFUL",
+            "reason": "My travel plans are unchanged and the Fukuoka booking still meets them. I keep the flight rather than give it up for only 50 back.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "RENEW_INTENT",
+            "option_id": null,
+            "reason_code": "LOW_FEE_AND_REPEATED_NEED",
+            "reason": "My existing membership supplied one completed Fukuoka trip at 250, with no new fee charged in this run. I intend to renew at 199 because four future trips are expected, I have some route and date flexibility and 1343 remains, while counting only this one trip as observed use.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "RENEW_INTENT"
+      }
+    },
+    {
+      "world_id": "SYN-117-00007-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00007",
+        "segment": "visiting_friends",
+        "segment_label": "探親訪友",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 4,
+        "total_budget": 1593,
+        "flexibility_days": 2,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "zh-HK",
+        "perceived_availability": 0.502,
+        "membership_active": true,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1243.0,
+        "membership_active": true,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 350,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 100,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 350.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "KEEP_MEMBERSHIP",
+            "option_id": null,
+            "reason_code": "EXISTING_MEMBERSHIP",
+            "reason": "I already have active membership, so no new subscription fee is due. I keep access while checking actual flights against my dates and remaining budget.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "EXISTING_MEMBER_VALUE",
+            "reason": "With my active membership, the suitable Fukuoka flight is 350 including fees, compared with 850 regular or 750 for Osaka. I will secure the available member seat and retain the rest of my 1593 budget for later needs.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "I already have the suitable Fukuoka flight at 350 and no plan change is stated. I retain that booking and preserve my remaining travel budget.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_TRIP",
+            "reason": "The Fukuoka flight is already booked at 350 and remains suitable. I keep it and preserve my remaining 1243.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "TRIP_STILL_USEFUL",
+            "reason": "I still intend to make this Fukuoka trip and the booking is suitable. The small 50 net refund does not justify cancelling an itinerary I can use.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DO_NOT_RENEW",
+            "option_id": null,
+            "reason_code": "FULL_FEE_LIMITS_FEASIBLE_USE",
+            "reason": "The observed 350 member trip was useful, but using an existing pass did not require the 599 renewal fee. With 1243 remaining, that fee plus two 350 flights would exceed my stated funds, and one 500 fare saving cannot recover the fee, so four expected trips alone do not justify renewal now.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "DO_NOT_RENEW"
+      }
+    },
+    {
+      "world_id": "SYN-117-00008-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00008",
+        "segment": "urgent_trip",
+        "segment_label": "臨時必要出行",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 2533,
+        "flexibility_days": 0,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "ja",
+        "perceived_availability": 0.521,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 1,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "cannot_travel",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 2054.0,
+        "membership_active": true,
+        "membership_fee_paid": 199.0,
+        "joined_this_run": true,
+        "booking": null,
+        "booking_cancelled": true,
+        "ticket_spend": 330.0,
+        "refund_received": 50.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "JOIN_PASS",
+            "option_id": "pass",
+            "reason_code": "LOW_FEE_WITH_FALLBACK",
+            "reason": "For two intended trips, one successful use would save 600 against the regular fare and cover the 199 fee. Even if my fixed date has no member seat, my 2533 budget can still cover the fee and a regular flight with my bag, so the uncertain offer is an affordable chance.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "SECURE_FIXED_DATE",
+            "reason": "The member flight matches my fixed Fukuoka date and costs 330 including my bag and mandatory fees, versus 930 regular. A member seat is available now, so I will secure this necessary itinerary rather than gamble on later availability.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "FIXED_DATE_ALREADY_SECURED",
+            "reason": "My required fixed-date Fukuoka trip is already booked with my checked bag for 330. The itinerary still meets my needs, so I keep it.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_FIXED_DATE",
+            "reason": "My exact-date Fukuoka flight and checked bag are already booked for 330. I keep this required itinerary while no plan change is supplied.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "CANCEL_BOOKING",
+            "option_id": "cancel",
+            "reason_code": "CANNOT_TRAVEL_RECOVER_TAX",
+            "reason": "I now cannot make the trip, so I will cancel and recover the stated 50 net refund. My checked-bag charge and the 199 subscription remain non-refundable, and I do not expect the whole 330 ticket total back.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DO_NOT_RENEW",
+            "option_id": null,
+            "reason_code": "CANCELLATION_EXPERIENCE",
+            "reason": "The pass provided a suitable seat, but the later cancellation left me with 479 net spending and no completed trip, including a non-refundable membership fee. With only two expected future trips on fixed dates, I do not currently intend to commit another fee despite being able to afford it.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "DO_NOT_RENEW",
+        "cancelled_booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 330,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 80
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 1,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        }
+      }
+    },
+    {
+      "world_id": "SYN-117-00008-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00008",
+        "segment": "urgent_trip",
+        "segment_label": "臨時必要出行",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 2533,
+        "flexibility_days": 0,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "ja",
+        "perceived_availability": 0.521,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 1,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "cannot_travel",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1653.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": null,
+        "booking_cancelled": true,
+        "ticket_spend": 930.0,
+        "refund_received": 50.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "INSUFFICIENT_RELIABLE_USE",
+            "reason": "One 500 fare saving would not recover the 599 fee, and I would need both intended trips to find suitable member seats. With fixed dates and availability only assumed at 52.1%, I prefer to retain the money for suitable regular flights.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "regular",
+            "reason_code": "FIXED_DATE_REGULAR",
+            "reason": "The 930 total includes my checked bag and fits my 2533 budget on the exact Fukuoka date I need. I have no membership and the Osaka alternative is unsuitable, so I will book the available regular seat.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "FIXED_DATE_ALREADY_SECURED",
+            "reason": "The 930 regular booking already covers the precise Fukuoka date and checked bag I need. I retain it because no changed circumstances have been presented.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_FIXED_DATE",
+            "reason": "The existing 930 booking covers my fixed-date Fukuoka trip and checked bag. I retain it without another purchase.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "CANCEL_BOOKING",
+            "option_id": "cancel",
+            "reason_code": "CANNOT_TRAVEL_RECOVER_TAX",
+            "reason": "Although this was a necessary fixed-date trip when I booked, I now cannot travel. I will cancel for 50 net after the cancellation fee, accepting that the base fare, baggage and other non-refundable charges will not be recovered.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "UNCERTAIN_FIXED_DATE_PAYBACK",
+            "reason": "My regular booking was cancelled and returned only 50, so there was no completed trip and I am wary of another non-refundable commitment. At 599 the pass still needs more than one successful 500 saving across just two expected fixed-date trips, so I decline.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": null,
+        "cancelled_booking": {
+          "id": "regular",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 930,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 600,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 80
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 1,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        }
+      }
+    },
+    {
+      "world_id": "SYN-117-00009-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00009",
+        "segment": "small_business",
+        "segment_label": "自費商務出行",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 5,
+        "total_budget": 2625,
+        "flexibility_days": 1,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "zh-HK",
+        "perceived_availability": 0.392,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 2176.0,
+        "membership_active": true,
+        "membership_fee_paid": 199.0,
+        "joined_this_run": true,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 250,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 250.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "JOIN_PASS",
+            "option_id": "pass",
+            "reason_code": "REPEATED_ROUTE_NEED",
+            "reason": "I expect five trips on the covered Fukuoka route, so even one successful 600 saving would recover the 199 fee. My 2625 budget leaves room for the upcoming trip and some fallback spending, although narrow date flexibility and uncertain inventory may limit use.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "USE_AVAILABLE_ROUTE_MATCH",
+            "reason": "The 250 member price includes fees on my preferred Fukuoka flight, with a suitable departure time and a member seat available. It saves 600 against the legal regular option and preserves my travel budget, so waiting has little appeal.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "My preferred Fukuoka flight is already secured for 250 and remains suitable. I keep the booking while retaining 2176 for later travel needs.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_TRIP",
+            "reason": "The 250 Fukuoka member booking still meets my trip needs and remains in force. I keep it and preserve the remaining travel funds.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "TRIP_STILL_USEFUL",
+            "reason": "My Fukuoka travel need is unchanged and the booking still serves it. I keep the flight instead of cancelling for a 50 net refund that would not recover the membership fee.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "RENEW_INTENT",
+            "option_id": null,
+            "reason_code": "OBSERVED_VALUE_REPEATED_NEED",
+            "reason": "I completed one Fukuoka trip for 449 including membership, versus the 850 regular option available when I booked. I intend to renew at 199 because five future trips are expected and 2176 remains, while treating suitable member seats as uncertain and those future trips as expectations only.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "RENEW_INTENT"
+      }
+    },
+    {
+      "world_id": "SYN-117-00009-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00009",
+        "segment": "small_business",
+        "segment_label": "自費商務出行",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 5,
+        "total_budget": 2625,
+        "flexibility_days": 1,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "zh-HK",
+        "perceived_availability": 0.392,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1676.0,
+        "membership_active": true,
+        "membership_fee_paid": 599.0,
+        "joined_this_run": true,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 350,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 100,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 350.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "JOIN_PASS",
+            "option_id": "pass",
+            "reason_code": "REPEATED_ROUTE_NEED",
+            "reason": "With five intended trips on a covered route, two successful 500 savings would outweigh the 599 fee despite the 39.2% availability assumption. The fee leaves 2026 for flights, so some useful member travel is affordable, but I cannot count on all five trips or plentiful regular-fare fallbacks.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "SUITABLE_MEMBER_SAVING",
+            "reason": "I can book the desired Fukuoka flight for 350 including fees, saving 500 against regular while keeping 1676 for later travel. The subscription is already paid and a usable member seat is available, so I will take this offer now.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "The existing 350 member booking matches my Fukuoka trip, with no new change or cancellation decision. I keep it without another ticket purchase.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_TRIP",
+            "reason": "I already secured the intended Fukuoka flight for 350 and have no stated reason to change it. I keep the booking.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "TRIP_STILL_USEFUL",
+            "reason": "I still need the booked Fukuoka itinerary and no conflict has arisen. I keep it because cancelling would return only 50 and remove a useful trip; the subscription fee would remain spent.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "RENEW_INTENT",
+            "option_id": null,
+            "reason_code": "FUTURE_REPEATED_USE_PLAUSIBLE",
+            "reason": "The one observed trip cost 949 including the fee, so its 500 fare saving alone did not recover my 599 subscription. I nevertheless intend to renew because five future trips are expected and the remaining 1676 could fund the fee and more than one member flight, with two usable seats across separate trips plausible but not guaranteed.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "RENEW_INTENT"
+      }
+    },
+    {
+      "world_id": "SYN-117-00010-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00010",
+        "segment": "inbound",
+        "segment_label": "入境及跨市場旅客",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 1530,
+        "flexibility_days": 2,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.593,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1081.0,
+        "membership_active": true,
+        "membership_fee_paid": 199.0,
+        "joined_this_run": true,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 250,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 250.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "JOIN_PASS",
+            "option_id": "pass",
+            "reason_code": "PLAUDIBLE_YEARLY_VALUE",
+            "reason": "I have two intended trips, accept both covered destinations and can shift dates by two days. One successful use saves 600 against the regular reference, and the 199 fee still leaves enough of my 1530 budget for an upcoming flight even if I must use a regular fare.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "BEST_CURRENT_ITINERARY",
+            "reason": "The 250 member option fits my desired Fukuoka date and time and is cheaper than both the 850 regular flight and the 750 Osaka alternative. I will use the available member seat and preserve the rest of my 1331 budget.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "My Fukuoka booking at 250 still matches my desired itinerary. I retain that booking rather than duplicate a purchase.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_TRIP",
+            "reason": "My 250 Fukuoka itinerary is already booked and continues to fit the stated trip. I retain it without a second charge.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "TRIP_STILL_USEFUL",
+            "reason": "My plans are unchanged and the Fukuoka member booking remains suitable. I will use the booked flight rather than cancel for only 50, with no subscription refund.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "RENEW_INTENT",
+            "option_id": null,
+            "reason_code": "OBSERVED_SAVING_AND_FLEXIBILITY",
+            "reason": "My one completed Fukuoka trip cost 449 including the fee, less than either regular option available at booking. I intend to renew at 199 given two expected future trips, flexibility across dates and both covered destinations, and 1081 remaining, without assuming both future trips will get member seats.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "RENEW_INTENT"
+      }
+    },
+    {
+      "world_id": "SYN-117-00010-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00010",
+        "segment": "inbound",
+        "segment_label": "入境及跨市場旅客",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 1530,
+        "flexibility_days": 2,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.593,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK",
+          "KIX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 780.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "alternative",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "KIX",
+          "departure_date": "2027-05-31",
+          "departure_time": "18:30",
+          "day_offset": 1,
+          "party_size": 1,
+          "price": 750,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 500,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 5,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 750.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "TWO_USES_NOT_ASSURED",
+            "reason": "The 599 fee exceeds the 500 saving from one use, so both intended trips would need suitable member seats to make it worthwhile. Availability is only an assumption, and a failed first attempt would also squeeze my 1530 travel budget.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "alternative",
+            "reason_code": "LOWER_ACCEPTABLE_TOTAL",
+            "reason": "Osaka is acceptable and the May 31 18:30 departure fits my two-day flexibility and time window. The 750 full price saves 100 against Fukuoka and leaves 780 of my 1530 budget, so I will book this available alternative.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "ACCEPTABLE_ALTERNATIVE_BOOKED",
+            "reason": "The Osaka flight on May 31 still meets my accepted destination and date flexibility, and its 750 fare is already paid. I keep it and preserve the remaining 780.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_ACCEPTED_ALTERNATIVE",
+            "reason": "The 750 Osaka booking on May 31 remains acceptable within my date flexibility. I keep that itinerary and preserve the remaining 780.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "ACCEPTED_TRIP_UNCHANGED",
+            "reason": "The accepted Osaka itinerary still fits my plans, which are unchanged. I retain the booking rather than give up the trip for a 50 net refund.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "REGULAR_ALTERNATIVE_WORKED",
+            "reason": "I completed the acceptable Osaka trip for 750 without joining, and only two future trips are expected. The 599 fee needs repeated successful use and would leave only 181 of my remaining 780 for flight charges, so I decline on the supplied budget and terms.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": null
+      }
+    },
+    {
+      "world_id": "SYN-117-00011-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00011",
+        "segment": "group",
+        "segment_label": "同行小組",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 3519,
+        "flexibility_days": 1,
+        "party_size": 3,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "zh-HK",
+        "perceived_availability": 0.445,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 3,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "date_uncertain",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1130.0,
+        "membership_active": true,
+        "membership_fee_paid": 199.0,
+        "joined_this_run": true,
+        "booking": {
+          "id": "member",
+          "action": "BUY_MEMBER",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 3,
+          "price": 2190,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 0,
+            "companions_base_fare": 1200,
+            "mandatory_fees": 750,
+            "baggage": 240
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 3,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 2190.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "JOIN_PASS",
+            "option_id": "pass",
+            "reason_code": "LIMITED_FEE_WITH_FALLBACK",
+            "reason": "Only my fare is discounted: the three-person itinerary with three bags would be 2190, or 2389 including the fee, within my 3519 budget. A single use would recover the 199 fee and I can still fund a regular itinerary if no member seat fits, though I will need three seats on an acceptable date.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_MEMBER",
+            "option_id": "member",
+            "reason_code": "GROUP_SEATS_AND_FULL_PRICE",
+            "reason": "There are eight total seats and four member seats, enough for our three-person party including my member entitlement. The 2190 total includes my companions at regular fares, all mandatory fees and three bags, fits my remaining 3320, and matches the desired Fukuoka itinerary.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "PARTY_BOOKING_ALREADY_SECURED",
+            "reason": "The existing 2190 booking covers all three travellers and three bags on the desired Fukuoka itinerary. No change has been stated, so I keep the confirmed party booking.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_PARTY_ARRANGEMENTS",
+            "reason": "Our three travellers and three bags are already booked on the suitable Fukuoka itinerary for 2190. I keep the whole party booking without duplicating it.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "GROUP_DATE_UNCERTAIN",
+            "reason": "Our date is uncertain, but no traveller is stated to be unable to take the existing Fukuoka flight. I will preserve the three-person booking rather than exchange the possible trip for the 350 net refund, understanding that baggage, fares and my subscription would not be refunded.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "term_end",
+            "action": "DO_NOT_RENEW",
+            "option_id": null,
+            "reason_code": "GROUP_COST_EXCEEDS_FUNDS",
+            "reason": "The outcome confirms one completed group trip for 2389 including membership, so the personal discount helped even though the other two travellers paid normally. I do not intend to renew now because my remaining 1130 cannot fund another full group itinerary plus the fee, and the two expected future trips do not provide additional funds.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "DO_NOT_RENEW"
+      }
+    },
+    {
+      "world_id": "SYN-117-00011-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00011",
+        "segment": "group",
+        "segment_label": "同行小組",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 3519,
+        "flexibility_days": 1,
+        "party_size": 3,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "zh-HK",
+        "perceived_availability": 0.445,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 3,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "date_uncertain",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 729.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "regular",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 3,
+          "price": 2790,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 600,
+            "companions_base_fare": 1200,
+            "mandatory_fees": 750,
+            "baggage": 240
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 3,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 2790.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "PARTY_COST_LIMITS_PAYBACK",
+            "reason": "The fee plus one member-priced group itinerary with three bags is 2889, more than the 2790 regular itinerary. My 3519 budget cannot fund two such group trips to recover the fee, and companions do not share my discount.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "regular",
+            "reason_code": "SECURE_SUITABLE_GROUP_FLIGHT",
+            "reason": "The 2790 price covers all three travellers, mandatory fees and three bags within my 3519 budget. We only accept Fukuoka and have little date flexibility, so I will secure the available three seats rather than wait for an uncertain cheaper quote.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "PARTY_BOOKING_ALREADY_SECURED",
+            "reason": "We already have three suitable Fukuoka seats and three bags booked for 2790. I retain that itinerary and do not commit the remaining 729 to a duplicate purchase.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_PARTY_ARRANGEMENTS",
+            "reason": "The 2790 regular booking already covers three Fukuoka seats and three bags on the intended date. I retain those arrangements because no change is stated.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "GROUP_DATE_UNCERTAIN",
+            "reason": "The new information makes our date uncertain without establishing that the group cannot travel. I keep the existing three-person itinerary because cancelling would remove that option for only 350 back, with no free rebooking or full refund promised.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "GROUP_FUNDING_AND_PAYBACK",
+            "reason": "Our one regular group trip completed at 2790 despite earlier date uncertainty, leaving 729. The 599 fee benefits only my fare and cannot pay back through one 500 saving, while another full group trip is not funded, so I decline.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": null
+      }
+    },
+    {
+      "world_id": "SYN-117-00012-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00012",
+        "segment": "access_needs",
+        "segment_label": "有協助與安排需求",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 1372,
+        "flexibility_days": 1,
+        "party_size": 1,
+        "minimum_notice_days": 21,
+        "route_match": true,
+        "language": "ja",
+        "perceived_availability": 0.161,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": true,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 522.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "regular",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 850,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 600,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 850.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NOTICE_AND_AVAILABILITY",
+            "reason": "I need confirmed assistance and at least 21 days of notice, with only one day of date flexibility. Given the 16.1% assumed availability and two intended trips, I would preserve my 1372 budget for a suitable confirmed flight instead of paying 199 for uncertain use.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "regular",
+            "reason_code": "ASSISTANCE_AND_NOTICE_CONFIRMED",
+            "reason": "The regular flight matches my Fukuoka date and departure window, has assistance confirmed, and costs 850 within my 1372 budget. Booking 28 days ahead meets my 21-day notice requirement, so I will secure it now.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "ASSISTED_BOOKING_ALREADY_SECURED",
+            "reason": "The existing 850 Fukuoka booking has assistance confirmed and was made with sufficient notice. I keep these arrangements; the current 14-day countdown does not require a new booking.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_ASSISTANCE",
+            "reason": "My 850 booking has assistance confirmed and was made with sufficient advance notice. I keep this suitable Fukuoka itinerary.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "ASSISTED_TRIP_UNCHANGED",
+            "reason": "My plans are unchanged and the existing Fukuoka booking retains confirmed assistance and the earlier arrangements. I keep this useful itinerary rather than cancel for only 50.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "CONSIDER_LATER",
+            "option_id": null,
+            "reason_code": "CHECK_ASSISTANCE_AND_NOTICE",
+            "reason": "I completed one regular Fukuoka trip with assistance arranged in advance, so I have no actual member-use history to rely on. I would consider the 199 pass only after checking a suitable member offer with confirmed assistance and at least 21 days of notice, since the low assumed availability and 522 remaining leave little fallback room.",
+            "confidence": "medium"
+          }
+        ],
+        "renewal_intention": "CONSIDER_LATER"
+      }
+    },
+    {
+      "world_id": "SYN-117-00012-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00012",
+        "segment": "access_needs",
+        "segment_label": "有協助與安排需求",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 1372,
+        "flexibility_days": 1,
+        "party_size": 1,
+        "minimum_notice_days": 21,
+        "route_match": true,
+        "language": "ja",
+        "perceived_availability": 0.161,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": true,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 522.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "regular",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 850,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 600,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 850.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "UNRELIABLE_PAYBACK",
+            "reason": "The 599 fee needs more than one successful 500 saving to pay off, yet I have only two intended trips and low assumed availability. My assistance, notice and date requirements make it especially important to keep money available for a suitable confirmed itinerary.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "regular",
+            "reason_code": "ASSISTANCE_AND_NOTICE_CONFIRMED",
+            "reason": "This 850 Fukuoka itinerary is suitable, affordable and explicitly confirms the assistance I need. I have only seven days of margin above my 21-day arrangement requirement, so waiting for an uncertain fare is not worth losing a workable booking.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "ASSISTED_BOOKING_ALREADY_SECURED",
+            "reason": "My suitable Fukuoka flight is already booked with confirmed assistance and the necessary advance arrangement time. I retain it without a further charge.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_CONFIRMED_ASSISTANCE",
+            "reason": "The existing Fukuoka booking still has the assistance I require confirmed, with arrangements made at the earlier round. I retain it without treating new-offer restrictions as a cancellation of my booking.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "ASSISTED_TRIP_UNCHANGED",
+            "reason": "The flight still suits my trip and the required assistance is confirmed on my booking. With no plan change, a 50 net cancellation refund does not justify losing those arrangements.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "REQUIREMENTS_AND_HIGH_FEE",
+            "reason": "My completed regular trip worked because assistance and the necessary advance arrangements were secured. A 599 fee exceeds my remaining 522 and repeated usable member seats are uncertain for my dates and 21-day notice requirement, so I decline despite two expected future trips.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": null
+      }
+    },
+    {
+      "world_id": "SYN-117-00013-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00013",
+        "segment": "infrequent",
+        "segment_label": "低頻及首次旅行",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 1,
+        "total_budget": 862,
+        "flexibility_days": 1,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.336,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 12.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "regular",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 850,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 600,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 850.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "PRESERVE_REGULAR_FALLBACK",
+            "reason": "I only expect one trip and have very little date flexibility, with member availability assumed at 33.6%. The 199 non-refundable fee would leave 663 and prevent me from paying the 850 regular reference if the member seat does not appear, so I preserve my 862 budget.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "regular",
+            "reason_code": "SECURE_BUDGET_LIMITED_TRIP",
+            "reason": "The 850 full price fits my 862 budget and matches the Fukuoka date and time I want. Although it leaves only 12, this is my one intended trip and a later price increase could make it unaffordable, so I will secure the current seat.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "I already secured my intended Fukuoka trip for 850 within the original budget. I keep that booking and do not attempt another purchase with only 12 remaining.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_BUDGETED_BOOKING",
+            "reason": "My single intended Fukuoka trip is already secured for 850. I keep it and do not attempt another purchase with only 12 remaining.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "SINGLE_TRIP_UNCHANGED",
+            "reason": "My one planned Fukuoka trip is unchanged and the ticket is already secured. Even with only 12 remaining, cancelling for 50 would give up the trip without meaningfully restoring the fare, so I keep it.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "ONE_TRIP_NO_FUNDED_FALLBACK",
+            "reason": "I completed my single intended regular trip for 850 and only 12 remains. With just one expected future trip, little date flexibility and no new travel budget supplied, I do not want to pay a non-refundable fee for uncertain access.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": null
+      }
+    },
+    {
+      "world_id": "SYN-117-00013-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00013",
+        "segment": "infrequent",
+        "segment_label": "低頻及首次旅行",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 1,
+        "total_budget": 862,
+        "flexibility_days": 1,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": true,
+        "language": "en",
+        "perceived_availability": 0.336,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "FUK",
+        "acceptable_destinations": [
+          "FUK"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 0,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 12.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": {
+          "id": "regular",
+          "action": "BUY_REGULAR",
+          "origin": "HKG",
+          "destination": "FUK",
+          "departure_date": "2027-05-30",
+          "departure_time": "10:30",
+          "day_offset": 0,
+          "party_size": 1,
+          "price": 850,
+          "currency": "HKD",
+          "price_breakdown": {
+            "holder_base_fare": 600,
+            "companions_base_fare": 0,
+            "mandatory_fees": 250,
+            "baggage": 0
+          },
+          "member_seats_available": 4,
+          "total_seats_available": 8,
+          "checked_bags_included": 0,
+          "assistance_confirmed": true,
+          "cancellation_terms": {
+            "refundable_tax_per_person": 150,
+            "cancellation_fee_per_booking": 100,
+            "base_fare_refundable": false,
+            "baggage_refundable": false
+          }
+        },
+        "booking_cancelled": false,
+        "ticket_spend": 850.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "FEE_EXCEEDS_SINGLE_USE",
+            "reason": "One intended trip cannot recover a 599 fee from a 500 fare saving. The fee plus the 350 member flight also exceeds my 862 budget.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "BUY_REGULAR",
+            "option_id": "regular",
+            "reason_code": "SECURE_BUDGET_LIMITED_TRIP",
+            "reason": "I preserved my budget by declining membership and can now buy the desired Fukuoka flight for 850. It leaves little money, but with one planned trip and no acceptable cheaper alternative I prefer a confirmed seat to uncertain later pricing.",
+            "confidence": "medium"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "EXISTING_USEFUL_BOOKING",
+            "reason": "The 850 booking still serves my single planned trip, and there is no stated change to it. I retain the booking without spending again.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "RETAIN_BUDGETED_BOOKING",
+            "reason": "The existing 850 Fukuoka booking still serves my planned trip and no change has been presented. I retain it without further spending.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "KEEP_BOOKING",
+            "option_id": null,
+            "reason_code": "SINGLE_TRIP_UNCHANGED",
+            "reason": "I still intend to make the booked Fukuoka trip. I keep the useful booking instead of cancelling for a 50 net refund while the base fare remains non-refundable.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "SINGLE_USE_CANNOT_PAY_BACK",
+            "reason": "I completed one regular trip and still expect only one future trip. Even a successful 500 fare saving would not recover the 599 fee, and only 12 remains, so I decline.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": null
+      }
+    },
+    {
+      "world_id": "SYN-117-00014-P0-V199",
+      "person": {
+        "customer_id": "SYN-117-00014",
+        "segment": "no_match",
+        "segment_label": "無合適航線或日期",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 1114,
+        "flexibility_days": 0,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": false,
+        "language": "en",
+        "perceived_availability": 0.304,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "LAX",
+        "acceptable_destinations": [
+          "LAX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 1,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 0,
+        "membership_fee": 199,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1114.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": null,
+        "booking_cancelled": false,
+        "ticket_spend": 0.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "ROUTE_NOT_COVERED",
+            "reason": "I need Hong Kong to Los Angeles and do not accept another destination. This pass only covers Fukuoka and Osaka, so its advertised fare cannot serve my trip.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_ACCEPTABLE_ROUTE",
+            "reason": "None of the offered flights goes to Los Angeles, my only acceptable destination. I will not spend my budget on an unusable Fukuoka or Osaka itinerary.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_ACCEPTABLE_ROUTE",
+            "reason": "There is still no Los Angeles flight among the legal options, and Fukuoka and Osaka remain unsuitable destinations. I decline these offers and preserve my budget.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_ACCEPTABLE_ROUTE",
+            "reason": "No offered flight reaches Los Angeles, my only acceptable destination. I decline the unsuitable itineraries and retain my budget.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_BOOKING_TO_CHANGE",
+            "reason": "I have no booking because none of the supplied routes served Los Angeles, and my circumstances are unchanged. There is no cancellation or purchase to make in this packet.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "ROUTE_STILL_NOT_COVERED",
+            "reason": "No supplied journey to my only acceptable destination, Los Angeles, was completed because the offers served other routes. Two expected future trips do not make the Fukuoka and Osaka coverage useful to me, so I continue to decline.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": null
+      }
+    },
+    {
+      "world_id": "SYN-117-00014-P100-V599",
+      "person": {
+        "customer_id": "SYN-117-00014",
+        "segment": "no_match",
+        "segment_label": "無合適航線或日期",
+        "source": "assumed_customer_scenario",
+        "expected_trips": 2,
+        "total_budget": 1114,
+        "flexibility_days": 0,
+        "party_size": 1,
+        "minimum_notice_days": 3,
+        "route_match": false,
+        "language": "en",
+        "perceived_availability": 0.304,
+        "membership_active": false,
+        "desired_origin": "HKG",
+        "desired_destination": "LAX",
+        "acceptable_destinations": [
+          "LAX"
+        ],
+        "desired_departure_date": "2027-05-30",
+        "departure_time_window": [
+          "08:00",
+          "22:00"
+        ],
+        "checked_bags": 1,
+        "assistance_required": false,
+        "existing_membership_days_remaining": 120,
+        "change_scenario": "unchanged",
+        "repeat_membership_eligible": true
+      },
+      "stage_index": 6,
+      "offer_config": {
+        "member_base_fare": 100,
+        "membership_fee": 599,
+        "mandatory_fees": 250,
+        "membership_term_days": 365,
+        "checked_bag_fee": 80,
+        "regular_base_fare": 600
+      },
+      "state": {
+        "remaining_budget": 1114.0,
+        "membership_active": false,
+        "membership_fee_paid": 0.0,
+        "joined_this_run": false,
+        "booking": null,
+        "booking_cancelled": false,
+        "ticket_spend": 0.0,
+        "refund_received": 0.0,
+        "history": [
+          {
+            "stage": "subscription",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "ROUTE_NOT_COVERED",
+            "reason": "Los Angeles is my only acceptable destination and it is outside the stated coverage. Paying 599 would consume my budget without a usable membership benefit.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d28",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_ACCEPTABLE_ROUTE",
+            "reason": "I need Los Angeles on my fixed date and there is no legal flight option for that route. The displayed Fukuoka and Osaka prices do not make those destinations suitable.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d14",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_ACCEPTABLE_ROUTE",
+            "reason": "My only acceptable destination is still Los Angeles on the fixed date, while the displayed flights serve other cities. I cannot use these offers and decline them.",
+            "confidence": "high"
+          },
+          {
+            "stage": "quote_d7",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_ACCEPTABLE_ROUTE",
+            "reason": "The displayed Fukuoka and Osaka routes still cannot serve my fixed-date Los Angeles trip. There is no legal suitable booking to purchase, so I decline.",
+            "confidence": "high"
+          },
+          {
+            "stage": "plan_change",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "NO_BOOKING_TO_CHANGE",
+            "reason": "My Los Angeles requirement is unchanged and I never booked the unsuitable offers. I decline this stage because there is no existing booking or legal new itinerary to act on.",
+            "confidence": "high"
+          },
+          {
+            "stage": "term_end",
+            "action": "DECLINE",
+            "option_id": null,
+            "reason_code": "ROUTE_STILL_NOT_COVERED",
+            "reason": "I still need Los Angeles and this membership only covers Fukuoka and Osaka. I completed no trip through these offers and see no usable benefit from paying 599 for the expected future travel.",
+            "confidence": "high"
+          }
+        ],
+        "renewal_intention": null
+      }
+    }
+  ]
+}
