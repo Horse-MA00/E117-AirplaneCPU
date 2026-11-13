@@ -1,6 +1,8 @@
 {
   "schema_version": "1.0",
   "generator_version": "nhpp-exogenous-1",
+  "python_version": "3.12.14",
+  "numpy_version": "2.3.5",
   "seed": 117,
   "rows": 200000,
   "flights": 1105,

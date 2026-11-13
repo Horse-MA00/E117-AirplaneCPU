@@ -31,9 +31,9 @@ def forecast_for(flight,day):
  return forecast(data.history(flight),days_to_departure=day,seed=117)
 
 def get(path):
- if path=='/api/summary':return {'dataset':{'rows':200000,'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':runner.status()}
+ if path=='/api/summary':return {'dataset':{'rows':data.manifest()['rows'],'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':runner.status()}
  if path=='/api/evaluation':
-  p=ROOT/'simulation/generated/nhpp_evaluation.json'
+  p=ROOT/'simulation/generated/nhpp_holdout.json'
   return json.loads(p.read_text()) if p.exists() else {'status':'pending'}
  if path=='/api/oag':
   result=[]
@@ -60,7 +60,12 @@ def post(path,body):
  if path in ('/api/forecast','/api/optimize','/api/offers'):
   flight=ident(body.get('flight_id'));day=number(body.get('days_to_departure',28),'day',0,28,True)
   f=forecast_for(flight,day)
-  if path=='/api/forecast':return {'forecast':f}
+  if path=='/api/forecast':
+   current=dict(f); committed=store().committed(flight,day)
+   current['releasable_seats']=0 if committed is None else max(0,f['releasable_seats']-committed)
+   current['committed_member_seats']=committed
+   current['assumptions']=list(f['assumptions'])+(['Existing offers use another simulation date; new issuance is disabled.'] if committed is None else [])
+   return {'forecast':current}
   if path=='/api/optimize':
    from .pricing import optimize
    config=body.get('config',{})
@@ -80,10 +85,12 @@ def post(path,body):
 
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,format,*args):pass
- def headers(self,status,ctype,length):
-  self.send_response(status);self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(length));self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Referrer-Policy','no-referrer');self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'");self.end_headers()
+ def send_response_headers(self,status,ctype,length):
+  self.send_response(status)
+  if ctype=='application/gzip':self.send_header('Content-Disposition','attachment; filename="snapshots.csv.gz"')
+  self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(length));self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Referrer-Policy','no-referrer');self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'");self.end_headers()
  def json(self,status,payload):
-  content=json.dumps(payload,ensure_ascii=False,allow_nan=False,default=lambda x:x.item() if hasattr(x,'item') else str(x)).encode();self.headers(status,'application/json; charset=utf-8',len(content));self.wfile.write(content)
+  content=json.dumps(payload,ensure_ascii=False,allow_nan=False,default=lambda x:x.item() if hasattr(x,'item') else str(x)).encode();self.send_response_headers(status,'application/json; charset=utf-8',len(content));self.wfile.write(content)
  def allowed_host(self):
   host=self.headers.get('Host','').split(':')[0]
   return host in ('127.0.0.1','localhost','[::1]')
@@ -92,11 +99,11 @@ class Handler(BaseHTTPRequestHandler):
   path=unquote(urlparse(self.path).path)
   try:
    if path=='/api/export/snapshots':
-    payload=(data.DATA/'snapshots.csv.gz').read_bytes();self.headers(200,'application/gzip',len(payload));self.wfile.write(payload);return
+    payload=(data.DATA/'snapshots.csv.gz').read_bytes();self.send_response_headers(200,'application/gzip',len(payload));self.wfile.write(payload);return
    if path.startswith('/api/'):return self.json(200,get(path))
    root=(ROOT/'frontend').resolve();file=(root/(path.lstrip('/') or 'index.html')).resolve()
    if root not in file.parents or not file.is_file():return self.json(404,{'error':'Not found'})
-   payload=file.read_bytes();self.headers(200,mimetypes.guess_type(file.name)[0] or 'application/octet-stream',len(payload));self.wfile.write(payload)
+   payload=file.read_bytes();self.send_response_headers(200,mimetypes.guess_type(file.name)[0] or 'application/octet-stream',len(payload));self.wfile.write(payload)
   except (KeyError,ValueError) as e:self.json(404,{'error':str(e)})
   except Exception:
    traceback.print_exc();self.json(500,{'error':'Server error; inspect local terminal'})

@@ -1,5 +1,7 @@
 # UOption Fly Pass — Hackathon 技術設計
 
+> 2026-11-14 更新：此文保留早期規劃。已實作版本改採 NHPP，請以 [最新技術實作](CURRENT_IMPLEMENTATION.md) 與 [優化審查](OPTIMIZATION_REVIEW.md) 為準。
+
 **2026-11-07｜版本 0.1｜狀態：待實作的 MVP 設計**
 
 [README](../README.md) · [團隊產品與分工](PROJECT_PLAN.md) · [Agent 交接](../agent.md)

@@ -1,5 +1,7 @@
 # UOption Fly Pass — 團隊共識與 Hackathon 執行指南
 
+> 2026-11-14 更新：此文保留早期規劃。已實作版本改採 NHPP，請以 [最新技術實作](CURRENT_IMPLEMENTATION.md) 與 [優化審查](OPTIMIZATION_REVIEW.md) 為準。
+
 **E117 · Team Airplane CPU｜2026-11-07｜版本 0.2**
 
 [README](../README.md) · [技術文檔](TECHNICAL_DESIGN.md) · [Agent 交接](../agent.md)

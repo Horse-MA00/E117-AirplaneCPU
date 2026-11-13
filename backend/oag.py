@@ -2,6 +2,7 @@
 import json,os,urllib.request,urllib.parse,urllib.error
 from pathlib import Path
 from datetime import datetime,timezone
+from llm_agent.runner import NoRedirect
 ROOT=Path(__file__).resolve().parents[1]
 
 def load_env():
@@ -22,7 +23,7 @@ def fetch(date='2026-11-15', refresh=False):
     for key in keys:
         request=urllib.request.Request('https://api.oag.com/flight-instances/?'+urllib.parse.urlencode(params),headers={'Subscription-Key':key,'Accept':'application/json'})
         try:
-            with urllib.request.urlopen(request,timeout=20) as response:
+            with urllib.request.build_opener(NoRedirect()).open(request,timeout=20) as response:
                 raw=json.load(response)
             records=raw.get('data',[]) if isinstance(raw,dict) else raw
             status.update(state='available',records=records,fetched_at=datetime.now(timezone.utc).isoformat())

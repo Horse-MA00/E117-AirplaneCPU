@@ -5,6 +5,8 @@
 ```bash
 python -m simulation.generate
 python -m simulation.generate --validate-only
+python -m simulation.evaluate_nhpp
+python -m simulation.calibrate_nhpp
 python -m unittest discover -s tests -p 'test_simulation_data.py' -v
 ```
 
@@ -35,3 +37,19 @@ python -m unittest discover -s tests -p 'test_simulation_data.py' -v
 可用 demo：SYN-00001 低需求、SYN-00002 一般、SYN-00003 高需求、SYN-00004 持續跳升、SYN-00005 脈衝、SYN-00006 衰退。情境標籤是隱藏生成背景；預測器只能看到截止觀測日的快照。
 
 後續模型驗證應按航班分組，再保留不同需求形狀和跳變情境作壓力測試。不能用本模擬器產生資料、再以知道真實 beta 的同一公式評估自己。真實客群行為及真實售罄截斷仍需另外校準。
+
+## 初始 NHPP 評估
+
+`evaluate_nhpp.py` 從資料中選擇 180 班，模型只看 D28 當下及更早的快照。D28 之後的成交、最終空座及隱藏潛在需求獨立取出評分。`generated/nhpp_evaluation.json` 同時保留整體、分情境及每班結果。
+
+目前這一版測試的正常需求 MAE 為 29.2813，最近七天速率基線為 34.0488；最終未售座位 MAE 為 10.4363。名義 P90 在這批情境的實際覆蓋率只有 **70.56%**，持續跳升情境為 **16%**。這些結果揭示未知未來衝擊及模型錯配；不可將程式的 P90 宣稱為已驗證 90% 保護。低需求子群的基線誤差也比目前 NHPP 小，並非 NHPP 在每個情境都勝出。
+
+未來若根據這份結果調整模型，應把這份結果視為開發／診斷集，另外生成新情境及 seed 作最終測試。評估腳本不會自動調參，也不把隱藏 beta 或未來票價提供給模型。
+
+## 分開校準與最終測試
+
+`calibrate_nhpp.py` 使用固定 seed 271117，把 180 班校準航班和另外 180 班測試航班分開。先在校準集計算「實際潛在需求 − 原始 P90」的上側次序統計量，取得非負的全局保護餘量 **16 座**，保存後才跑測試集。
+
+測試集的需求 MAE 為 29.2387，七天基線為 35.1529，最終未售座位 MAE 為 13.0674。原始 P90 覆蓋率為 75.00%，加入 16 座保護後為 **83.89%**；其中持續跳升情境仍只有 **47.62%**。因此調整後仍沒有達到 90%，不能改稱已驗證的 90% 保證。未根據這個測試集再調餘量。
+
+`calibration.json` 保存餘量、兩組航班 ID、模型程式及資料 manifest 的 SHA-256。`calibration_evaluation.json` 保存校準原始預測；`nhpp_holdout.json` 保存最終測試及原始／調整後覆蓋率。校準只驗證 D28；短期預測沿用同一完整餘量只是保守工程策略，尚未分天驗證。模型或生成設定改動後，舊校準不應被視為已重新驗證。

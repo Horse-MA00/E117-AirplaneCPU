@@ -29,6 +29,19 @@ class StoreTests(unittest.TestCase):
   ctx=scenario(p[0]);
   with self.assertRaises(ValueError):validate({'action':'BUY_ILLEGAL'},ctx)
   with self.assertRaises(ValueError):run(count=10000)
+ def test_commitments_expiry_and_membership_expiration(self):
+  from unittest.mock import patch
+  s=self.store
+  with patch('backend.store.time.time',return_value=1000):
+   o=s.offer('f',1,2,30,250,3);s.member('c',399)
+   self.assertEqual(o['expires'],1000+22*3600)
+   self.assertEqual(s.committed('f',1),2)
+   self.assertIsNone(s.committed('f',7))
+   s.book(o['id'],'c');self.assertEqual(s.committed('f',1),2)
+  with patch('backend.store.time.time',return_value=1000+23*3600):
+   self.assertEqual(s.committed('f',1),1)
+  with patch('backend.store.time.time',return_value=1000+366*86400):
+   with self.assertRaisesRegex(ValueError,'expired'):s.member('c',399)
  def test_numeric_validation(self):
   for x in (float('nan'),float('inf'),True,-1):
    with self.assertRaises(ValueError):number(x,'quantity',0,10)

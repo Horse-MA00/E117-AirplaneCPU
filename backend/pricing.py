@@ -32,7 +32,7 @@ def _config(config):
             for key, (default, low, high, integer) in specs.items()}
 
 
-def _world(prediction, cfg, seed, demand_multiplier=1.0):
+def _world(prediction, cfg, seed, demand_multiplier=1.0, group_size=1):
     rng = np.random.default_rng(seed)
     n, flight_count = cfg["customers"], cfg["flights"]
     # Behaviour dimensions represent broad leisure, visiting friends/relatives,
@@ -49,14 +49,20 @@ def _world(prediction, cfg, seed, demand_multiplier=1.0):
     # normal requests, rather than knowing each customer's future realized trips.
     expected_trips = (flight_count*min(mu, n)*annual_frequency/annual_frequency.sum()
                       + .45*independent_trip_frequency)
+    departure_days = [int(29+(cfg["membership_days"]-29)*(flight+.5)/flight_count)
+                      for flight in range(flight_count)]
+    # The scenario assigns one itinerary opportunity per person per calendar
+    # day, even if the synthetic catalogue contains several flights that day.
+    expected_trips = np.minimum(expected_trips, len(set(departure_days)))
     decision_day = max(1, int(prediction.get("days_to_departure", 28)))
     horizon = max(1/24, decision_day-2/24)
     beta = float(prediction.get("beta", 0))
     # Potential normal requests include customers denied by capacity; never clip
     # the forecast mean itself to physical capacity when interpreting demand.
     events = []
+    assigned_customer_days = set()
     for flight in range(flight_count):
-        normal_count = min(n, int(rng.poisson(min(mu, n*2))))
+        normal_count = min(n, int(rng.poisson(min(mu, n*2)/group_size))*group_size)
         normal_ids = rng.choice(n, normal_count, replace=False, p=annual_frequency/annual_frequency.sum())
         incremental_count = min(n-normal_count, int(rng.poisson(n*float(independent_trip_frequency.mean())/flight_count*.45)))
         incremental_pool = np.setdiff1d(np.arange(n), normal_ids, assume_unique=True)
@@ -66,13 +72,22 @@ def _world(prediction, cfg, seed, demand_multiplier=1.0):
         ids = np.concatenate([normal_ids, incremental_ids])
         normal = np.concatenate([np.ones(normal_count, bool), np.zeros(incremental_count, bool)])
         uniforms = rng.random(len(ids))
+        if group_size > 1 and normal_count:
+            uniforms[:normal_count] = np.repeat(rng.random(math.ceil(normal_count/group_size)), group_size)[:normal_count]
         elapsed = np.log1p(uniforms*math.expm1(beta*horizon))/beta if abs(beta)>1e-8 else uniforms*horizon
         days = np.clip(np.ceil(decision_day-elapsed), 1, decision_day).astype(int)
         willingness = rng.normal(cfg["mandatory_fees"]+85, 70, len(ids))
         order = np.argsort(-days, kind="stable")
+        unique = []
+        for position in order:
+            identity = (int(ids[position]), departure_days[flight])
+            if identity not in assigned_customer_days:
+                assigned_customer_days.add(identity)
+                unique.append(position)
+        order = np.asarray(unique, dtype=int)
         events.append({"ids": ids[order], "normal": normal[order], "days": days[order],
                        "willingness": willingness[order], "available": available,
-                       "departure_period_day": int(29+(cfg["membership_days"]-29)*(flight+.5)/flight_count)})
+                       "departure_period_day": departure_days[flight]})
     baseline_normal = sum(min(e["available"], int(e["normal"].sum())) for e in events)
     baseline_profit = baseline_normal*(cfg["normal_base_fare"]+cfg["ancillary_margin"]-cfg["incremental_cost"])
     return {"events": events, "expected_trips": expected_trips, "flexibility": flexibility,
@@ -175,6 +190,8 @@ def _aggregate(results):
         out[key] = round(float(np.mean([r[key] for r in results])), 3)
     out["feasible"] = all(r["feasible"] for r in results)
     out["decision"] = "OFFER" if out["feasible"] else "REJECTED"
+    out["reason"] = ("Within synthetic service constraints in every search replicate"
+                     if out["feasible"] else "At least one replicate fails membership uptake or usable seat supply constraints")
     out["ledger"] = {k: round(float(np.mean([r["ledger"][k] for r in results])), 2) for k in out["ledger"]}
     out["profit_p10"] = round(float(np.quantile([r["incremental_profit"] for r in results], .1)), 2)
     out["profit_p90"] = round(float(np.quantile([r["incremental_profit"] for r in results], .9)), 2)
@@ -217,10 +234,10 @@ def optimize(forecast_result: dict, config: dict | None = None) -> dict:
         holdout = _aggregate([_run(w, selected, cfg) for w in fresh])
         holdout["purpose"] = "Untouched seeds; never used to reselect the reported candidate"
         detail = _run(worlds[0], selected, cfg, include_events=True)
-        for name, cost_mult, interest_mult, demand_mult in [("High passenger cost", 1.5, 1, 1), ("Low member interest", 1, .6, 1), ("Normal demand surge", 1, 1, 1.5)]:
+        for name, cost_mult, interest_mult, demand_mult, group_size in [("High passenger cost", 1.5, 1, 1, 1), ("Low member interest", 1, .6, 1, 1), ("Normal demand surge", 1, 1, 1.5, 1), ("Correlated four-person demand", 1, 1, 1, 4)]:
             alternate = dict(cfg, incremental_cost=cfg["incremental_cost"]*cost_mult,
                              interest_multiplier=cfg["interest_multiplier"]*interest_mult)
-            result = _aggregate([_run(_world(forecast_result, alternate, cfg["seed"]+700001+i, demand_mult), selected, alternate) for i in range(3)])
+            result = _aggregate([_run(_world(forecast_result, alternate, cfg["seed"]+700001+i, demand_mult, group_size), selected, alternate) for i in range(3)])
             result["scenario"] = name
             stress.append(result)
     else:
@@ -233,8 +250,11 @@ def optimize(forecast_result: dict, config: dict | None = None) -> dict:
             "assumptions": ["All demand, customer preferences and costs are synthetic; not a representative HK Express estimate.",
                             "Membership fee is collected once for the full configured term; all simulated flights occur within that term.",
                             "Same customer identities, normal purchase intent and event randomness are replayed for every candidate.",
+                            "At most one exogenous itinerary per customer per departure calendar day is assigned before either policy runs.",
                             "Normal base fares stay fixed; mandatory fees are assumed pass-through and excluded from contribution.",
                             "Each flight receives one finite member allotment, after frozen NHPP protection; accepted bookings cannot exceed capacity.",
+                            "Pre-existing flight bookings are held constant in both arms; the ledger covers remaining sales and the full-term programme.",
                             "This finite flight catalogue is a supply scenario, not HK Express annual route coverage.",
                             "Search-set P10/P90 across few repeats are simulation spread, not confidence intervals or real market guarantees.",
-                            "Renewals, future cancellations, party bookings, competing carriers and paid acquisition are not modelled in this pricing experiment."]}
+                            "Correlated group requests are stress-tested; all-or-nothing party acceptance is not implemented.",
+                            "Renewals, future cancellations, competing carriers and paid acquisition are not modelled in this pricing experiment."]}

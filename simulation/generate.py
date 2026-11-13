@@ -13,6 +13,7 @@ import hashlib
 import io
 import json
 import math
+import platform
 from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -158,7 +159,7 @@ def generate(rows: int = 200_000, seed: int = 117, output: Path | str | None = N
     """Write exactly rows records, retaining complete final 28-day windows."""
     if isinstance(rows, bool) or not isinstance(rows, int) or rows < 29:
         raise ValueError("rows must be an integer >= 29")
-    if not isinstance(seed, int) or seed < 0:
+    if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
         raise ValueError("seed must be a non-negative integer")
     output = Path(output) if output else Path(__file__).parent / "generated"
     output.mkdir(parents=True, exist_ok=True)
@@ -195,6 +196,7 @@ def generate(rows: int = 200_000, seed: int = 117, output: Path | str | None = N
         writer.writerows(examples)
     manifest = {
         "schema_version": "1.0", "generator_version": "nhpp-exogenous-1",
+        "python_version": platform.python_version(), "numpy_version": np.__version__,
         "seed": seed, "rows": count, "flights": len(summaries),
         "source_kind": "assumed_demo", "currency": "HKD", "timezone": "Asia/Hong_Kong",
         "interval_definition": "Counts and interval_days describe the interval completed into this snapshot; D180 has exposure 0. D0 is departure minus 2h, not boarding.",

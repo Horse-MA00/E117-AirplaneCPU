@@ -1,94 +1,79 @@
 # UOption Fly Pass
 
-**Forecast spare seats. Decide when, how many, and at what fare.**
+**Forecast normal demand. Decide when to open member offers, how many seats to release, and what base fare to charge.**
 
-A hackathon prototype for a paid flight membership concept for HK Express, developed by **Team Airplane CPU · E117** for **Cathay Hackathon 2026 — Student Track**, under **Low-cost Travel: Smart Offer & Borderless Booking**.
+A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for Cathay Hackathon 2026, **Low-cost Travel — Smart Offer & Borderless Booking**. The proposed HK Express membership offers zero or low base fares plus mandatory charges.
 
-> **Status · 7 November 2026:** Documentation and prototype planning. The team has been invited to the Hackathon On-day. The features below are planned; this repository does not yet contain a runnable application or trained model.
+## Quick start
 
-## Overview
+Python 3.11+ is required. No Node build or external service is needed for the default demo.
 
-UOption Fly Pass connects flexible travellers with selected member flight offers. Members pay a subscription fee separately and may access a **zero or very low base fare**, plus fuel surcharges, taxes and applicable fees.
-
-The core prototype evaluates offers within a **confirmed 28-day pre-departure window** and recommends:
-
-- **WHEN:** when to open the offer.
-- **HOW MANY:** how many seats to release.
-- **WHAT FARE:** what member base fare to charge.
-
-The 28-day window is the planning period. Each flight's recommended opening time is an output of the decision engine. An offer is optional when the evaluated alternatives do not justify releasing seats.
-
-## Why this project
-
-Flexible travellers can spend time comparing many dates without knowing when suitable offers will appear. Short sales windows make it difficult to plan, while an advertised low base fare alone does not explain the full trip cost. A recurring membership could make eligible offers easier to find and compare, subject to available inventory.
-
-For the airline, a seat available today may still sell later at a normal fare. Opening an offer too early, releasing too many seats or setting an unnecessarily low fare may replace normal sales. Opening too late may leave travellers too little time to arrange a trip. The prototype connects demand forecasts to these three offer decisions and tests their commercial trade-offs.
-
-These are project hypotheses to validate with users and airline experts, not claims that HK Express lacks existing revenue-management capabilities.
-
-## How it works
-
-```mermaid
-flowchart LR
-    A[Flight, booking and fare data] --> B[Forecast remaining demand]
-    B --> C[Evaluate timing, quantity and fare within 28 days]
-    S[Demand-response and cost assumptions] --> C
-    C --> D[Recommended offer or no offer]
-    D --> E[Staff review]
-    E --> F[Member flight and date comparison]
-    F --> G[Itemised price and simulated booking]
-    C --> H[Compare with normal sales and fixed offers]
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m backend.server
 ```
 
-## Hackathon scope
+Open **http://127.0.0.1:8000**. The committed compressed dataset loads automatically. Choose a flight and D28–D0, inspect the forecast, compare membership policies, run hypothetical customers, and publish/join/book a **simulated** offer. SQLite enforces limited inventory and duplicate-booking prevention. No payment or real ticket is issued.
 
-| Priority | Deliverable |
+## What is implemented
+
+- Exactly **200,000 daily snapshots** across **1,105 synthetic flight histories**, including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
+- Regularized exponential NHPP with negative/positive beta, parameter uncertainty, capacity-constrained rollouts, censoring and surge safeguards. **No LightGBM**.
+- Up to **192 fee × fare × opening-day × allocation policies**; full-term hypothetical membership economics, paired ordinary-sales baseline, independent seeds and stress cases. Later as-of dates exclude past actions; cutoff returns no offer.
+- Airline dashboard, pricing heatmap and CSV export, customer scenarios, and transactional member booking flow.
+- Fourteen customer archetypes, bounded LLM prompts and a server-side live provider adapter; deterministic and live results are labelled separately.
+- Optional OAG Flight Info integration, private caching, timeouts and quota-aware failure handling.
+
+## Evidence and limitations
+
+This is a **synthetic-market decision prototype**, not a calibrated production revenue-management system or a representative survey of HK Express customers. OAG Flight Info supplies schedules and capacity estimates, not daily bookings or airfare history. All 200,000 simulation rows remain synthetic even when an OAG connection is available.
+
+On 180 untouched synthetic test flights, demand MAE was **29.24** versus **35.15** for the trailing-seven-day baseline. A protection allowance fitted on a separate 180-flight calibration set improved nominal demand coverage from **75.00% to 83.89%**; sustained-surges coverage was **47.62%**. This does **not** establish 90% protection. See [evaluation](simulation/generated/nhpp_holdout.json) and [calibration](simulation/generated/calibration.json). Predictive bands and operational protection are distinct.
+
+The pricing market uses a finite hypothetical flight catalogue over the full membership term. It does not simulate the entire real airline network, renewals, or real competitive responses. Customer segment weights and costs are assumptions. “Best” means best among evaluated candidates in that world, not a proven real-world optimal price.
+
+## Repository structure
+
+| Folder | Purpose |
 | --- | --- |
-| Core | A reproducible dataset and a simple booking-pickup forecast baseline |
-| Core | A decision engine that evaluates opening time, seat quantity and member base fare together |
-| Core | An airline dashboard showing the recommendation, alternatives, assumptions and expected outcomes |
-| Core | Comparison of normal sales, fixed offers and forecast-informed offers |
-| Supporting demo | A simple member page with plan eligibility, date comparison, price breakdown and simulated confirmation |
-| Supporting demo | A small membership-fee scenario worksheet within the application |
-| Stretch | A stronger forecasting model, richer recommendation ranking and additional routes |
+| `frontend/` | Responsive vanilla HTML/CSS/JS, Swiss visual direction |
+| `backend/` | NHPP, pricing simulation, local HTTP API, transactional SQLite |
+| `simulation/` | Generator, 200k compressed rows, separate truth, calibration/evaluation |
+| `llm_agent/` | Customer coverage, prompts, validated live/deterministic decisions |
+| `docs/` | Current architecture, progress, review and plan deviations |
+| `src/`, `configs/` | Preserved earlier standalone simulator and chart exporter |
+| `data/private/` | Ignored local keys' responses, LLM cache and demo database |
 
-The first demonstration uses selected flights, a single application and simulated booking. Production ticketing, payments and airline-system integration are outside this prototype.
+## Regenerate and test
 
-## Membership concept
+```sh
+python -m simulation.generate
+python -m unittest discover -s tests -v
+python -m unittest discover -s backend/tests -v
+python -m backend.evaluate --flight SYN-00001 --day 28
+# With the local server running; creates synthetic demo transactions:
+python scripts/smoke_api.py
+```
 
-- **Plan A / Plan B:** the current pitch proposes selected lower-demand routes for A and additional popular destinations at a higher fee for B. Route lists and fees remain open.
-- **Duration:** six months or one year appeared in the original concept; final terms remain open.
-- **Trip cost:** member base fare + fuel surcharges + taxes/mandatory fees + selected optional extras. Membership fees are displayed separately.
-- **Availability:** selected flights and limited seats; usage limits, cancellation and refund rules remain to be defined.
+Recalibration is a separate explicit operation: `python -m simulation.calibrate_nhpp`. Do not repeatedly tune on the final holdout. Read [simulation instructions](simulation/README.md) before changing generator or forecast assumptions.
 
-## Data and evaluation
+## Optional services
 
-Training requires flight-level booking snapshots at different times before departure, sellable capacity and final net bookings. Fare snapshots and calendar information support pricing analysis and forecasting. Historical promotions, customer response and commercial costs are needed to validate offer decisions; where unavailable, they will be explicit simulation assumptions.
+Copy `.env.example` to `.env.local`; real secrets and licensed responses are ignored by Git. Never put keys in frontend files. The app loads this file on startup.
 
-Current inventory, final unsold seats and boarded passenger counts are separate quantities. A no-show does not automatically represent an unsold ticket.
+- OAG: set `OAG_FLIGHT_INFO_KEY`, optionally an authentication fallback. Run `python -m backend.oag --date 2026-11-15`. HTTP429 stops requests; no credential rotation to bypass quota. Raw responses remain private.
+- LLM: set `LLM_API_URL` to an HTTPS Chat Completions endpoint, `LLM_API_KEY`, and `LLM_MODEL`. Live mode performs bounded, cached subscription and booking decisions. No LLM credentials were available during implementation, so live provider execution remains unverified. The default mode works without a key and is explicitly mathematical simulation.
 
-The team has requested **OAG Passenger Booking Data** and **OAG/Infare Airfare Data** access; approval and usable coverage are unconfirmed. The OAG Flight Info API reference supports schedule/capacity planning but does not supply the booking histories needed here. Synthetic data can support the demonstration, with results clearly labelled as simulated.
+The local server binds to loopback, validates Origin and serves only `frontend/`. External deployment requires authentication, TLS, worker limits and a production server; it is not enabled by the demo.
 
-Evaluation covers forecast error, recommended opening time and actual booking lead time, final unsold seats, member demand served and incremental contribution after costs and displaced normal-fare sales. No real-world uplift or model accuracy has been established.
+## Documentation
 
-## Getting started
+- [Current technical architecture](docs/CURRENT_IMPLEMENTATION.md)
+- [Implementation progress](docs/IMPLEMENTATION_PROGRESS.md)
+- [Review, improvements and deviations from the original plan](docs/OPTIMIZATION_REVIEW.md)
+- [Data generation and evaluation](simulation/README.md)
+- [Customer-agent scope](llm_agent/README.md)
 
-Start with the documents below. There are currently no dependencies to install or application commands to run. The proposed MVP stack is Python, Streamlit, pandas, scikit-learn and SQLite; implementation and dependency selection are pending.
-
-| Document | Audience and purpose |
-| --- | --- |
-| [Team brief](docs/PROJECT_PLAN.md) | Product goals, detailed pain points, confirmed decisions, scope, roles and demo checklist — Traditional Chinese |
-| [Technical design](docs/TECHNICAL_DESIGN.md) | Architecture, example data, decision algorithm, module contracts and implementation steps — Traditional Chinese |
-| [Agent handoff](agent.md) | Read order, recent context, development priorities and continuation notes — English |
-
-## Team and contributions
-
-Team Airplane CPU combines AI research, software engineering, risk analysis and aviation experience. Team members should agree task ownership in the team brief, implement the core decision flow first and record the data source and assumptions used in every experiment.
-
-## References and licence
-
-- [Official challenge statements](https://hackathon.cathaypacific.com/documents/hackathon_2026/Cathay%20Hackathon%202026%20Student%20Track%20Challenge%20Statement%20-%20Initial%20Submission%20Stage.pdf)
-- [OAG Passenger Booking Data](https://www.oag.com/passenger-booking-data)
-- [OAG Airfare Data](https://www.oag.com/airfare-data)
-
-This is a student concept, not an operating Cathay or HK Express product. A repository licence has not yet been selected. External datasets retain their own access and usage conditions.
+The earlier project and pricing planning documents are preserved as design history; the current implementation document records what actually runs.

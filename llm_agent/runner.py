@@ -4,6 +4,13 @@ from pathlib import Path
 from .population import population,coverage
 PROMPT=Path(__file__).parent/'prompts/customer_system.txt'
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, 'Redirect disabled for authenticated request', headers, fp)
+
+def _open(request):
+    return urllib.request.build_opener(NoRedirect()).open(request,timeout=30)
+
 def status():
     return dict(live_configured=all(os.environ.get(k) for k in ('LLM_API_URL','LLM_API_KEY','LLM_MODEL')),
                 default_mode='deterministic',prompt_version='customer-v1',coverage=coverage())
@@ -41,10 +48,10 @@ def live(context):
     if cache.exists():return json.loads(cache.read_text())
     request=urllib.request.Request(url,data=json.dumps(body).encode(),headers={'Authorization':'Bearer '+os.environ['LLM_API_KEY'],'Content-Type':'application/json'})
     try:
-        with urllib.request.urlopen(request,timeout=30) as response: raw=json.load(response)
+        with _open(request) as response: raw=json.load(response)
         result=json.loads(raw['choices'][0]['message']['content']);validate(result,context)
         cache.write_text(json.dumps(result,ensure_ascii=False));return result
-    except (urllib.error.URLError,KeyError,json.JSONDecodeError) as e:
+    except (urllib.error.URLError,TimeoutError,IndexError,TypeError,KeyError,json.JSONDecodeError) as e:
         raise ValueError('LLM provider failed or returned invalid JSON; no simulated result was substituted.') from None
 
 def run(mode='deterministic',count=14,seed=117,membership_fee=399,member_fare=70):

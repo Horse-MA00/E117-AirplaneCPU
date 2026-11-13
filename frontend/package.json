@@ -1,0 +1,7 @@
+{
+  "name": "uoption-fly-pass-frontend-checks",
+  "private": true,
+  "type": "module",
+  "scripts": {"test:smoke": "node smoke.mjs"},
+  "devDependencies": {"playwright": "1.62.1"}
+}
