@@ -20,3 +20,11 @@
 4. 尚未配置 LLM provider 金鑰；先完成可執行的行為模擬及 live 接口，不能將 deterministic 結果冒稱 LLM 呼叫。
 
 詳細進度參見 PROGRESS_DATA.md、PROGRESS_MODELS.md、PROGRESS_FRONTEND.md。驗證與 GitHub 結果在每個完成階段追加。
+
+## 完成資料階段
+
+- 200000 列、1105 條航班歷程，六種需求情境；5項生成器測試通過。
+- Git commit b9059da：資料與生成器、完整 manifest 和 SHA256；上傳進行中。
+- OAG 實測成功：2026-11-15 UO/HKG 查詢，HTTP200，10筆資料；座位欄位為 seatingCapacity.predicted，不是訂位或確定實際容量。原始資料留在 data/private。
+- LLM：14種客群情境、結構化提示、行動與預算驗證、live HTTPS接口已實作；目前沒有LLM金鑰，所以不偽稱已跑真人等效LLM市場。
+- 後端：SQLite交易庫存、會員一次付費、同航班防重複購買、同來源HTTP接口已實作，正在整合測試。
