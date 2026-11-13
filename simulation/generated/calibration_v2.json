@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "model_version": "nhpp-regime-mixture-v2",
+  "relative_guard_by_horizon": {
+    "28": 0.5714285714285714,
+    "14": 1.1666666666666667,
+    "7": 1.0416666666666667
+  },
+  "comparison_allowances": {
+    "v1": {
+      "28": {
+        "relative": 1.308641975308642
+      },
+      "14": {
+        "relative": 2.588235294117647
+      },
+      "7": {
+        "relative": 2.5
+      }
+    },
+    "v2": {
+      "28": {
+        "relative": 0.5714285714285714
+      },
+      "14": {
+        "relative": 1.1666666666666667
+      },
+      "7": {
+        "relative": 1.0416666666666667
+      }
+    }
+  },
+  "generation_seed": 20261115,
+  "final_generation_seed_reserved": 20261116,
+  "flights": 240,
+  "target_coverage": 0.9,
+  "forecast_code_sha256": "2c5739a40c7ca6143f820e9a7ca6daad1c93b3ad1355a337a7517c0e7de7732b",
+  "settings": {
+    "window_days": 35,
+    "beta_prior_mean": 0.012,
+    "beta_prior_sd": 0.025,
+    "price_elasticity": 0.8,
+    "future_persistent_probability_28d": 0.22,
+    "future_pulse_probability_28d": 0.1,
+    "shock_multiplier_range": [
+      2.0,
+      4.0
+    ],
+    "late_shock_prior_floor_fraction": 0.5,
+    "changepoint_log_lr_threshold": 5.0,
+    "max_beta": 0.1,
+    "min_beta": -0.08
+  },
+  "method": "worst synthetic regime upper order statistic of relative residual; one global scale per horizon",
+  "notes": [
+    "Scoring labels calibrate one global guard shared by every runtime flight; no scenario label enters forecasting.",
+    "Guarded protection is not a probability P90. It trades release volume for robustness across these synthetic regimes."
+  ]
+}

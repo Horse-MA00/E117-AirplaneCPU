@@ -20,7 +20,7 @@ Open **http://127.0.0.1:8000**. The committed compressed dataset loads automatic
 ## What is implemented
 
 - Exactly **200,000 daily snapshots** across **1,105 synthetic flight histories**, including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
-- Regularized exponential NHPP with negative/positive beta, parameter uncertainty, capacity-constrained rollouts, censoring and surge safeguards. **No LightGBM**.
+- NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - Up to **192 fee × fare × opening-day × allocation policies**; full-term hypothetical membership economics, paired ordinary-sales baseline, independent seeds and stress cases. Later as-of dates exclude past actions; cutoff returns no offer.
 - Airline dashboard, pricing heatmap and CSV export, customer scenarios, and transactional member booking flow.
 - Fourteen customer archetypes, bounded LLM prompts and a server-side live provider adapter; deterministic and live results are labelled separately.
@@ -30,7 +30,7 @@ Open **http://127.0.0.1:8000**. The committed compressed dataset loads automatic
 
 This is a **synthetic-market decision prototype**, not a calibrated production revenue-management system or a representative survey of HK Express customers. OAG Flight Info supplies schedules and capacity estimates, not daily bookings or airfare history. All 200,000 simulation rows remain synthetic even when an OAG connection is available.
 
-On 180 untouched synthetic test flights, demand MAE was **29.24** versus **35.15** for the trailing-seven-day baseline. A protection allowance fitted on a separate 180-flight calibration set improved nominal demand coverage from **75.00% to 83.89%**; sustained-surges coverage was **47.62%**. This does **not** establish 90% protection. See [evaluation](simulation/generated/nhpp_holdout.json) and [calibration](simulation/generated/calibration.json). Predictive bands and operational protection are distinct.
+On **240 fresh synthetic test flights**, v2's D28 sustained-surge protection coverage is **82.5%**. On the same flights, v1 with its original 16-seat margin scores **30.0%**, while v1 recalibrated using the same procedure scores **80.0%**. The historical 47.62% came from a different cohort. D14/D7 demand MAE improves, but D28 demand MAE worsens and D7 unseen-surges still have only 75% protection coverage. See the [full comparison and limitations](docs/NHPP_V2_REVIEW.md), [frozen final report](simulation/generated/nhpp_v2_final.json) and [calibration](simulation/generated/calibration_v2.json). Raw predictive bands and calibrated operational protection are separate.
 
 The pricing market uses a finite hypothetical flight catalogue over the full membership term. It does not simulate the entire real airline network, renewals, or real competitive responses. Customer segment weights and costs are assumptions. “Best” means best among evaluated candidates in that world, not a proven real-world optimal price.
 
@@ -57,7 +57,7 @@ python -m backend.evaluate --flight SYN-00001 --day 28
 python scripts/smoke_api.py
 ```
 
-Recalibration is a separate explicit operation: `python -m simulation.calibrate_nhpp`. Do not repeatedly tune on the final holdout. Read [simulation instructions](simulation/README.md) before changing generator or forecast assumptions.
+V2 calibration is a separate explicit operation: `python -m simulation.evaluate_nhpp_v2 calibration`. The committed final report must not be overwritten to retune against it. Do not repeatedly tune on the final holdout. Read [simulation instructions](simulation/README.md) before changing generator or forecast assumptions.
 
 ## Optional services
 

@@ -32,10 +32,58 @@ class NHPPTests(unittest.TestCase):
 
     def test_negative_beta_and_bounds(self):
         result = forecast(history(True), 28)
-        self.assertLess(result["beta"], 0)
+        # This fixture is a step-down, now represented by a downward regime
+        # change instead of forcing a permanently negative exponential slope.
+        self.assertTrue(result["beta"] < 0 or result["diagnostics"]["change_point"]["direction"] == "down")
         self.assertGreaterEqual(result["expected_empty_rate"], 0)
         self.assertLessEqual(result["expected_empty_rate"], 1)
         self.assertLessEqual(result["releasable_seats"], result["available_seats"])
+
+    def test_continuous_decline_still_allows_negative_beta(self):
+        import math
+        rows = history()
+        booked = 0
+        for index, row in enumerate(rows):
+            row['gross_bookings'] = round(8*math.exp(-.035*index))
+            booked += row['gross_bookings']
+            row['booked_seats'] = booked
+        result = forecast(rows, 28, protection_allowance=0)
+        self.assertLess(result['beta'], 0)
+
+    def test_regime_curves_use_uncapped_remaining_demand(self):
+        result = forecast(history(), 28, protection_allowance=0)
+        self.assertEqual(len(result['demand_curve']),29)
+        self.assertAlmostEqual(result['demand_curve'][0]['expected_remaining_demand'], result['expected_remaining_demand'],places=2)
+        self.assertEqual(result['demand_curve'][-1]['expected_remaining_demand'],0)
+        values=[r['expected_remaining_demand'] for r in result['demand_curve']]
+        self.assertEqual(values,sorted(values,reverse=True))
+
+    def test_observed_level_jump_is_not_extrapolated_as_exponential_acceleration(self):
+        rows=history();booked=0
+        for row in rows:
+            row['gross_bookings']=7 if 28<=row['days_to_departure']<35 else 1
+            booked+=row['gross_bookings'];row['booked_seats']=booked
+        result=forecast(rows,28,protection_allowance=0)
+        self.assertEqual(result['diagnostics']['change_point']['direction'],'up')
+        self.assertGreater(result['rate_now'],4)
+        # A seven-day level shift should not be projected as continuing 6%/day
+        # acceleration; V1 predicts 377 seats on this deterministic fixture.
+        self.assertLess(result['expected_remaining_demand'],300)
+
+    def test_right_censored_count_has_more_tail_mass_than_exact_count(self):
+        import numpy as np
+        from backend.nhpp import _sample
+        record={'start':-1,'end':0,'count':5,'price_factor':1,'censored':False}
+        exact=_sample([record],np.random.default_rng(117))[1]
+        censored=_sample([dict(record,censored=True)],np.random.default_rng(117))[1]
+        self.assertGreater(float(censored.mean()),float(exact.mean()))
+
+    def test_stale_calibration_is_rejected(self):
+        from unittest.mock import patch
+        from backend.nhpp import _allowance
+        with patch('backend.nhpp.Path.exists',return_value=True), patch('backend.nhpp.Path.read_text',return_value='{}'):
+            with self.assertRaisesRegex(ValueError,'stale'):
+                _allowance(28,None,50)
 
     def test_cancellations_are_not_negative_poisson_counts(self):
         rows = history()

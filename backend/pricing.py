@@ -32,6 +32,24 @@ def _config(config):
             for key, (default, low, high, integer) in specs.items()}
 
 
+def _arrival_days(prediction, uniforms):
+    """Draw request times from uncapped demand, not capacity-capped bookings."""
+    day = max(1, int(prediction.get("days_to_departure", 28)))
+    curve = prediction.get("demand_curve")
+    if curve:
+        points = sorted(curve, key=lambda row: -row["day"])
+        remaining = np.array([row["expected_remaining_demand"] for row in points])
+        increments = np.maximum(0, remaining[:-1]-remaining[1:])
+        if len(increments) and increments.sum()>0:
+            cdf = np.cumsum(increments)/increments.sum()
+            positions = np.minimum(np.searchsorted(cdf, uniforms, side="right"), len(increments)-1)
+            return np.array([row["day"] for row in points[:-1]], dtype=int)[positions]
+    horizon = max(1/24, day-2/24)
+    beta = float(prediction.get("beta", 0))
+    elapsed = np.log1p(uniforms*math.expm1(beta*horizon))/beta if abs(beta)>1e-8 else uniforms*horizon
+    return np.clip(np.ceil(day-elapsed), 1, day).astype(int)
+
+
 def _world(prediction, cfg, seed, demand_multiplier=1.0, group_size=1):
     rng = np.random.default_rng(seed)
     n, flight_count = cfg["customers"], cfg["flights"]
@@ -55,8 +73,6 @@ def _world(prediction, cfg, seed, demand_multiplier=1.0, group_size=1):
     # day, even if the synthetic catalogue contains several flights that day.
     expected_trips = np.minimum(expected_trips, len(set(departure_days)))
     decision_day = max(1, int(prediction.get("days_to_departure", 28)))
-    horizon = max(1/24, decision_day-2/24)
-    beta = float(prediction.get("beta", 0))
     # Potential normal requests include customers denied by capacity; never clip
     # the forecast mean itself to physical capacity when interpreting demand.
     events = []
@@ -74,8 +90,7 @@ def _world(prediction, cfg, seed, demand_multiplier=1.0, group_size=1):
         uniforms = rng.random(len(ids))
         if group_size > 1 and normal_count:
             uniforms[:normal_count] = np.repeat(rng.random(math.ceil(normal_count/group_size)), group_size)[:normal_count]
-        elapsed = np.log1p(uniforms*math.expm1(beta*horizon))/beta if abs(beta)>1e-8 else uniforms*horizon
-        days = np.clip(np.ceil(decision_day-elapsed), 1, decision_day).astype(int)
+        days = _arrival_days(prediction, uniforms)
         willingness = rng.normal(cfg["mandatory_fees"]+85, 70, len(ids))
         order = np.argsort(-days, kind="stable")
         unique = []
@@ -94,6 +109,23 @@ def _world(prediction, cfg, seed, demand_multiplier=1.0, group_size=1):
             "min_notice": min_notice, "join_uniform": join_uniform, "friction": friction,
             "baseline_normal": baseline_normal, "baseline_profit": baseline_profit,
             "forecast": prediction}
+
+
+def _remaining_protection(prediction, opening):
+    """Preserve regime-path tail risk; beta alone cannot describe the v2 mixture."""
+    if "protection_curve" in prediction:
+        for point in prediction["protection_curve"]:
+            if point["day"] == opening:
+                return max(0, math.ceil(point["protection_seats"]))
+        # An incomplete curve must not silently reduce the protection reserve.
+        return max(0, math.ceil(prediction.get("protection_p90", 0)))
+    beta = float(prediction.get("beta", 0))
+    decision_day = max(1, int(prediction.get("days_to_departure", 28)))
+    horizon = decision_day-2/24
+    remaining = min(opening, decision_day)-2/24
+    ratio = (math.exp(beta*(horizon-remaining))*math.expm1(beta*remaining)/math.expm1(beta*horizon)) if abs(beta)>1e-8 else remaining/horizon
+    raw = float(prediction.get("raw_protection_p90", prediction.get("protection_p90", 0)))
+    return max(0, math.ceil(raw*max(0, ratio)+float(prediction.get("protection_allowance", 0))))
 
 
 def _run(world, candidate, cfg, include_events=False):
@@ -122,16 +154,7 @@ def _run(world, candidate, cfg, include_events=False):
             if d <= opening and not opened:
                 # One total allotment per flight. Current seats are observable;
                 # remaining protection comes from the frozen baseline forecast.
-                beta = float(pred.get("beta", 0))
-                decision_day = max(1, int(pred.get("days_to_departure", 28)))
-                horizon = decision_day-2/24
-                remaining = min(opening, decision_day)-2/24
-                # The remaining interval is the LATE tail [horizon-remaining,
-                # horizon], not the early interval [0, remaining].
-                horizon_ratio = (math.exp(beta*(horizon-remaining))*math.expm1(beta*remaining)/math.expm1(beta*horizon)) if abs(beta)>1e-8 else remaining/horizon
-                raw_guard = float(pred.get("raw_protection_p90", pred.get("protection_p90", 0)))
-                calibration_guard = float(pred.get("protection_allowance", 0))
-                protection = math.ceil(raw_guard*max(0, horizon_ratio)+calibration_guard)
+                protection = _remaining_protection(pred, opening)
                 quota = max(0, min(releasable, seats-protection))
                 quota = int(math.floor(quota*fraction))
                 opened = True
