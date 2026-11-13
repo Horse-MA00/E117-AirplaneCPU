@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const state = { flights: [], flight: null, history: [], forecast: null, day: 28, candidates: [], best: null, loadedFlightId: null, request: 0, forecastRequest: 0, summary: null, offers: [] };
+const state = { flights: [], flight: null, history: [], forecast: null, day: 28, candidates: [], best: null, loadedFlightId: null, request: 0, forecastRequest: 0, summary: null, offers: [], marketRun: null, marketReport: null, marketCases: [], marketRequest: 0, marketTimer: null, marketLoading: false };
 const number = (value, digits = 0) => value === null || value === undefined || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-HK', { maximumFractionDigits: digits });
 const money = (value) => value === null || value === undefined ? '—' : `HK$${number(value)}`;
 const percent = (value) => value === null || value === undefined ? '—' : `${number(Number(value) * 100, 1)}%`;
@@ -21,15 +21,17 @@ async function busy(button, callback) {
   try { await callback(); } catch (e) { error(e.message); } finally { button.disabled = false; button.textContent = previous; }
 }
 function setView() {
-  const name = ['flights', 'pricing', 'customers', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
+  const name = ['flights', 'pricing', 'customers', 'market', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
   for (const section of document.querySelectorAll('.view')) section.hidden = section.id !== `view-${name}`;
   for (const anchor of document.querySelectorAll('.primary-nav a')) { if (anchor.hash === `#${name}`) anchor.setAttribute('aria-current', 'page'); else anchor.removeAttribute('aria-current'); }
-  document.title = `${({ flights: 'Flight decisions', pricing: 'Pricing lab', customers: 'Customer lab', members: 'Member experience' })[name]} — UOption Fly Pass`;
+  document.title = `${({ flights: 'Flight decisions', pricing: 'Fast screening', customers: 'Journey baseline', market: 'Shared market', members: 'Member experience' })[name]} — UOption Fly Pass`;
   const selected = document.querySelector('.primary-nav [aria-current=page]');
   if (selected) { const nav = selected.parentElement; if (selected.offsetLeft < nav.scrollLeft || selected.offsetLeft + selected.offsetWidth > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = Math.max(0, selected.offsetLeft - nav.offsetLeft - 20); }
   if (name === 'members') loadOffers();
+  if (name === 'market') loadMarketRuns();
 }
 window.addEventListener('hashchange', setView);
+document.querySelector('.skip').addEventListener('click', (event) => { event.preventDefault(); document.querySelector('.view:not([hidden]) h1')?.focus(); });
 let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (state.forecast) renderForecast(); }, 120); });
 $('go-pricing').addEventListener('click', () => { location.hash = 'pricing'; });
 
@@ -51,7 +53,7 @@ function drawChart(id, observed, future, { maxY, yLabel, width = 720, height = 2
   svg.append(svgNode('text', { x: left, y: 12, class: 'chart-tick' }, yLabel));
 }
 
-function invalidatePricing() { state.best = null; state.candidates = []; $('apply-policy').disabled = true; $('pricing-results').hidden = true; $('pricing-empty').hidden = false; }
+function invalidatePricing() { state.best = null; state.candidates = []; $('apply-policy').disabled = true; $('send-market-candidate').disabled = true; $('pricing-results').hidden = true; $('pricing-empty').hidden = false; }
 async function loadFlight() {
   invalidatePricing();
   clearError(); const id = $('flight-select').value; if (!id) return;
@@ -120,6 +122,7 @@ const fare = (c) => c.member_fare ?? c.base_fare ?? c.P;
 const fee = (c) => c.membership_fee ?? c.V;
 function renderPolicy(candidate) {
   const noOffer = candidate.decision === 'NO_OFFER';
+  $('send-market-candidate').disabled = noOffer || candidate.feasible === false || value('term-days') !== 365;
   text('best-fare', noOffer ? 'No offer' : money(fare(candidate))); text('best-fee', noOffer ? '—' : money(fee(candidate))); text('best-profit', money(candidateProfit(candidate)));
   const details = [ ['Decision', noOffer ? 'Do not launch this offer' : 'Offer subject to inventory'], ['Earliest opening', candidate.open_day == null ? '—' : `D${candidate.open_day}`], ['Release share', percent(candidate.release_fraction)], ['Simulated members', number(candidate.members)], ['Member bookings', number(candidate.member_bookings)], ['Request fulfilment', percent(candidate.service_rate)], ['Feasible', candidate.feasible === false ? 'No' : 'Yes'] ];
   $('policy-detail').replaceChildren(...details.flatMap(([label, val]) => [element('dt', label), element('dd', val)]));
@@ -153,7 +156,7 @@ function renderPricing(data) {
     map.append(button);
   }); });
 }
-$('optimize-form').addEventListener('input', () => { $('apply-policy').disabled = true; if (state.best) notify('Experiment settings changed. Run a new comparison before adopting a policy.'); });
+$('optimize-form').addEventListener('input', () => { $('apply-policy').disabled = true; $('send-market-candidate').disabled = true; if (state.best) notify('Experiment settings changed. Run a new comparison before adopting a policy.'); });
 $('optimize-form').addEventListener('submit', (event) => { event.preventDefault(); busy($('optimize-button'), async () => {
   if (!state.loadedFlightId) throw new Error('Select a flight first.');
   const flightId = state.loadedFlightId, day = state.day;
@@ -173,7 +176,7 @@ $('export-candidates').addEventListener('click', () => {
 
 function renderAgents(data) {
   const results = data.results || []; const mode = data.mode || 'deterministic';
-  text('agent-mode-message', `${mode === 'live' ? 'Live LLM' : 'Reproducible scenario model'} · ${number(results.length)} synthetic travellers. These decisions are not observed HK Express customer purchases.`);
+  text('agent-mode-message', `${mode === 'live' ? 'Live LLM' : 'Reproducible scenario model'} · ${number(results.length)} synthetic travellers · ${number(data.summary?.completed_stages || 0)} journey stages. These decisions are not observed HK Express customer purchases.${data.run_id ? ` Saved run: ${data.run_id}.` : ''}`);
   $('agent-results').replaceChildren(...results.map((row, index) => {
     const person = row.person || row.persona || row; const decision = row.decision || row; const booking = row.booking_decision;
     const card = element('article', undefined, 'customer-card');
@@ -184,11 +187,38 @@ function renderAgents(data) {
     card.append(element('p', String(decision.action || decision.choice || 'No action').replaceAll('_', ' '), 'action'));
     card.append(element('p', decision.reason || decision.explanation || 'No reason returned.'));
     if (booking) card.append(element('p', `Booking: ${String(booking.action || '').replaceAll('_',' ')}. ${booking.reason || ''}`, 'small'));
+    if (row.events?.length) {
+      const details = element('details');
+      details.append(element('summary', 'Follow the six-stage journey'));
+      const list = element('ol', undefined, 'journey-events');
+      for (const event of row.events) {
+        const item = element('li');
+        item.append(element('strong', `${event.packet.context.stage.replaceAll('_', ' ')} · ${event.decision.action.replaceAll('_', ' ')}`));
+        item.append(element('p', event.decision.reason, 'small'));
+        item.append(element('p', `Budget left: ${money(event.state_after.remaining_budget)} · Membership paid: ${money(event.state_after.membership_fee_paid)}`, 'traits'));
+        list.append(item);
+      }
+      details.append(list); card.append(details);
+    }
     card.append(element('p', `Source: ${row.source || data.source || mode}`, 'traits'));
     return card;
   }));
   if (!results.length) $('agent-results').append(element('p', 'No customer results returned.', 'empty-state'));
+  loadAgentRuns();
 }
+async function loadAgentRuns() {
+  try {
+    const data = await api('/api/agents/runs');
+    $('agent-runs').replaceChildren(...data.runs.slice(0, 20).map((run) => {
+      const item = element('li');
+      const link = element('a', `${run.run_id} · ${run.source} · ${run.status} · ${number(run.event_records)} records`, 'text-link');
+      link.href = `/api/agents/runs/${encodeURIComponent(run.run_id)}`;
+      item.append(link); return item;
+    }));
+    if (!data.runs.length) $('agent-runs').append(element('li', 'No saved runs yet.'));
+  } catch (error) { text('agent-runs', `Saved runs unavailable: ${error.message}`); }
+}
+$('refresh-agent-runs').addEventListener('click', loadAgentRuns);
 $('agent-mode').addEventListener('change', () => { const live = $('agent-mode').value === 'live'; $('agent-count').max = live ? 5 : 100; $('agent-count').value = Math.min(value('agent-count'), live ? 5 : 100); });
 $('agent-form').addEventListener('submit', (event) => { event.preventDefault(); busy($('agent-button'), async () => {
   const data = await api('/api/agents/run', { mode: $('agent-mode').value, count: value('agent-count'), member_fare: value('agent-fare'), membership_fee: value('agent-fee'), seed: 117 }); renderAgents(data);
@@ -197,6 +227,186 @@ async function loadPersonas() {
   try { const data = await api('/api/personas'); const segments = data.segments || []; $('coverage').replaceChildren(...segments.map((s) => element('span', `${s.name || s.label || s.id}${s.assumed_weight != null ? ` · ${percent(s.assumed_weight)} assumed` : ''}`))); }
   catch (e) { text('coverage', `Customer coverage could not be loaded: ${e.message}`); }
 }
+
+// A run is a bounded background batch. Polling only reads saved progress;
+// further provider calls require an explicit start/resume submission.
+const marketIsRunning = (status) => ['queued', 'running'].includes(status);
+const marketLabel = (policy) => policy?.name === 'NO_OFFER' ? 'No membership offer' : policy?.name === 'FIXED' ? 'Fixed offer' : policy?.name === 'CANDIDATE' ? 'Candidate' : policy?.name || 'Policy';
+const marketFields = { membership_revenue: 'Membership fees', member_base_revenue: 'Member base fares', normal_base_revenue: 'Normal base fares', ancillary_revenue: 'Ancillary revenue', cancellation_revenue: 'Cancellation service revenue', passenger_cost: 'Passenger costs', ancillary_cost: 'Ancillary costs', membership_service_cost: 'Member service costs', program_cost: 'Programme costs', refunds_paid: 'Refunds paid', mandatory_liability: 'Mandatory fees awaiting remittance', mandatory_remitted: 'Mandatory fees remitted', revenue_excluding_mandatory_fees: 'Revenue excluding mandatory fees', total_variable_cost: 'Variable costs', total_cost: 'Total costs in this comparison', contribution: 'Contribution' };
+function marketControlState() {
+  const running = marketIsRunning(state.marketStatus);
+  $('market-start').disabled = running || state.marketLoading;
+  $('market-resume').disabled = running || state.marketLoading;
+  $('market-start').textContent = running ? 'Batch is running…' : state.marketLoading ? 'Starting…' : 'Start shared-market run';
+  $('market-call-budget').disabled = $('market-mode').value !== 'live' && !state.marketRun;
+}
+function marketOptions(id, rows, preferred) {
+  const select = $(id); select.replaceChildren(...rows.map(([key, label]) => { const option = element('option', label); option.value = key; return option; }));
+  if (rows.some(([key]) => key === preferred)) select.value = preferred;
+  select.disabled = !rows.length;
+}
+async function loadMarketRuns() {
+  try {
+    const data = await api('/api/market/runs');
+    const rows = (data.runs || []).map((run) => [run.run_id, `${run.run_id} · ${String(run.status).replaceAll('_', ' ')} · ${number(run.completed_cases)}/${number(run.cases)} policies complete`]);
+    marketOptions('market-run-select', [['', 'Select a saved market run'], ...rows], state.marketRun || '');
+  } catch (e) { if (!state.marketRun) text('market-run-status', `Saved market runs unavailable: ${e.message}`); }
+}
+function selectMarketRun(runId) {
+  clearTimeout(state.marketTimer); state.marketRequest++; state.marketRun = runId || null; state.marketReport = null; state.marketCases = []; state.marketStatus = null; state.marketCase = null;
+  $('market-report').hidden = true; $('market-resume-controls').hidden = true;
+  if (!runId) { text('market-run-status', 'Start a new run or select a saved experiment.'); marketControlState(); return; }
+  text('market-run-status', `Loading ${runId}…`);
+  loadMarketRun(runId, state.marketRequest);
+}
+async function loadMarketRun(runId, request) {
+  try {
+    const result = await api(`/api/market/runs/${encodeURIComponent(runId)}`);
+    if (request !== state.marketRequest || runId !== state.marketRun) return;
+    state.marketStatus = result.status;
+    const report = result.report;
+    text('market-run-status', `${runId} · ${String(result.status || 'recorded').replaceAll('_', ' ')}${report ? ` · ${number(report.completed_cases)}/${number(report.cases)} policy worlds complete` : ''}${result.error ? ` · ${result.error}` : ''}`);
+    const paused = ['paused_at_budget', 'paused_after_errors', 'interrupted'].includes(result.status);
+    $('market-resume-controls').hidden = !paused;
+    text('market-pause-reason', result.status === 'paused_after_errors' ? 'A provider or validation error paused this run. Accepted events are saved; no fallback decisions were inserted. Resume explicitly to retry.' : 'This run has stopped at its checkpoint. Accepted events are saved. Resume explicitly to allow the next bounded batch.');
+    if (report) renderMarketReport(report, runId);
+    marketControlState();
+    if (marketIsRunning(result.status)) state.marketTimer = setTimeout(() => loadMarketRun(runId, request), 1800);
+    else loadMarketRuns();
+  } catch (e) {
+    if (request !== state.marketRequest) return;
+    text('market-run-status', `Unable to read this run: ${e.message} Select the saved run again to retry; no further calls were requested.`);
+    state.marketStatus = 'read_failed'; marketControlState();
+  }
+}
+function renderMarketReport(report, runId) {
+  state.marketReport = report; $('market-report').hidden = false;
+  $('market-report-link').href = `/api/market/runs/${encodeURIComponent(runId)}`;
+  $('market-audit-link').href = report.run_id ? `/api/agents/runs/${encodeURIComponent(report.run_id)}/export` : '/api/agents/runs';
+  const runtime = report.runtime || {};
+  const decisions = [runtime.environment_forced, runtime.deterministic_choices, runtime.validated_live_choices];
+  const recorded = decisions.every((x) => Number.isFinite(x)) ? decisions.reduce((a, b) => a + b, 0) : (report.case_results || []).reduce((n, row) => n + (row.metrics?.decision_count || 0), 0);
+  text('market-event-count', number(recorded));
+  text('market-event-detail', `${number(report.completed_cases)}/${number(report.cases)} policy worlds completed`);
+  text('market-call-count', number(runtime.provider_calls));
+  text('market-call-detail', `${number(runtime.cache_hits)} cache hits · ${number(runtime.failures)} failures`);
+  text('market-source-counts', `Run-wide provenance: ${number(runtime.deterministic_choices)} deterministic choices · ${number(runtime.validated_live_choices)} validated live choices (including ${number(runtime.cache_hits)} cached responses) · ${number(runtime.environment_forced)} environment-forced actions. Forced actions are not model choices.`);
+  const cases = report.case_results || [];
+  state.marketCases = cases;
+  const pairs = new Map((report.paired_differences || []).map((pair) => [pair.case_id, pair]));
+  const groupKey = (row) => JSON.stringify([row.mode, row.split || 'development', typeof row.policy === 'string' ? row.policy : row.policy?.name]);
+  const aggregates = new Map((report.aggregate || []).map((group) => [groupKey(group), group]));
+  const groups = new Map();
+  for (const row of cases) { const key = groupKey(row); if (!groups.has(key)) groups.set(key, []); groups.get(key).push(row); }
+  const comparisons = [...groups.entries()].map(([key, rows]) => {
+    const first = rows[0], completeRows = rows.filter((row) => row.completed), metrics = aggregates.get(key)?.mean_metrics || (rows.length === 1 ? first.metrics || {} : {});
+    const deltas = rows.filter((row) => row.completed).map((row) => row.policy?.enabled === false ? 0 : pairs.get(row.case_id)?.metric_differences?.contribution).filter((delta) => Number.isFinite(delta));
+    return { first, rows, metrics, completed: completeRows.length, delta: deltas.length === rows.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null };
+  });
+  const completed = report.cases > 0 && report.completed_cases === report.cases;
+  const contexts = new Set(comparisons.map((group) => JSON.stringify([group.first.mode, group.first.split || 'development'])));
+  const ranked = comparisons.filter((group) => Number.isFinite(group.delta)).sort((a, b) => b.delta - a.delta);
+  const singleContext = contexts.size === 1;
+  text('market-best-profit', completed && ranked.length ? singleContext ? money(ranked[0].delta) : 'By cohort' : 'Pending');
+  const leaders = ranked.length ? [...new Set(ranked.filter((item) => Math.abs(item.delta - ranked[0].delta) < .005).map((item) => marketLabel(item.first.policy)))] : [];
+  text('market-best-label', completed && ranked.length ? singleContext ? `${leaders.join(' / ')}${leaders.length > 1 ? ' (tied)' : ''} · mean across matched seeds` : 'Compare policies within each mode and split below' : 'All policies must finish before ranking');
+  text('market-comparison-note', completed ? 'Each policy is paired with the no-offer world at the same seed and decision mode. Values are means across completed seeds; different modes and development/validation splits remain separate. These simulator results do not establish an optimal real-market price.' : 'This run is incomplete. Partial ledger values are progress only; ranking is withheld until all compared worlds finish. The table groups policies by decision mode and development/validation split.');
+  $('market-policy-table').replaceChildren(...comparisons.map((group) => {
+    const { first: row, metrics: m, delta } = group;
+    const tr = element('tr'), digits = group.rows.length > 1 ? 1 : 0;
+    const nameCell = element('td'); nameCell.append(element('strong', marketLabel(row.policy)));
+    nameCell.append(element('div', row.policy?.enabled === false ? 'Normal sales only' : `${money(row.policy?.member_fare)} + ${money(row.policy?.membership_fee)} membership · D${row.policy?.open_day} · ${percent(row.policy?.release_fraction)} release`, 'market-policy-status'));
+    nameCell.append(element('div', `${number(group.rows.length)} seed${group.rows.length > 1 ? 's' : ''} · ${row.mode} · ${row.split || 'development'}`, 'market-policy-status')); tr.append(nameCell);
+    for (const item of [`${number(group.completed)}/${number(group.rows.length)} complete`, number(m.members, digits), number(m.member_flown, digits), number(m.normal_seats_flown, digits), money(m.contribution), money(delta)]) tr.append(element('td', item));
+    return tr;
+  }));
+  if (!cases.length) { const tr = element('tr'), td = element('td', 'The first checkpoint is being prepared.'); td.colSpan = 7; tr.append(td); $('market-policy-table').append(tr); }
+  const selected = $('market-policy-select').value;
+  marketOptions('market-policy-select', cases.map((row) => [row.case_id, `${marketLabel(row.policy)} · seed ${number(row.seed)} · ${row.mode}`]), selected);
+  list('market-assumptions', report.limitations || []);
+  // Keep the inspected traveller stable while periodic progress reads complete.
+  if (cases.length && (state.marketCaseId !== $('market-policy-select').value || !state.marketCase || !marketIsRunning(state.marketStatus))) loadMarketCase();
+}
+async function loadMarketCase() {
+  const runId = state.marketRun, caseId = $('market-policy-select').value;
+  if (!runId || !caseId) return;
+  const request = (state.marketCaseRequest || 0) + 1; state.marketCaseRequest = request; state.marketCaseId = caseId;
+  $('market-detail-grid')?.setAttribute('aria-busy', 'true');
+  try {
+    const data = await api(`/api/market/runs/${encodeURIComponent(runId)}/cases/${encodeURIComponent(caseId)}`);
+    if (request !== state.marketCaseRequest || runId !== state.marketRun || caseId !== $('market-policy-select').value) return;
+    const inspection = data.inspection;
+    const world = inspection ? { day: inspection.day, records: inspection.events || [], customers: Object.fromEntries((inspection.customers || []).map((customer) => [customer.customer_id, { ...customer, budget_cents: customer.remaining_budget * 100, membership_expires: customer.membership_expires_day }])) } : data.state;
+    if (!world) throw new Error('This saved policy has no inspection state.');
+    state.marketCase = world;
+    const current = state.marketCases.find((row) => row.case_id === caseId);
+    const metrics = inspection?.metrics || current?.metrics;
+    const ledger = metrics?.ledger || Object.fromEntries(Object.entries(world.ledger_cents || {}).map(([key, cents]) => [key, cents / 100]));
+    list('market-assumptions', [...new Set([...(state.marketReport?.limitations || []), ...(metrics?.assumptions || [])])]);
+    $('market-ledger').replaceChildren(...Object.entries(marketFields).filter(([key]) => ledger[key] != null).flatMap(([key, label]) => [element('dt', label), element('dd', money(ledger[key]))]));
+    const flights = inspection?.flights || Object.values(world.flights || {}), bookings = Object.values(world.bookings || {});
+    $('market-flight-table').replaceChildren(...flights.map((flight) => {
+      const matching = bookings.filter((booking) => booking.flight_id === flight.flight_id && booking.status !== 'cancelled');
+      const member = inspection ? flight.member_seats : matching.reduce((n, booking) => n + (booking.member_seats || 0), 0);
+      const normal = inspection ? flight.occupied - flight.legacy_seats - member : matching.reduce((n, booking) => n + (booking.normal_seats || 0), 0);
+      const tr = element('tr');
+      for (const item of [`${flight.flight_id} · ${flight.destination}`, number(flight.legacy_seats), number(normal), number(member), number(flight.capacity - flight.occupied)]) tr.append(element('td', item));
+      return tr;
+    }));
+    const selectedPerson = $('market-person-select').value;
+    marketOptions('market-person-select', Object.entries(world.customers || {}).map(([id, customer]) => [id, `${id} · ${customer.person?.segment_label || customer.person?.segment || 'Synthetic traveller'}`]), selectedPerson);
+    renderMarketJourney();
+  } catch (e) { if (request === state.marketCaseRequest) { state.marketCase = null; text('market-ledger', `Unable to load this policy: ${e.message}`); $('market-flight-table').replaceChildren(); $('market-journey-events').replaceChildren(); } }
+  finally { if (request === state.marketCaseRequest) $('market-detail-grid')?.setAttribute('aria-busy', 'false'); }
+}
+function renderMarketJourney() {
+  const world = state.marketCase, personId = $('market-person-select').value, customer = world?.customers?.[personId];
+  if (!customer) { text('market-person-state', 'No traveller selected'); return; }
+  const membership = customer.membership_expires == null ? 'No membership' : customer.membership_expires >= world.day ? 'Membership active' : 'Membership expired';
+  text('market-person-state', `${membership} · ${money(customer.budget_cents / 100)} budget left · ${money(customer.membership_fee_paid ?? (customer.membership_fee_cents == null ? null : customer.membership_fee_cents / 100))} membership paid${customer.renewal_intention ? ` · ${String(customer.renewal_intention).replaceAll('_', ' ')} (not charged)` : ''}`);
+  const records = (world.records || []).filter((record) => record.customer_id === personId);
+  $('market-journey-events').replaceChildren(...records.map((record) => {
+    const item = element('li');
+    const provenance = record.source ? record : (state.marketReport?.decision_sources || {})[record.packet_id];
+    item.append(element('p', provenance ? `${provenance.source}${provenance.cache_hit ? ' · cached response' : ''}` : 'Accepted environment record', 'event-source'));
+    item.append(element('strong', `Day ${number(record.day, 1)} · ${String(record.stage || '').replaceAll('_', ' ')}`));
+    item.append(element('p', String(record.action || '').replaceAll('_', ' ')));
+    if (record.reason) item.append(element('p', record.reason));
+    const deltas = Object.entries(record.financial_delta || {}).filter(([, amount]) => Number(amount) !== 0).map(([key, amount]) => `${marketFields[key] || key.replaceAll('_', ' ')} ${money(amount)}`);
+    item.append(element('p', `${money(record.remaining_budget)} budget left${deltas.length ? ` · ${deltas.join(' · ')}` : ' · No financial posting'}`, 'event-state'));
+    return item;
+  }));
+  if (!records.length) $('market-journey-events').append(element('li', 'No decisions recorded for this traveller at the current checkpoint.'));
+}
+$('market-form').addEventListener('submit', async (event) => {
+  event.preventDefault(); clearError(); state.marketLoading = true; marketControlState();
+  try {
+    const data = await api('/api/market/runs', { mode: $('market-mode').value, seed: value('market-seed'), member_fare: value('market-fare'), membership_fee: value('market-fee'), open_day: value('market-open'), release_fraction: value('market-release'), max_calls: $('market-mode').value === 'live' ? value('market-call-budget') : 0 });
+    selectMarketRun(data.run_id); state.marketStatus = data.status; await loadMarketRuns();
+  } catch (e) { error(e.message); }
+  finally { state.marketLoading = false; marketControlState(); }
+});
+$('market-resume').addEventListener('click', async () => {
+  if (!state.marketRun || !['paused_at_budget', 'paused_after_errors', 'interrupted'].includes(state.marketStatus)) return;
+  if (!$('market-call-budget').reportValidity()) return;
+  clearError(); const id = state.marketRun; state.marketLoading = true; marketControlState();
+  try { const data = await api(`/api/market/runs/${encodeURIComponent(id)}/resume`, { max_calls: value('market-call-budget') }); if (id === state.marketRun) { selectMarketRun(id); state.marketStatus = data.status; } }
+  catch (e) { error(e.message); }
+  finally { state.marketLoading = false; marketControlState(); }
+});
+$('market-refresh').addEventListener('click', () => { loadMarketRuns(); if (state.marketRun) selectMarketRun(state.marketRun); });
+$('market-run-select').addEventListener('change', () => selectMarketRun($('market-run-select').value));
+$('market-policy-select').addEventListener('change', loadMarketCase);
+$('market-person-select').addEventListener('change', renderMarketJourney);
+$('market-mode').addEventListener('change', marketControlState);
+$('send-market-candidate').addEventListener('click', () => {
+  const best = state.best; if (!best || best.decision === 'NO_OFFER') return;
+  $('market-fare').value = fare(best); $('market-fee').value = fee(best);
+  $('market-open').value = best.open_day; $('market-release').value = best.release_fraction;
+  text('market-candidate-origin', `Candidate copied from fast screening: ${money(fare(best))} base fare, ${money(fee(best))} membership, opens D${best.open_day}, releases ${percent(best.release_fraction)}. This transfers a hypothesis; the shared market will evaluate its own full-term outcomes.`);
+  location.hash = 'market';
+});
+marketControlState();
 
 async function loadOffers() {
   try { const data = await api('/api/offers'); state.offers = data.offers || (Array.isArray(data) ? data : []); renderOffers(); } catch (e) { error(e.message); }
@@ -229,12 +439,34 @@ async function init() {
     const [summary, flightData] = await Promise.all([api('/api/summary'), api('/api/flights')]); state.summary = summary; state.flights = flightData.flights || flightData;
     text('dataset-label', `${number(summary.dataset?.rows ?? summary.rows)} daily snapshots · synthetic`);
     const configured = summary.llm?.live_configured || summary.llm?.configured || summary.llm?.live_available;
-    if (configured) { $('live-mode-option').disabled = false; $('live-mode-option').textContent = 'Live LLM'; }
+    if (configured) { $('live-mode-option').disabled = false; $('live-mode-option').textContent = 'Live LLM'; $('market-live-option').disabled = false; $('market-live-option').textContent = 'Live LLM · bounded calls'; }
     $('flight-select').replaceChildren(...state.flights.map((flight) => { const option = element('option', `${flight.origin} → ${flight.destination} · ${(flight.departure_at || flight.departure_date || '').slice(0, 10)} · ${flight.flight_id}`); option.value = flight.flight_id; return option; }));
     $('flight-select').disabled = !state.flights.length;
     if (state.flights.length) await loadFlight(); else throw new Error('No flights available. Generate the simulation dataset and restart the backend.');
-    loadPersonas();
-    api('/api/evaluation').then((report) => { const result = report.overall || {}; text('validation-summary', `${number(result.flights)} synthetic evaluation flights. Demand MAE: ${number(result.demand_mae, 1)} requests; unsold-seat MAE: ${number(result.empty_seats_mae, 1)} seats. Raw model P90 coverage: ${percent(result.raw_p90_empirical_coverage ?? result.p90_empirical_coverage)}. Coverage after the ${number(report.protection_allowance)}-seat protection allowance: ${percent(result.p90_empirical_coverage)}. The allowance was calibrated for D28 only; neither figure guarantees future airline coverage.`); }).catch(() => text('validation-summary', 'Evaluation report is unavailable. No empirical coverage claim is shown.'));
+    loadPersonas(); loadAgentRuns();
+    api('/api/evaluation').then((report) => {
+      if (!report.summary) throw new Error('Evaluation pending');
+      text('validation-summary', `${number(report.flights)} fresh synthetic flights, evaluated at D28, D14 and D7 after model freeze. Protection includes a separate calibrated safety margin; it is not a posterior P90 or a real-airline guarantee. The comparison below uses the same flights for both models.`);
+      const table = element('table');
+      table.append(element('caption', 'Held-out surge coverage and all-flight trade-offs'));
+      const header = element('thead'); const heading = element('tr');
+      for (const label of ['Day', 'Surge v1', 'Surge v2', 'Demand MAE v2', 'Released v2']) { const th = element('th', label); th.scope = 'col'; heading.append(th); }
+      header.append(heading); table.append(header);
+      const body = element('tbody');
+      for (const day of [28, 14, 7]) {
+        const all = report.summary[`v2/D${day}/all`], old = report.summary[`v1/D${day}/surge`], surge = report.summary[`v2/D${day}/surge`];
+        if (!all || !old || !surge) continue;
+        const row = element('tr');
+        for (const item of [`D${day}`, percent(old.coverage), percent(surge.coverage), number(all.demand_mae, 1), `${number(all.mean_release, 1)} seats`]) row.append(element('td', item));
+        body.append(row);
+      }
+      table.append(body); $('validation-table').replaceChildren(table);
+    }).catch(() => text('validation-summary', 'Evaluation report is unavailable. No empirical coverage claim is shown.'));
+    api('/api/evaluation/extended').then((report) => {
+      const v2 = report.summary?.['v2/D28/surge'], v1 = report.summary?.['v1/D28/surge'], unseen = report.summary?.['v2/D7/surge_future'];
+      if (!v2 || !v1) throw new Error('Extended evaluation pending');
+      text('extended-validation-summary', `Additional frozen-model check: ${number(report.evaluated_flights)} synthetic flights, including ${number(v2.n)} surge flights. D28 surge protection coverage: ${percent(v2.coverage)} for v2 versus ${percent(v1.coverage)} for recalibrated v1. ${unseen ? `For ${number(unseen.n)} flights with a surge still unobserved at D7, v2 coverage is ${number(unseen.coverage * 100, 2)}%. ` : ''}This larger, separate cohort complements the first holdout; it does not establish real-airline coverage.`);
+    }).catch(() => text('extended-validation-summary', 'Extended evaluation is unavailable. The first holdout remains visible above.'));
   } catch (e) { error(`Unable to load the workspace. ${e.message}`); text('dataset-label', 'Dataset unavailable'); }
 }
 init();

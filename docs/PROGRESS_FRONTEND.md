@@ -2,6 +2,8 @@
 
 2026-11-14 Asia/Hong_Kong
 
+Current state: five views, including Shared market; real DeepSeek is configured locally and its completed experiments are documented separately. The earlier entries below describe the first implementation stage. Journey live runs allow up to five people (six stages each); shared live batches have their own explicit call budget.
+
 - Read the requested frontend-design skill and modern-web-guidance responsive-table, accessibility and tabs guides.
 - Implemented Swiss visual system and responsive static HTML/CSS in frontend/.
 - Implemented four API-connected views and native form flows in frontend/app.js.
@@ -31,3 +33,18 @@
 - Final validation disclosure reports both raw model P90 coverage and allowance-adjusted protection coverage, explicitly scoped to D28. It does not label adjusted protection as a posterior P90.
 - Playwright 1.62.1 was verified against installed package metadata and successfully installed from npm; package-lock.json records resolved package integrity.
 - Final root review also clears stale pricing results when changing the selected flight or as-of day; a new comparison is required before showing a recommendation under the new context.
+
+## Shared-market implementation — 2026-11-14
+
+- Preserved the existing isolated six-stage journey audit and NHPP v2 validation work. Renamed their navigation context to Journey baseline and Fast screening, and added clear links to Shared market.
+- Built the fifth view with three-policy paired comparison, saved runs, seed and candidate price/timing/allocation controls, explicit live budget (default60, maximum100), read-only progress polling and manual resume. Partial runs cannot produce a winning-policy claim.
+- Connected full-term inspections to actual per-policy ledger, finite seat inventory, customer budget and membership status, renewal intention and event provenance. Forced, deterministic, cached and live counts remain separate. Added programme/member-service costs and total costs after the engine accounting revision.
+- Candidate transfer copies only the chosen 365-day hypothesis into experiment inputs; it never launches a paid run or claims real-market optimality. The original member-demo publish/join/reserve journey remains separate.
+- Added the additional frozen-model evaluation statement from `/api/evaluation/extended`, preserving the first holdout and exposing the D7 still-unobserved-surge limitation.
+- Read and applied the modern-web-guidance `accordion` guide before changes: native independent disclosures, text-only summaries and keyboard-accessible standard data tables.
+- First Chromium integration pass completed: three deterministic worlds, nine flights, fourteen synthetic travellers, multi-trip term journeys, zero provider calls, and five mobile layouts without page overflow. A mocked pause/resume fixture verifies that a pause never starts another budget automatically.
+- Browser review found and repaired a malformed existing live-mode `<option>` that caused initialization to fail when the provider was configured.
+- Desktop and mobile Shared market screenshots inspected; captures remain local under the ignored `frontend/test-results/` directory. Final frozen-engine regression passed, including simulated publishing, joining, fee-inclusive reservation and inventory decrement. A targeted follow-up verified current-view skip navigation, the shared-market raw-audit link and the extended D7 future-surge coverage statement. Added a mobile scroll hint to the wide comparison and inventory tables.
+- Hardened comparisons for saved multi-seed experiments: policy rows now show group means, paired differences average matched seeds, and mixed decision modes/splits never share one winning headline. The regression fixture verifies that fixed deltas +100/+100 beat candidate deltas +1000/−900; the best individual seed cannot select the winner.
+- Re-ran the full frontend smoke after this change successfully. Static checks also pass (`node --check`, `git diff --check`, no duplicate HTML IDs, no malformed option closers). No live provider requests were made by frontend QA; the pause/resume and ranking edge cases use intercepted test fixtures only.
+- Final independent review passed frontend and API smoke tests, real CLI-running status and polling, incomplete ranking disclosure, and the streaming gzip audit download (2,775 complete records). No automatic market POST or provider spending was triggered by polling.

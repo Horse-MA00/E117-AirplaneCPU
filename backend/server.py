@@ -1,13 +1,13 @@
 """Local same-origin application server. Run: python -m backend.server."""
-import json,math,mimetypes,os,re,threading,traceback
+import gzip,json,math,mimetypes,os,re,threading,traceback
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from urllib.parse import urlparse,unquote
 from pathlib import Path
 from functools import lru_cache
-from . import data
+from . import data,market_jobs
 from .store import Store
 from .oag import load_env
-from llm_agent import runner
+from llm_agent import runner,audit
 from llm_agent.population import coverage,population
 ROOT=Path(__file__).resolve().parents[1]; load_env()
 _store=None
@@ -33,7 +33,10 @@ def forecast_for(flight,day):
 def get(path):
  if path=='/api/summary':return {'dataset':{'rows':data.manifest()['rows'],'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':runner.status()}
  if path=='/api/evaluation':
-  p=ROOT/'simulation/generated/nhpp_holdout.json'
+  p=ROOT/'simulation/generated/nhpp_v2_final.json'
+  return json.loads(p.read_text()) if p.exists() else {'status':'pending'}
+ if path=='/api/evaluation/extended':
+  p=ROOT/'simulation/validation_extended/report.json'
   return json.loads(p.read_text()) if p.exists() else {'status':'pending'}
  if path=='/api/oag':
   result=[]
@@ -52,11 +55,22 @@ def get(path):
   id=ident(path.split('/')[-1]);rows=data.history(id);f=next(f for f in data.flights() if f['flight_id']==id)
   return {'flight':f,'history':rows}
  if path=='/api/personas':return coverage()|{'personas':population(100)}
+ if path=='/api/agents/runs':return {'runs':audit.list_runs()}
+ if path.startswith('/api/agents/runs/'):return audit.read_run(ident(path.split('/')[-1]))
+ if path=='/api/market/runs':return {'runs':market_jobs.list_runs()}
+ if path.startswith('/api/market/runs/'):
+  parts=path.strip('/').split('/')
+  if len(parts)==6 and parts[4]=='cases':return market_jobs.read_case(ident(parts[3]),ident(parts[5]))
+  if len(parts)==4:return market_jobs.read(ident(parts[3]))
  if path=='/api/offers':return {'offers':store().offers()}
  raise KeyError('Not found')
 
 _optimizer_lock=threading.Lock()
 def post(path,body):
+ if path=='/api/market/runs':return market_jobs.start(body)
+ if path.startswith('/api/market/runs/') and path.endswith('/resume'):
+  parts=path.strip('/').split('/')
+  if len(parts)==5:return market_jobs.start(body,ident(parts[3]))
  if path in ('/api/forecast','/api/optimize','/api/offers'):
   flight=ident(body.get('flight_id'));day=number(body.get('days_to_departure',28),'day',0,28,True)
   f=forecast_for(flight,day)
@@ -78,17 +92,20 @@ def post(path,body):
   maxq=int(f.get('releasable',f.get('releasable_seats',f.get('max_member_seats',0))))
   if day==0:raise ValueError('Sales are closed')
   return {'offer':store().offer(flight,day,quantity,fare,row['mandatory_fees'] if row['mandatory_fees'] is not None else 250,maxq),'simulated':True}
- if path=='/api/agents/run':return runner.run(mode=body.get('mode','deterministic'),count=number(body.get('count',14),'count',1,100,True),membership_fee=body.get('membership_fee',399),member_fare=body.get('member_fare',70))
+ if path=='/api/agents/run':
+  mode=body.get('mode','deterministic')
+  return runner.run(mode=mode,count=number(body.get('count',5 if mode=='live' else 14),'count',1,5 if mode=='live' else 100,True),membership_fee=body.get('membership_fee',399),member_fare=body.get('member_fare',70),scenario_mode='journey')
  if path=='/api/members':return {'member':store().member(ident(body.get('customer_id')),number(body.get('membership_fee',399),'membership_fee',0,10000)),'simulated':True}
  if path=='/api/bookings':return store().book(body.get('offer_id'),ident(body.get('customer_id')))
  raise KeyError('Not found')
 
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,format,*args):pass
- def send_response_headers(self,status,ctype,length):
+ def send_response_headers(self,status,ctype,length,filename='snapshots.csv.gz'):
   self.send_response(status)
-  if ctype=='application/gzip':self.send_header('Content-Disposition','attachment; filename="snapshots.csv.gz"')
-  self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(length));self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Referrer-Policy','no-referrer');self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'");self.end_headers()
+  if ctype=='application/gzip':self.send_header('Content-Disposition',f'attachment; filename="{filename}"')
+  if length is not None:self.send_header('Content-Length',str(length))
+  self.send_header('Content-Type',ctype);self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Referrer-Policy','no-referrer');self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'");self.end_headers()
  def json(self,status,payload):
   content=json.dumps(payload,ensure_ascii=False,allow_nan=False,default=lambda x:x.item() if hasattr(x,'item') else str(x)).encode();self.send_response_headers(status,'application/json; charset=utf-8',len(content));self.wfile.write(content)
  def allowed_host(self):
@@ -100,6 +117,23 @@ class Handler(BaseHTTPRequestHandler):
   try:
    if path=='/api/export/snapshots':
     payload=(data.DATA/'snapshots.csv.gz').read_bytes();self.send_response_headers(200,'application/gzip',len(payload));self.wfile.write(payload);return
+   parts=path.strip('/').split('/')
+   if len(parts)==5 and parts[:3]==['api','agents','runs'] and parts[-1]=='export':
+    run_id=ident(parts[3]);source=audit.BASE/run_id/'events.jsonl'
+    if not source.is_file():raise KeyError('Audit not found')
+    remaining=source.stat().st_size
+    self.close_connection=True
+    self.send_response_headers(200,'application/gzip',None,filename=run_id+'.jsonl.gz')
+    with source.open('rb') as handle,gzip.GzipFile(filename='',mode='wb',fileobj=self.wfile,mtime=0) as compressed:
+     while remaining:
+      line=handle.readline(remaining)
+      if not line:break
+      remaining-=len(line)
+      # A live append may have been incomplete at the size snapshot.
+      # Export only complete JSONL records; later downloads include the rest.
+      if not line.endswith(b'\n'):break
+      compressed.write(line)
+    return
    if path.startswith('/api/'):return self.json(200,get(path))
    root=(ROOT/'frontend').resolve();file=(root/(path.lstrip('/') or 'index.html')).resolve()
    if root not in file.parents or not file.is_file():return self.json(404,{'error':'Not found'})

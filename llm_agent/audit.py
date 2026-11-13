@@ -14,15 +14,17 @@ BASE = Path(__file__).resolve().parents[1] / "data/private/llm_runs"
 
 def sanitize(value):
     secrets = [v for k, v in os.environ.items() if len(v) >= 8 and any(t in k.upper() for t in ("API_KEY", "TOKEN", "SECRET"))]
-    if isinstance(value, str):
-        for secret in secrets:
-            value = value.replace(secret, "[REDACTED]")
-        return value
-    if isinstance(value, list):
-        return [sanitize(x) for x in value]
-    if isinstance(value, dict):
-        return {str(k): "[REDACTED]" if str(k).lower() in ("authorization", "api_key", "api-key", "access_token") else sanitize(v) for k, v in value.items()}
-    return value
+    def walk(item):
+        if isinstance(item, str):
+            for secret in secrets:
+                item = item.replace(secret, "[REDACTED]")
+            return item
+        if isinstance(item, list):
+            return [walk(x) for x in item]
+        if isinstance(item, dict):
+            return {walk(str(k)): "[REDACTED]" if str(k).lower() in ("authorization", "api_key", "api-key", "access_token") else walk(v) for k, v in item.items()}
+        return item
+    return walk(value)
 
 
 def _path(run_id):

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from backend.nhpp import forecast
+from simulation.baselines.nhpp_v1 import forecast
 
 
 def _row(raw):

@@ -1,0 +1,10 @@
+{
+  "source": "shared_market_experiment",
+  "run_id": "market-4cfd5031a0484273",
+  "synthetic_only": true,
+  "files": {
+    "report.json": "8120a12eb4196c43865588572db657227a55a0bfa1ac02e7c98f8715f1dee6b5",
+    "experiment.json": "94670b42f8a6a09b530894fbc2d36e2c2a8b0bda0b066e54499ede46b1347e24",
+    "audit.jsonl.gz": "f54e487d30a5d0fe6a73c9b975a82143cb5aea22a4810f4b2e9de80da2be4596"
+  }
+}

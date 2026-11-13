@@ -31,7 +31,7 @@ def calibrate(data_dir: Path | str | None = None, per_split: int = 180, seed: in
     # for real airlines; no real-world conformal guarantee is claimed.
     rank = min(per_split, math.ceil((per_split + 1) * .9))
     allowance = max(0, int(math.ceil(residuals[rank - 1])))
-    model_path = Path(__file__).resolve().parents[1] / "backend" / "nhpp.py"
+    model_path = Path(__file__).resolve().parent / "baselines" / "nhpp_v1.py"
     calibration = {
         "schema_version": "1.0", "allowance": allowance, "as_of_day": 28,
         "target_coverage": .9, "method": "nonnegative_global_upper_order_statistic_of_actual_demand_minus_raw_P90",

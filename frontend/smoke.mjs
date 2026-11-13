@@ -49,6 +49,12 @@ try {
     assert.ok((await page.locator('#heatmap-detail').textContent()).includes('Fare'));
   }
   await page.screenshot({ path: `${output}pricing-desktop.png`, fullPage: true });
+  if (!await page.locator('#send-market-candidate').isDisabled()) {
+    await page.locator('#send-market-candidate').click();
+    assert.equal(await page.locator('#market-fare').inputValue(), String(result.best.member_fare));
+    assert.equal(await page.locator('#market-fee').inputValue(), String(result.best.membership_fee));
+    assert.ok((await page.locator('#market-candidate-origin').textContent()).includes('hypothesis'));
+  }
 
   await navigate('customers');
   await page.locator('#agent-count').fill('14');
@@ -56,6 +62,25 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('.customer-card').length === 14);
   assert.ok((await page.locator('#agent-mode-message').textContent()).includes('not observed'));
   await page.screenshot({ path: `${output}customers-desktop.png`, fullPage: true });
+
+  await navigate('market');
+  const marketStartResponse = page.waitForResponse((response) => response.url().endsWith('/api/market/runs') && response.request().method() === 'POST');
+  await page.locator('#market-mode').selectOption('deterministic');
+  await page.locator('#market-start').click();
+  const started = await (await marketStartResponse).json();
+  assert.ok(started.run_id, JSON.stringify(started));
+  await page.waitForFunction(() => document.getElementById('market-run-status').textContent.includes(' · completed · '), null, { timeout: 180000 });
+  assert.equal(await page.locator('#market-policy-table tr').count(), 3);
+  await page.waitForFunction(() => document.querySelectorAll('#market-flight-table tr').length === 9);
+  assert.equal(await page.locator('#market-person-select option').count(), 14);
+  const caseIds = await page.locator('#market-policy-select option').evaluateAll((options) => options.map((option) => option.value));
+  await page.locator('#market-policy-select').selectOption(caseIds.at(-1));
+  await page.waitForFunction(() => document.getElementById('market-detail-grid').getAttribute('aria-busy') === 'false');
+  assert.ok(await page.locator('#market-journey-events li').count() >= 16, 'Full-term view must include multiple trips and renewal intention.');
+  assert.ok((await page.locator('#market-source-counts').textContent()).includes('0 validated live'));
+  assert.ok((await page.locator('#market-call-count').textContent()) === '0');
+  assert.ok(await page.locator('#market-resume-controls').isHidden());
+  await page.screenshot({ path: `${output}market-desktop.png`, fullPage: true });
 
   if (process.argv.includes('--transactions')) {
     await navigate('members');
@@ -81,15 +106,50 @@ try {
     await page.screenshot({ path: `${output}members-desktop.png`, fullPage: true });
   }
 
-  for (const view of ['flights', 'pricing', 'customers', 'members']) {
+  for (const view of ['flights', 'pricing', 'customers', 'market', 'members']) {
     await page.setViewportSize({ width: 390, height: 844 });
     await navigate(view);
     await page.waitForTimeout(200);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${view} has mobile page overflow.`);
     await page.screenshot({ path: `${output}${view}-mobile.png`, fullPage: true });
   }
+  // Exercise the pause/resume UI against intercepted responses: no provider
+  // request is made by this fixture and merely reading a pause cannot resume it.
+  await navigate('market');
+  let resumes = 0;
+  // A candidate wins one seed spectacularly but loses the other. The fixed
+  // policy wins on the paired mean, which must drive the policy headline.
+  const fixturePolicies = [{ name: 'NO_OFFER', enabled: false }, { name: 'FIXED', enabled: true }, { name: 'CANDIDATE', enabled: true }];
+  const fixtureDeltas = [[0, 0], [100, 100], [1000, -900]];
+  const fixtureCases = fixturePolicies.flatMap((policy, index) => [1, 2].map((seed) => ({ case_id: `qa-${index}-${seed}`, seed, mode: 'deterministic', split: 'validation', policy, completed: true, metrics: { contribution: 1000 + fixtureDeltas[index][seed - 1] } })));
+  const rankingFixture = {
+    run_id: 'qa-paused', cases: 6, completed_cases: 6, case_results: fixtureCases,
+    aggregate: fixturePolicies.map((policy, index) => ({ policy: policy.name, mode: 'deterministic', split: 'validation', replicates: 2, mean_metrics: { contribution: 1000 + fixtureDeltas[index].reduce((a, b) => a + b) / 2 } })),
+    paired_differences: fixtureCases.filter((row) => row.policy.enabled).map((row) => ({ case_id: row.case_id, metric_differences: { contribution: row.metrics.contribution - 1000 } })), runtime: {},
+  };
+  await page.route('**/api/market/runs/qa-paused/cases/**', async (route) => route.fulfill({ json: { inspection: { day: 365, metrics: { ledger: {} }, customers: [], flights: [], events: [] } } }));
+  await page.route('**/api/market/runs/qa-paused/resume', async (route) => {
+    resumes++; assert.equal(route.request().postDataJSON().max_calls, 60);
+    await route.fulfill({ json: { run_id: 'qa-paused', status: 'queued' } });
+  });
+  await page.route('**/api/market/runs/qa-paused', async (route) => route.fulfill({ json: { run_id: 'qa-paused', status: resumes ? 'completed' : 'paused_at_budget', report: resumes ? rankingFixture : { cases: 6, completed_cases: 0, case_results: [], runtime: {} } } }));
+  await page.route('**/api/market/runs', async (route) => {
+    if (route.request().method() === 'POST') await route.fulfill({ json: { run_id: 'qa-paused', status: 'queued' } });
+    else await route.continue();
+  });
+  await page.locator('#market-start').click();
+  await page.waitForFunction(() => !document.getElementById('market-resume-controls').hidden);
+  await page.waitForTimeout(2000);
+  assert.equal(resumes, 0, 'Paused runs must not automatically consume another budget.');
+  await page.locator('#market-call-budget').fill('60');
+  await page.locator('#market-resume').click();
+  await page.waitForFunction(() => document.getElementById('market-run-status').textContent.includes(' · completed · '));
+  assert.equal(resumes, 1);
+  assert.equal(await page.locator('#market-best-profit').textContent(), 'HK$100');
+  assert.ok((await page.locator('#market-best-label').textContent()).startsWith('Fixed offer'));
+  assert.equal(await page.locator('#market-policy-table tr').count(), 3);
   assert.deepEqual(errors, []);
-  console.log('PASS: as-of forecast, cost propagation, 192 candidates, 14 synthetic customers, future-offer guard and four mobile layouts.');
+  console.log('PASS: as-of forecast, cost propagation, 192 candidates, 14 synthetic customers, future-offer guard, three shared-market policies, manual bounded resume and five mobile layouts.');
   if (process.argv.includes('--transactions')) console.log('PASS: simulated offer, membership, itemised booking and inventory-backed reservation.');
 } finally {
   await browser.close();
