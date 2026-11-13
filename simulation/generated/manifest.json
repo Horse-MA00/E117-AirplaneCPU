@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "generator_version": "nhpp-exogenous-1",
+  "seed": 117,
+  "rows": 200000,
+  "flights": 1105,
+  "source_kind": "assumed_demo",
+  "currency": "HKD",
+  "timezone": "Asia/Hong_Kong",
+  "interval_definition": "Counts and interval_days describe the interval completed into this snapshot; D180 has exposure 0. D0 is departure minus 2h, not boarding.",
+  "price_definition": "Quote applies AFTER the snapshot. Missing when sold out or at cutoff; missing is not a zero fare.",
+  "cutoff_hours": 2,
+  "history_lengths": {
+    "181": 1104,
+    "176": 1
+  },
+  "row_count_note": "Exactly 200000 default: 1104 full D180-D0 paths and one D175-D0 path; all paths were generated from D180, omitted warmup is not an additional observation.",
+  "scenarios": {
+    "low": 185,
+    "typical": 184,
+    "high": 184,
+    "surge": 184,
+    "pulse": 184,
+    "declining": 184
+  },
+  "scenario_is_hidden_provenance": true,
+  "capacity_definition": "Assumed fixed sellable seat capacity, not observed aircraft occupancy.",
+  "assumptions": [
+    "Timetable, routes, capacities, fares, taxes, demand, and cancellation rates are synthetic; no observed HK Express booking or fare history was used.",
+    "Conditional on latent parameters and exogenous fare paths, demand is an NHPP with exponential trend and piecewise shocks.",
+    "Random flight parameters yield a mixture of NHPPs across flights; accepted bookings are capacity-censored and not themselves an uncensored NHPP.",
+    "Cancellations occur at the end of each interval and release seats for the next interval.",
+    "Fees of HK$250 and elasticity 0.8 are assumptions, not airline estimates.",
+    "Flight-level scenario, final outcomes and truth.csv.gz must not be predictor features.",
+    "One request represents one seat; group-arrival shocks require a separate compound-process stress test."
+  ],
+  "files": {
+    "snapshots.csv.gz": {
+      "bytes": 2610628,
+      "sha256": "a8df8b18de2e65721e3fdbf695de56fd2294d8058f25bc3367c8ebb3cedbedcf"
+    },
+    "truth.csv.gz": {
+      "bytes": 2500765,
+      "sha256": "5103798f961e9d7a2239db2cc8c3571f71957200daa1e34826af1f79585e574d"
+    },
+    "flights.json": {
+      "bytes": 491763,
+      "sha256": "e9c21d8cb3adfb0f0716cddd44b6d75dc3b7b0b6e40728a1e2a26466270765d5"
+    },
+    "sample.csv": {
+      "bytes": 28259,
+      "sha256": "65acf32076935b90c97162769295c37442c69cae70b37805f74ac52b313f4f82"
+    }
+  }
+}
