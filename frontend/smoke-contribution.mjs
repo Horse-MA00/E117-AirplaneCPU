@@ -87,6 +87,7 @@ try{
   await page.setViewportSize({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Mobile page must not overflow');
   const ledger=search.locator('.contribution-table').first();
+  assert.ok(await ledger.locator('tbody th').first().evaluate(node=>node.getBoundingClientRect().width<=180),'Sticky mobile row labels must leave room for numeric cells');
   await ledger.focus();await page.keyboard.press('ArrowRight');
   await page.waitForFunction(()=>document.querySelector('.contribution-table').scrollLeft>0);
   assert.ok(await ledger.evaluate(node=>node.scrollWidth>node.clientWidth),'Mobile table preserves readable columns with horizontal scrolling');
