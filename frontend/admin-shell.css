@@ -179,6 +179,8 @@ tbody tr.selected>*{background:var(--purple-wash);font-weight:600}
   .sidebar-foot{margin:0 0 0 auto;padding:0;flex-direction:row;align-items:center}
   .sidebar-foot .source-tag,.sidebar-foot .llm-status{display:none}
   .portal-link{min-height:40px;padding:8px 12px;font-size:13px}
+  .page-head>div:first-child{flex-basis:100%}
+  .page-actions{flex:1 1 100%;min-width:0}
   .context-bar{position:static;gap:10px;padding:12px var(--gutter)}
   .ctx-field,.ctx-round{height:66px}
   .ctx-field.demand,.ctx-field.route{flex:1 1 150px}
@@ -195,3 +197,30 @@ tbody tr.selected>*{background:var(--purple-wash);font-weight:600}
   .primary-nav a[aria-current=page]{outline:2px solid LinkText}
   .day-shortcuts button[aria-pressed=true],.round-buttons button[aria-pressed=true],.button.primary{border:2px solid ButtonText}
 }
+
+/* ---------- Info tip (ⓘ): explanations stay off the page until asked for ----------
+   Markup: <span class="info"><button type="button" class="info-btn" aria-describedby="tip-x" aria-label="About …">i</button>
+           <span class="info-tip" role="tooltip" id="tip-x"><strong class="info-title">…</strong>…</span></span>
+   Opens on hover and keyboard focus; Esc closes (info-tip.js). Content is display:none until opened. */
+.info{position:relative;display:inline-flex;vertical-align:middle;margin-left:6px}
+.info-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border-radius:50%;border:1.5px solid var(--faint);background:transparent;color:var(--muted);font:600 12px/1 var(--font);font-style:normal;cursor:help}
+.info-btn:hover,.info:focus-within .info-btn{border-color:var(--purple);color:var(--purple);background:var(--purple-wash)}
+.info-tip{display:none;position:absolute;z-index:60;top:calc(100% + 10px);left:-12px;width:min(380px,calc(100vw - 32px));padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:0 14px 40px rgba(30,20,40,.16);color:var(--ink-2);font-size:14px;font-weight:400;line-height:1.6;letter-spacing:0;text-transform:none;text-align:left;white-space:normal;cursor:auto}
+.info-tip::before{content:"";position:absolute;top:-12px;left:0;right:0;height:12px}
+.info:hover>.info-tip,.info:focus-within>.info-tip{display:block}
+.info.dismissed>.info-tip{display:none}
+.info.align-right>.info-tip{left:auto;right:-12px}
+.info-tip .info-title{display:block;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.info-tip p{margin:0 0 8px}
+.info-tip p:last-child{margin-bottom:0}
+.info-tip .info-label{display:block;margin:10px 0 4px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.info-tip .info-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 10px;margin:0 -10px;border-radius:var(--r-sm)}
+.info-tip .info-row strong{color:var(--ink);font-size:16px;font-weight:700;white-space:nowrap}
+.info-tip .info-row.current{background:var(--ground)}
+.info-tip small{display:block;color:var(--muted);font-size:13px;line-height:1.5}
+.info-tip ol,.info-tip ul{margin:4px 0 0;padding-left:18px}
+.info-tip li{margin:4px 0}
+.ctx-head{display:flex;align-items:center}
+.ctx-head .info-btn{width:18px;height:18px;font-size:11px}
+h1 .info,h2 .info{margin-left:10px}
+@media (forced-colors:active){.info-tip{border:2px solid CanvasText}}

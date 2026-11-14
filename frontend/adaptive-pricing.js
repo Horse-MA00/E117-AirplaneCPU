@@ -16,7 +16,7 @@ const hypothesisLabel = status => ({supported:'Above initial revenue',not_suppor
 let flights = [], segments = [], defaultWeights = {}, scope = null, run = null, liveConfigured = false;
 const TARGET_PROFILE = 'flexible_deal_seekers';
 let targetPopulation = null;
-let scopeSequence = 0, runSequence = 0, pollTimer = null, submitting = false, savedRuns = [];
+let scopeSequence = 0, runSequence = 0, pollTimer = null, submitting = false, savedRuns = [], setupOpen = false, shownRunId = null;
 
 async function api(path, body) {
   const options = body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)};
@@ -88,11 +88,21 @@ function renderScope(value) {
   $('starting-fare').textContent = value ? money(value.member_fare_cap ?? value.initial_member_fare) : '—';
   $('member-quota').textContent = value ? count(value.releasable_seats) : '—';
   $('scope-day').textContent = value ? `D${value.as_of_day}` : 'Choose a flight';
-  $('flight-title').textContent = value ? `${value.origin} → ${value.destination}` : 'Your selected flight';
+  $('flight-title').textContent = value ? `${value.origin} → ${value.destination}` : 'Your Selected Flight';
   $('flight-description').textContent = value ? `${value.departure_date} · ${value.flight_id} · ${value.departure_time || ''}` : 'A separate experiment is created for each flight and release round.';
   syncRound();
   $('scope-message').textContent = value ? value.releasable_seats > 0 ? 'The starting price is the 80% member-fare cap, rounded down to whole HKD. The NHPP quota is held fixed during price trials.' : 'No member quota is available at this release round. Choose another flight or round.' : 'Choose a flight to load its normal fare quote and NHPP member quota.';
   updateControls();
+}
+// Settings stay folded while a result is on screen; "New experiment" opens them. With no result they are the page.
+function updateSetup() {
+  const state = run ? (run.recommendation ? 'result' : 'running') : 'setup';
+  document.body.dataset.optState = state;
+  const folded = Boolean(run) && !setupOpen;
+  $('setup-panel').hidden = folded;
+  $('new-experiment').hidden = !run;
+  $('new-experiment').setAttribute('aria-expanded', String(!folded));
+  $('new-experiment').textContent = folded ? 'New experiment' : 'Hide settings';
 }
 function syncRound() {
   for (const b of document.querySelectorAll('[data-round]')) b.setAttribute('aria-pressed', String(b.dataset.round === $('release-day').value));
@@ -130,9 +140,10 @@ async function loadScope() {
   try {
     const result = await api('/api/adaptive-pricing/scope', {flight_id:flightId, forecast_day:Number($('release-day').value),profile:TARGET_PROFILE});
     if (sequence !== scopeSequence) return;
-    renderScope(result.scope || result);
+    // Open the latest saved result before enabling anything, so the page settles in one step.
     const latest = !run && !submitting ? latestSavedFor(flightId, $('release-day').value) : null;
-    if (latest) await showRun(latest.run_id);
+    if (latest) { try { await showRun(latest.run_id); return; } catch { /* fall back to the live scope below */ } }
+    renderScope(result.scope || result);
   } catch (e) { if (sequence === scopeSequence) { $('scope-message').textContent = 'Flight details could not be loaded.'; error(e.message); } }
 }
 function updateControls() {
@@ -140,6 +151,7 @@ function updateControls() {
   const weights = Object.values(readWeights());
   const weightsValid = targetPopulation && weights.length === 8 && weights.every(n => Number.isFinite(n) && n>=0) && Math.abs(weights.reduce((a,b)=>a+b,0)-1)<0.00001;
   $('setup-fields').disabled = busy;
+  updateSetup();
   $('scope-fields').disabled = busy;
   $('start').disabled = busy || !scope || !(scope.releasable_seats > 0) || !weightsValid || (isLive && !liveConfigured);
   $('start').textContent = submitting ? 'Starting experiment…' : isLive ? 'Start Thompson with live customers' : 'Start Thompson simulation';
@@ -154,6 +166,7 @@ function clearRun() {
   $('empty-state').hidden=false;
   $('member-feedback-link').hidden=true;
   $('publish-link').hidden=true;
+  setupOpen=false;shownRunId=null;
   const url=new URL(location.href);url.searchParams.delete('run');url.searchParams.delete('round');history.replaceState(null,'',url);
   $('experiments-nav-link').href='/admin#customers';
   updateControls();
@@ -246,6 +259,7 @@ function renderValidation(validation) {
 function renderRun(value) {
   if(!currentRun(value))throw new Error('This experiment is no longer available. Choose a current Thompson Sampling experiment.');
   run=value;
+  if(value.run_id!==shownRunId){shownRunId=value.run_id;setupOpen=false;}
   $('run-progress').hidden=false;$('empty-state').hidden=true;
   const completed=value.progress?.completed_rounds??value.rounds?.length??0,total=value.progress?.total_rounds??value.config?.rounds??1;
   $('round-progress').textContent=`${completed} / ${total} price rounds`;
@@ -275,7 +289,7 @@ function renderRun(value) {
   if(recommendation){
     const adjustment=recommendation.marketing_adjustment;
     $('recommended-price').textContent=money(recommendation.price);
-    $('recommendation-title').textContent='Promotional base fare';
+    $('recommendation-title').textContent='Promotional Base Fare';
     $('recommendation-stage').textContent=value.validation?'Candidate checked on independent panels':'Promotional candidate for validation';
     $('marketing-fare-note').hidden=false;
     $('marketing-fare-note').textContent=`Search selection ${money(recommendation.raw_price)} → promotional quote ${money(recommendation.price)}. Round down to an amount ending in 9; a resulting fare below HK$30 becomes HK$0. The adjusted quote is validated before it can be retained.${adjustment?` Initial comparison: ${money(adjustment.initial_price_before_marketing)} → ${money(adjustment.initial_price)}.`:''}`;
@@ -290,6 +304,7 @@ function renderRun(value) {
     $('validation-verdict').textContent=adoption?adoptions[adoption]||adoption:'Waiting for independent validation.';
   }
   updatePublishLink(value);
+  updateSetup();
   updateControls();
 }
 async function fetchRun(id, sequence=runSequence) {
@@ -328,6 +343,7 @@ $('release-day').addEventListener('change',()=>{syncRound();clearRun();loadScope
 for(const id of ['mode','rounds','customers','validation-repeats'])$(id).addEventListener('input',updateControls);
 $('max-calls').addEventListener('input',()=>{$('max-calls').removeAttribute('aria-invalid');error();});
 $('reset-weights').addEventListener('click',()=>setWeights(defaultWeights));
+$('new-experiment').addEventListener('click',()=>{setupOpen=!setupOpen;updateSetup();if(setupOpen){$('setup-panel').scrollIntoView({block:'start',behavior:'smooth'});$('mode').focus({preventScroll:true});}});
 $('saved-run').addEventListener('change',()=>{$('load-run').disabled=!$('saved-run').value;});
 $('load-run').addEventListener('click',()=>showRun($('saved-run').value).catch(e=>error(e.message)));
 $('refresh-run').addEventListener('click',()=>{if(!safeId(run?.run_id))return;clearTimeout(pollTimer);const sequence=++runSequence;error();fetchRun(run.run_id,sequence).catch(e=>error(e.message));});

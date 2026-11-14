@@ -40,6 +40,7 @@ try{
  await page.selectOption('#route','HKG → KMQ');await page.selectOption('#flight',scope.flight_id);
  await page.waitForFunction(()=>!document.getElementById('start').disabled);
  assert.equal(scopes.at(-1).profile,'flexible_deal_seekers');assert.equal(starts.length,0);
+    if(await page.locator('#setup-panel').isHidden())await page.locator('#new-experiment').click(); // a saved result for this flight opens first
  await page.locator('#start').click();await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$249');
  assert.equal(starts.length,1);assert.equal(starts[0].profile,'flexible_deal_seekers');assert.equal(Object.keys(starts[0].weights).length,8);
  assert.equal(starts[0].mode,'synthetic');assert.equal('membership_fee' in starts[0],false);
@@ -64,6 +65,8 @@ try{
  await page.screenshot({path:root+'test-results/adaptive-pricing-mobile.png',fullPage:true});
  await page.selectOption('#flight','TEST-HKG-KMQ-ZERO');await page.waitForFunction(()=>document.getElementById('member-quota').textContent==='0');assert.equal(await page.locator('#start').isDisabled(),true);
  await page.selectOption('#flight',scope.flight_id);await page.waitForFunction(()=>!document.getElementById('start').disabled);
+ // With a result on screen the settings are folded; open them as an admin would.
+ if(await page.locator('#setup-panel').isHidden())await page.locator('#new-experiment').click();
  await page.locator('.settings summary').click();await page.locator('#weight-0').fill('1');assert.equal(await page.locator('#start').isDisabled(),true);
  await page.locator('#reset-weights').click();assert.equal(await page.locator('#start').isEnabled(),true);
  await page.selectOption('#mode','live');await page.locator('#max-calls').fill('1');await page.locator('#start').click();

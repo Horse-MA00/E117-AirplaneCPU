@@ -1,5 +1,5 @@
 {
- "_说明": "前端 UI 重构的冻结约定，规则见 docs/FRONTEND_UI.md。改布局可以移动这些元素，但不能删除或改名；确需改动时，在同一个提交里同步修改 JS、smoke 测试和本文件。tests/test_frontend_contract.py 会检查。",
+ "_说明": "前端 UI 重构的冻结约定，规则见 docs/FRONTEND_UI.md。改布局可以移动这些元素，但不能删除或改名；确需改动时，在同一个提交里同步修改 JS、smoke 测试和本文件。tests/test_frontend_contract.py 会检查。 解释文字可以收进 ⓘ 提示（.info-tip），只要元素和 id 仍在页面里。",
  "pages": {
   "/admin": {
    "html": "frontend/index.html",
@@ -310,6 +310,7 @@
    "price-chart",
    "protection-value",
    "publish-button",
+   "publish-next",
    "refresh-offers",
    "refresh-results",
    "release-decision",
@@ -369,6 +370,7 @@
    "member-feedback-link",
    "member-quota",
    "mode",
+   "new-experiment",
    "normal-fare",
    "observed-rate",
    "opt-demand",
@@ -404,6 +406,7 @@
    "scope-message",
    "seed",
    "setup-fields",
+   "setup-panel",
    "start",
    "starting-fare",
    "validation-basis",

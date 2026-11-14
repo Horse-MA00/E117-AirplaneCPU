@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/styles.css">
 <script type="module" src="/app.js"></script>
 <script type="module" src="/experiments.js"></script>
+<script type="module" src="/info-tip.js"></script>
 </head>
 <body class="admin">
 <a class="skip" href="#page-title">Skip to content</a>
@@ -34,7 +35,7 @@
 
   <div class="workspace">
     <search id="context-bar" class="context-bar" aria-label="Filter forecast flights">
-      <div class="ctx-field demand"><label for="forecast-demand">Demand level</label><select id="forecast-demand" name="forecast_demand" aria-describedby="forecast-demand-help" disabled><option value="all">All demand</option></select></div>
+      <div class="ctx-field demand"><div class="ctx-head"><label for="forecast-demand">Demand level</label><span class="info"><button type="button" class="info-btn" aria-describedby="tip-demand" aria-label="About demand level">i</button><span class="info-tip" role="tooltip" id="tip-demand"><strong class="info-title">Demand level</strong><span id="forecast-demand-help">Flights are grouped by their fixed D28 forecast occupancy: low below 60%, medium 60–85%, high 85% or more. The groups do not change when you move the timeline.</span><span class="info-label">Now</span><span id="forecast-demand-status" role="status">Loading demand groups…</span></span></span></div><select id="forecast-demand" name="forecast_demand" aria-describedby="forecast-demand-help" disabled><option value="all">All demand</option></select></div>
       <div class="ctx-field route"><label for="context-route">Route</label><select id="context-route" name="route" disabled><option value="">All routes</option></select></div>
       <div class="ctx-field flight"><label for="flight-select">Flight</label><select id="flight-select" disabled><option>Loading flights…</option></select></div>
       <div class="ctx-round" role="group" aria-labelledby="round-label"><span id="round-label" class="ctx-label">Release round</span>
@@ -58,39 +59,30 @@
         <div class="page-head">
           <div>
             <p class="eyebrow">Step 1 of 4 · Seat forecast</p>
-            <h1 id="page-title" tabindex="-1">Protect normal demand first</h1>
+            <h1 id="page-title" tabindex="-1">Protect Normal Demand First</h1>
             <p class="intro"><span id="flight-date">—</span> · <span id="flight-capacity">—</span> · <span id="flight-scenario-note">Synthetic flight scenarios</span></p>
-            <p class="small muted demand-note"><span id="forecast-demand-status" role="status">Loading demand groups…</span> <span id="forecast-demand-help">D28 forecast occupancy: low &lt;60%, medium 60–&lt;85%, high ≥85%. These groups stay fixed when you move the timeline.</span></p>
           </div>
           <div class="page-actions"><button class="button primary" id="go-pricing" type="button">Optimize member pricing <span aria-hidden="true">→</span></button></div>
         </div>
-        <p id="flight-filter-empty" class="message" role="status" hidden>No flights match this demand level and route. Choose another level, route or All demand.</p>
+        <p id="flight-filter-empty" class="message" role="status" hidden>No flights match this demand level. Choose another level or All demand.</p>
         <div id="flight-main" aria-busy="true">
           <p id="release-decision" class="message error release-decision" role="status" hidden></p>
           <div class="kpi-row forecast-metrics">
-            <article class="stat-card featured"><span>New seats releasable today</span><strong id="release-value">—</strong><small id="member-allocation-detail">Checking today's release round…</small></article>
-            <article class="stat-card nhpp-card"><span>NHPP recommended member seats</span><strong id="nhpp-release-value">—</strong><small id="nhpp-release-detail">Empty seats minus seats protected for normal demand</small></article>
-            <article class="stat-card"><span>Forecast headroom</span><strong id="headroom-value">—</strong><small id="headroom-detail">Safe member capacity, including usable published quota</small></article>
-            <article class="stat-card"><span>Published seats bookable now</span><strong id="bookable-value">—</strong><small id="bookable-detail">Issued quota that can currently be purchased</small></article>
+            <article class="stat-card featured"><span class="stat-label">New seats releasable today<span class="info"><button type="button" class="info-btn" aria-describedby="tip-release" aria-label="How this number is calculated">i</button><span class="info-tip" role="tooltip" id="tip-release"><strong class="info-title">How this number is calculated</strong><p>The NHPP forecast protects normal-fare demand first. Member seats come only from what is left, after earlier rounds and sold member seats are deducted.</p><span class="info-row"><span>NHPP recommended member seats</span><strong id="nhpp-release-value">—</strong></span><small id="nhpp-release-detail">Empty seats minus seats protected for normal demand</small><span class="info-row"><span>Forecast headroom</span><strong id="headroom-value">—</strong></span><small id="headroom-detail">Safe member capacity, including usable published quota</small></span></span></span><strong id="release-value">—</strong><small id="member-allocation-detail">Checking today's release round…</small></article>
+            <article class="stat-card"><span class="stat-label">Booked</span><strong id="booked-value">—</strong><small id="booked-detail">—</small></article>
+            <article class="stat-card"><span class="stat-label">Protected for normal demand<span class="info"><button type="button" class="info-btn" aria-describedby="tip-protected" aria-label="About protected seats">i</button><span class="info-tip" role="tooltip" id="tip-protected"><strong class="info-title">Protected for normal demand</strong><p>Seats kept for travellers paying the normal fare: the P90 forecast of remaining normal bookings plus a calibrated safety allowance, capped at the seats physically available.</p><span class="info-row"><span>Normal-sales baseline unsold</span><strong id="empty-value">—</strong></span><small id="empty-detail">Expected without additional member bookings</small><span class="info-row"><span>More normal bookings before cutoff</span><strong id="demand-value">—</strong></span><small>NHPP expected value</small></span></span></span><strong id="protection-value">—</strong><small>Kept for normal-fare travellers</small></article>
+            <article class="stat-card"><span class="stat-label">Published and bookable</span><strong id="bookable-value">—</strong><small id="bookable-detail">Issued quota that can currently be purchased</small></article>
           </div>
           <div class="first-row">
             <section class="seat-overview card" aria-labelledby="seat-overview-title">
-              <div class="section-line">
-                <div><h2 id="seat-overview-title">How the seats are divided</h2><p class="hint">Every seat appears once: bookings, protected demand, published seats or unpublished headroom.</p></div>
-                <div class="booked-summary"><strong id="booked-value">—</strong><span>reported bookings</span><small id="booked-detail">—</small></div>
-              </div>
+              <div class="title-line"><h2 id="seat-overview-title">How the Seats Are Divided</h2><span class="info"><button type="button" class="info-btn" aria-describedby="tip-seats" aria-label="About the seat bar">i</button><span class="info-tip" role="tooltip" id="tip-seats"><strong class="info-title">How the seats are divided</strong><p>Every seat appears once: normal and member bookings, seats protected for normal demand, published member seats, unpublished member headroom, and seats held by other safety limits.</p></span></span></div>
               <p id="seat-inventory-warning" class="message error" role="alert" hidden></p>
               <div id="seat-composition" class="seat-composition" role="img" aria-label="Seat allocation loading"></div>
               <div id="seat-composition-legend" class="seat-composition-legend"></div>
-              <div class="forecast-estimates">
-                <div><span>Normal-sales baseline unsold</span><strong id="empty-value">—</strong><small id="empty-detail">Expected without additional member bookings</small></div>
-                <div><span>Normal seats protected</span><strong id="protection-value">—</strong><small>Clamped to physically available seats</small></div>
-                <div><span>More normal bookings before cutoff</span><strong id="demand-value">—</strong><small>NHPP expected value</small></div>
-              </div>
             </section>
             <figure class="chart-block card">
               <div class="section-line">
-                <h2>Normal bookings through departure</h2>
+                <div class="title-line"><h2>Normal Bookings Through Departure</h2><span class="info"><button type="button" class="info-btn" aria-describedby="tip-bookings" aria-label="About this chart">i</button><span class="info-tip" role="tooltip" id="tip-bookings"><strong class="info-title">Normal bookings through departure</strong><p id="chart-caption">Forecast updates at the selected day.</p></span></span></div>
                 <span class="chart-legend"><i class="solid"></i>Normal bookings <i class="dashed"></i>Forecast</span>
               </div>
               <div class="timeline">
@@ -102,14 +94,12 @@
                 </div>
               </div>
               <svg id="booking-chart" role="img" aria-label="Normal bookings and NHPP baseline forecast, excluding member demo bookings" viewBox="0 0 720 260"></svg>
-              <figcaption id="chart-caption">Forecast updates at the selected day.</figcaption>
             </figure>
           </div>
           <h2 class="more-title">More detail</h2>
           <figure class="chart-block card">
-            <div class="section-line"><h2>Normal ticket price</h2><span class="hint">HKD · base fare</span></div>
+            <div class="section-line"><div class="title-line"><h2>Normal Ticket Price</h2><span class="info"><button type="button" class="info-btn" aria-describedby="tip-price" aria-label="About this chart">i</button><span class="info-tip" role="tooltip" id="tip-price"><strong class="info-title">Normal ticket price</strong><p id="price-caption">Observed base fares up to the selected day. Mandatory fees shown separately.</p></span></span></div><span class="hint">HKD · base fare</span></div>
             <svg id="price-chart" role="img" aria-label="Observed normal ticket base prices" viewBox="0 0 620 260"></svg>
-            <figcaption id="price-caption">Observed base fares up to the selected day. Mandatory fees shown separately.</figcaption>
           </figure>
         </div>
       </section>
@@ -119,39 +109,39 @@
         <div class="page-head">
           <div>
             <p class="eyebrow">Step 3 of 4 · Publish</p>
-            <h1 tabindex="-1">Publish the member offer</h1>
-            <p class="intro">Members can book these seats as soon as you publish. Normal-demand seats stay protected, and every booking is checked again on the member site.</p>
+            <div class="title-line"><h1 tabindex="-1">Publish the Member Offer</h1><span class="info"><button type="button" class="info-btn" aria-describedby="tip-publish" aria-label="Publishing rules">i</button><span class="info-tip" role="tooltip" id="tip-publish"><strong class="info-title">Publishing rules</strong><p>One publication per D28, D14 or D7 round. Valid unsold quota from earlier rounds is deducted before new seats are issued.</p><p>Enter the fare yourself after reviewing the Thompson result. The server checks the 80% fare cap, whole-HKD pricing and the current protection again when you publish, and every member booking is checked again on the member site.</p></span></span></div>
+            <p class="intro">Members can book these seats as soon as you publish.</p>
           </div>
           <div class="page-actions"><a class="button secondary" href="/members">Open member site <span aria-hidden="true">→</span></a></div>
         </div>
         <div class="first-row publish-row">
           <section class="card offer-panel" aria-labelledby="offer-title">
-            <h2 id="offer-title">Offer for the selected flight</h2>
+            <h2 id="offer-title">Offer for the Selected Flight</h2>
             <p id="offer-flight-context" class="offer-context">Choose a flight in the bar above.</p>
-            <p id="offer-release-status" class="hint">One publication per D28, D14 or D7 round. Earlier valid unsold quota is carried forward.</p>
+            <p id="offer-release-status" class="release-limit">Checking the release limit…</p>
             <div id="offer-guidance" class="offer-guidance" role="status">Choose a flight to calculate its safe release limit.</div>
             <form id="offer-form" class="stack-form">
               <div class="field"><label for="offer-quantity">New seats to release</label><input id="offer-quantity" type="number" min="1" max="180" value="1" required></div>
               <div class="field"><label for="offer-fare">Member base fare (HK$)</label><input id="offer-fare" type="number" step="1" min="0" max="2000" value="70" required></div>
               <button id="publish-button" aria-describedby="offer-release-status" class="button primary" type="submit">Publish member offer</button>
             </form>
+            <div id="publish-next" class="publish-next" hidden><span>Published. Next:</span><a class="button primary" href="/members">Open member site <span aria-hidden="true">→</span></a><a class="button" href="#results">See results</a></div>
           </section>
           <section class="card preview-panel" aria-labelledby="preview-title">
-            <div class="section-line"><div><h2 id="preview-title">What members will see</h2><p class="hint">Member booking site · updates as you type</p></div><span class="pill cyan">Preview</span></div>
+            <div class="section-line"><h2 id="preview-title">What Members Will See</h2><span class="pill cyan">Live preview</span></div>
             <div id="offer-preview" class="offer-preview"></div>
           </section>
         </div>
         <h2 class="more-title">More detail</h2>
-        <div class="section-line list-head"><h2>Published member offers</h2><button type="button" id="refresh-offers" class="text-button">Refresh inventory</button></div>
+        <div class="section-line list-head"><h2>Published Member Offers</h2><button type="button" id="refresh-offers" class="text-button">Refresh inventory</button></div>
         <div id="offers-list" class="offers-list"><p class="empty-state">No offers loaded.</p></div>
         <section class="card plan-panel" aria-labelledby="plan-title">
-          <h2 id="plan-title">Membership price</h2>
+          <div class="title-line"><h2 id="plan-title">Membership Price</h2><span class="info"><button type="button" class="info-btn" aria-describedby="tip-plan" aria-label="About the membership price">i</button><span class="info-tip" role="tooltip" id="tip-plan"><strong class="info-title">Membership price</strong><p>The price applies to new memberships. Existing members keep their recorded payment. Thompson experiments price tickets for existing members and do not change this fee.</p></span></span></div>
           <form id="member-plan-form" class="stack-form">
             <div class="field"><label for="member-fee">365-day membership fee (HK$)</label><input id="member-fee" type="number" step="1" min="0" max="5000" value="399" required></div>
             <button id="save-plan-button" class="button" type="submit">Save membership price</button>
           </form>
           <p id="membership-status" class="hint">Loading the currently published membership plan…</p>
-          <p class="hint">The price applies to new memberships. Existing members keep their recorded payment. Thompson experiments price tickets for existing members and do not change this fee.</p>
         </section>
       </section>
 
@@ -160,7 +150,7 @@
         <div class="page-head">
           <div>
             <p class="eyebrow">Step 4 of 4 · Results</p>
-            <h1 tabindex="-1">Member sales so far</h1>
+            <h1 tabindex="-1">Member Sales So Far</h1>
             <p class="intro" id="results-context">Bookings from the member site, read from the shared offer inventory.</p>
           </div>
           <div class="page-actions"><span id="results-updated" class="pill ok" role="status">Not loaded yet</span><button type="button" id="refresh-results" class="button">Refresh</button></div>
@@ -168,17 +158,17 @@
         <div class="kpi-row">
           <article class="stat-card featured"><span>Member seats sold</span><strong id="results-sold">—</strong><small id="results-sold-detail">For the selected flight</small></article>
           <article class="stat-card"><span>Remaining member quota</span><strong id="results-remaining">—</strong><small>Still bookable on the member site</small></article>
-          <article class="stat-card"><span>Member ticket revenue</span><strong id="results-revenue">—</strong><small id="results-revenue-detail">Sold seats × member base fare · excludes membership fees</small></article>
-          <article class="stat-card"><span>Mandatory fees collected</span><strong id="results-fees">—</strong><small id="results-fees-detail">Shown separately from ticket revenue</small></article>
+          <article class="stat-card"><span>Member ticket revenue</span><strong id="results-revenue">—</strong><small id="results-revenue-detail">Excludes membership fees</small></article>
+          <article class="stat-card"><span>Mandatory fees collected</span><strong id="results-fees">—</strong><small id="results-fees-detail">Shown separately</small></article>
         </div>
         <div class="first-row">
           <section class="card" aria-labelledby="results-seats-title">
-            <div class="section-line"><div><h2 id="results-seats-title">Seats now</h2><p class="hint">Same seat count as the forecast, including confirmed member bookings.</p></div><span id="results-protected" class="pill cyan">—</span></div>
+            <div class="section-line"><div class="title-line"><h2 id="results-seats-title">Seats Now</h2><span class="info"><button type="button" class="info-btn" aria-describedby="tip-results-seats" aria-label="About this bar">i</button><span class="info-tip" role="tooltip" id="tip-results-seats"><strong class="info-title">Seats now</strong><p>The same seat count as the forecast, with bookings split into normal and member seats. Member sales only come out of released member quota; protected seats are never sold to members.</p><p>Revenue is sold member seats × member base fare, read from the published offers. Membership fees are not included.</p></span></span></div><span id="results-protected" class="pill cyan">—</span></div>
             <div id="results-composition" class="seat-composition" role="img" aria-label="Seat allocation loading"></div>
             <div id="results-legend" class="seat-composition-legend"></div>
           </section>
           <section class="card" aria-labelledby="results-offers-title">
-            <h2 id="results-offers-title">Offers on this flight</h2>
+            <h2 id="results-offers-title">Offers on This Flight</h2>
             <div class="table-wrapper results-table"><table><thead><tr><th scope="col">Round</th><th scope="col">Released</th><th scope="col">Sold</th><th scope="col">Left</th><th scope="col">Fare</th></tr></thead><tbody id="results-flight-offers"></tbody></table></div>
             <p id="results-empty" class="hint" hidden>No member offers have been published for this flight yet. <a href="#members">Publish one</a>.</p>
           </section>
@@ -192,8 +182,8 @@
         <div class="page-head">
           <div>
             <p class="eyebrow">Evidence · Thompson experiments</p>
-            <h1 id="feedback-title" tabindex="-1">What members said</h1>
-            <p class="intro">Read the saved summary and purchase decisions from each price round. Viewing feedback makes no new model calls.</p>
+            <h1 id="feedback-title" tabindex="-1">What Members Said</h1>
+            <p class="intro">Purchase decisions and reasons from each saved price round. Viewing makes no new model calls.</p>
           </div>
         </div>
         <div class="feedback-controls card">
@@ -219,7 +209,7 @@
       </section>
 
       <section id="view-unavailable" class="view" hidden>
-        <div class="page-head"><div><p class="eyebrow">Page unavailable</p><h1 tabindex="-1">This page is no longer available.</h1><p class="intro">This address does not identify an active workspace.</p></div></div>
+        <div class="page-head"><div><p class="eyebrow">Page unavailable</p><h1 tabindex="-1">This Page Is No Longer Available</h1><p class="intro">This address does not identify an active workspace.</p></div></div>
         <p><a href="/admin#flights">Open Forecast seats</a> · <a href="/adaptive-pricing">Open Thompson Sampling</a></p>
       </section>
     </main>

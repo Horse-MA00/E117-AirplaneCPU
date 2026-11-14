@@ -1,15 +1,20 @@
 /* Admin page content (/admin). Tokens, shell and shared components: admin-shell.css. */
 
 .view{min-width:0}
-.demand-note{margin:8px 0 0}
-#forecast-demand-status{color:var(--purple);font-weight:600}
 .more-title{margin:44px 0 14px;font-size:13px;font-weight:600;color:var(--faint);letter-spacing:.07em;text-transform:uppercase}
 .first-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;margin-top:18px;align-items:stretch}
+
+/* Titles with an info tip */
+.title-line{display:flex;align-items:center;gap:2px;min-width:0}
+.title-line h1,.title-line h2{min-width:0}
 
 /* KPI cards */
 .kpi-row{display:grid;grid-template-columns:minmax(0,1.45fr) repeat(3,minmax(0,1fr));gap:18px}
 .stat-card{display:flex;flex-direction:column;gap:10px;min-width:0;padding:22px 24px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg)}
 .stat-card>span{font-size:14.5px;font-weight:500;color:var(--muted)}
+.stat-label{display:flex;align-items:center}
+.stat-card.featured .info-btn{border-color:rgba(255,255,255,.7);color:#fff}
+.stat-card.featured .info:focus-within .info-btn,.stat-card.featured .info-btn:hover{background:#fff;color:var(--purple);border-color:#fff}
 .stat-card strong{font-size:var(--fs-kpi);font-weight:700;letter-spacing:-.035em;line-height:1;white-space:nowrap}
 .stat-card small{font-size:var(--fs-sm);line-height:1.5;color:var(--muted)}
 .stat-card.featured{background:var(--purple);border-color:var(--purple);color:#fff}
@@ -18,11 +23,7 @@
 .nhpp-card{box-shadow:inset 0 3px 0 var(--cyan)}
 
 /* Seat composition */
-.seat-overview .section-line{margin-bottom:6px}
-.booked-summary{display:flex;align-items:baseline;justify-content:flex-end;flex-wrap:wrap;gap:4px 8px;font-size:13px;color:var(--muted);text-align:right}
-.booked-summary strong{font-size:28px;font-weight:700;color:var(--ink);letter-spacing:-.02em}
-.booked-summary small{flex-basis:100%;font-size:12.5px}
-.seat-composition{display:flex;gap:2px;height:60px;margin:18px 0 16px;border-radius:var(--r-sm);overflow:hidden}
+.seat-composition{display:flex;gap:2px;height:72px;margin:22px 0 18px;border-radius:var(--r-sm);overflow:hidden}
 .seat-part{display:flex;align-items:center;justify-content:center;flex-basis:calc(var(--seat-share) * 1%);min-width:0;overflow:hidden;font-size:17px;font-weight:700}
 .seat-part.occupied{background:var(--seat-booked);color:#fff}
 .seat-part.protected{background:var(--seat-protected);color:#2B1D35}
@@ -37,11 +38,6 @@
 .seat-legend-item.available i{background:var(--seat-member)}
 .seat-legend-item.held i,.seat-legend-item.published-held i{background:var(--seat-held);border:1px solid #A995B4}
 .seat-legend-item strong{font-weight:700;color:var(--ink)}
-.forecast-estimates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
-.forecast-estimates>div{display:grid;gap:4px;align-content:start;min-width:0}
-.forecast-estimates span{font-size:13.5px;color:var(--muted)}
-.forecast-estimates strong{font-size:26px;font-weight:700;letter-spacing:-.02em}
-.forecast-estimates small{font-size:12.5px;color:var(--muted)}
 .release-decision{font-weight:500}
 .release-decision strong{display:block;font-size:16px;margin-bottom:4px}
 
@@ -69,12 +65,15 @@ figcaption{font-size:13px;line-height:1.55;color:var(--muted);margin-top:8px}
 #price-chart circle{fill:var(--cyan-ink)}
 
 /* Publish */
+.release-limit{margin:14px 0 0;font-size:22px;font-weight:700;color:var(--purple-dark);letter-spacing:-.01em}
+.publish-next{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:18px;padding:14px 16px;border-radius:var(--r-md);background:var(--ok-wash);border:1px solid #BFE3CE;color:var(--ok);font-weight:600}
+.publish-next span{margin-right:auto}
 .offer-context{font-size:17px;font-weight:600;margin:8px 0 4px}
-.offer-guidance{margin:16px 0 0;padding:14px 16px;border-radius:var(--r-md);background:var(--ground);border:1px solid var(--line);font-size:14.5px;line-height:1.6}
+.offer-guidance{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:16px 0 0;padding:14px 16px;border-radius:var(--r-md);background:var(--ground);border:1px solid var(--line);font-size:14.5px;line-height:1.6}
 .offer-guidance p{margin:0 0 8px}
 .offer-guidance p:last-child{margin-bottom:0}
-.offer-guidance .button{margin-top:6px}
-.offer-guidance .thompson-ref{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding:10px 12px;margin:0 0 10px;border-radius:var(--r-sm);background:var(--purple-wash)}
+.offer-guidance .button{margin:0}
+.offer-guidance .thompson-ref{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding:10px 12px;margin:0;flex:1 1 320px;border-radius:var(--r-sm);background:var(--purple-wash)}
 .offer-guidance .thompson-ref strong{font-size:22px;color:var(--purple-dark);letter-spacing:-.01em}
 .stack-form{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:end;margin-top:20px}
 .stack-form .button{grid-column:1/-1;justify-self:start}
@@ -135,12 +134,10 @@ figcaption{font-size:13px;line-height:1.55;color:var(--muted);margin-top:8px}
   .stat-card strong{grid-column:2;grid-row:1/3;font-size:34px!important}
   .stat-card small{grid-column:1/-1}
   .card{padding:20px}
-  .booked-summary{display:none}
-  .seat-composition{height:44px}
+    .seat-composition{height:44px}
   .seat-part{font-size:14px}
   .seat-composition-legend{display:grid;gap:8px}
-  .forecast-estimates{grid-template-columns:1fr 1fr}
-  .timeline{flex-wrap:wrap}
+    .timeline{flex-wrap:wrap}
   .stack-form{grid-template-columns:minmax(0,1fr)}
   .preview-card{grid-template-columns:minmax(0,1fr);gap:12px}
   .preview-price{text-align:left}
@@ -159,3 +156,10 @@ figcaption{font-size:13px;line-height:1.55;color:var(--muted);margin-top:8px}
   .seat-part{border:1px solid CanvasText}
   .chart-band{fill-opacity:.2}
 }
+
+/* Info tips inside stat cards must not inherit the card's large numbers or light-on-purple text. */
+.stat-card .info-tip,.stat-card.featured .info-tip{color:var(--ink-2)}
+.stat-card .info-tip strong,.stat-card.featured .info-tip strong{font-size:16px;font-weight:700;letter-spacing:0;line-height:1.4;color:var(--ink)}
+.stat-card .info-tip .info-title,.stat-card.featured .info-tip .info-title{font-size:15px}
+.stat-card .info-tip small,.stat-card.featured .info-tip small{font-size:13px;line-height:1.5;color:var(--muted)}
+.stat-card .info-tip span,.stat-card.featured .info-tip span{color:var(--ink-2)}

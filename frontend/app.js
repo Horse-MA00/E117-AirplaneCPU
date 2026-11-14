@@ -88,16 +88,24 @@ function clearFlightSelection() {
   $('flight-filter-empty').hidden=false; $('go-pricing').disabled=true; $('publish-button').disabled=true;
   text('flight-date','—'); text('flight-capacity','—'); text('flight-scenario-note','Choose another demand level to find a flight.');
 }
+// The route box always shows the current flight's route; the flight box lists that route's departures.
 function fillForecastFlights(preferred=$('flight-select').value) {
-  const route=$('context-route').value;
-  const matches=state.flights.filter(f=>matchesDemand(f,$('forecast-demand').value)&&(!route||routeKey(f)===route));
-  $('flight-select').replaceChildren(...matches.map(f=>new Option(route?`${longDate(flightDay(f))} · ${number(f.capacity)} seats`:`${longDate(flightDay(f))} · ${routeKey(f)}`,f.flight_id)));
-  $('flight-select').disabled=!matches.length;
-  text('forecast-demand-status',`${number(matches.length)} of ${number(state.flights.length)} flights match. Demand groups use the fixed D28 forecast.`);
-  if(!matches.length){$('flight-select').append(new Option('No flights match these filters',''));clearFlightSelection();return false;}
-  const retained=matches.find(f=>f.flight_id===preferred);
-  const demo=matches.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);
-  $('flight-select').value=(retained||demo||matches[0]).flight_id;
+  const inDemand=state.flights.filter(f=>matchesDemand(f,$('forecast-demand').value));
+  text('forecast-demand-status',`${number(inDemand.length)} of ${number(state.flights.length)} flights match. Demand groups use the fixed D28 forecast.`);
+  if(!inDemand.length){
+    $('context-route').replaceChildren(new Option('No routes','')); $('context-route').disabled=true;
+    $('flight-select').replaceChildren(new Option('No flights match these filters','')); $('flight-select').disabled=true;
+    clearFlightSelection(); return false;
+  }
+  const routes=[...new Set(inDemand.map(routeKey))].sort();
+  const wanted=inDemand.find(f=>f.flight_id===preferred), demo=inDemand.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);
+  let route=wanted?routeKey(wanted):$('context-route').value;
+  if(!routes.includes(route))route=demo?routeKey(demo):routes[0];
+  $('context-route').replaceChildren(...routes.map(r=>new Option(r,r))); $('context-route').value=route; $('context-route').disabled=false;
+  const matches=inDemand.filter(f=>routeKey(f)===route).sort((a,b)=>`${flightDay(a)}${a.flight_id}`.localeCompare(`${flightDay(b)}${b.flight_id}`));
+  $('flight-select').replaceChildren(...matches.map(f=>new Option(`${longDate(flightDay(f))} · ${number(f.capacity)} seats`,f.flight_id)));
+  $('flight-select').disabled=false;
+  $('flight-select').value=(matches.find(f=>f.flight_id===preferred)||matches.find(f=>f===demo)||matches[0]).flight_id;
   $('flight-filter-empty').hidden=true;
   return true;
 }
@@ -214,12 +222,7 @@ $('day-slider').addEventListener('input', () => { clearTimeout(dayTimer); const 
 document.querySelectorAll('[data-day]').forEach((button) => button.addEventListener('click', () => { clearTimeout(dayTimer); chooseDay(Number(button.dataset.day)); }));
 $('flight-select').addEventListener('change', loadFlight);
 $('forecast-demand').addEventListener('change',()=>{if(fillForecastFlights())loadFlight();});
-$('context-route').addEventListener('change',()=>{if(fillForecastFlights())loadFlight();});
-function fillRoutes(){
-  const routes=[...new Set(state.flights.map(routeKey))].sort();
-  $('context-route').replaceChildren(new Option('All routes',''),...routes.map(r=>new Option(r,r)));
-  $('context-route').disabled=false;
-}
+$('context-route').addEventListener('change',()=>{if(fillForecastFlights(''))loadFlight();});
 
 async function loadOffers() {
   try { const data = await api('/api/offers'); state.offers = data.offers || (Array.isArray(data) ? data : []); state.offersLoaded = true; renderOffers(); renderResults(); } catch (e) { error(e.message); }
@@ -239,12 +242,12 @@ function renderOffers() {
   if (!state.offers.length) $('offers-list').append(element('p', 'No member offers yet. Publish an offer from the selected flight above.', 'empty-state'));
 }
 function offerOptimizeLink(flightId,day){
-  const link=element('a','Optimize this flight','button primary');link.href=thompsonUrl({flightId,day});
+  const link=element('a','Optimize this flight','button secondary');link.href=thompsonUrl({flightId,day});
   return link;
 }
 async function selectOffer(flightId,day,manual=true){
   const changed=flightId!==state.offerFlightId||day!==state.offerDay;
-  if(changed){$('offer-fare').value='';$('offer-quantity').value=1;}
+  if(changed){$('offer-fare').value='';$('offer-quantity').value='';$('publish-next').hidden=true;}
   const token=++state.offerRequest;state.offerManual=manual;state.offerFlightId=flightId;state.offerDay=day;state.offerForecast=null;$('publish-button').disabled=true;
   const flight=state.flights.find(f=>f.flight_id===flightId), box=$('offer-guidance');
   box.setAttribute('aria-busy','true');box.replaceChildren(element('p','Calculating the current NHPP release limit…'));renderPreview();
@@ -253,10 +256,13 @@ async function selectOffer(flightId,day,manual=true){
   try{
     const result=await api('/api/forecast',{flight_id:flightId,days_to_departure:day});if(token!==state.offerRequest)return;
     state.offerForecast=result.forecast;
-    const qty=Math.max(0,Math.floor(state.offerForecast.releasable_seats));$('offer-quantity').max=qty;$('offer-quantity').value=Math.min(Math.max(1,value('offer-quantity')),qty)||1;
-    text('offer-release-status',`${qty} new seats can currently be released. ${state.offerForecast.release_status?.blocked_reason||'Existing valid quotas are deducted before new seats are issued.'}`);
-    box.replaceChildren(element('p','Review the Thompson result for this flight, then enter the base fare and seat quantity below. Publication is a separate manual action.'));
-    if(RELEASE_DAYS.includes(day)){const ref=await thompsonReference(flightId,day);if(token!==state.offerRequest)return;if(ref)box.prepend(ref);box.append(offerOptimizeLink(flightId,day));}
+    const qty=Math.max(0,Math.floor(state.offerForecast.releasable_seats));$('offer-quantity').max=qty;
+    // Default to the full safe limit; a value already typed for this flight and round is kept.
+    $('offer-quantity').value=$('offer-quantity').value===''?(qty||1):Math.min(Math.max(1,value('offer-quantity')),qty)||1;
+    const blocked=state.offerForecast.release_status?.blocked_reason;
+    text('offer-release-status',`${qty} new seat${qty===1?'':'s'} can be released now${blocked?`. ${blocked}`:''}`);
+    box.replaceChildren();
+    if(RELEASE_DAYS.includes(day)){const ref=await thompsonReference(flightId,day);if(token!==state.offerRequest)return;box.append(ref||element('p','No completed Thompson experiment for this flight and round yet.','muted'),offerOptimizeLink(flightId,day));}
     else box.replaceChildren(element('p','Select D28, D14 or D7 to publish a new allocation.'));
   }catch(e){if(token===state.offerRequest)box.replaceChildren(element('p',`Release limit unavailable: ${e.message}`));}
   finally{if(token===state.offerRequest){box.setAttribute('aria-busy','false');$('publish-button').disabled=!canPublish();renderPreview();}}
@@ -266,7 +272,7 @@ $('offer-form').addEventListener('submit',(event)=>{event.preventDefault();busy(
   if(!canPublish())throw new Error('Choose a valid flight and release round with new safe seats.');
   if(value('offer-quantity')>Number(state.offerForecast.releasable_seats))throw new Error('Requested seats exceed the current forecast release limit.');
   const data=await api('/api/offers',{flight_id:state.offerFlightId,days_to_departure:state.offerDay,quantity:value('offer-quantity'),base_fare:value('offer-fare')});
-  notify(`Member offer published: ${(data.offer||data).offer_id||(data.offer||data).id||'saved'}.`);await loadOffers();await selectOffer(state.offerFlightId,state.offerDay,state.offerManual);if(state.loadedFlightId===state.offerFlightId)await loadForecast();
+  notify(`Member offer published: ${(data.offer||data).offer_id||(data.offer||data).id||'saved'}.`);state.thompsonRuns=null;await loadOffers();await selectOffer(state.offerFlightId,state.offerDay,state.offerManual);$('publish-next').hidden=false;if(state.loadedFlightId===state.offerFlightId)await loadForecast();
 });});
 async function loadMemberPlan() {
   try { const data = await api('/api/member-portal/plan'); const plan = data.membership;
@@ -375,11 +381,10 @@ async function init() {
     const llm = summary.llm || {};
     const llmOn = Boolean(llm.live_configured || llm.configured || llm.live_available);
     text('llm-status', llmOn ? 'LLM configured' : 'LLM not configured'); $('llm-status').dataset.state = llmOn ? 'on' : 'off';
-    populateDemandFilter($('forecast-demand'),state.flights); fillRoutes();
+    populateDemandFilter($('forecast-demand'),state.flights);
     // Optimize and the sidebar pass the current selection back as ?flight_id=&forecast_day=.
     const params = new URL(location.href).searchParams, wanted = state.flights.find(f => f.flight_id === params.get('flight_id'));
     const wantedDay = Number(params.get('forecast_day'));
-    if (wanted) $('context-route').value = routeKey(wanted);
     if ([28, 14, 7, 1].includes(wantedDay)) { state.day = wantedDay; $('day-slider').value = 28 - wantedDay; text('day-number', wantedDay); document.querySelectorAll('[data-day]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.day) === wantedDay))); }
     if(fillForecastFlights(wanted?.flight_id) && location.hash !== '#customers')await loadFlight();
     loadMemberPlan();

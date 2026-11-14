@@ -27,6 +27,7 @@ try{
     assert.equal(snapshot.scope.as_of_day,28);
     assert.ok(snapshot.scope.releasable_seats>0,'This offline demo needs a positive NHPP member quota');
     await page.waitForFunction(()=>!document.getElementById('start').disabled);
+    if(await page.locator('#setup-panel').isHidden())await page.locator('#new-experiment').click(); // a saved result for this flight opens first
     await page.locator('#mode').selectOption('synthetic');
     await page.locator('#rounds').fill('3');
     await page.locator('#customers').fill('16');
