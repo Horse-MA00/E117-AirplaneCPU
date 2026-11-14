@@ -12,7 +12,8 @@ the booking forecast and observed ticket prices. The separate Client Portal prov
 flight search, base fares with a separate fees/total line, membership and saved trips.
 
 The primary optimizer now requires a **specific route, flight date and D28/D14/D7 snapshot**.
-P₀ comes from that flight's simulated data and is read-only; the user-selected V₀ stays
+P₀ is that flight's latest observed **normal base fare** at the selected snapshot,
+without the former 15% discount, and is read-only; the user-selected V₀ stays
 fixed during the fare search. Mathematical and live-LLM tracks replay this flight's
 inventory, compare contributions and purchases, and validate the candidate on independent
 worlds. Price/profit plots distinguish maximum contribution, margin and buyer count.
@@ -22,13 +23,19 @@ New member-opportunity examples supply inventory; zero-supply runs are blocked. 
 regular purchasers are counted separately, and each new fare comparison freezes its seat
 profile. See [the inventory and price-evidence corrections](docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md).
 
-Admin also explains each retained candidate with paired revenue/cost tables, the full membership-fee cash view and per-replay service requirements. See the [HK$2,364 contribution audit](docs/CONTRIBUTION_AUDIT_2026-11-14.md).
+Forecast and Optimize both filter flights by **Low / Medium / High demand**, using
+the D28 NHPP forecast of final normal occupancy (below 60%, 60% to below 85%, and at least 85%).
+Unavailable or stale classifications remain Unclassified. See the
+[demand filter and original-fare contract](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
+
+Admin also explains each retained candidate with paired revenue/cost tables, the full membership-fee cash view and per-replay service requirements. The [historical HK$2,364 contribution audit](docs/CONTRIBUTION_AUDIT_2026-11-14.md) includes subsequent sales of the selected flight through departure. Other future member trips and renewal revenue/costs are not modelled, so it does not establish whole-term membership profitability.
 
 SQLite saves rounds, seat-feedback profiles, redacted original LLM outputs and resumable
 market state. Live runs automatically cross internal batches within a selected total
-budget. NO_OFFER remains a valid result. The base NHPP remains frozen.
+budget. NO_OFFER remains a valid decision for the selected flight, not a rejection
+of the complete membership programme. The base NHPP remains frozen.
 
-Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md).
+Read [the current workflow and scope](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
 The [earlier joint engine](docs/OPTIMIZATION_ENGINE.md), whole-term continuous search
 and historical experiments remain available as explicitly labelled reference tools.
 Use Docker below on Windows; the customer panel retains POSIX `fcntl`.
@@ -74,7 +81,7 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 - **680,364 daily snapshots** across **3,759 synthetic flight histories** (200,000 original demo rows, two 40,182-row route/date supplements and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
-- **Flight-specific optimisation:** 1–12 rounds per mathematical/LLM track, dataset-derived P₀, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
+- **Flight-specific optimisation:** 1–12 rounds per mathematical/LLM track, normal-base-fare P₀, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
 - **Separate Admin and member interfaces:** actionable analysis navigation, panel outcome summaries, segment comparisons, searchable/paginated traveller lists, and a member-facing flight search, price review, membership and My trips flow.
 - **Larger background panels:** up to **100 live LLM travellers** or **1,000 rule-based travellers**, with a default of 100. Live batches default to 60 decision attempts (maximum120), checkpoint each traveller, show progress and resume only on explicit request. Sole legal actions need no model call.

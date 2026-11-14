@@ -23,7 +23,7 @@ function forecast(day){
 await page.route('**/*',async route=>{
   const u=new URL(route.request().url()),path=u.pathname,reply=json=>route.fulfill({json});
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
-  if(['/app.js','/optimization.js','/contribution-explanation.js','/seat-status.js','/styles.css','/continuous.js','/price-chart.js'].includes(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
+  if(['/app.js','/demand-filter.js','/optimization.js','/contribution-explanation.js','/seat-status.js','/styles.css','/continuous.js','/price-chart.js'].includes(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
   if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:365}});
   if(path==='/api/flights')return reply({flights:[flight]});

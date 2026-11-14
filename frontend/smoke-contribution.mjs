@@ -24,7 +24,7 @@ const baseline=process.env.BASELINE_UI==='1';
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
 const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],blocked=[];
 page.on('pageerror',error=>errors.push(error.message));
-const assets=['/app.js','/optimization.js','/contribution-explanation.js','/seat-status.js','/styles.css','/continuous.js','/price-chart.js'];
+const assets=['/app.js','/demand-filter.js','/optimization.js','/contribution-explanation.js','/seat-status.js','/styles.css','/continuous.js','/price-chart.js'];
 async function source(path){
   return baseline?execFileSync('git',['show',`HEAD:frontend/${path}`],{cwd:repo,encoding:'utf8'}):readFile(new URL(path,import.meta.url),'utf8');
 }
