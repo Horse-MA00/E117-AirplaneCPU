@@ -14,7 +14,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 
 ### 现行规格
 
-- [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（v6：会员价上限为正常基本票价的 50%，P₀ = 上限；数学轨先用公式算 P*，再模拟附近 9 个价格）、需求筛选、座位口径、会计公式、SQLite 和 API。
+- [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（v7：会员价上限为正常基本票价的 80%，P₀ = 上限；数学轨先用公式算 P*，再模拟附近 9 个价格；新增已入会客群加权、Thompson Sampling 与并行 LLM 实验）、需求筛选、座位口径、会计公式、SQLite 和 API。
 - [THREE_ROUND_RELEASE](docs/THREE_ROUND_RELEASE.md)：D28/D14/D7 放票规则；新一轮扣除前几轮仍有效的未售配额。
 - [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：整体架构、HTTP 路由表、与原计划的差异及限制。
 - [NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：冻结的 NHPP v2 参数、输出和验证。
@@ -29,6 +29,8 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 - [EXTENDED_VALIDATION](docs/EXTENDED_VALIDATION.md)（1,200 班 NHPP 验证、发布完整性检查）、[SHARED_MARKET_VALIDATION](docs/SHARED_MARKET_VALIDATION.md)（v2 实盘验证，不能用来验证 v3 三轮规则）、[JOINT_OPTIMIZATION_VALIDATION](docs/JOINT_OPTIMIZATION_VALIDATION.md)（旧联合引擎）。
 - 日志：[ITERATION_2_PROGRESS](docs/ITERATION_2_PROGRESS.md)，里程碑记录在这里。
 - 其他：`src/README.md` 是旧独立模拟器（仍被 `tests/test_simulator.py` 使用）。
+
+- 本地既有研究记录：[数据供应](docs/DATA_SUPPLIER_OPTIONS_2026-11-12.md)、[OAG API 审计](docs/OAG_API_DATA_AUDIT_2026-11-11.md)、[OAG 产品](docs/OAG_DATASET_PRODUCT_REVIEW_2026-11-11.md)、[文档检查](docs/OAG_DOCS_REVIEW_CHECKLIST_2026-11-11.md)、[技术走读](docs/TECHNICAL_WALKTHROUGH_ZH_2026-11-14.md)。
 
 ## 不能动的东西
 
@@ -67,11 +69,11 @@ python scripts/verify_artifacts.py                # 实验与数据的 SHA256 �
 ## 目录与模块
 
 - `backend/`：stdlib HTTP API（`server.py`）和 SQLite 持久化（`store.py`、`optimization_store.py`）。
-  - 预测 `nhpp.py`（冻结）；放票 `release_policy.py`；座位口径 `seat_inventory.py`；指定航班优化 `optimization.py`、`scoped_market.py`、`initial_policy.py`；共享市场 `shared_market.py`；座位反馈 `seat_feedback.py`。
+  - 预测 `nhpp.py`（冻结）；放票 `release_policy.py`；座位口径 `seat_inventory.py`；指定航班优化 `optimization.py`、`scoped_market.py`、`initial_policy.py`；自适应票价 `adaptive_pricing.py`、`thompson.py`、审计 `adaptive_store.py`；共享市场 `shared_market.py`；座位反馈 `seat_feedback.py`。
   - 测试在 `backend/tests/`。
 - `frontend/`：Admin，原生 HTML/JS，路径 `/admin`；`frontend/members/` 是会员端，路径 `/members`。不需要构建，由后端直接提供；`*.mjs` 是浏览器 smoke 测试。
 - `simulation/`：合成数据生成器、NHPP 评估脚本和已提交的冻结数据集。
-- `llm_agent/`：旅客 Agent、prompt、provider 适配、审计；`experiments/` 是可公开的合成实验证据。
+- `llm_agent/`：旅客 Agent、prompt、provider 适配、审计；`experiments/` 是可公开的合成实验证据；`weighted_population.py` 与 `adaptive_customers.py` 提供分层测试客群及有上限的并行调用。
 - `scripts/`：发布检查、证据校验、HTTP/容器 smoke、导出工具。`tests/`：根目录的发布和模拟器测试。
 - `docs/`：现行规格、证据记录和日志，见上面的文档索引。
 

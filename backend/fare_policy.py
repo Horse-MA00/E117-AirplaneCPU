@@ -1,7 +1,7 @@
-"""Member fares are a discount product: never above half the normal base fare."""
+"""Member fares are a discount product: at least 20% below the normal base fare."""
 import math
 
-MEMBER_FARE_CAP_RATIO = 0.5
+MEMBER_FARE_CAP_RATIO = 0.8
 
 
 def member_fare_cap(normal_base_fare):

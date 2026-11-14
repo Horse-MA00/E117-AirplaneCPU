@@ -203,3 +203,12 @@ Merged main at `a178b08` (documentation cleanup) into `feature/formula-grid-pric
 - Forecast seats adds an **NHPP recommended member seats** card (`available_seats − protection_p90`). A release round with no NHPP headroom shows an explicit "do not release" decision on Forecast and Optimize; Start is also disabled when the release share rounds the allowance down to zero.
 - Observed with zero programme cost on DEMO-ISG-HKG: the best tested fare (the HK$220 cap) still lost HK$480 against no offer because both member buyers would otherwise have bought normal fares (+HK$440 member revenue, −HK$920 normal revenue). The engine's decision was NO_OFFER.
 
+
+
+## 2026-11-14 — Weighted member-only Thompson pricing
+
+Implemented on local `experiment/thompson-member-pricing`: an 80% member fare cap, existing-member base-fare scenario, 14 weighted test segments, a cluster-tempered Logistic posterior, joint-draw Thompson exploration, parallel customer calls with a shared budget, integer seat clearing, private SQLite and raw-output audit, cached replay deduplication, independent validation and a new Admin page. Frozen NHPP and historical evidence remain unchanged.
+
+Full technical design and results are in [the current specification](FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing). The 80-case offline benchmark found mean TS member receipts 4.55% above equal-round greedy MAP: 37 wins, 25 ties and 18 losses. Live v1 and v2 candidates increased buyers but lost weighted revenue by 6.96% and 10.59% respectively; both negative outcomes are saved. The two runs used 409 fresh calls, four peak concurrent requests, two authorized key slots and zero failures.
+
+Final native checks: 290 backend and 31 publication/data/documentation tests, with artifact hashes passing. Chrome mock and real read-only desktop/mobile checks passed. Five pre-existing local research documents received only a record-status line and AGENTS index entries so the existing documentation checks pass; their content was preserved. No PR, merge or paid calls beyond the bounded experiments.

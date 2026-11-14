@@ -1,0 +1,13 @@
+{
+  "source": "offline_synthetic_response_benchmark",
+  "version": "weighted-member-thompson-benchmark-v2",
+  "synthetic": true,
+  "provider_calls": 0,
+  "cases": 80,
+  "files": {
+    "report.json": {
+      "sha256": "932f38dfb789f18434de795ebbe64c8414504b8cc02fe816cf019b4747179edc",
+      "bytes": 786824
+    }
+  }
+}

@@ -62,6 +62,27 @@ def verify(manifest_path):
                 assert track['validation']['seat_calibration'] == track['best']['seat_calibration'], track['mode']
         assert result['audit_records'] == manifest['audit_records'], audit
         result['completed_market_cases'] = len(contents['worlds'])
+    if manifest.get('source') == 'adaptive_thompson_pricing':
+        contents = json.loads(report.read_text())
+        assert contents['status'] == 'completed', report
+        assert len(contents['rounds']) == contents['config']['rounds'], report
+        assert contents['counts']['provider_calls'] <= contents['config']['max_calls'], report
+        assert sum(contents['counts']['key_slots'].values()) == contents['counts']['provider_calls'], report
+        assert contents['counts']['failures'] == 0, report
+        cap = contents['scope']['member_fare_cap']
+        assert all(0 <= row['price'] <= cap for row in contents['rounds']), report
+        assert contents['recommendation']['price'] in {r['price'] for r in contents['rounds']}, report
+        assert contents['validation']['selected_price_frozen_before_validation'], report
+        training_ids = {p['customer_id'] for p in contents['panel']}
+        assert abs(sum(p['population_weight'] for p in contents['panel'])-1) < 1e-8, report
+        for world in contents['validation_worlds']:
+            metrics = world['result']
+            assert training_ids.isdisjoint(r['person']['customer_id'] for r in metrics['decisions']), report
+            assert metrics['remaining_seats'] >= 0 and metrics['remaining_quota'] >= 0, report
+            assert metrics['member_buyers'] <= metrics['quota'], report
+            assert abs(metrics['member_revenue']+metrics['regular_revenue']-metrics['revenue']) < .01, report
+        assert result['audit_records'] == manifest['audit_records'], audit
+        result['validated_price_rounds'] = len(contents['rounds'])
     return result
 
 

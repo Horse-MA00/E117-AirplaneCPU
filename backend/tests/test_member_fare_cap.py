@@ -1,4 +1,4 @@
-"""Member fares must never exceed 50% of the normal base fare."""
+"""Member fares must never exceed 80% of the normal base fare."""
 from pathlib import Path
 import tempfile
 import unittest
@@ -11,12 +11,12 @@ from backend.store import Store
 
 
 class FarePolicy(unittest.TestCase):
-    def test_cap_is_half_rounded_down_to_the_cent(self):
-        self.assertEqual(member_fare_cap(830), 415)
-        self.assertEqual(member_fare_cap(100.01), 50)
-        self.assertEqual(check_member_fare(415, 830), 415)
-        with self.assertRaisesRegex(ValueError, 'exceeds the cap of HK\\$415.00'):
-            check_member_fare(415.01, 830)
+    def test_cap_is_eighty_percent_rounded_down_to_the_cent(self):
+        self.assertEqual(member_fare_cap(830), 664)
+        self.assertEqual(member_fare_cap(100.01), 80)
+        self.assertEqual(check_member_fare(664, 830), 664)
+        with self.assertRaisesRegex(ValueError, 'exceeds the cap of HK\\$664.00'):
+            check_member_fare(664.01, 830)
 
 
 class PublishingCap(unittest.TestCase):
@@ -38,7 +38,7 @@ class PublishingCap(unittest.TestCase):
         return server.post('/api/offers', {'flight_id': self.flight, 'days_to_departure': 28,
                                            'quantity': 1, 'base_fare': fare})
 
-    def test_offer_above_half_the_normal_fare_is_rejected(self):
+    def test_offer_above_eighty_percent_the_normal_fare_is_rejected(self):
         with self.assertRaisesRegex(ValueError, 'exceeds the cap'):
             self.publish(round(self.cap + .01, 2))
         self.assertEqual(self.store.offers(), [])
@@ -56,7 +56,7 @@ class PricingGridCap(unittest.TestCase):
         except (KeyError, TypeError):
             self.skipTest('forecast fixture does not match the pricing world contract')
         self.assertTrue(result['candidates'])
-        self.assertTrue(all(c['member_fare'] <= 60 for c in result['candidates']))
+        self.assertTrue(all(c['member_fare'] <= 96 for c in result['candidates']))
 
 
 if __name__ == '__main__':

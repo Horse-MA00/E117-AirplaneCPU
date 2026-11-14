@@ -14,6 +14,12 @@ These are the team's hypotheses, not verified HK Express findings:
 
 This prototype turns a normal-demand forecast into concrete, auditable release and pricing choices for that membership.
 
+## Adaptive member pricing — Thompson Sampling
+
+Open [Adaptive pricing](http://127.0.0.1:8000/adaptive-pricing) from Admin. This experiment treats every traveller as an existing member and compares **basic ticket fares only**, capped at **80% of the observed normal base fare**. It fits a small, weighted purchase-response model and uses Thompson Sampling to choose the next price. Customer LLM calls run concurrently; a deterministic clearing engine alone allocates integer seats.
+
+Fourteen explicitly assumed customer segments are sampled with poststratification weights. The final tested price is frozen before fresh holdout panels compare it with the starting price and no member offer. Separate charts show member purchases, actual panel receipts and weighted target-mix estimates. This is synthetic evidence, not observed HK Express conversion or airline profit. Full design, commands and results are in the [current technical specification](docs/FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing).
+
 ## Joint optimisation and new portals (2026-11-14)
 
 Admin now follows **Forecast seats → Optimize prices → Experiments → Manage offers**,
@@ -22,7 +28,7 @@ the booking forecast and observed ticket prices. The separate Client Portal prov
 flight search, base fares with a separate fees/total line, membership and saved trips.
 
 The primary optimizer now requires a **specific route, flight date and D28/D14/D7 snapshot**.
-Member base fares are capped at **50% of the flight's latest observed normal base fare**;
+Member base fares are capped at **80% of the flight's latest observed normal base fare**;
 P₀ starts at that cap and is read-only, and the user-selected V₀ stays fixed during
 the fare search. The mathematical track scores every fare up to the cap with a
 closed-form expectation of its customer model, then simulates the best estimate P*
@@ -47,7 +53,7 @@ market state. Live runs automatically cross internal batches within a selected t
 budget. NO_OFFER remains a valid decision for the selected flight, not a rejection
 of the complete membership programme. The base NHPP remains frozen.
 
-Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md); the latest changes (50% member fare cap, formula-guided fare search, NHPP seat card) are logged in [iteration progress](docs/ITERATION_2_PROGRESS.md); the v4 record is [demand filter and original fare](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
+Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md); the latest changes (80% member fare cap, formula-guided fare search, NHPP seat card) are logged in [iteration progress](docs/ITERATION_2_PROGRESS.md); the v4 record is [demand filter and original fare](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
 The earlier joint P/V engine (test-only), whole-term continuous search
 and historical experiments remain available as explicitly labelled reference tools.
 Use Docker below on Windows; the customer panel retains POSIX `fcntl`.
@@ -93,7 +99,7 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 - **680,364 daily snapshots** across **3,759 synthetic flight histories** (200,000 original demo rows, two 40,182-row route/date supplements and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
-- **Flight-specific optimisation:** formula P* plus a 9-fare simulated grid on the mathematical track, 1–12 rounds on the live-LLM track, member fares capped at 50% of the normal base fare, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
+- **Flight-specific optimisation:** formula P* plus a 9-fare simulated grid on the mathematical track, 1–12 rounds on the live-LLM track, member fares capped at 80% of the normal base fare, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
 - **Separate Admin and member interfaces:** actionable analysis navigation, panel outcome summaries, segment comparisons, searchable/paginated traveller lists, and a member-facing flight search, price review, membership and My trips flow.
 - **Larger background panels:** up to **100 live LLM travellers** or **1,000 rule-based travellers**, with a default of 100. Live batches default to 60 decision attempts (maximum120), checkpoint each traveller, show progress and resume only on explicit request. Sole legal actions need no model call.

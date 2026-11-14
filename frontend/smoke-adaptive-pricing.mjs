@@ -1,0 +1,96 @@
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {readFile, mkdir} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {chromium} from 'playwright';
+
+const root=fileURLToPath(new URL('.',import.meta.url));
+const files={'/adaptive-pricing':'adaptive-pricing.html','/adaptive-pricing.js':'adaptive-pricing.js','/adaptive-pricing.css':'adaptive-pricing.css'};
+const server=createServer(async(req,res)=>{const file=files[new URL(req.url,'http://localhost').pathname];if(!file){res.writeHead(404).end();return;}try{const data=await readFile(root+file);res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html'});res.end(data);}catch{res.writeHead(500).end();}});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+const origin=`http://127.0.0.1:${server.address().port}`;
+const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
+const page=await browser.newPage({viewport:{width:1440,height:1050}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const weights=[.13,.09,.14,.10,.12,.10,.08,.04,.04,.05,.03,.02,.04,.02];
+const names=['Flexible budget traveller','Student on term breaks','Fixed-leave employee','Frequent leisure traveller','Family on school holidays','Couple on a short break','Visiting friends and relatives','Urgent essential traveller','Self-funded business traveller','Inbound and cross-market traveller','Small travel group','Traveller needing assistance','Infrequent traveller','No matching route or dates'];
+const population={source:'hypothetical_coverage_not_market_shares',segments:weights.map((weight,i)=>({id:`segment-${i}`,name:names[i],weight}))};
+const scope={flight_id:'TEST-HKG-KMQ',origin:'HKG',destination:'KMQ',departure_date:'2027-05-18',departure_time:'10:30',as_of_day:28,normal_base_fare:410,initial_member_fare:328,member_fare_cap:328,member_fare_cap_ratio:.8,releasable_seats:45};
+const flights=[scope,{...scope,flight_id:'TEST-HKG-KMQ-ZERO'},{...scope,flight_id:'TEST-HKG-FUK',destination:'FUK'}];
+const curve=[{price:0,expected_buyers:25,expected_member_revenue:0},{price:100,expected_buyers:20,expected_member_revenue:2000},{price:200,expected_buyers:16,expected_member_revenue:3200},{price:328,expected_buyers:8,expected_member_revenue:2624}];
+const rounds=[{round:1,learning_updates:24,reused_analysis:false,analysis_source:'provider_live',price:328,member_buyers:8,member_revenue:2624,weighted_conversion:.3,curve,analysis:{summary:'Several members declined because the fare exceeded their base-fare budget.'},decisions:[{person:{segment_label:'Flexible budget traveller',customer_id:'TEST-01'},decision:{action:'DECLINE',reason:'The base fare is above my travel budget. <img src=x onerror=alert(1)>'},source:'provider_live'}]},{round:2,learning_updates:0,reused_analysis:true,analysis_source:'provider_live',price:200,member_buyers:16,member_revenue:3200,weighted_conversion:.6,curve,analysis:{summary:'The lower fare increased the observed member purchases.'},decisions:[{person:{segment_label:'Student on term breaks',customer_id:'TEST-02'},decision:{action:'BUY_MEMBER',reason:'The date is suitable and this fare is within my base-fare budget.'},source:'provider_live'}]}];
+rounds.push({...rounds[1],round:3});
+rounds[1]={...rounds[1],learning_updates:24,reused_analysis:false};
+let run={run_id:'adaptive-test-117',status:'completed',scope,population,config:{flight_id:scope.flight_id,forecast_day:28,mode:'synthetic',rounds:3,customers:28,concurrency:4,max_calls:600,seed:117,validation_repeats:2},progress:{completed_rounds:3,total_rounds:3,phase:'completed'},counts:{provider_calls:20,cache_hits:2,forced:4,failures:0,peak_parallel:4},rounds,recommendation:{price:200,revenue_fraction:.9,model_curve:curve,curve:curve.filter(p=>[200,328].includes(p.price))},validation:{decision:'IMPROVED_IN_SIMULATION',delta_vs_initial:576,delta_vs_no_offer:-80,comparisons:[{policy:'initial',price:328,mean_buyers:8,mean_revenue:2624},{policy:'selected',price:200,mean_buyers:16,mean_revenue:3200},{policy:'no_offer',price:null,mean_buyers:8,mean_revenue:3280}]},elapsed_seconds:70};
+let posts=[],scopeRequests=0;
+await page.route('**/api/**',async route=>{
+ const u=new URL(route.request().url()),path=u.pathname,method=route.request().method();
+ if(path==='/api/flights')return route.fulfill({json:{flights}});
+ if(path==='/api/adaptive-pricing/status')return route.fulfill({json:{live_configured:true,population}});
+ if(path==='/api/adaptive-pricing/scope'){
+   scopeRequests++; const b=route.request().postDataJSON();
+   if(b.flight_id==='TEST-HKG-FUK')await new Promise(r=>setTimeout(r,150));
+   return route.fulfill({json:{scope:{...flights.find(f=>f.flight_id===b.flight_id),as_of_day:b.forecast_day,releasable_seats:b.flight_id.endsWith('ZERO')?0:45},population}});
+ }
+ if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill({json:{runs:[run]}});
+ if(path==='/api/adaptive-pricing/runs'&&method==='POST'){
+   posts.push(route.request().postDataJSON());
+   run={...run,config:{...run.config,...posts.at(-1)}};
+   return route.fulfill({json:{...run,status:'running',rounds:[],recommendation:null,validation:null,progress:{phase:'search',completed_rounds:0,total_rounds:posts.at(-1).rounds}}});
+ }
+ if(path==='/api/adaptive-pricing/runs/adaptive-test-117')return route.fulfill({json:run});
+ return route.fulfill({status:404,json:{error:'Unexpected mock API route'}});
+});
+try{
+ await page.goto(origin+'/adaptive-pricing');
+ await page.locator('#route:not([disabled])').waitFor();
+ assert.equal(await page.locator('#weights input').count(),14);
+ assert.equal(await page.locator('#start').isDisabled(),true);
+ await page.selectOption('#route','HKG → KMQ');await page.selectOption('#flight','TEST-HKG-KMQ');
+ await page.waitForFunction(()=>document.getElementById('starting-fare').textContent==='HK$328');
+ assert.equal(await page.locator('#start').isEnabled(),true);
+ await page.locator('#start').click();
+ await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$200');
+ assert.equal(posts.length,1);assert.equal(posts[0].mode,'synthetic');assert.equal(Object.keys(posts[0].weights).length,14);
+ assert.equal(await page.locator('#round-table tr').count(),3);
+ assert.match(await page.locator('#delta-initial').innerText(),/576/);
+ assert.match(await page.locator('#delta-no-offer').innerText(),/−HK\$80/);
+ assert.equal(await page.locator('#curve-table tr').count(),4,'Full model curve preferred over tested-price subset');
+ assert.match(await page.locator('#curve-caption').innerText(),/90%/);
+ assert.match(await page.locator('#round-table tr').nth(2).innerText(),/0.*Cached summary/s);
+ assert.match(await page.locator('#analysis-source-note').innerText(),/Cached summary/);
+ assert.equal(await page.locator('#comparison-bars .comparison-row').count(),3);
+ assert.match(await page.locator('#run-counts').innerText(),/4 peak parallel calls/);
+ await page.selectOption('#feedback-round','1');
+ assert.match(await page.locator('#feedback-list').innerText(),/<img src=x/);
+ assert.equal(await page.locator('#feedback-list img').count(),0,'LLM output is text, never executable HTML');
+ await page.reload();await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$200');
+ assert.equal(posts.length,1,'Saved-run reload is read-only');
+ await mkdir(root+'test-results',{recursive:true});
+ await page.screenshot({path:root+'test-results/adaptive-pricing-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No page horizontal overflow');
+ await page.evaluate(()=>{scrollTo(0,0);return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
+ assert.ok(await page.locator('#round-chart').evaluate(svg=>svg.viewBox.baseVal.width<400),'Charts use readable mobile coordinates');
+ await page.screenshot({path:root+'test-results/adaptive-pricing-mobile.png'});
+ await page.locator('#recommendation').scrollIntoViewIfNeeded();
+ await page.screenshot({path:root+'test-results/adaptive-pricing-mobile-result.png'});
+ await page.selectOption('#flight','TEST-HKG-KMQ-ZERO');
+ await page.waitForFunction(()=>document.getElementById('member-quota').textContent==='0');
+ assert.equal(await page.locator('#start').isDisabled(),true);
+ assert.equal(await page.locator('#recommendation').isHidden(),true,'Changing scope clears previous results');
+ await page.selectOption('#flight','TEST-HKG-KMQ');await page.waitForFunction(()=>document.getElementById('start').disabled===false);
+ await page.locator('.settings summary').click();
+ await page.locator('#weight-0').fill('1');assert.equal(await page.locator('#start').isDisabled(),true);
+ await page.locator('#reset-weights').click();assert.equal(await page.locator('#start').isEnabled(),true);
+ await page.selectOption('#mode','live');await page.locator('#max-calls').fill('1');await page.locator('#start').click();
+ assert.equal(posts.length,1);assert.match(await page.locator('#page-error').innerText(),/call limit must be at least/);
+ await page.locator('#max-calls').fill('600');await page.locator('#start').click();
+ await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$200');
+ assert.equal(posts.length,2);assert.equal(posts[1].mode,'live');
+ run={...run,status:'failed',error:'Live call budget exhausted. Completed decisions are saved.'};
+ await page.locator('#refresh-run').click();await page.getByText('failed: Live call budget exhausted.',{exact:false}).waitFor();
+ assert.equal(await page.locator('#start').isEnabled(),true);
+ assert.deepEqual(errors,[]);
+ console.log('Adaptive pricing UI passed: scoped80%cap, weighted14groups, zeroquota, invalidweights, boundedlive explicitstart, read-onlyreload, modelcurve, roundtrace, independentvalidation, Englishsafeoutputs, failedrun, mobileoverflow. All API calls mocked; no paid calls.');
+}finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

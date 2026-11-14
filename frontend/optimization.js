@@ -207,7 +207,7 @@ function formulaSummary(){
   const box=$('optimization-formula'),e=state.data?.config?.formula_estimate;box.hidden=!e;if(!e){box.replaceChildren();return;}
   const math=(state.data.tracks||[]).find(t=>t.mode==='math'),best=math?.best;
   const parts=[node('strong',`Formula estimate P* = ${money(e.p_star)}`),
-    document.createTextNode(` Scored ${num(e.prices_scored)} member fares from ${money(e.search_low)} to ${money(e.search_high)} (the 50% cap) for ${num(e.travellers_scored)} simulated travellers using the mathematical customer model's choice probabilities; expected ${signed(e.expected_incremental)} versus no offer. The full simulation then tests P* and ${num(e.grid.length-1)} nearby prices.`)];
+    document.createTextNode(` Scored ${num(e.prices_scored)} member fares from ${money(e.search_low)} to ${money(e.search_high)} (the saved fare cap) for ${num(e.travellers_scored)} simulated travellers using the mathematical customer model's choice probabilities; expected ${signed(e.expected_incremental)} versus no offer. The full simulation then tests P* and ${num(e.grid.length-1)} nearby prices.`)];
   if(best)parts.push(document.createTextNode(best.member_fare===e.p_star?` Simulation confirms P* as the best tested price.`:` Simulation moved the best tested price to ${money(best.member_fare)}.`));
   box.replaceChildren(...parts);
 }
@@ -243,21 +243,21 @@ function fillFlights(selected=''){
 async function loadScope(){
   const token=++state.scopeRequest;state.scope=null;$('optimization-fare').value='';$('optimization-load-demo').hidden=true;showError('');controls();
   const flightId=$('optimization-flight').value;
-  if(!flightId){text('optimization-scope',filteredFlights().length?'Choose a route and departure to load this flight.':'No flight selected. Change the demand filter to continue.');text('optimization-initial-source','P₀ is the member fare cap: 50% of the selected flight’s normal base fare, before taxes and fees.');return;}
+  if(!flightId){text('optimization-scope',filteredFlights().length?'Choose a route and departure to load this flight.':'No flight selected. Change the demand filter to continue.');text('optimization-initial-source','P₀ is the member fare cap: 80% of the selected flight’s normal base fare, before taxes and fees.');return;}
   text('optimization-scope','Loading the observed flight snapshot…');
   try{
     const result=await api('/api/optimization/initial-policy',{flight_id:flightId,forecast_day:val('optimization-day'),customers:val('optimization-customers'),program_cost:val('optimization-cost')});
     if(token!==state.scopeRequest)return;
     if(!result.scope)throw new Error('This backend does not support flight-scoped optimization. Refresh after updating the server.');
     state.scope=result.scope;$('optimization-fare').value=result.initial_member_fare;
-    // Member fares never exceed 50% of the normal base fare; the server enforces the same cap.
+    // Member fares never exceed 80% of the normal base fare; the server enforces the same cap.
     const cap=Number(result.scope.member_fare_cap??result.initial_member_fare);
     $('optimization-fare-max').max=String(cap);$('optimization-fare-max').value=String(cap);
     if(val('optimization-fare-min')>=cap)$('optimization-fare-min').value='0';
     const scope=result.scope;
     text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${num(scope.available_seats)} physical empty seats / ${num(scope.capacity)} capacity; ${num(scope.releasable_seats)} forecast member seats.`);
     $('optimization-load-demo').hidden=scopeEligible(scope);
-    text('optimization-initial-source',`P₀ ${money(result.initial_member_fare)} is the member fare cap: 50% of this flight’s ${money(scope.normal_base_fare)} normal base fare, before taxes and fees${scope.quote_age_days?` (last available quote ${scope.quote_age_days} days earlier)`:''}. Tested member fares never go above it.`);
+    text('optimization-initial-source',`P₀ ${money(result.initial_member_fare)} is the member fare cap: 80% of this flight’s ${money(scope.normal_base_fare)} normal base fare, before taxes and fees${scope.quote_age_days?` (last available quote ${scope.quote_age_days} days earlier)`:''}. Tested member fares never go above it.`);
     showError('');
   }catch(error){if(token===state.scopeRequest)showError(error.message);}finally{if(token===state.scopeRequest)controls();}
 }

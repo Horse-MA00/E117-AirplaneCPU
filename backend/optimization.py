@@ -19,7 +19,7 @@ import uuid
 from . import optimization_store as store
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'flight-policy-feedback-v6-formula-grid'
+VERSION = 'flight-policy-feedback-v7-cap80'
 FORMULA_GRID = 'formula-p-star-fine-grid-v1'
 CONTROLLED_PRICE_PROTOCOL = 'fixed-seat-profile-local-fare-v1'
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,7 +41,7 @@ def validate(body):
         from backend.initial_policy import flight_scope
         scope = flight_scope(body['flight_id'], body.get('forecast_day', 28))
         body = {**body, 'initial_member_fare': scope['initial_member_fare'], 'fee_min':0, 'fee_max':5000}
-        # Member fares never exceed 50% of the normal base fare; a wider requested
+        # Member fares never exceed 80% of the normal base fare; a wider requested
         # upper bound is narrowed to the cap so no candidate can be proposed above it.
         cap = scope['member_fare_cap']
         requested = body.get('fare_max', cap)

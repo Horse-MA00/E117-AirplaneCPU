@@ -49,6 +49,23 @@ def forecast_for(flight,day):
  return forecast(data.history(flight),days_to_departure=day,seed=117)
 
 def get(path,query=None):
+ if path=='/api/adaptive-pricing/status':
+  from . import adaptive_pricing
+  return adaptive_pricing.status()
+ if path=='/api/adaptive-pricing/runs':
+  from . import adaptive_pricing
+  return {'runs':adaptive_pricing.list_runs()}
+ if path.startswith('/api/adaptive-pricing/runs/'):
+  from . import adaptive_pricing
+  parts=path.strip('/').split('/')
+  try:
+   if len(parts)==4:return adaptive_pricing.read(ident(parts[3]))
+   if len(parts)==5 and parts[4]=='export':return adaptive_pricing.export_run(ident(parts[3]))
+   if len(parts)==5 and parts[4]=='events':return adaptive_pricing.events(ident(parts[3]),query_int(query or {},('limit',),100),query_int(query or {},('offset',),0))
+  except ValueError as e:
+   if str(e)=='Adaptive pricing run not found':raise NotFound(str(e)) from None
+   raise
+  raise NotFound('Adaptive pricing endpoint not found')
  if path=='/api/health':
   with store().connect() as connection:connection.execute('SELECT 1').fetchone()
   return {'status':'ok'}
@@ -125,6 +142,12 @@ def get(path,query=None):
 
 _optimizer_lock=threading.Lock()
 def post(path,body):
+ if path=='/api/adaptive-pricing/scope':
+  from . import adaptive_pricing
+  return adaptive_pricing.scope(body)
+ if path=='/api/adaptive-pricing/runs':
+  from . import adaptive_pricing
+  return adaptive_pricing.start(body)
  if path=='/api/optimization/initial-policy':
   from .initial_policy import suggest
   return suggest(body)
@@ -244,7 +267,8 @@ class Handler(BaseHTTPRequestHandler):
       compressed.write(line)
     return
    if path.startswith('/api/'):return self.json(200,get(path,parse_qs(urlparse(self.path).query)))
-   aliases={'/admin':'index.html','/admin/':'index.html','/members':'members/index.html','/members/':'members/index.html'}
+   aliases={'/admin':'index.html','/admin/':'index.html','/members':'members/index.html','/members/':'members/index.html',
+            '/adaptive-pricing':'adaptive-pricing.html','/adaptive-pricing/':'adaptive-pricing.html'}
    root=(ROOT/'frontend').resolve();file=(root/aliases.get(path,path.lstrip('/') or 'index.html')).resolve()
    if root not in file.parents or not file.is_file():return self.json(404,{'error':'Not found'})
    payload=file.read_bytes();self.send_response_headers(200,mimetypes.guess_type(file.name)[0] or 'application/octet-stream',len(payload));self.wfile.write(payload)
