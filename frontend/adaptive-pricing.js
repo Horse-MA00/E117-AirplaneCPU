@@ -1,7 +1,9 @@
+import { analysisDiagnostics, analysisUnavailable, analysisLabel } from './analysis-diagnostics.js';
 import { releaseRound } from './thompson-navigation.js';
 import { matchesDemand, populateDemandFilter } from './demand-filter.js';
 import { populatePlaces, matchesFlightPlaces, setFlightPlaces, flightOptionLabel } from './flight-picker.js';
 const $ = id => document.getElementById(id);
+const analystDiagnostics = analysisDiagnostics($('run-analysis-diagnostics'));
 const money = value => Number.isFinite(Number(value)) && value !== null && value !== undefined ? `HK$${Number(value).toLocaleString('en-HK', {minimumFractionDigits: Number(value) % 1 ? 2 : 0, maximumFractionDigits: 2})}` : '—';
 const numeric = value => typeof value === 'number' && Number.isFinite(value);
 const count = value => numeric(value) ? value.toLocaleString('en-HK', {maximumFractionDigits: 2}) : '—';
@@ -12,7 +14,7 @@ const safeId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,80}$/.tes
 const active = run => ['queued', 'running'].includes(run?.status);
 const CURRENT_VERSION = 'member-thompson-v5-marketing';
 const currentRun = value => value?.version === CURRENT_VERSION && value?.config?.profile === 'flexible_deal_seekers';
-const budgetUpper = (rounds,members,panels) => rounds*(2*members+1)+3*panels*members;
+const budgetUpper = (rounds,members,panels) => rounds*(2*members+3)+3*panels*members;
 const hypothesisLabel = status => ({supported:'Above initial revenue',not_supported:'Below initial revenue'}[status] || String(status||'not_tested').replaceAll('_',' '));
 let flights = [], segments = [], defaultWeights = {}, scope = null, run = null, liveConfigured = false;
 const TARGET_PROFILE = 'flexible_deal_seekers';
@@ -148,9 +150,10 @@ function updateControls() {
   const n=Number($('rounds').value), m=Number($('customers').value), v=Number($('validation-repeats').value);
   const calls=budgetUpper(n,m,v);
   $('customers').min=String(Math.max(1,weights.filter(w=>w>0).length));
-  $('call-estimate').textContent = isLive ? `Up to ${calls.toLocaleString()} calls for fresh paired cohorts and independent confirmation, before forced choices or identical-policy reuse. The configured call limit applies to the whole experiment.` : 'Uses simulated customer choices. No paid LLM calls are made in this mode.';
+  $('call-estimate').textContent = isLive ? `Up to ${calls.toLocaleString()} calls for fresh paired cohorts, up to 3 analyst attempts per round and independent confirmation, before forced choices or identical-policy reuse. The configured call limit applies to the whole experiment.` : 'Uses simulated customer choices. No paid LLM calls are made in this mode.';
 }
 function clearRun() {
+  analystDiagnostics.clear();
   runSequence++; clearTimeout(pollTimer); run = null;
   for (const id of ['run-progress','recommendation','round-section','curve-section','validation-section']) $(id).hidden=true;
   $('empty-state').hidden=false;
@@ -188,8 +191,10 @@ function renderRounds(rounds) {
     const observations=numeric(r.learning_updates)?String(r.learning_updates):'Not recorded';
     const fresh=numeric(r.unique_customers)?`${r.unique_customers} / ${observations}`:observations;
     const test=r.hypothesis_test;
-    const feedback=test ? hypothesisLabel(test.status) : r.reused_analysis?'Cached summary':r.analysis_source==='provider_live'?'Fresh LLM summary':r.analysis_source==='synthetic_analysis'?'Rule summary':'Recorded summary';
+    const feedback=analysisUnavailable(r)||r.analysis_attempts?.length>1 ? analysisLabel(r) : test ? hypothesisLabel(test.status) : r.reused_analysis?'Cached summary':r.analysis_source==='provider_live'?'Fresh LLM summary':r.analysis_source==='synthetic_analysis'?'Rule summary':'Recorded summary';
     const row=tableRow([r.round,money(r.price),count(r.member_buyers),percentage(r.weighted_conversion),money(r.member_revenue),fresh,signedMoney(r.paired_delta_vs_initial),feedback]);
+    if(r.analysis_error)row.lastElementChild.append(node('small',r.analysis_error,'analysis-cell'));
+    else if(r.analysis_attempts?.some(a=>a.status==='failed'))row.lastElementChild.append(node('small',r.analysis_attempts.filter(a=>a.status==='failed').map(a=>`Attempt ${a.attempt}: ${a.error}`).join(' '),'analysis-cell'));
     if(run?.recommendation?.raw_price===r.price)row.className='selected';return row;
   }));
   $('round-caption').textContent=`${rounds.length} rounds · ${new Set(rows.map(r=>r.price)).size} different prices`;
@@ -261,9 +266,10 @@ function renderRun(value) {
   const phase=String(['failed','interrupted','paused_at_budget'].includes(value.status)?value.status:value.progress?.phase||value.status||'').replaceAll('_',' ');
   $('run-status').textContent=value.error?`${phase}: ${value.error}`:value.status==='completed'?'Complete. Selection and independent validation are saved.':`${phase.charAt(0).toUpperCase()+phase.slice(1)}. Progress is saved; this page can be reopened.`;
   const counts=value.counts||{};
+  analystDiagnostics.update(value);
   const unique=value.progress?.cumulative_unique_customers??value.cumulative_unique_customers;
   $('run-people').textContent=numeric(unique)?`${count(unique)} unique search members · New people in every round; paired quotes share the same people.`:'Fresh paired search cohorts; exact budgets are private to customers.';
-  $('run-counts').textContent=`${counts.provider_calls??0} provider calls · ${counts.cache_hits??0} cache hits · ${counts.forced??0} forced decisions · ${counts.failures??0} failures · ${counts.peak_parallel??0} peak parallel calls`;
+  $('run-counts').textContent=`${counts.provider_calls??0} provider calls · ${counts.cache_hits??0} cache hits · ${counts.forced??0} forced decisions · ${counts.failures??0} failures · ${counts.peak_parallel??0} peak parallel calls · ${counts.analyst_retries??0} analyst retries · ${counts.analyst_unavailable??0} unavailable analyses`;
   $('member-feedback-link').hidden=!safeId(value.run_id);
   if(safeId(value.run_id)){
     const params=new URLSearchParams({run:value.run_id});

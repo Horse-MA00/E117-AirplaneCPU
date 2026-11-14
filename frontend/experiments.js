@@ -1,5 +1,7 @@
+import { analysisDiagnostics, analysisUnavailable, analysisLabel } from './analysis-diagnostics.js';
 // A read-only view of saved price-round feedback. Viewing a run never starts calls.
 const $ = id => document.getElementById(id);
+const analystDiagnostics = analysisDiagnostics($('feedback-analysis-diagnostics'));
 const safeId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(value);
 const money = value => value !== null && value !== undefined && Number.isFinite(Number(value))
   ? `HK$${Number(value).toLocaleString('en-HK', { maximumFractionDigits: 2 })}` : '—';
@@ -55,8 +57,11 @@ function renderRound() {
   $('feedback-empty').hidden = true;
   $('feedback-content').hidden = false;
   const analysis = round.analysis || {};
-  $('feedback-summary').textContent = typeof analysis === 'string' ? analysis : analysis.summary || analysis.interpretation || 'No written summary was saved for this round. Recorded member decisions are shown below.';
-  $('feedback-source').textContent = round.reused_analysis
+  analystDiagnostics.update(selectedRun,{round:selectedRun.status==='failed'?null:roundNumber(round,index)});
+  $('feedback-summary').textContent = analysisUnavailable(round) ? `Analysis unavailable. ${round.analysis_error || 'The analyst could not provide a usable response.'}` : typeof analysis === 'string' ? analysis : analysis.summary || analysis.interpretation || 'No written summary was saved for this round. Recorded member decisions are shown below.';
+  $('feedback-source').textContent = analysisUnavailable(round) ? 'Valid customer choices remain available below. Thompson continues without an analyst direction for this round.'
+    : round.analysis_attempts?.length>1 ? `${analysisLabel(round)}. Earlier rejected responses remain in Analyst checks.`
+    : round.reused_analysis
     ? 'Reused summary from an earlier identical price; this is not a new analysis call.'
     : round.analysis_source === 'provider_live' ? 'Saved LLM summary of this round’s recorded decisions.'
     : round.analysis_source === 'synthetic_analysis' ? 'Saved summary of offline simulated customer choices.'
@@ -92,6 +97,7 @@ function renderRound() {
 function renderRun(run, preferredRound) {
   if(run.version!=='member-thompson-v5-marketing'||run.config?.profile!=='flexible_deal_seekers')throw new Error('This experiment is no longer available. Choose a current Thompson Sampling experiment.');
   selectedRun = run;
+  analystDiagnostics.update(run, {round:run.status==='failed'?null:Number(preferredRound)||null});
   const rounds = Array.isArray(run.rounds) ? run.rounds : [];
   $('feedback-status').textContent = `${run.config?.mode === 'live' ? 'Live LLM' : 'Offline simulated customers'} · ${String(run.status || 'saved').replaceAll('_', ' ')} · ${rounds.length} saved price rounds. Viewing feedback makes no new model calls.`;
   if (!rounds.length) {
@@ -107,6 +113,7 @@ function renderRun(run, preferredRound) {
 async function loadRun(id, preferredRound) {
   if (!safeId(id)) return;
   const sequence = ++requestSequence;
+  analystDiagnostics.clear();
   showError();
   setBusy(true);
   $('feedback-content').hidden = true;
@@ -125,6 +132,7 @@ async function loadRun(id, preferredRound) {
   } finally { if (sequence === requestSequence) setBusy(false); }
 }
 async function loadSaved() {
+  analystDiagnostics.clear();
   const sequence = ++requestSequence;
   const params = new URL(location.href).searchParams;
   const requested = params.get('run');

@@ -7,6 +7,7 @@
 <title>Admin — UOption Fly Pass</title>
 <link rel="preload" href="/fonts/inter-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/admin-shell.css">
+<link rel="stylesheet" href="/analysis-diagnostics.css">
 <link rel="stylesheet" href="/styles.css">
 <script type="module" src="/app.js"></script>
 <script type="module" src="/experiments.js"></script>
@@ -196,6 +197,7 @@
         <p id="feedback-status" class="hint" role="status"></p>
         <div id="feedback-error" class="message error" role="alert" hidden></div>
         <div id="feedback-empty" class="empty-state" hidden><p id="feedback-empty-message">No saved feedback yet.</p><a href="/adaptive-pricing">Open price optimization</a></div>
+        <section id="feedback-analysis-diagnostics" class="analysis-diagnostics" aria-label="Saved analyst checks" hidden></section>
         <section id="feedback-content" class="member-feedback card" aria-labelledby="feedback-title" hidden>
           <p id="feedback-context" class="hint"></p>
           <p id="feedback-summary" class="feedback-summary"></p>

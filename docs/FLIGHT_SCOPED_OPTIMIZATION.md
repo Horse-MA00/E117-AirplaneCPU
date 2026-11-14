@@ -1,6 +1,6 @@
 # Thompson Sampling：指定航班會員票價
 
-> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`public-member-response-v1`、`weighted-member-panel-v3-motivation`、`adaptive-member-decisions-v4-hypotheses`、`whole-hkd-quotes-v1`、`member-marketing-fare-v1`、`backend/forecast.py`
+> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`public-member-response-v1`、`weighted-member-panel-v3-motivation`、`adaptive-member-decisions-v4-hypotheses`、`analyst-retry-v1`、`whole-hkd-quotes-v1`、`member-marketing-fare-v1`、`backend/forecast.py`
 
 更新：2026-11-15。這份規格描述目前唯一的定價方法：**Thompson Sampling**。正常需求預測仍由 NHPP 負責；會員放票沿用 [D28／D14／D7 三輪規則](THREE_ROUND_RELEASE.md)。顧客已入會，票價實驗不再次收會費；結果是合成情境中的基本票款，不是航空公司淨利潤。
 
@@ -101,9 +101,17 @@ Three cohorts and bootstrap intervals are a conservative **prototype rule**, not
 
 ### Audit, costs of experiments and optional human pilot
 
-Fresh calls, cache hits, forced actions and failures have separate counters. Both configured key slots share one finite limit, with at most eight parallel customer calls (default four). The first failure stops further dispatches; in-flight calls may finish, with no automatic retries or synthetic replacements. Requests, raw responses, validated decisions, prompts/context hashes and accounting are persisted in ignored private SQLite and redacted on export. Retained current-version reports preserve their original provenance and recorded outcomes.
+Fresh calls, cache hits, forced actions and failed attempts have separate counters. Both configured key slots share one finite limit, with at most eight parallel customer calls (default four). A **customer-decision** failure still stops further dispatches; in-flight calls may finish. Missing or invalid purchase decisions never become synthetic purchases.
 
-A complete live run needs an explicit budget covering `R*(2*M+1) + 3*H*M` calls. The estimate deliberately overcounts identical-price reuse and forced choices. Default M=16, H=3; minimum M covers every positive-weight segment. The final validation is read only once after selection. Same-price cache reuse is not new evidence, while a new person's answer is.
+The separate `analyst-retry-v1` policy permits **three analyst attempts per round: the initial request plus at most two retries**. Each dispatched retry consumes the same explicit budget. Validation repairs receive the concrete rejection and untrusted prior output, with the same recorded feedback; no customer cohort is replayed. Temporary transport failures can retry; permanent provider errors or exhausted budget may end attempts early. Audit-storage failures and unexpected implementation errors remain fatal.
+
+After unsuccessful attempts, the round stores `analysis=null`, `analysis_status="unavailable"`, `analysis_source="analysis_unavailable"`, a concrete `analysis_error` and `analysis_attempts` metadata. The purchase outcomes, model updates and round are still saved. The next hypothesis slot falls back to ordinary Thompson Sampling instead of reusing an older direction. Independent confirmation still runs. This is not an invented analyst response, a failed purchase observation, or a claim that the LLM supported the price. A recovered response has status `available` and keeps the preceding failed attempts.
+
+`analyst_retries` counts additional dispatched attempts; `analyst_unavailable` counts rounds lacking valid analysis. `failures` includes each failed attempt even if the round later recovers. `analysis_unavailable_rounds` names affected rounds. Historical reports keep their original provenance and outcomes, including old failures; this change does not resume them automatically.
+
+Requests, raw responses, validation reasons, round/attempt identifiers, context hashes and accounting remain in ignored private SQLite and are redacted on export. Optimize and Member feedback show diagnostic summaries; opening a round's response disclosure reads the original audit through `GET /api/adaptive-pricing/runs/{id}/analysis-attempts?round=N`. Without `round`, the endpoint supplies metadata only. Transport errors with no response are labelled accordingly; rejected text is never displayed as a valid analysis. Viewing diagnostics makes no provider calls.
+
+A complete live run now needs an explicit budget covering `R*(2*M+3) + 3*H*M` calls, including all allowed analyst retries. For R=10, M=16, H=3 this is **494 calls**; the default cap remains 600. The estimate deliberately overcounts identical-price reuse and forced choices. Minimum M covers every positive-weight segment. The final validation is read only once after selection. Same-price cache reuse is not new evidence, while a new person's answer is.
 
 `synthetic` mode uses a declared random-utility oracle with private motivation coefficients in `adaptive_customers.synthetic_probability`; it is independent of the public response learner and is not human calibration. `scripts/benchmark_paired_pricing.py` runs prespecified offline comparisons on the current engine and never calls a provider.
 

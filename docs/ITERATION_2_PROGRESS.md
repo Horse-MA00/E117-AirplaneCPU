@@ -85,3 +85,15 @@ Admin 与 Optimize 的 Route 改为 From → To，复用 Client 的完整机场�
 空组合保持用户选择并清除旧预测、发布目标和优化scope；显式加载已保存实验恢复该航班，自动加载最新结果保持原地区范围。共享helper统一日期显示，不因浏览器时区改变日期。桌面From／To并排，手机依照键盘顺序排列。
 
 验证：`scripts/check_container.py` 通过198项后端及24项根目录测试，发布及冻结证据检查通过。六组浏览器检查通过：Demand、Adaptive pricing、Flight offers、Seat supply、真实Admin流程和已保存离线实验读取。覆盖完整目录、地区／Anywhere、返程、同日不同编号、空结果及过期请求拦截；最终样式再次通过Demand与真实Admin手机检查。Client、后端、冻结数据没有修改；没有LLM／OAG调用、新实验或库存交易。
+
+## 2026-11-15 · Analyst有限重试与不中断Thompson
+
+原因已由原始audit离线重现：Analyst报价格异议数0却建议lower，旧版验证拒绝后中断整个run。现在`analyst-retry-v1`每轮最多首次加两次重试；验证修正使用同一feedback及具体错误、前次不可信回覆，临时transport错误有短暂退避。永久错误或预算耗尽可提前结束，所有派送共用max_calls。预估上界改为`R*(2*M+3)+3*H*M`，默认10轮／16人／3批确认上界494。
+
+Analyst仍不可用时存`analysis=null`、error、attempt metadata和unavailable轮号，顾客决策及本轮模型更新不丢失；后续普通Thompson选价，最终独立确认照常执行。顾客回覆失败、audit写入失败或非预期内部错误仍停止，包括尚未派送的并行请求。没有伪造摘要、购买标签或重跑同一客群补结果。冻结prompt文件保持原字节，新增policy metadata记录行为变化；旧失败实验不回填、不自动恢复。
+
+新增只读`analysis-attempts`审计投影，默认metadata，指定round才读原始回覆；旧audit也能还原尚未成为完整round的失败阶段。Optimize和Member feedback显示具体错误、重试及分析不可用，原生details按需显示已脱敏原文，以textContent阻止HTML执行；无新回覆、cache及传输失败不会伪装成模型输出。Client和NHPP未修改。
+
+验证：新adapter、worker、审计API与浏览器测试先在旧行为失败，再修复通过。完整原生`check_container.py`通过216项后端＋24项根目录，共240项；发布链接及冻结SHA验证通过。完整worker mock测试让3轮Analyst各失败3次，记录9次失败、6次重试、3轮分析不可用，仍完成Thompson及独立确认。测试同时覆盖恢复成功、预算边界、永久／暂时错误、原始回覆保存、audit／内部失败停止排队、历史audit投影与大小上限。
+
+浏览器`test:analyst-diagnostics`、`test:adaptive-pricing`、真实服务`test:smoke`通过；额外在实际旧失败实验验证第10轮具体错误／原文及已保存顾客选择在两页均可读，未启动新实验。桌面／390px截图检查通过，包含恶意HTML作为纯文字、迟到响应隔离、加载失败重试。整个修复没有真实LLM／OAG调用或库存交易；确认无活动实验后重启原生8000服务。

@@ -88,6 +88,101 @@ def events(run_id, limit=100, offset=0):
     return sanitize({'events': [{**dict(row), 'record':json.loads(row['record'])} for row in rows]})
 
 
+def analysis_attempts(run_id, round_number=None):
+    """Project analyst audits without copying requests or raw text into reports.
+
+    Old attempts have no round/attempt fields: their request context and hash
+    recover the same grouping, including a round that failed before being saved.
+    Raw output is fetched only for an explicitly selected round, after a byte
+    limit check. Listing attempts never loads the potentially large raw bodies.
+    """
+    from llm_agent.audit import sanitize
+    if round_number is not None and (isinstance(round_number, bool)
+            or not isinstance(round_number, int) or not 1 <= round_number <= 30):
+        raise ValueError('Analysis round must be an integer from 1 to 30')
+    read(run_id)
+    query = '''SELECT id, json_extract(record,'$.event') AS event,
+        CASE WHEN json_type(record,'$.round') = 'integer'
+             THEN json_extract(record,'$.round')
+             WHEN json_valid(json_extract(record,'$.request.messages[1].content'))
+             THEN json_extract(json_extract(record,'$.request.messages[1].content'),'$.round') END AS round_number,
+        json_extract(record,'$.attempt') AS attempt,
+        json_extract(record,'$.context_sha256') AS context_hash,
+        json_extract(record,'$.error') AS error,
+        json_extract(record,'$.error_type') AS error_type,
+        json_extract(record,'$.failure_kind') AS failure_kind,
+        json_extract(record,'$.provider_call') AS provider_call,
+        json_type(record,'$.raw_response_text') = 'text' AS raw_available,
+        length(CAST(json_quote(json_extract(record,'$.raw_response_text')) AS BLOB)) AS raw_bytes
+        FROM adaptive_events WHERE run_id=? AND json_extract(record,'$.event') GLOB 'analyst_*'
+        ORDER BY id'''
+    attempts, by_hash, latest, sequence = {}, {}, {}, {}
+    with connection() as db:
+        for row in db.execute(query, (run_id,)):
+            event = row['event']
+            if event not in ('analyst_request', 'analyst_response', 'analyst_failed', 'analyst_validated', 'analyst_cache'):
+                continue
+            number, attempt, context_hash = row['round_number'], row['attempt'], row['context_hash']
+            key = by_hash.get(context_hash) if isinstance(context_hash, str) else None
+            if not isinstance(number, int) or not 1 <= number <= 30:
+                if key is None:
+                    continue
+                number = key[0]
+            if isinstance(attempt, int) and not isinstance(attempt, bool) and attempt > 0:
+                key = (number, attempt)
+            elif event == 'analyst_request':
+                key = (number, sequence.get(number, 0) + 1)
+            elif key is None:
+                key = latest.get(number, (number, 1))
+            sequence[number] = max(sequence.get(number, 0), key[1])
+            latest[number] = key
+            if isinstance(context_hash, str):
+                by_hash[context_hash] = key
+            if key not in attempts:
+                attempts[key] = {'round': number, 'attempt': key[1], 'status': 'pending',
+                                 'error': None, 'error_type': None, 'failure_kind': None,
+                                 'provider_call': event != 'analyst_cache', 'raw_available': False,
+                                 '_raw_id': None, '_raw_bytes': 0}
+            item = attempts[key]
+            if row['provider_call'] is not None:
+                item['provider_call'] = bool(row['provider_call'])
+            if row['raw_available']:
+                item.update(raw_available=True, _raw_id=row['id'], _raw_bytes=row['raw_bytes'] or 0)
+            if event == 'analyst_failed':
+                error = row['error'] if isinstance(row['error'], str) else 'Analyst attempt failed'
+                error_type = row['error_type'] if isinstance(row['error_type'], str) else None
+                kind = row['failure_kind']
+                if not isinstance(kind, str):
+                    kind = ('budget' if 'budget' in error.lower() else 'transport'
+                            if error_type in ('HTTPError', 'URLError', 'TimeoutError', 'ConnectionError', 'OSError')
+                            else 'validation')
+                item.update(status='failed', error=error, error_type=error_type, failure_kind=kind)
+            elif event in ('analyst_validated', 'analyst_cache'):
+                item['status'] = 'passed'
+
+        chosen = [attempts[key] for key in sorted(attempts) if round_number is None or key[0] == round_number]
+        result = {'run_id': run_id, 'round': round_number, 'attempts': [
+            {k: v for k, v in item.items() if not k.startswith('_')} for item in chosen]}
+        byte_count = len(encode(result).encode('utf-8'))
+        if round_number is not None:
+            # Include JSON escaping and the added property name, not only the
+            # unescaped provider-text size (quotes/newlines can double it).
+            byte_count += sum(item['_raw_bytes'] + 32 for item in chosen)
+        if byte_count > MAX_EXPORT_BYTES:
+            raise ValueError('Analysis attempts exceed the inline export limit; use paginated audit events')
+        if round_number is not None:
+            for item, target in zip(chosen, result['attempts']):
+                target['raw_response_text'] = None
+                if item['_raw_id'] is not None:
+                    target['raw_response_text'] = db.execute(
+                        "SELECT json_extract(record,'$.raw_response_text') FROM adaptive_events WHERE id=? AND run_id=?",
+                        (item['_raw_id'], run_id)).fetchone()[0]
+    result = sanitize(result)
+    if len(encode(result).encode('utf-8')) > MAX_EXPORT_BYTES:
+        raise ValueError('Analysis attempts exceed the inline export limit; use paginated audit events')
+    return result
+
+
 def export_run(run_id):
     from llm_agent.audit import sanitize
     report = read(run_id)

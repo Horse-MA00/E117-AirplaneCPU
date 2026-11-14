@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from urllib.parse import urlparse,unquote,parse_qs,urlsplit
 from pathlib import Path
 from functools import lru_cache
-from . import data,member_portal,adaptive_pricing,demo_auth
+from . import data,member_portal,adaptive_pricing,adaptive_store,demo_auth
 from .store import Store
 from .evidence import EvidenceUnavailable,read_evaluation
 from .errors import NotFound
@@ -50,6 +50,9 @@ def get(path,query=None):
    if len(parts)==4:return adaptive_pricing.read(ident(parts[3]))
    if len(parts)==5 and parts[4]=='export':return adaptive_pricing.export_run(ident(parts[3]))
    if len(parts)==5 and parts[4]=='events':return adaptive_pricing.events(ident(parts[3]),query_int(query or {},('limit',),100),query_int(query or {},('offset',),0))
+   if len(parts)==5 and parts[4]=='analysis-attempts':
+    run_id=ident(parts[3]);adaptive_pricing.read(run_id)
+    return adaptive_store.analysis_attempts(run_id,query_int(query or {},('round',),None))
   except ValueError as e:
    if str(e)=='Adaptive pricing run not found':raise NotFound(str(e)) from None
    raise

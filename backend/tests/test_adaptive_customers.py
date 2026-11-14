@@ -382,5 +382,154 @@ class AdaptiveCustomerTests(unittest.TestCase):
         self.assertEqual(audit[-1]['event'], 'analyst_synthetic')
 
 
+class AnalystRecoveryTests(unittest.TestCase):
+    def context(self):
+        return {'round':10, 'price':294, 'member_fare_cap':536, 'feedback':[
+            {'customer_id':'BUYER', 'decision':{'action':'BUY_MEMBER','reason_code':'VALUE'}},
+            {'customer_id':'DECLINER', 'decision':{'action':'DECLINE','reason_code':'LOW_INTEREST'}},
+        ]}
+
+    def analysis(self, direction='hold'):
+        return {'summary':'One member purchased and another preferred not to travel. No price objection was reported.',
+                'reason_counts':{'price':0,'date':0,'companions':0,'availability':0,'other':2},
+                'hypothesis':'Test the same fare on fresh customers because no price objection supports a lower-price hypothesis.',
+                'evidence_customer_ids':['BUYER','DECLINER'], 'suggested_direction':direction}
+
+    @patch.dict(os.environ, ENV)
+    def test_inconsistent_lower_direction_retries_same_feedback_then_succeeds(self):
+        audit, requests = [], []
+        outputs = iter([self.analysis('lower'), self.analysis()])
+        def transport(req):
+            requests.append(json.loads(req.data))
+            return io.BytesIO(json.dumps(response(next(outputs))).encode())
+        client = adapter.DecisionClient(max_calls=5, audit_callback=audit.append)
+        with patch.object(adapter, '_transport', side_effect=transport):
+            result = client.analyse(self.context())
+        self.assertEqual(result['analysis_status'], 'available')
+        self.assertEqual(result['analysis']['suggested_direction'], 'hold')
+        self.assertIsNone(result['analysis_error'])
+        self.assertEqual([a['status'] for a in result['analysis_attempts']], ['failed','passed'])
+        self.assertIn('reported price objection', result['analysis_attempts'][0]['error'])
+        first, second = [json.loads(r['messages'][1]['content']) for r in requests]
+        self.assertEqual(first['feedback'], second['feedback'])
+        self.assertEqual(second['round'], 10)
+        self.assertIn('reported price objection', second['analyst_retry']['previous_error'])
+        self.assertIn('lower', second['analyst_retry']['previous_response'])
+        self.assertEqual(requests[0]['messages'][0]['content'], adapter.PROMPTS['analyst'].read_text())
+        self.assertEqual(client.stats()['provider_calls'], 2)
+        self.assertEqual(client.stats()['analyst_retries'], 1)
+        self.assertEqual(client.stats()['failures'], 1)
+        self.assertFalse(client.stats()['stopped_after_failure'])
+        for e in audit:
+            if e['event'] in ('analyst_request','analyst_response','analyst_failed','analyst_validated'):
+                self.assertEqual(e['round'],10)
+                self.assertIn(e['attempt'],(1,2))
+        failed=next(e for e in audit if e['event']=='analyst_failed')
+        self.assertEqual(json.loads(json.loads(failed['raw_response_text'])['choices'][0]['message']['content'])['suggested_direction'],'lower')
+        self.assertNotIn('raw_response_text', result['analysis_attempts'][0])
+
+    @patch.dict(os.environ, ENV)
+    def test_three_invalid_analyses_are_unavailable_but_next_customer_continues(self):
+        audit=[]
+        client=adapter.DecisionClient(max_calls=4,audit_callback=audit.append)
+        def invalid(req): return io.BytesIO(json.dumps(response(self.analysis('lower'))).encode())
+        with patch.object(adapter,'_transport',side_effect=invalid) as calls:
+            result=client.analyse(self.context())
+            self.assertEqual(calls.call_count,3)
+        self.assertIsNone(result['analysis'])
+        self.assertEqual(result['source'],'analysis_unavailable')
+        self.assertEqual(result['analysis_status'],'unavailable')
+        self.assertIn('reported price objection',result['analysis_error'])
+        self.assertEqual(len(result['analysis_attempts']),3)
+        self.assertEqual(client.stats()['analyst_retries'],2)
+        self.assertEqual(client.stats()['analyst_unavailable'],1)
+        self.assertEqual(client.stats()['failures'],3)
+        self.assertFalse(client.stats()['stopped_after_failure'])
+        self.assertEqual(sum(e['event']=='analyst_failed' for e in audit),3)
+        self.assertEqual(audit[-1]['event'],'analyst_unavailable')
+        with patch.object(adapter,'_transport',return_value=io.BytesIO(json.dumps(response()).encode())):
+            self.assertEqual(client.choose(observation())['decision']['action'],'BUY_MEMBER')
+        self.assertEqual(client.stats()['provider_calls'],4)
+
+    @patch.dict(os.environ, ENV)
+    def test_analyst_budget_is_not_exceeded_and_no_substitute_is_fabricated(self):
+        client=adapter.DecisionClient(max_calls=1)
+        with patch.object(adapter,'_transport',side_effect=lambda req:io.BytesIO(json.dumps(response(self.analysis('lower'))).encode())) as calls:
+            result=client.analyse(self.context())
+        self.assertEqual(calls.call_count,1)
+        self.assertEqual(client.stats()['provider_calls'],1)
+        self.assertEqual(client.stats()['analyst_retries'],0)
+        self.assertIsNone(result['analysis'])
+        self.assertEqual(result['analysis_attempts'][-1]['failure_kind'],'budget')
+        self.assertFalse(result['analysis_attempts'][-1]['provider_call'])
+        self.assertFalse(client.stats()['stopped_after_failure'])
+
+    @patch.dict(os.environ, ENV)
+    def test_transient_transport_retries_and_permanent_auth_error_does_not(self):
+        audit=[]
+        client=adapter.DecisionClient(max_calls=3,audit_callback=audit.append)
+        with patch.object(adapter,'_transport',side_effect=[TimeoutError('request timed out'),io.BytesIO(json.dumps(response(self.analysis())).encode())]),patch.object(adapter.time,'sleep'):
+            result=client.analyse(self.context())
+        self.assertEqual(result['analysis_status'],'available')
+        self.assertEqual(result['analysis_attempts'][0]['failure_kind'],'transport')
+        self.assertIsNone(next(e for e in audit if e['event']=='analyst_failed')['raw_response_text'])
+        secret=ENV['LLM_API_KEY']
+        client=adapter.DecisionClient(max_calls=3,audit_callback=audit.append)
+        with patch.object(adapter,'_transport',side_effect=urllib.error.HTTPError('https://api.deepseek.com',401,'Unauthorized '+secret,{},io.BytesIO(secret.encode()))) as calls:
+            denied=client.analyse(self.context())
+        self.assertEqual(calls.call_count,1)
+        self.assertEqual(denied['analysis_status'],'unavailable')
+        self.assertNotIn(secret,json.dumps(denied))
+        self.assertNotIn(secret,json.dumps(audit))
+        self.assertFalse(client.stats()['stopped_after_failure'])
+
+    @patch.dict(os.environ, ENV)
+    def test_malformed_or_truncated_analyst_output_can_be_retried(self):
+        broken=response(self.analysis()); broken['choices'][0]['finish_reason']='length'
+        client=adapter.DecisionClient(max_calls=3)
+        with patch.object(adapter,'_transport',side_effect=[io.BytesIO(b'not json'),io.BytesIO(json.dumps(broken).encode()),io.BytesIO(json.dumps(response(self.analysis())).encode())]):
+            result=client.analyse(self.context())
+        self.assertEqual(result['analysis_status'],'available')
+        self.assertEqual([a['failure_kind'] for a in result['analysis_attempts']],['validation','validation',None])
+        self.assertEqual(client.stats()['failures'],2)
+
+    @patch.dict(os.environ, ENV)
+    def test_unexpected_customer_errors_and_audit_failures_stop_queued_calls(self):
+        def audit_failure(record):
+            if record['event'] == 'customer_response':
+                raise OSError('durable audit failed')
+        for failure in ('transport_bug', 'audit_failure'):
+            with self.subTest(failure=failure):
+                client = adapter.DecisionClient(max_calls=10, concurrency=1,
+                    audit_callback=audit_failure if failure == 'audit_failure' else None)
+                def transport(req):
+                    if failure == 'transport_bug':
+                        raise RuntimeError('unexpected provider adapter bug')
+                    return io.BytesIO(json.dumps(response()).encode())
+                with patch.object(adapter, '_transport', side_effect=transport) as calls:
+                    with self.assertRaises((RuntimeError, OSError)):
+                        client.choose_many([observation(str(i)) for i in range(8)])
+                    self.assertEqual(calls.call_count, 1)
+                    with self.assertRaisesRegex(ValueError, 'stopped'):
+                        client.choose(observation('later'))
+                    self.assertEqual(calls.call_count, 1)
+                self.assertTrue(client.stats()['stopped_after_failure'])
+
+    @patch.dict(os.environ, ENV)
+    def test_analyst_audit_failure_and_programming_errors_are_not_suppressed(self):
+        def audit_failure(record):
+            if record['event']=='analyst_response': raise OSError('audit storage unavailable')
+        client=adapter.DecisionClient(max_calls=3,audit_callback=audit_failure)
+        with patch.object(adapter,'_transport',side_effect=lambda req:io.BytesIO(json.dumps(response(self.analysis())).encode())) as calls:
+            with self.assertRaisesRegex(OSError,'audit storage unavailable'):client.analyse(self.context())
+        self.assertEqual(calls.call_count,1)
+        self.assertEqual(client.stats()['analyst_unavailable'],0)
+        client=adapter.DecisionClient(max_calls=3)
+        with patch.object(adapter,'_transport',side_effect=RuntimeError('unexpected implementation bug')) as calls:
+            with self.assertRaisesRegex(RuntimeError,'implementation bug'):client.analyse(self.context())
+        self.assertEqual(calls.call_count,1)
+        self.assertEqual(client.stats()['analyst_unavailable'],0)
+
+
 if __name__ == '__main__':
     unittest.main()

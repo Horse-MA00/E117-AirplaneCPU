@@ -1,0 +1,18 @@
+.analysis-diagnostics{margin-top:20px;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:var(--card);min-width:0}
+.analysis-diagnostics h3{margin:0 0 8px;font-size:18px}
+.analysis-diagnostics p{margin:8px 0;overflow-wrap:anywhere}
+.analysis-diagnostics .analysis-notice{color:var(--ink-2);font-size:15px}
+.analysis-round{border-top:1px solid var(--line);padding:10px 0}
+.analysis-round>summary{font-weight:600;color:var(--purple);cursor:pointer;font-size:16px}
+.analysis-diagnostics summary{display:list-item;list-style:revert}
+.analysis-diagnostics summary::after{display:none}
+.analysis-diagnostics summary::-webkit-details-marker{display:revert}
+.analysis-round>summary:focus-visible,.analysis-raw>summary:focus-visible{outline:2px solid var(--purple);outline-offset:4px;border-radius:2px}
+.analysis-diagnostics .analysis-error{color:var(--ink);border-left:3px solid var(--purple);padding-left:10px;font-size:14px}
+.analysis-raw{margin-top:12px;padding:10px 12px;background:var(--ground);border-radius:8px}
+.analysis-raw>summary{cursor:pointer;font-size:14px;font-weight:600}
+.analysis-response{margin-top:14px;min-width:0}
+.analysis-response strong{font-size:14px}
+.analysis-response pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:13px/1.5 ui-monospace,monospace;max-height:360px;overflow:auto;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:6px}
+.analysis-cell{display:block;max-width:320px;white-space:normal;font-size:13px;overflow-wrap:anywhere;margin-top:4px}
+@media(max-width:600px){.analysis-diagnostics{padding:14px}.analysis-round>summary{font-size:15px}}

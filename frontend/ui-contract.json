@@ -237,6 +237,16 @@
     "members/portal.js"
    ],
    "body": []
+  },
+  {
+   "method": "GET",
+   "path": "/api/adaptive-pricing/runs/{run_id}/analysis-attempts",
+   "used_by": [
+    "analysis-diagnostics.js"
+   ],
+   "query": [
+    "round (optional; raw responses only for a specific round)"
+   ]
   }
  ],
  "events": {
@@ -317,6 +327,7 @@
    "feedback-source",
    "feedback-status",
    "feedback-summary",
+   "feedback-analysis-diagnostics",
    "flight-capacity",
    "flight-date",
    "flight-filter-empty",
@@ -443,6 +454,7 @@
    "run-progress",
    "run-source",
    "run-status",
+   "run-analysis-diagnostics",
    "saved-run",
    "scope-day",
    "scope-fields",

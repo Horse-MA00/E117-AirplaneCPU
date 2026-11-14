@@ -1,8 +1,8 @@
 # UOption Fly Pass 技術速讀與 Present 指南
 
-> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`public-member-response-v1`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`three-round-release-v1`、`member-marketing-fare-v1`
+> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`analyst-retry-v1`、`public-member-response-v1`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`three-round-release-v1`、`member-marketing-fare-v1`
 
-更新：2026-11-15。Team Airplane CPU · E117。技術基準為 main 的 `655ee40`，包含新版Admin、半年會員計劃與示範登入；本文件補充其實作講解，不改變預測或定價算法。主規格為 [Thompson 定價](FLIGHT_SCOPED_OPTIMIZATION.md)及[三輪放票](THREE_ROUND_RELEASE.md)。
+更新：2026-11-15。Team Airplane CPU · E117。本文件涵蓋現行Admin、半年會員計劃、示範登入、From／To及Analyst有限重試；預測與定價數學沿用狀態行所列版本。主規格為 [Thompson 定價](FLIGHT_SCOPED_OPTIMIZATION.md)及[三輪放票](THREE_ROUND_RELEASE.md)。
 
 **一句話：先預留可能按正常價格購票的需求，再把可釋放的座位提供給彈性會員，透過 Thompson Sampling 尋找值得採用的會員基本票價。**
 
@@ -260,12 +260,16 @@ $$
 預設10輪、每輪16人、3批確認、並行4個顧客請求。完整Live預算上界為：
 
 $$
-\text{calls}_{max}=R(2M+1)+3HM=10(33)+3(3)(16)=474
+\text{calls}_{max}=R(2M+3)+3HM=10(35)+3(3)(16)=494
 $$
 
-其中每輪最多兩組報價與一次分析，確認為三方案乘H批；相同價格重用或只有唯一合法動作時可少呼叫。API預設`max_calls=600`，設定小於完整實驗上界會在開始前被拒絕；這不是執行時間估計。
+其中每輪最多兩組報價與三次分析嘗試（首次加最多兩次重試），確認為三方案乘H批；相同價格重用或只有唯一合法動作時可少呼叫。API預設`max_calls=600`，設定小於完整實驗上界會在開始前被拒絕；這不是執行時間估計。
 
-每次保存原始請求／回應、驗證結果、來源及提示雜湊。新provider呼叫、快取、強制動作、失敗分開計數；非法回覆或provider失敗會停止後續派送，不用虛構成功補上。
+每次保存原始請求／回應、驗證結果、來源及提示雜湊。顧客決策失敗仍會停止後續派送，不能用虛構購買補上。Analyst則使用`analyst-retry-v1`：驗證失敗帶上具體錯誤及前次不可信回覆重試，暫時傳輸錯誤可重試；永久錯誤或預算耗盡可提前結束。最多三次均計入同一預算，重試不重新詢問顧客。
+
+仍失敗時，該輪保存`analysis=null`、`analysis_status=unavailable`、具體錯誤及各次嘗試；顧客選擇、學習資料及配對結果照常保存，後續用一般Thompson探索，不借用前幾輪的舊分析。最終獨立確認仍需完成。新計數`analyst_retries`是額外派送次數，`analyst_unavailable`是無有效分析輪數；`failures`仍記所有失敗嘗試。審計寫入或程式內部故障不會被此容錯吞掉。
+
+Optimize及Member feedback顯示每輪狀態與實際錯誤；展開原始回覆時才讀取審計，沒有回應本文的傳輸故障會明確標示。`analysis-attempts`端點不帶round時只返摘要，帶`?round=N`時返該輪原始回覆。這些查閱不發付費呼叫。舊實驗保持原紀錄與提示雜湊，不會自動重跑或回填成成功。
 
 **講法：**「我們用LLM測不同類型會員的選擇和理由；這些是可追查的模擬回應，真正的轉化率仍需要真人資料校準。」
 
@@ -387,6 +391,7 @@ Admin新版以共用航班欄串連Forecast、Optimize、Publish offers和Result
 | POST `/api/adaptive-pricing/scope` | 航班／時點的P₀、原價及實驗配額 |
 | GET／POST `/api/adaptive-pricing/runs` | 讀取當前v5列表／明確開始新實驗 |
 | GET `/api/adaptive-pricing/runs/{id}`、`/{id}/events`、`/{id}/export` | 進度、結果、回饋及匯出 |
+| GET `/api/adaptive-pricing/runs/{id}/analysis-attempts`、`?round=N` | 分析嘗試摘要；指定輪次時提供已脫敏原始回覆，只讀審計 |
 | GET／POST `/api/offers` | 讀優惠／人工發布 |
 | GET `/api/member-portal/config`、`/plan`、`/flights`、`/accounts/{id}` | 會員plan、可訂優惠及訂單 |
 | POST `/api/member-portal/plan`、`/join`、`/book` | 更新plan、模擬入會、購票 |
@@ -426,7 +431,7 @@ Admin新版以共用航班欄串連Forecast、Optimize、Publish offers和Result
 
 ## 11 驗證與後續實作邊界
 
-`python scripts/check_container.py`覆蓋後端、根目錄、發布連結及證據校驗；`python scripts/smoke_api.py --url http://127.0.0.1:8001`為無付費呼叫的API檢查；瀏覽器測試見[frontend說明](../frontend/README.md)。最近完整驗證通過222項Python測試（198項後端、24項根目錄）；執行紀錄與瀏覽器驗證見[維護紀錄](ITERATION_2_PROGRESS.md)。軟件測試通過、合成效果改善、真人市場有效是三個不同層次。
+`python scripts/check_container.py`覆蓋後端、根目錄、發布連結及證據校驗；`python scripts/smoke_api.py --url http://127.0.0.1:8000`為無付費呼叫的API檢查；瀏覽器測試見[frontend說明](../frontend/README.md)。最近完整驗證通過240項Python測試（216項後端、24項根目錄）；執行紀錄與瀏覽器驗證見[維護紀錄](ITERATION_2_PROGRESS.md)。軟件測試通過、合成效果改善、真人市場有效是三個不同層次。
 
 下一步優先收集真實訂票／取消／可售庫存／報價歷史，以及隨機報價下的會員曝光、購買和不購買資料。接著校準需求和回應模型，測完整三輪策略與正常銷售替代，最後才擴展至全年會員使用、續會、會費和成本。
 

@@ -1,0 +1,111 @@
+/** Analyst recovery UI, with mocked APIs and no paid calls. */
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {readFile,mkdir} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {chromium} from 'playwright';
+const root=fileURLToPath(new URL('.',import.meta.url));
+const aliases={'/adaptive-pricing':'adaptive-pricing.html','/admin':'index.html','/':'index.html','/members/airports.js':'members/airports.js'};
+const server=createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname,file=aliases[path]||(/^\/[a-z0-9-]+\.(js|css)$/.test(path)||/^\/fonts\/inter-\d{3}\.woff2$/.test(path)?path.slice(1):null);try{if(!file)throw Error();const body=await readFile(root+file);res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.woff2')?'font/woff2':'text/html'}).end(body);}catch{res.writeHead(404).end('Not found');}});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+const origin=`http://127.0.0.1:${server.address().port}`;
+const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
+const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+const population={profile:'flexible_deal_seekers',segments:['Students','Spontaneous solo travellers','Destination-flexible explorers','Frequent bargain travellers','Flexible weekday travellers','Flexible friends','Flexible couples','Deal-only occasional travellers'].map((name,i)=>({id:`flexible-${i}`,name,weight:[.20,.15,.15,.15,.1,.1,.08,.07][i]}))};
+const scope={flight_id:'TEST-HKG-KMQ',origin:'HKG',destination:'KMQ',departure_date:'2027-05-18',departure_time:'10:30',as_of_day:28,normal_base_fare:410,initial_member_fare:328,member_fare_cap:328,releasable_seats:45};
+const flights=[{...scope,capacity:180,departure_at:'2027-05-18T10:30:00+08:00',demand_band:'low'},
+ {...scope,flight_id:'TEST-HKG-KMQ-ZERO',demand_band:'low'},
+ {...scope,flight_id:'TEST-HKG-HND-HIGH',destination:'HND',demand_band:'high'}];
+const curve=[{price:0,expected_buyers:25,expected_member_revenue:0},{price:100,expected_buyers:20,expected_member_revenue:2000},{price:255,expected_buyers:16,expected_member_revenue:4080},{price:328,expected_buyers:8,expected_member_revenue:2624}];
+const rounds=[1,2,3].map(round=>({round,price:round===1?328:255,unique_customers:16,learning_updates:round*16,member_buyers:16,member_revenue:4080,weighted_conversion:.6,paired_delta_vs_initial:1456,curve,analysis_source:'provider_live',analysis:{summary:'Members liked the lower fare. <img src=x onerror=alert(1)>'},hypothesis_test:{source_round:round===1?null:round-1,direction:'lower',status:'supported',summary:'Fresh paired customers bought more.'},decisions:[{person:{segment_label:'Flexible budget traveller',customer_id:`TEST-${round}`},decision:{action:'BUY_MEMBER',reason:'This affordable fare fits my flexible trip. <img src=x onerror=alert(1)>'},source:'provider_live'}]}));
+let report={version:'member-thompson-v5-marketing',run_id:'adaptive-test-current',status:'completed',scope,population,config:{profile:'flexible_deal_seekers',final_member_fare_policy:'member-marketing-fare-v1',flight_id:scope.flight_id,forecast_day:28,mode:'synthetic',rounds:3,customers:16,concurrency:4,max_calls:600,seed:117,validation_repeats:3},rounds,counts:{provider_calls:20,cache_hits:2,forced:4,failures:0,peak_parallel:4},progress:{completed_rounds:3,total_rounds:3,cumulative_unique_customers:48},recommendation:{raw_price:255,price:249,revenue_max_price:255,volume_max_price:0,revenue_fraction:.95,model_curve:curve,marketing_adjustment:{policy:'member-marketing-fare-v1',initial_price_before_marketing:328,initial_price:319}},validation:{adoption_result:'ADOPT_CANDIDATE',retained_price:249,break_even_conversion:.82,observed_conversion:.6,initial_price_before_marketing:328,initial_price:319,selected_price_before_marketing:255,selected_price:249,delta_vs_initial:1432,delta_vs_no_offer:704,comparisons:[{policy:'initial',price:319,mean_buyers:8,mean_revenue:2552},{policy:'selected',price:249,mean_buyers:16,mean_revenue:3984},{policy:'no_offer',price:null,mean_buyers:8,mean_revenue:3280}]},elapsed_seconds:70};
+let starts=[],scopes=[],setup='ready',empty=false,failFeedback=false,apiReads=0;
+let auditRequests=[],rawReads=0,failAudit=false,holdRaw=false,releaseRaw;
+const objection='A lower-price hypothesis needs a cited decline and a reported price objection';
+const raw='<img src=x onerror=alert(1)> invalid lower response';
+let attempts=[{round:1,attempt:1,status:'failed',error:objection,failure_kind:'validation',provider_call:true,raw_available:true,raw_response_text:raw},{round:1,attempt:2,status:'passed',error:null,provider_call:true,raw_available:true,raw_response_text:'{"suggested_direction":"hold"}'},{round:2,attempt:1,status:'failed',error:'Provider request timed out',failure_kind:'transport',provider_call:true,raw_available:false,raw_response_text:null},{round:2,attempt:2,status:'failed',error:objection,failure_kind:'validation',provider_call:true,raw_available:true,raw_response_text:raw},{round:2,attempt:3,status:'failed',error:objection,failure_kind:'validation',provider_call:true,raw_available:true,raw_response_text:raw}];
+report.config.mode='live';
+report.counts={...report.counts,failures:4,analyst_retries:3,analyst_unavailable:1};
+report.rounds[0]={...report.rounds[0],analysis_status:'available',analysis_attempts:attempts.filter(a=>a.round===1)};
+report.rounds[1]={...report.rounds[1],analysis:null,analysis_status:'unavailable',analysis_source:'analysis_unavailable',analysis_error:objection,analysis_attempts:attempts.filter(a=>a.round===2)};
+await page.route('**/api/**',async route=>{
+ const request=route.request(),path=new URL(request.url()).pathname,method=request.method();apiReads++;
+ if(path.endsWith('/analysis-attempts')){const round=new URL(request.url()).searchParams.get('round');auditRequests.push(request.url());if(failAudit)return route.fulfill({status:503,json:{error:'Audit temporarily unavailable'}});if(round)rawReads++;const payload={run_id:report.run_id,round:round?Number(round):null,attempts:attempts.filter(a=>!round||a.round===Number(round)).map(a=>round?a:Object.fromEntries(Object.entries(a).filter(([k])=>k!=='raw_response_text')))};if(round&&holdRaw)await new Promise(resolve=>releaseRaw=resolve);return route.fulfill({json:payload});}
+ if(path==='/api/flights')return route.fulfill({json:{flights}});
+ if(path==='/api/summary')return route.fulfill({json:{dataset:{rows:200000}}});
+ if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_months:6,term_label:'6 months',term_days:181}}});
+ if(path==='/api/adaptive-pricing/status')return route.fulfill(setup==='failed'?{status:503,json:{error:'Setup unavailable'}}:{json:{live_configured:true,population:setup==='ready'?population:null,populations:setup==='ready'?[population]:[]}});
+ if(path==='/api/adaptive-pricing/scope'){const body=request.postDataJSON();scopes.push(body);return route.fulfill({json:{population,scope:{...scope,flight_id:body.flight_id,as_of_day:body.forecast_day,releasable_seats:body.flight_id.endsWith('ZERO')?0:45}}});}
+ if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill(failFeedback?{status:503,json:{error:'Saved feedback unavailable'}}:{json:{runs:empty?[]:[report]}});
+ if(path==='/api/adaptive-pricing/runs'&&method==='POST'){const body=request.postDataJSON();starts.push(body);report={...report,config:{...report.config,...body}};return route.fulfill({json:report});}
+ if(path===`/api/adaptive-pricing/runs/${report.run_id}`)return route.fulfill({json:report});
+ return route.fulfill({status:404,json:{error:'Not found'}});
+});
+try{
+ await mkdir(root+'test-results',{recursive:true});
+ await page.goto(origin+`/adaptive-pricing?run=${report.run_id}`);
+ await page.locator('#run-analysis-diagnostics:visible').waitFor({timeout:5000});
+ assert.match(await page.locator('#run-status').innerText(),/Complete/);
+ assert.match(await page.locator('#round-table').innerText(),/Analysis unavailable/);
+ assert.match(await page.locator('#round-table').innerText(),/retry/);
+ assert.match(await page.locator('#run-analysis-diagnostics').textContent(),new RegExp(objection));
+ assert.equal(rawReads,0,'Raw responses must not download during progress rendering');
+ await page.locator('#run-analysis-diagnostics details[data-analysis-round="2"] > summary').click();
+ await page.locator('#run-analysis-diagnostics details[data-analysis-round="2"] .analysis-raw > summary').click();
+ await page.waitForFunction(()=>document.querySelector('#run-analysis-diagnostics pre')?.textContent.includes('invalid lower response'));
+ assert.equal(await page.locator('#run-analysis-diagnostics img').count(),0,'Raw output is inert text');
+ assert.match(await page.locator('#run-analysis-diagnostics').innerText(),/No provider response was received/);
+ assert.equal(starts.length,0);
+ await page.evaluate(()=>scrollTo(0,0));
+ await page.screenshot({path:root+'test-results/analyst-diagnostics-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Mobile must not overflow');
+ await page.screenshot({path:root+'test-results/analyst-diagnostics-mobile.png',fullPage:true});
+ await page.goto(origin+`/admin?run=${report.run_id}&round=2#customers`);
+ await page.locator('#feedback-content:visible').waitFor();
+ assert.match(await page.locator('#feedback-summary').innerText(),/Analysis unavailable/);
+ assert.match(await page.locator('#feedback-source').innerText(),/Thompson/);
+ assert.match(await page.locator('#feedback-list').innerText(),/BUY MEMBER/);
+ assert.match(await page.locator('#feedback-analysis-diagnostics').textContent(),new RegExp(objection));
+ const beforeRaw=rawReads;
+ await page.locator('#feedback-analysis-diagnostics details[data-analysis-round="2"] > summary').click();
+ await page.locator('#feedback-analysis-diagnostics .analysis-raw > summary').click();
+ await page.waitForFunction(()=>document.querySelector('#feedback-analysis-diagnostics pre')?.textContent.includes('invalid lower response'));
+ assert.equal(rawReads,beforeRaw+1);
+ assert.equal(await page.locator('#view-customers img').count(),0);
+ await page.selectOption('#feedback-round','1');
+ await page.waitForFunction(()=>document.querySelector('#feedback-analysis-diagnostics').textContent.includes('Available after 1 retry'));
+ assert.equal(await page.locator('#feedback-analysis-diagnostics pre').count(),0,'Round changes discard old raw responses');
+ // A late raw response for a previously selected round must never populate the next round.
+ holdRaw=true;
+ await page.selectOption('#feedback-round','2');
+ await page.locator('#feedback-analysis-diagnostics details[data-analysis-round="2"] > summary').click();
+ await page.locator('#feedback-analysis-diagnostics .analysis-raw > summary').click();
+ await page.waitForFunction(()=>document.querySelector('#feedback-analysis-diagnostics').textContent.includes('Loading saved responses'));
+ await new Promise((resolve,reject)=>{const deadline=Date.now()+5000;const check=()=>releaseRaw?resolve():Date.now()>deadline?reject(new Error('Raw audit request did not start')):setTimeout(check,10);check();});
+ await page.selectOption('#feedback-round','1');
+ const staleResponse=page.waitForResponse(r=>r.url().endsWith('analysis-attempts?round=2'));
+ holdRaw=false;releaseRaw();await (await staleResponse).finished();
+ assert.equal(await page.locator('#feedback-analysis-diagnostics details[data-analysis-round="2"]').count(),0);
+ assert.equal(await page.locator('#feedback-analysis-diagnostics pre').count(),0,'Late responses stay detached');
+ report={...report,status:'failed',error:'Live analyst response failed validation or transport; raw output was audited and no substitute was used',counts:{failures:1},rounds:[{...report.rounds[0],analysis_status:undefined,analysis_attempts:undefined}],recommendation:null,validation:null};
+ attempts=[{...attempts[0],round:10,attempt:1}];
+ await page.goto(origin+`/adaptive-pricing?run=${report.run_id}`);
+ await page.locator('#run-analysis-diagnostics details[data-analysis-round="10"]').waitFor();
+ assert.match(await page.locator('#run-analysis-diagnostics').textContent(),new RegExp(objection));
+ await page.goto(origin+`/admin?run=${report.run_id}&round=10#customers`);
+ await page.locator('#feedback-analysis-diagnostics details[data-analysis-round="10"]').waitFor();
+ assert.match(await page.locator('#feedback-status').textContent(),/failed/);
+ assert.equal(starts.length,0,'All diagnostic reads are GET-only');
+ failAudit=true;
+ await page.goto(origin+`/adaptive-pricing?run=${report.run_id}`);
+ await page.locator('#run-analysis-diagnostics button').waitFor();
+ assert.match(await page.locator('#run-analysis-diagnostics').innerText(),/Audit temporarily unavailable/);
+ failAudit=false;
+ await page.locator('#run-analysis-diagnostics button').click();
+ await page.locator('#run-analysis-diagnostics details[data-analysis-round="10"]').waitFor();
+ assert.equal(starts.length,0);
+ assert.deepEqual(errors,[]);
+ console.log('PASS: analyst retry/unavailable labels, retained member decisions, lazy raw responses, old failed audits, safe text, retry reads and mobile layout.');
+}finally{await browser.close();server.close();}

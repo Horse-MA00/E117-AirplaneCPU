@@ -1,6 +1,7 @@
 """Member-only experiment integration without network calls or private DB writes."""
 from pathlib import Path
 import hashlib
+import io
 import json
 import tempfile
 import time
@@ -297,9 +298,99 @@ class ExperimentTests(unittest.TestCase):
 
     def test_new_panel_call_budget_and_minimum_confirmation_cohorts(self):
         cfg, _, _ = pricing.validate(self.config())
-        self.assertEqual(cfg['estimated_calls_upper_bound'], 2*(2*14+1)+3*3*14)
+        self.assertEqual(cfg['estimated_calls_upper_bound'], 2*(2*14+3)+3*3*14)
+        self.assertEqual(cfg['analyst_max_attempts'], 3)
         with self.assertRaisesRegex(ValueError, 'validation_repeats'):
             pricing.validate(self.config(validation_repeats=2))
+
+    def test_unavailable_analyst_keeps_customer_rounds_and_confirmation(self):
+        failure = {'analysis': None, 'source': 'analysis_unavailable',
+                   'analysis_status': 'unavailable',
+                   'analysis_error': 'A lower-price hypothesis needs a cited decline and a reported price objection',
+                   'analysis_attempts': [dict(attempt=i, status='failed',
+                       error='A lower-price hypothesis needs a cited decline and a reported price objection',
+                       error_type='ValueError', failure_kind='validation', provider_call=True)
+                       for i in (1, 2, 3)],
+                   'provider_call': True, 'cache_hit': False, 'forced': False}
+        baseline = pricing.start(self.config(rounds=3), blocking=True)
+        with patch.object(DecisionClient, 'analyse', return_value=failure):
+            report = pricing.start(self.config(rounds=3), blocking=True)
+        self.assertEqual(report['status'], 'completed', report.get('error'))
+        self.assertEqual(report['progress']['completed_rounds'], 3)
+        self.assertIsNotNone(report['validation'])
+        self.assertIsNone(report['error'])
+        self.assertEqual(report['analysis_unavailable_rounds'], [1, 2, 3])
+        for row in report['rounds']:
+            self.assertIsNone(row['analysis'])
+            self.assertEqual(row['analysis_status'], 'unavailable')
+            self.assertEqual(row['analysis_source'], 'analysis_unavailable')
+            self.assertEqual(len(row['analysis_attempts']), 3)
+            self.assertIn('price objection', row['analysis_error'])
+            self.assertTrue(row['decisions'])
+        # Identical first-round demand remains intact; the missing analyst adds
+        # no fabricated purchase observation and must not replay that cohort.
+        self.assertEqual(report['rounds'][0]['decisions'], baseline['rounds'][0]['decisions'])
+        self.assertEqual(report['rounds'][0]['learning_updates'], baseline['rounds'][0]['learning_updates'])
+        self.assertEqual(report['rounds'][2]['hypothesis_test']['status'], 'not_tested')
+        persisted = adaptive_store.read(report['run_id'])
+        self.assertEqual(persisted['rounds'][1]['analysis_attempts'], failure['analysis_attempts'])
+
+    def test_recovered_analysis_keeps_attempt_history_without_unavailable_warning(self):
+        original = DecisionClient.analyse
+        def recovered(client, context):
+            result = original(client, context)
+            return {**result, 'analysis_status': 'available', 'analysis_error': None,
+                    'analysis_attempts': [dict(attempt=1, status='failed', error='Invalid analyst counts',
+                        error_type='ValueError', failure_kind='validation', provider_call=True),
+                        dict(attempt=2, status='passed', error=None, error_type=None,
+                             failure_kind=None, provider_call=True)]}
+        with patch.object(DecisionClient, 'analyse', recovered):
+            report = pricing.start(self.config(), blocking=True)
+        self.assertEqual(report['status'], 'completed', report.get('error'))
+        self.assertEqual(report['analysis_unavailable_rounds'], [])
+        self.assertTrue(all(row['analysis_status'] == 'available' for row in report['rounds']))
+        self.assertTrue(all(len(row['analysis_attempts']) == 2 for row in report['rounds']))
+        self.assertTrue(all(row['analysis_error'] is None for row in report['rounds']))
+
+    def test_real_adapter_exhausted_analyst_retries_still_finishes_live_worker(self):
+        def provider(request):
+            body = json.loads(request.data)
+            context = json.loads(body['messages'][-1]['content'])
+            if 'feedback' in context:
+                # Same contradiction as the observed failure, with IDs from
+                # this fresh fixture rather than any private experiment data.
+                answer = dict(summary='No customer objected to the basic fare.',
+                    hypothesis='Test a lower fare on fresh members.',
+                    reason_counts=dict(price=0,date=0,companions=0,availability=0,other=0),
+                    evidence_customer_ids=[context['feedback'][0]['customer_id']],
+                    suggested_direction='lower')
+            else:
+                action = next((a for a in ('BUY_MEMBER','BUY_REGULAR') if a in context['allowed_actions']), 'DECLINE')
+                answer = dict(action=action, fallback_action='DECLINE', reason_code='VALUE',
+                              reason='This choice fits my optional travel plan.')
+            return io.BytesIO(json.dumps({'choices':[{'finish_reason':'stop',
+                'message':{'content':json.dumps(answer)}}], 'usage':{'total_tokens':10}}).encode())
+        env = {'LLM_API_URL':'https://example.test/chat/completions',
+               'LLM_API_KEY':'fixture-private-key','LLM_MODEL':'fixture-model'}
+        with patch.dict('os.environ',env,clear=True), patch.object(pricing,'status',return_value={'live_configured':True}), \
+             patch('llm_agent.adaptive_customers._transport',side_effect=provider):
+            report = pricing.start(self.config(mode='live', rounds=3, max_calls=1000), blocking=True)
+        self.assertEqual(report['status'], 'completed', report.get('error'))
+        self.assertEqual(report['analysis_unavailable_rounds'], [1,2,3])
+        self.assertEqual(report['counts']['analyst_calls'], 9)
+        self.assertEqual(report['counts']['analyst_retries'], 6)
+        self.assertEqual(report['counts']['analyst_unavailable'], 3)
+        self.assertEqual(report['counts']['failures'], 9)
+        self.assertFalse(report['counts']['stopped_after_failure'])
+        self.assertLessEqual(report['counts']['provider_calls'], report['config']['estimated_calls_upper_bound'])
+        self.assertIsNotNone(report['validation'])
+        self.assertGreater(len(report['training_observations']), 0)
+        self.assertEqual(report['rounds'][2]['selection'], 'thompson_sample')
+        self.assertTrue(all(r['analysis'] is None for r in report['rounds']))
+        attempts = adaptive_store.analysis_attempts(report['run_id'], 3)['attempts']
+        self.assertEqual(len(attempts), 3)
+        self.assertTrue(all(a['status']=='failed' and a['raw_available'] for a in attempts))
+        self.assertIn('No customer objected', attempts[0]['raw_response_text'])
 
     def test_fractional_candidate_stops_run_before_executing_it(self):
         with patch.object(pricing, 'recommend', return_value={'price':326.5,'curve':[]}):

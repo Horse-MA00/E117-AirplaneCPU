@@ -1,6 +1,6 @@
 # 前端 UI 规格
 
-> 状态：现行 · 对应代码：`frontend/ui-contract.json`、`frontend/flight-picker.js`、`frontend/admin-shell.css`、`frontend/styles.css`、`frontend/adaptive-pricing.css`、`frontend/members/portal.css`、`tests/test_frontend_contract.py`
+> 状态：现行 · 对应代码：`frontend/ui-contract.json`、`frontend/flight-picker.js`、`frontend/analysis-diagnostics.js`、`frontend/admin-shell.css`、`frontend/styles.css`、`frontend/adaptive-pricing.css`、`frontend/members/portal.css`、`tests/test_frontend_contract.py`
 
 这份文档管前端**长什么样、怎么搭**：重构规则、冻结的功能与接口、设计系统、信息架构和设计决定。
 前端**做什么**（交互流程、产品取舍、面板上限）以 [ADMIN_AND_MEMBER_UX](ADMIN_AND_MEMBER_UX.md) 和 [CLIENT_FLEXIBLE_SEARCH](CLIENT_FLEXIBLE_SEARCH.md) 为准；接口返回的字段以 [CURRENT_IMPLEMENTATION](CURRENT_IMPLEMENTATION.md) 的路由表为准。
@@ -389,3 +389,9 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 ### 7.5 2026-11-15 完整 From / To 与航班编号
 
 按用户要求，用与 Client 相同目录的 From / To 取代单个 Route，保留 Flight 并加入完整合成编号。桌面两端并排，窄屏顺序排列；默认 HKG → Anywhere。共享 helper 统一 Admin 与 Optimize 的地点过滤和日期／编号文案，旧 Route 搜索脚本及样式删除。Client、后端、NHPP、发布规则与冻结数据均未修改。
+
+### 7.6 2026-11-15 Analyst重试与可查原始回覆
+
+Optimize显示具体分析错误、重试计数和无分析轮数；round table分别说明该轮分析是否可用。Member feedback在Analysis unavailable时继续展示真实保存的顾客决定，不把被拒绝的模型原文伪装成摘要。两页共用`analysis-diagnostics.js`及其样式：先读attempt摘要，用户展开某轮的原始回覆时才请求完整文本；使用原生details／summary，文本用textContent渲染，手机长文本可换行。读取失败可重试，切换实验时废弃旧请求结果。
+
+审计API能呈现旧failed实验中尚未写入rounds的失败轮次；仅查看，不恢复或改写旧实验。没有收到原始回覆的尝试明确说明，原始回覆显示与“可用分析”状态分开。前端预算估算包含每轮最多三次Analyst调用，和后端一致；NHPP、客户Portal及发布流程不变。

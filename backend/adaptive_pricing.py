@@ -21,7 +21,8 @@ from . import adaptive_store as store
 from .fare_policy import member_fare_cap, final_member_fare, FINAL_MEMBER_FARE_VERSION
 from .initial_policy import flight_scope
 from .member_response import PurchasePosterior, recommend, learner_view, whole_price
-from llm_agent.adaptive_customers import DecisionClient, prompt_metadata
+from llm_agent.adaptive_customers import (DecisionClient, prompt_metadata,
+    ANALYST_MAX_ATTEMPTS, ANALYST_RETRY_POLICY_VERSION)
 from llm_agent.weighted_population import population, metadata, DEFAULT_PROFILE
 from llm_agent.file_lock import exclusive_lock
 
@@ -80,7 +81,9 @@ def validate(body):
     selected = flight_scope(cfg['flight_id'], cfg['forecast_day'])
     if selected['releasable_seats'] < 1 or member_fare_cap(selected['normal_base_fare']) < .01:
         raise ValueError('This snapshot has no positive-price member inventory. Choose another flight or release day.')
-    cfg['estimated_calls_upper_bound'] = cfg['rounds']*(2*cfg['customers']+1)+3*cfg['validation_repeats']*cfg['customers']
+    cfg['analyst_max_attempts'] = ANALYST_MAX_ATTEMPTS
+    cfg['analyst_retry_policy'] = ANALYST_RETRY_POLICY_VERSION
+    cfg['estimated_calls_upper_bound'] = cfg['rounds']*(2*cfg['customers']+ANALYST_MAX_ATTEMPTS)+3*cfg['validation_repeats']*cfg['customers']
     cfg['hypothesis_round_interval'] = 3
     cfg['prediction_support_size'] = 128
     cfg['final_member_fare_policy'] = FINAL_MEMBER_FARE_VERSION
@@ -282,7 +285,12 @@ def _hypothesis_price(proposal, prior, number, cap, interval=3):
             'summary':'No directional hypothesis was assigned to this round.'}
     if not prior or number % interval:
         return proposal['price'], info
-    direction = prior['analysis'].get('suggested_direction','insufficient_evidence')
+    analysis = prior.get('analysis')
+    if prior.get('analysis_status') == 'unavailable' or not isinstance(analysis, dict):
+        info.update(source_round=prior.get('round'),
+                    summary='Previous-round analysis was unavailable. Ordinary Thompson Sampling continues using recorded purchase decisions.')
+        return proposal['price'], info
+    direction = analysis.get('suggested_direction','insufficient_evidence')
     info.update(direction=direction,source_round=prior['round'])
     if direction == 'insufficient_evidence' or not prior['analysis'].get('evidence_customer_ids'):
         return proposal['price'], info
@@ -382,12 +390,21 @@ def _worker(run):
                     hypothesis['paired_delta_vs_initial'] = paired['delta']
                     hypothesis['summary'] = 'Provisional single-cohort revenue test against the paired initial fare; not a causal comparison with the previous round or final adoption evidence.'
                 feedback = [{'customer_id':r['person']['customer_id'],'decision':r['decision']} for r in result['decisions']]
+                run['progress'].update(phase='analysing_feedback', active_round=number)
+                run['counts'] = client.stats()
+                store.save(run)
                 analysis = client.analyse({'round':number,'price':price,'member_fare_cap':selected['member_fare_cap'],
                                            'paired_initial':paired,
                                            'metrics':{k:v for k,v in result.items() if k not in ('decisions','executions')},
                                            'feedback':feedback})
                 curve = [{**point,'expected_revenue':point.get('expected_member_revenue')} for point in proposal['curve']]
-                entry = {'round':number,'price':price,**result,'analysis':analysis.get('analysis',{}),
+                analysis_status = analysis.get('analysis_status', 'available')
+                if analysis_status == 'unavailable':
+                    run['analysis_unavailable_rounds'].append(number)
+                entry = {'round':number,'price':price,**result,'analysis':analysis.get('analysis'),
+                         'analysis_status':analysis_status,
+                         'analysis_error':analysis.get('analysis_error'),
+                         'analysis_attempts':analysis.get('analysis_attempts', []),
                          'cohort_seed':cohort_seed,'unique_customers':len(people),
                          'cumulative_unique_customers':number*cfg['customers'],
                          'initial_comparison':paired,'paired_delta_vs_initial':paired['delta'],
@@ -476,6 +493,7 @@ def start(body, *, blocking=False):
     run = {'run_id':run_id,'version':VERSION,'status':'queued','created_at':time.time(),
            'config':cfg,'scope':{k:v for k,v in selected.items() if k!='history'},'population':meta,
            'provenance':_provenance(),'rounds':[],'recommendation':None,'validation':None,'error':None,
+           'analysis_unavailable_rounds':[],
            'counts':{'provider_calls':0,'cache_hits':0,'forced':0,'failures':0,'peak_parallel':0},
            'progress':{'phase':'queued','completed_rounds':0,'total_rounds':cfg['rounds'],'completed_validation_worlds':0},
            'assumptions':['Only existing members; no joining or renewal decision and no fee deduction.',
@@ -484,6 +502,7 @@ def start(body, *, blocking=False):
                 'Fresh stratified members each search round; paired candidate and initial quote in reset, blinded worlds. One seat per member per world.',
                 'Only declared public segment/flexibility enter learning; private budgets, motivation and simulator constraints remain environment-only.',
                 'Every third round may test a cited LLM direction within a bounded model-scored interval; text never adds a demand label.',
+                'Analyst requests allow at most three attempts within the shared call budget. Unavailable analysis supplies no direction; recorded purchases still train Thompson and undergo independent confirmation.',
                 'Quoted fares are whole HKD; weighted averages and statistical estimates may have decimals.',
                 'Parallel intent elicitation followed by fixed-priority integer inventory clearing; no seat is reserved by an LLM.',
                 'Weighted demand estimates and actual panel cash/seat transactions are reported separately.',

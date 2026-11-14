@@ -14,6 +14,8 @@ The Python backend directly serves the committed HTML/CSS/JavaScript; no fronten
 
 Optimize fixes the population to eight flexible bargain groups, with editable weights. Offline simulated customer decisions and live LLM decisions use the same Thompson method. The page keeps rounds, price/revenue estimates, the final promotional quote and independent confirmation. Viewing results does not start experiments or spend provider budget.
 
+Analyst failures permit two retries within the explicit budget, then show **Analysis unavailable** while Thompson continues on valid purchase decisions. Optimize and Member feedback show concrete attempt errors; native disclosures load redacted raw replies on demand through the read-only `analysis-attempts` API. Unavailable analysis is never presented as a successful summary. Customer failures still stop the experiment. The budget estimate includes all three possible analyst attempts per round.
+
 Old Math/Math+LLM, panel, shared-market and continuous-pricing pages, scripts and data are removed. Retired hashes, including `#optimization`, show a page-unavailable state without redirecting. Removed experiment IDs and deleted assets return not found. Forecast and Manage offers preserve a selected flight and release day when opening Optimize.
 
 Manage offers is manual: review a retained Thompson result, enter a draft, then publish after current inventory checks. Experiments do not change the member site's inventory or membership plan. Client checkout shows the base fare prominently and mandatory fees/total separately; the server validates the complete amount. No real payment or ticket is issued. The default plan is HK$399 for six calendar months; new purchases use an exact Hong Kong calendar expiry. Demo logins and their persistence rules are in the [member guide](../docs/ADMIN_AND_MEMBER_UX.md#client-portal).
@@ -34,6 +36,7 @@ With the native backend running:
 cd frontend
 npm ci
 npm run test:adaptive-pricing
+npm run test:analyst-diagnostics
 APP_URL=http://127.0.0.1:8000 npm run test:optimization
 APP_URL=http://127.0.0.1:8000 npm run test:smoke
 APP_URL=http://127.0.0.1:8000 npm run test:flight-offers
