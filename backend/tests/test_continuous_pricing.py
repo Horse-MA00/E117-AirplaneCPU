@@ -107,6 +107,12 @@ class ContinuousSearchTests(unittest.TestCase):
             result=optimize({'evaluations':3,'replicates':1,'customers':2,'seed':811})
         self.assertEqual(result['best']['decision'],'NO_OFFER')
         self.assertFalse(result['ready_for_review'])
+        for row in [*result['trace'], result['validation'], *result['stress']]:
+            self.assertEqual(row['mean_total_contribution'], 900)
+            self.assertEqual(row['mean_baseline_contribution'], 1000)
+            self.assertEqual(row['incremental_contribution'], -100)
+        self.assertIsNone(result['trace'][0]['total_standard_error'])
+        self.assertEqual(result['validation']['total_standard_error'], 0)
         self.assertFalse(set(result['search_seeds']) & set(result['validation_seeds']))
         self.assertTrue(all(cost==0 for seed,enabled,cost in calls if not enabled))
         self.assertTrue(all(cost==150000 for seed,enabled,cost in calls if enabled))

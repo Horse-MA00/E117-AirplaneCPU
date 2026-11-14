@@ -12,7 +12,7 @@ from pathlib import Path
 import statistics
 from backend.probabilistic_customer import choose, VERSION as CUSTOMER_VERSION
 
-VERSION = "continuous-shared-pricing-v1"
+VERSION = "continuous-shared-pricing-v1.1"
 
 
 def _number(value, name, low, high, integer=False):
@@ -108,8 +108,14 @@ def optimize(config=None):
         deltas = [r["contribution"] - baseline(s, scenario)["contribution"] for s, r in zip(seeds, reports)]
         feasible = all(r["new_members"] > 0 and r["service_rate"] >= cfg["min_service_rate"] for r in reports)
         mean = statistics.mean(deltas)
+        totals = [r["contribution"] for r in reports]
+        baseline_totals = [baseline(s, scenario)["contribution"] for s in seeds]
         return {"member_fare": round(price, 2), "membership_fee": cfg["membership_fee"],
             "incremental_contribution": round(mean, 2), "paired_differences": deltas,
+            "mean_total_contribution": round(statistics.mean(totals), 2),
+            "mean_baseline_contribution": round(statistics.mean(baseline_totals), 2),
+            "total_contributions": totals,
+            "total_standard_error": statistics.stdev(totals) / math.sqrt(len(totals)) if len(totals) > 1 else None,
             "feasible": feasible, "search_score": mean if feasible else min(mean, 0) - 10000,
             "mean_members": statistics.mean(r["new_members"] for r in reports),
             "mean_member_trips": statistics.mean(r["member_flown"] for r in reports),

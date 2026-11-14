@@ -86,3 +86,8 @@ The new continuous-price and probabilistic-user path is documented in [CONTINUOU
 - Compose publishes only host loopback, injects optional credentials at runtime, and persists SQLite/audits/jobs in a named volume. Build context allowlist excludes private data and host environments. Added explicit server bind option and a lightweight database health endpoint.
 - Isolated, offline test service: 132 backend + 19 simulator tests passed, as did all frozen artifact checks. Three browser suites passed against the container on a custom port; real synthetic bookings and bounded rule/pricing jobs survived container recreation and a port change.
 - Native amd64 build and emulated arm64 build passed; 22 key tests also passed inside arm64. No physical Mac full-suite claim. No new provider calls. Setup, data lifecycle and validation are documented in DOCKER.md.
+
+
+## Price–contribution visualisation — 2026-11-14
+
+Added an interactive numeric-price versus mean-total-contribution chart and a saved-run link. Report v1.1 adds totals and their NO_OFFER reference without changing search rules. The unconstrained tested peak is visually separated from service feasibility and the actual recommendation; historical incremental-only reports are never relabelled as total profit. Full 151-test container regression, frozen artifacts, actual price-search browser checks and chart edge-case/mobile checks passed.

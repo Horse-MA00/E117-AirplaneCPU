@@ -55,6 +55,11 @@
   </form>
   <p id="continuous-status" role="status">No provider calls. An independent holdout tests the selected hypothesis.</p>
   <div id="continuous-result" hidden>
+    <section class="price-curve" aria-labelledby="price-curve-title">
+      <h3 id="price-curve-title">Price vs expected total contribution</h3>
+      <p class="small muted">Compare the total return of each tested fare with normal sales. Hover, tap or focus a point for its result.</p>
+      <div id="continuous-chart"></div>
+    </section>
     <dl class="candidate-detail" id="continuous-summary"></dl>
     <div class="table-wrapper" tabindex="0" role="region" aria-label="Continuous price evaluations"><table><caption>Adaptive evaluations · incremental to matched NO_OFFER</caption><thead><tr><th scope="col">Price</th><th scope="col">Mean contribution</th><th scope="col">Members</th><th scope="col">Service</th><th scope="col">Feasible</th></tr></thead><tbody id="continuous-trace"></tbody></table></div>
     <p class="small muted">Service here means new members completing at least one member trip. No global-optimum or real-market guarantee. Existing fast screening below remains a labelled legacy baseline.</p>

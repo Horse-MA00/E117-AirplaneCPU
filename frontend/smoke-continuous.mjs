@@ -22,6 +22,13 @@ try {
   assert.ok(result.validation.markets.every(m=>m.complete && Object.values(m.checks).every(Boolean)));
   assert.ok(result.validation.markets.some(m=>m.feedback.length>0));
   assert.ok(result.trace.every(r=>r.member_fare>=0 && r.member_fare<=500));
+  assert.equal(await page.locator('.price-point').count(),result.trace.length);
+  const peak=[...result.trace].sort((a,b)=>b.mean_total_contribution-a.mean_total_contribution || a.member_fare-b.member_fare)[0];
+  assert.equal(Number(await page.locator('.price-peak').getAttribute('data-peak-price')),peak.member_fare);
+  for(const row of result.trace) {
+    assert.equal(Number(await page.locator(`.price-point[data-price="${row.member_fare}"]`).getAttribute('data-total')),row.mean_total_contribution);
+    assert.ok(Math.abs(row.mean_total_contribution-row.mean_baseline_contribution-row.incremental_contribution)<.02);
+  }
   await page.screenshot({path:'test-results/continuous-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));

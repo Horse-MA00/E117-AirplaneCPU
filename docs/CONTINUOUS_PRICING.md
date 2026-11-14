@@ -106,3 +106,27 @@ new continuous browser smoke (desktop/390px), JavaScript syntax and historical
 artifact checks. The new smoke uses actual background jobs, shared accounting,
 independent validation and feedback. Run `npm run test:continuous` in frontend
 against the running server (`APP_URL`; `CHROMIUM_EXECUTABLE_PATH` if needed).
+
+
+## Price versus total contribution chart (report v1.1)
+
+New reports include mean total contribution, matched NO_OFFER mean contribution,
+per-world totals and their standard error, alongside the existing paired incremental
+objective. Search choices, service constraints and the user law are unchanged.
+The chart uses numeric price spacing, connects only evaluated points, and explicitly
+labels the zoomed vertical scale. It marks the largest tested total even if that
+price fails the service rule; the NO_OFFER reference and constrained search decision
+remain separate. Totals cover the full finite simulated market, not just member
+fares, and exclude pass-through fees and aircraft fixed costs.
+
+Hover, tap or keyboard-focus a point for exact values. The saved report URL uses
+`?pricing_run=price-...#pricing`; opening or refreshing it only reads the completed
+experiment. Old reports without totals remain unchanged and request a fresh run
+rather than presenting incremental contribution as total profit. The chart is an
+estimated mean from a small synthetic cohort, not proof of a global optimum.
+
+Validation: 151 container regression tests and artifact checks passed. The real
+continuous-price browser smoke checks plotted values against the API. A separate
+chart browser test covers an infeasible maximum versus NO_OFFER, a feasible winner,
+historical reports, numeric sorting, keyboard details, mobile resize and read-only
+reload. Run `npm run test:price-chart` with APP_URL pointed at the container.
