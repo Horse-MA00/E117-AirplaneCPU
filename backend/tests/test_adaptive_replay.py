@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 from backend import adaptive_pricing as pricing
 from backend import adaptive_store as store
-from backend.thompson import PurchasePosterior
+from backend.member_response import PurchasePosterior
 from llm_agent import adaptive_customers as adapter
 
 
@@ -27,7 +27,7 @@ def scope():
     return dict(flight_id='TEST-REPLAY', origin='HKG', destination='KMQ', departure_date='2027-05-18',
                 departure_time='10:30', as_of_day=28, normal_base_fare=410., initial_member_fare=328.,
                 available_seats=80, releasable_seats=30, history=[], history_sha256='test-history',
-                capacity=180, booked_seats=100, member_fare_cap_ratio=.8)
+                capacity=180, booked_seats=100, member_fare_cap_ratio=.8, member_fare_cap=328)
 
 
 class AdaptiveReplayTests(unittest.TestCase):
@@ -91,33 +91,48 @@ class AdaptiveReplayTests(unittest.TestCase):
 
     def run_experiment(self):
         report = pricing.start({'mode': 'live', 'flight_id': 'TEST-REPLAY', 'forecast_day': 28,
-                                'customers': 14, 'rounds': 3, 'validation_repeats': 2,
-                                'max_calls': 200, 'concurrency': 4, 'seed': 117,
+                                'customers': 14, 'rounds': 3, 'validation_repeats': 3,
+                                'max_calls': 300, 'concurrency': 4, 'seed': 117,
                                 'revenue_fraction': .8}, blocking=True)
         self.assertEqual(report['status'], 'completed', report.get('error'))
         return report
 
-    def test_same_price_replays_choices_without_new_calls_or_likelihood_rows(self):
+    def test_repeated_price_uses_fresh_cohorts_and_blinded_paired_control(self):
         report = self.run_experiment()
-        self.assertEqual([r['price'] for r in report['rounds']], [328., 200., 200.])
-        repeated = report['rounds'][2]['decisions']
-        self.assertTrue(any(row['source'] == 'provider_cache' for row in repeated))
-        self.assertTrue(all(row['source'] in ('provider_cache', 'environment_forced') for row in repeated))
-        self.assertFalse(any(row['provider_call'] for row in repeated))
-        self.assertEqual(report['rounds'][2]['learning_updates'], 0)
-        self.assertTrue(report['rounds'][2]['reused_analysis'])
-        self.assertEqual(report['rounds'][2]['analysis_source'], 'reused_no_new_observations')
-        self.assertFalse(report['rounds'][1]['reused_analysis'])
-        self.assertGreater(report['counts']['cache_hits'], 0)
-        self.assertEqual(report['counts']['analyst_calls'], 2)
+        self.assertEqual([r['price'] for r in report['rounds']], [328, 200, 200])
+        self.assertTrue(all(type(r['price']) is int for r in report['rounds']))
+        third = report['rounds'][2]['decisions']
+        self.assertTrue(any(row['source'] == 'provider_live' for row in third))
+        self.assertFalse(any(row['source'] == 'provider_cache' for row in third))
+        self.assertEqual([row['learning_updates'] for row in report['rounds']], [14,28,28])
+        self.assertFalse(any(row['reused_analysis'] for row in report['rounds']))
+        self.assertEqual(report['counts']['analyst_calls'], 3)
         analyst_requests = [req for req in self.requests if 'feedback' in req]
-        self.assertEqual([req['price'] for req in analyst_requests], [328., 200.])
-        for rows in self.fit_rows:
-            pairs = [(r['person']['customer_id'], round(r['price'] * 100)) for r in rows]
-            self.assertEqual(len(pairs), len(set(pairs)), 'Cached same-price outcomes must not duplicate likelihood rows')
-        final_pairs = {(r['person']['customer_id'], round(r['price'] * 100)) for r in self.fit_rows[-1]}
-        expected = {(p['customer_id'], price) for p in report['panel'] if p['eligible'] for price in (32800, 20000)}
-        self.assertEqual(final_pairs, expected)
+        self.assertEqual([req['price'] for req in analyst_requests], [328,200,200])
+        all_search_ids = set()
+        expected = set()
+        for index,row in enumerate(report['rounds']):
+            ids = {d['person']['customer_id'] for d in row['decisions']}
+            self.assertTrue(all_search_ids.isdisjoint(ids))
+            all_search_ids.update(ids)
+            initial_ids = {d['person']['customer_id'] for d in row['initial_result']['decisions']}
+            self.assertEqual(ids,initial_ids)
+            expected.update((cid,p) for cid in ids for p in {row['price'],328})
+            self.assertEqual(row['paired_identical_price_reused'], index==0)
+        self.assertEqual(report['rounds'][1]['comparison_order'], [328,200])
+        self.assertEqual(report['rounds'][2]['comparison_order'], [200,328])
+        for fit in self.fit_rows:
+            pairs = [(r['person']['customer_id'],r['price']) for r in fit]
+            self.assertEqual(len(pairs),len(set(pairs)))
+            self.assertTrue(all(set(r['person']) == {'customer_id','segment','flexibility_days','population_weight'} for r in fit))
+        self.assertEqual({(r['person']['customer_id'],r['price']) for r in self.fit_rows[-1]},expected)
+        customer_requests = [req for req in self.requests if 'feedback' not in req]
+        for req in customer_requests:
+            self.assertNotIn('paired_initial',req)
+            self.assertNotIn('optimizer_profit',req)
+            self.assertNotIn('other_quote',req)
+        self.assertEqual(len(all_search_ids),42)
+        self.assertTrue(all(call['target_customers']==14 for call in self.proposals))
 
     def test_final_diagnostics_use_full_posterior_grid_without_training_on_holdout(self):
         report = self.run_experiment()
@@ -129,7 +144,7 @@ class AdaptiveReplayTests(unittest.TestCase):
         self.assertEqual({r['price'] for r in recommendation['curve']}, tested)
         self.assertGreater(len(recommendation['model_curve']), len(tested))
         self.assertTrue(any(not call['draw'] and call.get('candidate_prices') is None for call in self.proposals))
-        training_ids = {p['customer_id'] for p in report['panel']}
+        training_ids = {p['customer_id'] for panel in report['search_panels'] for p in panel['people']}
         holdout_ids = {r['person']['customer_id'] for world in report['validation_worlds']
                        for r in world['result']['decisions']}
         self.assertFalse(training_ids & holdout_ids)

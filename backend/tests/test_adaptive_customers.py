@@ -91,6 +91,9 @@ class AdaptiveCustomerTests(unittest.TestCase):
             'price_sensitivity': 'very_high',
             'value_context': 'A ticket being affordable does not make this optional trip worthwhile.',
             'outside_option': 'Skip the trip and retain the ticket budget.',
+            'trip_interest': 'low', 'recent_travel': 'within_two_weeks',
+            'destination_interest': 'medium', 'outside_option_strength': 'high',
+            'motivation_context': 'Recently returned from a leisure trip and currently only browsing.',
         }
         obj['person'].update(fields, target_conversion=.9, candidate_profit=9000)
         visible = adapter.public_observation(obj)
@@ -200,6 +203,32 @@ class AdaptiveCustomerTests(unittest.TestCase):
         self.assertGreater(len(hi_ids), 0)
         self.assertLess(len(lo_ids), 100)
         self.assertEqual(client.stats()['provider_calls'], 0)
+
+    def test_declared_optional_motivation_changes_synthetic_response_without_forcing_actions(self):
+        obj = observation(fare=200, budget=500)
+        obj['person'].update(scenario_profile='flexible_deal_seekers', trip_interest='low',
+                             recent_travel='within_two_weeks', destination_interest='low',
+                             outside_option_strength='high', price_sensitivity='very_high')
+        low = adapter.synthetic_probability(obj)
+        eager = copy.deepcopy(obj)
+        eager['person'].update(trip_interest='high', recent_travel='none_in_six_months',
+                               destination_interest='high', outside_option_strength='low')
+        high = adapter.synthetic_probability(eager)
+        self.assertGreater(low, 0.)
+        self.assertLess(high, 1.)
+        self.assertLess(low, high)
+        cheaper = copy.deepcopy(eager)
+        cheaper['member_fare'] = 100
+        self.assertGreater(adapter.synthetic_probability(cheaper), high)
+        client = adapter.DecisionClient(mode='synthetic')
+        result = client.choose(eager)
+        self.assertEqual(result['synthetic_behavior'], 'assumed_optional_motivation_utility_v2')
+
+    def test_synthetic_legacy_formula_is_unchanged(self):
+        import math
+        obj = observation(fare=200, budget=500)
+        expected = 1/(1+math.exp(-(2.4 + .04*3 - 4.2*200/500)))
+        self.assertAlmostEqual(adapter.synthetic_probability(obj), expected)
 
     @patch.dict(os.environ, ENV)
     def test_parallel_order_keys_budget_and_audit(self):
@@ -311,11 +340,44 @@ class AdaptiveCustomerTests(unittest.TestCase):
         valid = {'summary': 'The fare was too high for one traveller.',
                  'reason_counts': {'price': 1, 'date': 0, 'companions': 0, 'availability': 0, 'other': 0},
                  'hypothesis': 'A lower fare may change that choice.', 'evidence_customer_ids': ['ONE']}
-        self.assertEqual(adapter.validate_analysis(valid, context), valid)
+        checked = adapter.validate_analysis(valid, context)
+        self.assertEqual({key: checked[key] for key in valid}, valid)
+        self.assertEqual(checked['suggested_direction'], 'insufficient_evidence')
         invalid = copy.deepcopy(valid); invalid['evidence_customer_ids'] = ['INVENTED']
         with self.assertRaises(ValueError): adapter.validate_analysis(invalid, context)
         invalid = copy.deepcopy(valid); invalid['reason_counts']['date'] = 1
         with self.assertRaises(ValueError): adapter.validate_analysis(invalid, context)
+
+    def test_directional_feedback_requires_a_cited_observation_and_matching_action(self):
+        context = {'feedback': [
+            {'customer_id': 'DECLINER', 'decision': {'action': 'DECLINE', 'reason_code': 'PRICE'}},
+            {'customer_id': 'BUYER', 'decision': {'action': 'BUY_MEMBER', 'reason_code': 'VALUE'}},
+        ]}
+        base = {'summary': 'One traveller declined and another purchased.',
+                'reason_counts': {'price':1, 'date':0, 'companions':0, 'availability':0, 'other':1},
+                'hypothesis': 'A lower fare may improve receipts on fresh paired customers.',
+                'evidence_customer_ids':['DECLINER'], 'suggested_direction':'lower'}
+        result = adapter.validate_analysis(base, context)
+        self.assertEqual(result['suggested_direction'], 'lower')
+        self.assertEqual(result['hypothesis_status'], 'untested_not_a_willingness_to_pay_label')
+        self.assertNotIn('suggested_price', result)
+        for change in ({'evidence_customer_ids':[]}, {'evidence_customer_ids':['BUYER']},
+                       {'suggested_direction':'higher'}, {'suggested_direction':'invented'},
+                       {'reason_counts':{'price':0, 'date':0, 'companions':0, 'availability':0, 'other':2}}):
+            with self.assertRaises(ValueError): adapter.validate_analysis(base | change, context)
+        higher = adapter.validate_analysis(base | {'suggested_direction':'higher', 'evidence_customer_ids':['BUYER']}, context)
+        self.assertEqual(higher['suggested_direction'], 'higher')
+
+    def test_synthetic_direction_is_diagnostic_not_an_extra_purchase(self):
+        audit=[]
+        client=adapter.DecisionClient(mode='synthetic', audit_callback=audit.append)
+        result=client.analyse({'feedback':[{'customer_id':'ONE','decision':{
+            'action':'DECLINE','reason_code':'SYNTHETIC_PRICE','reason':'This optional trip is not worthwhile at this fare.'}}]})
+        self.assertEqual(result['analysis']['suggested_direction'], 'lower')
+        self.assertEqual(result['analysis']['evidence_customer_ids'], ['ONE'])
+        self.assertEqual(client.stats()['provider_calls'], 0)
+        self.assertEqual(client.stats()['synthetic_choices'], 0)
+        self.assertEqual(audit[-1]['event'], 'analyst_synthetic')
 
 
 if __name__ == '__main__':

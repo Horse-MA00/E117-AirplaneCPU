@@ -75,6 +75,22 @@ def verify(manifest_path):
         assert contents['validation']['selected_price_frozen_before_validation'], report
         training_ids = {p['customer_id'] for p in contents['panel']}
         assert abs(sum(p['population_weight'] for p in contents['panel'])-1) < 1e-8, report
+        if contents['version'] == 'member-thompson-v4-paired':
+            cohorts = contents['search_panels']
+            assert len(cohorts) == contents['config']['rounds'], report
+            ids = [p['customer_id'] for cohort in cohorts for p in cohort['people']]
+            assert len(ids) == len(set(ids)) == contents['config']['rounds']*contents['config']['customers'], report
+            training_ids = set(ids)
+            allowed = {'customer_id','segment','flexibility_days','population_weight'}
+            assert all(set(p) <= allowed for p in contents['prediction_population']), report
+            assert training_ids.isdisjoint(p['customer_id'] for p in contents['prediction_population']), report
+            for row in contents['training_observations']:
+                assert set(row['person']) <= allowed and row['phase'] == 'search', report
+                assert row['person']['customer_id'] in training_ids, report
+                assert row['price'] == int(row['price']), report
+            assert all(row['price'] == int(row['price']) for row in contents['rounds']), report
+            assert contents['scope']['normal_base_fare'] == int(contents['scope']['normal_base_fare']), report
+            assert contents['validation']['adoption_result'] in ('ADOPT_CANDIDATE','KEEP_INITIAL','INCONCLUSIVE','NO_OFFER'), report
         for world in contents['validation_worlds']:
             metrics = world['result']
             assert training_ids.isdisjoint(r['person']['customer_id'] for r in metrics['decisions']), report

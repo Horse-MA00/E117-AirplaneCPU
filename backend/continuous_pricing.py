@@ -1,4 +1,4 @@
-"""Adaptive cent-resolution fare search in the actual shared-market engine.
+"""Adaptive whole-HKD fare search in the actual shared-market engine.
 
 Membership fee and release fraction stay fixed. Feedback is complete simulated
 market contribution, not an optimal-price label or a claim of human demand.
@@ -12,7 +12,7 @@ from pathlib import Path
 import statistics
 from backend.probabilistic_customer import choose, VERSION as CUSTOMER_VERSION
 
-VERSION = "continuous-shared-pricing-v1.1"
+VERSION = "continuous-shared-pricing-v1.2-whole-hkd"
 
 
 def _number(value, name, low, high, integer=False):
@@ -23,11 +23,12 @@ def _number(value, name, low, high, integer=False):
 
 def adaptive_search(evaluate, low, high, budget=15):
     """Bounded optimistic interval refinement; no global-optimum certificate."""
-    left, right = round(low * 100), round(high * 100)
+    from .fare_policy import integer_price
+    left, right = integer_price(low, 'price_min'), integer_price(high, 'price_max')
     observations = {}
-    def sample(cents):
-        if cents not in observations:
-            observations[cents] = evaluate(cents / 100)
+    def sample(price):
+        if price not in observations:
+            observations[price] = evaluate(price)
     sample(left)
     if right != left:
         sample(right)
@@ -68,8 +69,8 @@ def optimize(config=None):
     src = config or {}
     if not isinstance(src, dict):
         raise ValueError("config must be an object")
-    defaults = {"price_min": (0, 0, 2000, False), "price_max": (500, 0, 2000, False),
-        "membership_fee": (399, 0, 5000, False), "release_fraction": (.5, 0, 1, False),
+    defaults = {"price_min": (0, 0, 2000, True), "price_max": (500, 0, 2000, True),
+        "membership_fee": (399, 0, 5000, True), "release_fraction": (.5, 0, 1, False),
         "evaluations": (11, 3, 31, True), "replicates": (2, 1, 5, True),
         "seed": (117, 0, 2**31-100000, True), "customers": (14, 1, 100, True),
         "flights": (6, 6, 12, True), "min_service_rate": (.6, 0, 1, False),
@@ -110,7 +111,7 @@ def optimize(config=None):
         mean = statistics.mean(deltas)
         totals = [r["contribution"] for r in reports]
         baseline_totals = [baseline(s, scenario)["contribution"] for s in seeds]
-        return {"member_fare": round(price, 2), "membership_fee": cfg["membership_fee"],
+        return {"member_fare": int(price), "membership_fee": cfg["membership_fee"],
             "incremental_contribution": round(mean, 2), "paired_differences": deltas,
             "mean_total_contribution": round(statistics.mean(totals), 2),
             "mean_baseline_contribution": round(statistics.mean(baseline_totals), 2),
@@ -143,7 +144,7 @@ def optimize(config=None):
         "best": {"decision": "OFFER" if winner else "NO_OFFER", **(winner or {"incremental_contribution": 0, "member_fare": None})},
         "validation": validation, "stress": stress, "ready_for_review": safe,
         "assumptions": ["Synthetic probabilistic feedback; not observed human willingness to pay.",
-            "Adaptive bounded search at HKD cent resolution; best evaluated feasible price, not a certified global optimum.",
+            "Adaptive bounded search at whole-HKD resolution; best evaluated feasible price, not a certified global optimum.",
             "Membership fee and release share remain fixed. D28/D14/D7 quotas use the same shared-market engine.",
             "A constant fare policy is evaluated over the full finite catalogue. Re-running updates the recommendation; no autonomous live repricing or parameter training is claimed.",
             "Validation seeds never select another price. Stress results do not retune the frozen user law.",

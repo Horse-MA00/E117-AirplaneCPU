@@ -80,6 +80,19 @@ class FlexibleDealPopulationTests(unittest.TestCase):
         self.assertIn("not a representative sample", text)
         self.assertTrue(all(row["weight"] == row["assumed_weight"] for row in result["segments"]))
 
+    def test_private_motivation_varies_before_any_price_is_shown(self):
+        people = population(120, 740001)
+        for field in ('trip_interest', 'destination_interest', 'outside_option_strength'):
+            self.assertEqual({p[field] for p in people}, {'low', 'medium', 'high'})
+        self.assertEqual({p['recent_travel'] for p in people},
+                         {'within_two_weeks', 'one_to_three_months', 'none_in_six_months'})
+        self.assertTrue(all(p['motivation_context'] and p['motivation_source'].startswith('assumed_') for p in people))
+        self.assertTrue(all(isinstance(p['base_fare_budget'], int) for p in people))
+        self.assertTrue(all(p['outside_option_strength'] == 'high' for p in people if p['trip_interest'] == 'low'))
+        self.assertTrue(all(p['outside_option_strength'] == 'low' for p in people if p['trip_interest'] == 'high'))
+        self.assertEqual(population(28, 740001, scope={'as_of_day':28, 'member_fare':10}),
+                         population(28, 740001, scope={'as_of_day':28, 'member_fare':900}))
+
 
 if __name__ == "__main__":
     unittest.main()

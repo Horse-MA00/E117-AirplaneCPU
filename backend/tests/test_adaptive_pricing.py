@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from backend import adaptive_pricing as pricing
 from backend import adaptive_store
-from backend.thompson import PurchasePosterior
+from backend.member_response import PurchasePosterior, learner_view
 from llm_agent.adaptive_customers import DecisionClient
 from llm_agent.weighted_population import population
 
@@ -17,7 +17,7 @@ def selected_scope():
                 departure_date="2027-05-18", departure_time="10:30", as_of_day=28,
                 normal_base_fare=410., initial_member_fare=328., available_seats=80,
                 releasable_seats=30, history=[], history_sha256="test-history",
-                capacity=180, booked_seats=100, member_fare_cap_ratio=.8)
+                capacity=180, booked_seats=100, member_fare_cap_ratio=.8, member_fare_cap=328)
 
 
 def buyer(i, weight=1 / 3):
@@ -62,6 +62,13 @@ class SettlementTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pricing.settle([buyer(0)], [request()], selected, None, 117)
 
+    def test_fractional_fares_are_rejected_instead_of_display_rounded(self):
+        with self.assertRaisesRegex(ValueError, 'whole HKD'):
+            pricing.settle([buyer(0)], [request()], selected_scope(), 326.5, 117)
+        with self.assertRaisesRegex(ValueError, 'whole HKD'):
+            pricing.settle([buyer(0)], [request()],
+                           dict(selected_scope(),normal_base_fare=410.5), 328, 117)
+
     def test_parallel_completion_order_does_not_change_allocation(self):
         selected = {**selected_scope(), "releasable_seats": 2, "available_seats": 5}
         people = population(28, 117, scope=selected)
@@ -81,7 +88,7 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual([x["person"]["customer_id"] for x in second["decisions"]],
                          [p["customer_id"] for p in people])
 
-    def test_forced_decline_remains_distinct_from_model_demand(self):
+    def test_forced_decline_is_audited_and_learned_without_private_constraint(self):
         selected = selected_scope()
         people = population(14, 117, scope=selected)
         people[0] = {**people[0], "eligible": True, "base_fare_budget": 0}
@@ -92,9 +99,10 @@ class SettlementTests(unittest.TestCase):
         self.assertFalse(record["provider_call"])
         self.assertTrue(record["forced"])
         model = PurchasePosterior([people[0]["segment"]])
-        model.fit([dict(person=people[0], price=328, normal_fare=410, bought=False)])
-        self.assertEqual(model.summary()["unaffordable"], 1)
-        self.assertEqual(model.summary()["effective_likelihood_mass"], 0)
+        model.fit([dict(person=learner_view(people[0]), price=328, normal_fare=410, bought=False)])
+        self.assertEqual(model.summary()["likelihood_rows"], 1)
+        self.assertEqual(model.summary()["effective_likelihood_mass"], 1)
+        self.assertFalse(model.summary()["private_constraints_used"])
 
     def test_public_quote_excludes_future_and_optimizer_information(self):
         selected = {**selected_scope(), "future_actual_bookings": 999, "optimizer_profit": 12000}
@@ -123,7 +131,7 @@ class ExperimentTests(unittest.TestCase):
 
     def config(self, **changes):
         return dict(mode="synthetic", flight_id="TEST-HKG-KMQ", forecast_day=28,
-                    customers=14, rounds=2, validation_repeats=2, max_calls=0,
+                    customers=14, rounds=2, validation_repeats=3, max_calls=0,
                     concurrency=4, seed=117) | changes
 
     def test_complete_run_freezes_selection_and_never_fits_holdout(self):
@@ -145,17 +153,32 @@ class ExperimentTests(unittest.TestCase):
         self.assertTrue(all(0 <= r["price"] <= 328 for r in report["rounds"]))
         self.assertIn(report["recommendation"]["price"], [r["price"] for r in report["rounds"]])
         self.assertTrue(report["validation"]["selected_price_frozen_before_validation"])
-        search_ids = {p["customer_id"] for p in report["panel"]}
+        search_ids = {p["customer_id"] for panel in report["search_panels"] for p in panel["people"]}
         heldout_ids = {r["person"]["customer_id"] for w in report["validation_worlds"]
                        for r in w["result"]["decisions"]}
         self.assertFalse(search_ids & heldout_ids)
         self.assertEqual(len(fit_ids), 2)
         self.assertTrue(all(ids <= search_ids for ids in fit_ids))
-        self.assertEqual(len({w["seed"] for w in report["validation_worlds"]}), 2)
+        self.assertEqual(len({w["seed"] for w in report["validation_worlds"]}), 3)
         selected_worlds = [w for w in report["validation_worlds"] if w["policy"] == "selected"]
         self.assertTrue(all(w["price"] == report["recommendation"]["price"] for w in selected_worlds))
         self.assertEqual(adaptive_store.read(report["run_id"])["status"], "completed")
         self.assertGreater(len(adaptive_store.events(report["run_id"])["events"]), 0)
+        support_ids = {p['customer_id'] for p in report['prediction_population']}
+        self.assertEqual(len(support_ids), 128)
+        self.assertTrue(support_ids.isdisjoint(search_ids | heldout_ids))
+        public_fields = {'customer_id','segment','flexibility_days','population_weight'}
+        self.assertTrue(all(set(p) == public_fields for p in report['prediction_population']))
+        self.assertTrue(all(set(row['person']) == public_fields for row in report['training_observations']))
+        self.assertTrue(all(row['phase'] == 'search' for row in report['training_observations']))
+        for row in report['rounds']:
+            candidate_ids = [x['person']['customer_id'] for x in row['decisions']]
+            initial_ids = [x['person']['customer_id'] for x in row['initial_result']['decisions']]
+            self.assertEqual(candidate_ids, initial_ids)
+            self.assertIsInstance(row['price'], int)
+            self.assertIn(row['comparison_order'][0], (row['price'],328))
+        self.assertIn(report['validation']['adoption_result'],
+                      ('ADOPT_CANDIDATE','KEEP_INITIAL','NO_OFFER','INCONCLUSIVE'))
 
     def test_profile_is_validated_and_preserved_in_holdout_and_provenance(self):
         with self.assertRaises(ValueError):
@@ -167,7 +190,7 @@ class ExperimentTests(unittest.TestCase):
         self.assertEqual({p['segment'] for p in report['panel']},
                          {r['person']['segment'] for w in report['validation_worlds']
                           for r in w['result']['decisions']})
-        self.assertIn('llm_agent/prompts/adaptive_customer_v3_en.txt', report['provenance']['files'])
+        self.assertIn('llm_agent/prompts/adaptive_customer_v4_en.txt', report['provenance']['files'])
         self.assertNotIn('llm_agent/prompts/adaptive_customer_v1_en.txt', report['provenance']['files'])
 
     def test_scope_returns_the_selected_profiles_weight_schema(self):
@@ -200,17 +223,35 @@ class ExperimentTests(unittest.TestCase):
         self.assertNotEqual(report["recommendation"]["price"], report["rounds"][-1]["price"])
         self.assertEqual(len(calls), 5)
 
-    def test_repeated_identical_offer_adds_no_learning_observations(self):
+    def test_repeated_price_new_people_add_evidence_but_paired_identical_quote_is_reused(self):
         with patch.object(pricing, "recommend", return_value={"price": 328., "curve": []}):
             report = pricing.start(self.config(rounds=4), blocking=True)
         self.assertEqual(report["status"], "completed", report.get("error"))
         rounds = report["rounds"]
         self.assertGreater(rounds[0]["learning_updates"], 0)
-        self.assertTrue(all(row["learning_updates"] == 0 for row in rounds[1:]))
-        self.assertTrue(all(row["reused_analysis"] for row in rounds[1:]))
-        self.assertEqual(len({row["posterior"]["observations"] for row in rounds}), 1)
+        self.assertTrue(all(row["learning_updates"] == 14 for row in rounds))
+        self.assertTrue(all(not row["reused_analysis"] for row in rounds))
+        self.assertTrue(all(row["paired_identical_price_reused"] for row in rounds))
+        self.assertEqual([row["posterior"]["observations"] for row in rounds], [14,28,42,56])
+        ids = [{p["customer_id"] for p in panel["people"]} for panel in report["search_panels"]]
+        self.assertEqual(len(set.union(*ids)), 56)
+        self.assertEqual(report["rounds"][-1]["cumulative_unique_customers"], 56)
         self.assertTrue(all(world["reused_identical_policy"] for world in report["validation_worlds"]
                             if world["policy"] == "selected"))
+
+    def test_new_panel_call_budget_and_minimum_confirmation_cohorts(self):
+        cfg, _, _ = pricing.validate(self.config())
+        self.assertEqual(cfg['estimated_calls_upper_bound'], 2*(2*14+1)+3*3*14)
+        with self.assertRaisesRegex(ValueError, 'validation_repeats'):
+            pricing.validate(self.config(validation_repeats=2))
+
+    def test_fractional_candidate_stops_run_before_executing_it(self):
+        with patch.object(pricing, 'recommend', return_value={'price':326.5,'curve':[]}):
+            report = pricing.start(self.config(), blocking=True)
+        self.assertEqual(report['status'], 'failed')
+        self.assertEqual([row['price'] for row in report['rounds']], [328])
+        self.assertIn('whole HKD', report['error'])
+        self.assertIsNone(report['validation'])
 
     def test_insufficient_live_budget_rejected_before_client_construction(self):
         with patch.object(pricing, "DecisionClient") as client:
@@ -227,6 +268,112 @@ class ExperimentTests(unittest.TestCase):
         self.assertIsNone(report["validation"])
         self.assertIn("Mock decision failure", report["error"])
         self.assertEqual(adaptive_store.read(report["run_id"])["status"], "failed")
+
+
+class ConfirmationAndHypothesisTests(unittest.TestCase):
+    @staticmethod
+    def worlds(counts, selected_price=200):
+        people = [buyer(i,1/20) for i in range(20)]
+        selected = selected_scope()
+        worlds = []
+        for seed,(initial_n,selected_n,normal_n) in enumerate(counts,700):
+            for policy,price,n in [('initial',328,initial_n),('selected',selected_price,selected_n),('no_offer',None,normal_n)]:
+                action = 'BUY_REGULAR' if price is None else 'BUY_MEMBER'
+                decisions = [request(action if i < n else 'DECLINE','DECLINE') for i in range(20)]
+                result = pricing.settle(people,decisions,selected,price,seed)
+                worlds.append(dict(seed=seed,policy=policy,price=price,result=result))
+        return worlds
+
+    def test_consistent_positive_confirmation_can_adopt(self):
+        report = pricing.compare_validation(self.worlds([(10,18,6)]*3),328,200,117)
+        self.assertEqual(report['adoption_result'],'ADOPT_CANDIDATE')
+        self.assertEqual(report['retained_price'],200)
+        self.assertGreater(report['confirmation_interval']['low'],0)
+        self.assertGreater(report['confirmation_extra_interval']['low'],0)
+        self.assertAlmostEqual(report['break_even_conversion'],.82)
+        self.assertAlmostEqual(report['observed_conversion'],.9)
+        self.assertIn('not a forecast',report['break_even_scope'])
+
+    def test_positive_average_and_lower_bound_do_not_hide_a_losing_world(self):
+        report = pricing.compare_validation(self.worlds([(10,16,6)]+[(10,18,6)]*3),328,200,117)
+        self.assertGreater(report['decision_gain_vs_initial'],0)
+        self.assertGreater(report['confirmation_interval']['low'],0)
+        self.assertEqual(report['adoption_result'],'INCONCLUSIVE')
+        self.assertEqual(report['retained_price'],328)
+
+    def test_negative_candidate_keeps_initial_and_both_losing_means_no_offer(self):
+        losing = pricing.compare_validation(self.worlds([(10,15,6)]*3),328,200,117)
+        self.assertEqual(losing['adoption_result'],'KEEP_INITIAL')
+        self.assertEqual(losing['retained_price'],328)
+        both = pricing.compare_validation(self.worlds([(6,10,8)]*3),328,200,117)
+        self.assertGreater(both['decision_gain_vs_initial'],0)
+        self.assertLess(both['decision_gain_vs_no_offer'],0)
+        self.assertEqual(both['adoption_result'],'NO_OFFER')
+        self.assertIsNone(both['retained_price'])
+
+    def test_binding_capacity_uses_actual_transactions_for_adoption(self):
+        worlds = self.worlds([(10,15,6)]*3)
+        for world in worlds:
+            result = world['result']
+            result['capacity_binding'] = True
+            result['weighted_revenue'] = 9999 if world['policy']=='selected' else 1000
+        report = pricing.compare_validation(worlds,328,200,117)
+        self.assertEqual(report['decision_basis'],'actual_capacity_constrained_panel')
+        self.assertLess(report['decision_gain_vs_initial'],0)
+        self.assertEqual(report['adoption_result'],'KEEP_INITIAL')
+
+    def test_zero_price_break_even_is_undefined_not_division_failure(self):
+        report = pricing.compare_validation(self.worlds([(10,20,6)]*3,selected_price=0),328,0,117)
+        self.assertIsNone(report['break_even_conversion'])
+        self.assertEqual(report['adoption_result'],'KEEP_INITIAL')
+
+    def test_reweighted_receipts_cannot_bypass_available_inventory(self):
+        worlds = self.worlds([(10,15,6)]*3)
+        for world in worlds:
+            if world['policy'] == 'selected':
+                world['result']['quota'] = 16
+                world['result']['weighted_fulfilled_conversion'] = .95
+                world['result']['weighted_revenue'] = 9999
+        report = pricing.compare_validation(worlds,328,200,117)
+        self.assertEqual(report['decision_basis'],'actual_capacity_constrained_panel')
+        self.assertEqual(report['adoption_result'],'KEEP_INITIAL')
+        self.assertFalse(report['break_even_attainable'])
+        self.assertAlmostEqual(report['max_fulfilled_conversion'],.8)
+
+    def test_free_price_can_match_an_already_zero_receipt_baseline(self):
+        report = pricing.compare_validation(self.worlds([(0,20,0)]*3,selected_price=0),328,0,117)
+        self.assertEqual(report['break_even_conversion'],0)
+        self.assertTrue(report['break_even_attainable'])
+
+    def test_feedback_is_bounded_test_only_on_reserved_rounds(self):
+        proposal = {'price':100,'curve':[dict(price=p,expected_member_revenue=p*10)
+                                       for p in (0,100,200,250,275,300,328)]}
+        prior = {'price':300,'round':2,'analysis':{'suggested_direction':'lower','evidence_customer_ids':['C1']}}
+        price,info = pricing._hypothesis_price(proposal,prior,3,328)
+        self.assertEqual(price,275)
+        self.assertGreaterEqual(price,300-82)
+        self.assertLess(price,prior['price'])
+        self.assertEqual(info['status'],'pending')
+        self.assertEqual(info['source_round'],2)
+        self.assertEqual(info['evidence_customer_ids'],['C1'])
+        for number in (1,2,4,5):
+            selected,info = pricing._hypothesis_price(proposal,prior,number,328)
+            self.assertEqual(selected,100)
+            self.assertEqual(info['status'],'not_tested')
+        prior['analysis']['evidence_customer_ids'] = []
+        selected,info = pricing._hypothesis_price(proposal,prior,3,328)
+        self.assertEqual(selected,100)
+        self.assertEqual(info['status'],'not_tested')
+
+    def test_feedback_cannot_escape_domain_or_invent_unscored_price(self):
+        proposal = {'price':100,'curve':[dict(price=p,expected_member_revenue=p*10)
+                                       for p in (0,100,200,300,328)]}
+        prior = {'price':328,'round':2,'analysis':{'suggested_direction':'higher','evidence_customer_ids':['C1']}}
+        price,info = pricing._hypothesis_price(proposal,prior,3,328)
+        self.assertEqual(price,100)
+        self.assertEqual(info['status'],'not_tested')
+        self.assertIn('no permitted',info['summary'])
+
 
 
 if __name__ == "__main__":

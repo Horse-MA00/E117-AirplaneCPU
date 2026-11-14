@@ -179,15 +179,15 @@ class ScopedOptimizationTests(unittest.TestCase):
 
     def test_scoped_local_price_probes_and_later_explicit_boundary(self):
         cfg=engine.validate({'flight_id':'NET-HKG-ICN-20270521'})
-        cfg['initial_member_fare']=73.5
+        cfg['initial_member_fare']=74
         rows=[]
         for _ in range(5):
             p=engine.propose(cfg,rows)
-            rows.append({**p,'feasible':True,'incremental_contribution':-(p['member_fare']-73.5)**2})
-        self.assertEqual([r['member_fare'] for r in rows[:3]],[73.5,55.12,91.88])
+            rows.append({**p,'feasible':True,'incremental_contribution':-(p['member_fare']-74)**2})
+        self.assertEqual([r['member_fare'] for r in rows[:3]],[74,56,92])
         self.assertEqual(rows[3]['member_fare'],0)
         self.assertEqual(rows[3]['search_step'],'boundary_low')
-        self.assertGreater(rows[4]['member_fare'],91.88)
+        self.assertGreater(rows[4]['member_fare'],92)
         self.assertEqual(len({r['member_fare'] for r in rows}),5)
 
     def test_zero_supply_cancellation_difference_is_not_price_evidence(self):

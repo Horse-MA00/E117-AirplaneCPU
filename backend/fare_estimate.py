@@ -18,8 +18,9 @@ import numpy as np
 from backend import data
 from backend.probabilistic_customer import SCENARIOS, VERSION as CUSTOMER_VERSION, uniform
 from backend.release_policy import RELEASE_DAYS
+from backend.fare_policy import integer_price, quoted_base_fare
 
-VERSION = 'formula-scan-v1'
+VERSION = 'formula-scan-v2-whole-hkd'
 GRID_POINTS = 9
 GRID_DIVISIONS = 32  # grid step = cap / 32, so the 9 points span +/- cap / 8
 
@@ -30,7 +31,7 @@ def _fare_by_day(flight_id, as_of_day, fallback):
     fares, last = {}, fallback
     for day in range(as_of_day, -1, -1):
         last = quotes.get(day) or last
-        fares[day] = last
+        fares[day] = quoted_base_fare(last)
     return fares
 
 
@@ -105,10 +106,10 @@ def _scan(prices, travellers, fares, days, fee, costs, allocation, offer):
 def estimate(cfg, seeds):
     """Score every member fare in [0, cap] at HK$1 and return P* plus the simulation grid."""
     scope = cfg['scope']
-    cap = round(float(scope['member_fare_cap']), 2)
-    low = round(float(cfg['fare_min']), 2)
-    high = min(cap, round(float(cfg['fare_max']), 2))
-    prices = np.unique(np.append(np.arange(low, high, 1.0), high)).round(2)
+    cap = integer_price(scope['member_fare_cap'], 'member_fare_cap')
+    low = integer_price(cfg['fare_min'], 'fare_min')
+    high = min(cap, integer_price(cfg['fare_max'], 'fare_max'))
+    prices = np.arange(low, high + 1, dtype=float)
     travellers, costs = _travellers(cfg, seeds)
     days = [d for d in RELEASE_DAYS if d <= scope['as_of_day']]
     fares = _fare_by_day(scope['flight_id'], scope['as_of_day'], scope['normal_base_fare'])
@@ -118,13 +119,13 @@ def estimate(cfg, seeds):
     incremental = (with_offer - without) / max(1, len(seeds))
     # Ties go to the higher fare: an equal estimate never justifies a deeper discount.
     best = int(np.flatnonzero(incremental >= incremental.max() - 1e-9)[-1])
-    p_star = float(prices[best])
-    return {'version': VERSION, 'p_star': round(p_star, 2), 'cap': cap, 'search_low': low, 'search_high': high,
+    p_star = int(prices[best])
+    return {'version': VERSION, 'p_star': p_star, 'cap': cap, 'search_low': low, 'search_high': high,
             'expected_incremental': round(float(incremental[best]), 2),
             'expected_member_tickets': round(float(member_tickets[best]) / max(1, len(seeds)), 3),
             'expected_joins': round(float(joins[best]) / max(1, len(seeds)), 3),
             'travellers_scored': len(travellers), 'prices_scored': int(len(prices)),
-            'curve': [{'member_fare': float(p), 'expected_incremental': round(float(v), 2)}
+            'curve': [{'member_fare': int(p), 'expected_incremental': round(float(v), 2)}
                       for p, v in zip(prices[::max(1, len(prices) // 60)], incremental[::max(1, len(prices) // 60)])],
             'grid': fine_grid(p_star, low, high),
             'approximation': 'Expected logit choices on the same simulated travellers; ignores member quota, background demand, cancellations and seat rationing. The full simulation re-scores the grid.'}
@@ -136,18 +137,22 @@ def fine_grid(p_star, low, high):
     A search bound inside the grid window is always tested itself: when the
     estimate sits just below the fare cap, the cap is often the true optimum.
     """
-    step = max(.01, round((high - low) / GRID_DIVISIONS, 2))
-    points, seen = [round(p_star, 2)], {round(p_star * 100)}
+    p_star = integer_price(p_star, 'p_star')
+    low, high = integer_price(low, 'low'), integer_price(high, 'high')
+    if not low <= p_star <= high:
+        raise ValueError('P* must lie within whole-HKD bounds')
+    step = max(1, round((high - low) / GRID_DIVISIONS))
+    points, seen = [p_star], {p_star}
     for bound in (high, low):
-        if abs(bound - p_star) <= (GRID_POINTS // 2) * step and round(bound * 100) not in seen:
-            points.append(round(bound, 2))
-            seen.add(round(bound * 100))
+        if abs(bound - p_star) <= (GRID_POINTS // 2) * step and bound not in seen:
+            points.append(bound)
+            seen.add(bound)
     for k in range(1, 4 * GRID_POINTS):
         for sign in (-1, 1):
-            value = round(p_star + sign * k * step, 2)
-            if low - 1e-9 <= value <= high + 1e-9 and round(value * 100) not in seen:
+            value = p_star + sign * k * step
+            if low <= value <= high and value not in seen:
                 points.append(value)
-                seen.add(round(value * 100))
+                seen.add(value)
             if len(points) == GRID_POINTS:
                 return points
     return points

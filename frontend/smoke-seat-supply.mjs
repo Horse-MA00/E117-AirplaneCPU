@@ -8,9 +8,9 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
 page.on('pageerror',e=>errors.push(e.message));
 const flight={flight_id:'DEMO-UI-ICN',origin:'HKG',destination:'ICN',departure_at:'2027-05-15T10:00:00+08:00',capacity:180,demo_priority:0,demo_d28_releasable:44};
 const history=[28,14,13,7,1,0].map(days_to_departure=>({days_to_departure,capacity:180,booked_seats:70,available_seats:110,normal_base_fare:500,normal_total_fare:750,mandatory_fees:250}));
-let scenario='off',starts=0,exposed=false,scopeSeats=0;
+let scenario='off',starts=0,exposed=false,scopeSeats=0,protocol='fixed-seat-profile-local-fare-v1';
 const row=(round,member_fare)=>({round,member_fare,membership_fee:399,total_contribution:1000+member_fare,incremental_contribution:member_fare,profit_margin:.5,mean_member_buyers:exposed?2:0,mean_regular_buyers:3,mean_new_members:exposed?1:0,mean_member_tickets:exposed?3:0,mean_regular_tickets:4,mean_member_offer_customers:exposed?4:0,member_supply_exposure:exposed?7:0,price_evidence_qualified:exposed,price_evidence_status:exposed?'observed_member_sales':'uninformative_no_supply',feasible:exposed,service_rate:exposed?1:0,accepted:false});
-function report(){return {run_id:'opt-ui-supply',status:'completed',config:{scope:{...flight,departure_date:'2027-05-15',as_of_day:28},mode:'math',initial_member_fare:75,initial_membership_fee:399,rounds:2,customers:7,price_comparison_protocol:'fixed-seat-profile-local-fare-v1'},progress:{completed_rounds:2,total_rounds:2},counts:{},tracks:[{mode:'math',rounds:[row(1,0),row(2,70)],best:null,decision:'NO_OFFER'}]};}
+function report(){return {run_id:'opt-ui-supply',status:'completed',config:{scope:{...flight,departure_date:'2027-05-15',as_of_day:28},mode:'math',initial_member_fare:75,initial_membership_fee:399,rounds:2,customers:7,price_comparison_protocol:protocol},progress:{completed_rounds:2,total_rounds:2},counts:{},tracks:[{mode:'math',rounds:[row(1,0),row(2,70)],best:null,decision:'NO_OFFER'}]};}
 function forecast(day){
   const carry=scenario==='carry',sold=scenario==='sold',protectedAll=scenario==='protected';
   const occupied=sold?78:70,protection=protectedAll?180-occupied:sold?95:103,headroom=protectedAll?0:7,published=carry?7:0;
@@ -99,9 +99,11 @@ try{
   assert.equal(await page.locator('#optimization-price-profit circle').count(),0);
   assert.match(await page.locator('#optimization-price-evidence').innerText(),/No member-price evidence/);
   assert.equal(await page.locator('#optimization-rounds-table tr').count(),2);
-  exposed=true;await page.locator('#optimization-refresh').click();
+  assert.match(await page.locator('#optimization-curve-protocol').innerText(),/matched markets stay fixed/);
+  exposed=true;protocol='fixed-seat-profile-local-fare-v2-whole-hkd';await page.locator('#optimization-refresh').click();
   await page.waitForFunction(()=>document.querySelectorAll('#optimization-price-profit circle').length===2);
   assert.match(await page.locator('#optimization-tradeoffs').innerText(),/Most member buyers/);
+  assert.match(await page.locator('#optimization-curve-protocol').innerText(),/matched markets stay fixed/);
   await page.locator('#optimization-price-profit circle').first().focus();
   assert.match(await page.locator('#optimization-price-detail').innerText(),/2 member buyers \/ 3 regular buyers/);
   assert.match(await page.locator('#optimization-price-detail').innerText(),/1 joins/);

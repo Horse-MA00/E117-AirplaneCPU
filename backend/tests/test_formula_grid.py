@@ -17,8 +17,9 @@ class FineGrid(unittest.TestCase):
         for p_star, low, high in ((100, 0, 220), (3, 0, 220), (220, 0, 220), (0, 0, 5)):
             grid = fine_grid(p_star, low, high)
             self.assertEqual(grid[0], p_star)
-            self.assertEqual(len(grid), GRID_POINTS)
-            self.assertEqual(len({round(p * 100) for p in grid}), GRID_POINTS)
+            self.assertEqual(len(grid), min(GRID_POINTS, high-low+1))
+            self.assertEqual(len(set(grid)), len(grid))
+            self.assertTrue(all(isinstance(p, int) for p in grid))
             self.assertTrue(all(low <= p <= high for p in grid))
 
     def test_nearby_fare_cap_is_always_tested(self):

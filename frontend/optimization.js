@@ -87,7 +87,7 @@ function priceProfit(tracks){
   const allRows=tracks.flatMap(t=>t.rounds.filter(r=>Number.isFinite(r.total_contribution)).map(r=>({...r,mode:t.mode})));
   const rows=allRows.filter(row=>row.price_evidence_qualified===true);
   text('optimization-price-evidence',!allRows.length?'Waiting for evaluated customer decisions.':!rows.length?'No member-price evidence: no usable member offer exposure was recorded. Financial audit rows below are not a price-response curve.':`${rows.length} tested prices had customer exposure to a member offer. ${allRows.length-rows.length} uninformative evaluations excluded. These are tested candidates; only independent validation can recommend an offer.`);
-  text('optimization-curve-protocol',state.data.config.price_comparison_protocol==='fixed-seat-profile-local-fare-v1'?'Pass fee, seat-protection profile and matched markets stay fixed across tested prices. Proposed forecast updates are recorded separately.':'Historical run: seat protection may differ by round; price effects are not isolated.');
+  text('optimization-curve-protocol',['fixed-seat-profile-local-fare-v1','fixed-seat-profile-local-fare-v2-whole-hkd'].includes(state.data.config.price_comparison_protocol)?'Pass fee, seat-protection profile and matched markets stay fixed across tested prices. Proposed forecast updates are recorded separately.':'Historical run: seat protection may differ by round; price effects are not isolated.');
   const width=Math.max(290,Math.round(svg.getBoundingClientRect().width)||700),height=320;
   svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
   svg.append(svgNode('title',{},'Member base price versus simulated flight contribution; point size represents member buyers'));

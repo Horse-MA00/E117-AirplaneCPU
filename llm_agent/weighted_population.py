@@ -12,7 +12,7 @@ import random
 
 from .population import SEGMENTS as LEGACY_SEGMENTS
 
-VERSION = "weighted-member-panel-v2-flexible"
+VERSION = "weighted-member-panel-v3-motivation"
 DEFAULT_PROFILE = "flexible_deal_seekers"
 LEGACY_PROFILE = "broad_coverage"
 # key, label, assumed share, typical trips, basic-fare budget range, flexible days
@@ -161,6 +161,36 @@ def _legacy_population(count=28, seed=117, weights=None, scope=None):
     return people
 
 
+def _motivation(rng):
+    """Private, pre-price travel context; these are scenario assumptions.
+
+    Date/destination flexibility does not determine whether another trip is
+    appealing today. No willingness-to-pay amount or desired action is drawn.
+    """
+    interest = rng.choices(("low", "medium", "high"), weights=(.35, .40, .25))[0]
+    recent = rng.choices(("within_two_weeks", "one_to_three_months", "none_in_six_months"),
+                         weights=(.30, .40, .30))[0]
+    destination = rng.choice(("low", "medium", "high"))
+    outside = {"low": "high", "medium": "medium", "high": "low"}[interest]
+    descriptions = [
+        {"low": "Only browsing for inspiration; another optional trip is not currently a priority.",
+         "medium": "Open to a short break if the offer makes it worthwhile, without a committed itinerary.",
+         "high": "Keen to arrange an optional break, with no ticket booked and no compulsory date or destination."}[interest],
+        {"within_two_weeks": "Returned from a leisure trip within the last two weeks.",
+         "one_to_three_months": "Last leisure trip was one to three months ago.",
+         "none_in_six_months": "Has not taken a leisure trip in the last six months."}[recent],
+        {"low": "This destination is acceptable but has little particular attraction today.",
+         "medium": "This destination has some appeal, while other served destinations are also acceptable.",
+         "high": "This destination is particularly appealing today, although another destination could also work."}[destination],
+        {"high": "Keeping the schedule free and retaining the ticket money is a strongly appealing alternative.",
+         "medium": "Skipping this trip and retaining the ticket money is a credible alternative.",
+         "low": "Skipping remains possible, though arranging a worthwhile leisure break is preferred."}[outside],
+    ]
+    return {"trip_interest": interest, "recent_travel": recent, "destination_interest": destination,
+            "outside_option_strength": outside, "motivation_context": " ".join(descriptions),
+            "motivation_source": "assumed_pre_price_personal_context_not_observed_customer_data"}
+
+
 def population(count=28, seed=117, weights=None, scope=None, profile=DEFAULT_PROFILE):
     if profile == LEGACY_PROFILE:
         return _legacy_population(count, seed, weights, scope)
@@ -174,11 +204,12 @@ def population(count=28, seed=117, weights=None, scope=None, profile=DEFAULT_PRO
         for _ in range(counts[key]):
             # Draw person traits before viewing any candidate price. No hidden
             # scalar willingness-to-pay threshold or prescribed buy rate exists.
-            budget = round(rng.uniform(*budget_range), 2)
+            budget = rng.randint(*budget_range)
             flex = rng.randint(*flex_range)
             notice = rng.choice((1, 2, 3, 5, 7))
             eligible = day >= notice
             intensity = rng.choice(("very_high", "very_high", "high"))
+            motivation = _motivation(rng)
             people.append({
                 "customer_id": f"DEAL-{seed}-{len(people)+1:05d}",
                 "segment": key, "segment_label": label,
@@ -201,6 +232,7 @@ def population(count=28, seed=117, weights=None, scope=None, profile=DEFAULT_PRO
                 "price_sensitivity": intensity,
                 "value_context": scenario["value"],
                 "outside_option": scenario["outside"],
+                **motivation,
                 "population_weight": weights[key] / counts[key],
                 "target_segment_weight": weights[key], "sample_segment_count": counts[key],
                 "source": "assumed_targeted_flexible_deal_seeker_scenario",
@@ -235,6 +267,7 @@ def metadata(weights=None, people=None, profile=DEFAULT_PROFILE):
              if profile == DEFAULT_PROFILE else "The historical broad profile preserves the v1 person generator, including fixed-date and mandatory-travel coverage cases."),
             "All sampled travellers are already valid members; no membership purchase, renewal, taxes, fuel fees or airline costs enter this experiment.",
             "Each sampled member decides about one personal ticket; companions' purchases are outside this experiment.",
+            "Optional-trip interest, recent travel, destination appeal and the appeal of skipping are pre-price private scenario traits, not observed preferences or numerical willingness-to-pay labels.",
             "Poststratified rates and expected revenue are estimates. Accepted ticket counts and cash revenue remain integer transactions in the cleared panel.",
             "An LLM persona is not an independent observed HK Express customer; repeated choices do not create additional people.",
         ],

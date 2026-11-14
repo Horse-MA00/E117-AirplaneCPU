@@ -20,7 +20,7 @@ def store():
  return _store
 
 def number(x,name,lo,hi,integer=False):
- if isinstance(x,bool) or not isinstance(x,(int,float)) or not math.isfinite(x) or not lo<=x<=hi or (integer and int(x)!=x):raise ValueError(f'{name} must be {lo}..{hi}')
+ if isinstance(x,bool) or not isinstance(x,(int,float)) or not math.isfinite(x) or not lo<=x<=hi or (integer and int(x)!=x):raise ValueError(f'{name} must be {lo}..{hi}' + (' (integer)' if integer else ''))
  return int(x) if integer else x
 
 def ident(x):
@@ -142,6 +142,10 @@ def get(path,query=None):
 
 _optimizer_lock=threading.Lock()
 def post(path,body):
+ if path in ('/api/agents/run','/api/agents/panels','/api/market/runs','/api/pricing/runs'):
+  from .fare_policy import integer_price
+  for key in ('member_fare','membership_fee','price_min','price_max'):
+   if key in body:integer_price(body[key],key)
  if path=='/api/adaptive-pricing/scope':
   from . import adaptive_pricing
   return adaptive_pricing.scope(body)
@@ -161,7 +165,7 @@ def post(path,body):
   raise NotFound('Optimization endpoint not found')
  if path=='/api/pricing/runs':return pricing_jobs.start(body)
  if path=='/api/member-portal/plan':
-  store().plan(number(body.get('membership_fee'),'membership_fee',0,5000))
+  store().plan(number(body.get('membership_fee'),'membership_fee',0,5000,True))
   return member_portal.config(store())
  if path=='/api/member-portal/join':
   expected=number(body['expected_fee'],'expected_fee',0,5000) if 'expected_fee' in body else None
@@ -203,9 +207,9 @@ def post(path,body):
    if not _optimizer_lock.acquire(False):raise ValueError('An optimization is already running; retry after it finishes')
    try:return optimize(f,config)
    finally:_optimizer_lock.release()
-  quantity=number(body.get('quantity'),'quantity',1,400,True);fare=number(body.get('base_fare'),'base_fare',0,3000)
+  quantity=number(body.get('quantity'),'quantity',1,400,True);fare=number(body.get('base_fare'),'base_fare',0,3000,True)
   row=next(r for r in data.history(flight) if r['days_to_departure']==day)
-  # Member fares may never exceed 50% of the normal base fare visible at this release day.
+  # Member fares may never exceed 80% of the normal base fare visible at this release day.
   quote=next((r for r in sorted(data.history(flight),key=lambda r:r['days_to_departure']) if r['days_to_departure']>=day and r.get('normal_base_fare') is not None),None)
   if quote is None:raise ValueError('No observable normal base fare to cap the member fare')
   from .fare_policy import check_member_fare

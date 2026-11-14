@@ -23,9 +23,9 @@ from .audit import sanitize
 from .journey_runner import _transport
 from .output_contract import validate_english_output
 
-VERSION = "adaptive-member-decisions-v3-fallback-contract"
+VERSION = "adaptive-member-decisions-v4-hypotheses"
 PROMPTS = {kind: Path(__file__).parent / "prompts" / filename for kind, filename in (
-    ("customer", "adaptive_customer_v3_en.txt"), ("analyst", "adaptive_analyst_v1_en.txt"))}
+    ("customer", "adaptive_customer_v4_en.txt"), ("analyst", "adaptive_analyst_v2_en.txt"))}
 
 
 def _canonical(value):
@@ -50,7 +50,9 @@ def public_observation(observation):
                      "minimum_notice_days", "eligible", "eligibility_reason", "date_match", "companions_confirmed",
                      "travel_party_context", "scenario_profile", "trip_purpose", "booking_trigger",
                      "trip_commitment", "destination_openness", "travel_window_days",
-                     "departure_time_tolerance", "price_sensitivity", "value_context", "outside_option")
+                     "departure_time_tolerance", "price_sensitivity", "value_context", "outside_option",
+                     "trip_interest", "recent_travel", "destination_interest", "outside_option_strength",
+                     "motivation_context")
     person = {key: copy.deepcopy(original[key]) for key in person_fields if key in original}
     person.update(membership_active=True, membership_valid_at_departure=True, own_ticket_only=True, party_size=1)
     budget = _money(person["base_fare_budget"], "base_fare_budget")
@@ -122,8 +124,20 @@ def validate_analysis(value, context):
     ids = value.get("evidence_customer_ids")
     if not isinstance(ids, list) or len(ids) > len(feedback) or any(not isinstance(cid, str) or cid not in known for cid in ids):
         raise ValueError("Analyst cited an unknown customer")
+    direction = value.get("suggested_direction", "insufficient_evidence")
+    if direction not in {"lower", "higher", "hold", "insufficient_evidence"}:
+        raise ValueError("Unknown analyst test direction")
+    if direction != "insufficient_evidence" and not ids:
+        raise ValueError("A directional hypothesis must cite observed customer feedback")
+    cited_actions = {row.get("decision", {}).get("action") for row in feedback
+                     if isinstance(row, dict) and row.get("customer_id") in ids}
+    if direction == "lower" and ("DECLINE" not in cited_actions or counts["price"] < 1):
+        raise ValueError("A lower-price hypothesis needs a cited decline and a reported price objection")
+    if direction == "higher" and "BUY_MEMBER" not in cited_actions:
+        raise ValueError("A higher-price hypothesis needs a cited member purchase")
     return {"summary": value["summary"], "reason_counts": counts, "hypothesis": value["hypothesis"],
-            "evidence_customer_ids": list(dict.fromkeys(ids))}
+            "evidence_customer_ids": list(dict.fromkeys(ids)), "suggested_direction": direction,
+            "hypothesis_status": "untested_not_a_willingness_to_pay_label"}
 
 
 def synthetic_probability(observation):
@@ -135,9 +149,20 @@ def synthetic_probability(observation):
         return 0.
     # A diverse, monotone random-utility curve creates an interior revenue
     # tradeoff for many budgets. These coefficients are declared assumptions.
-    offset = {"urgent_trip": 1., "visiting_friends": .45, "small_business": .6,
-              "student": -.25, "infrequent": -.25}.get(p.get("segment"), 0.)
-    utility = 2.4 + offset + .04*p.get("flexibility_days", 0) - 4.2*fare/max(1., p["base_fare_budget"])
+    if p.get("scenario_profile") == "flexible_deal_seekers" and "trip_interest" in p:
+        # Predeclared synthetic coefficients, not fitted customer preferences.
+        # The same person keeps the same latent choice draw across paired fares.
+        utility = (2.0 + {"low": -.8, "medium": 0., "high": .8}[p["trip_interest"]]
+                   + {"low": -.35, "medium": 0., "high": .35}[p["destination_interest"]]
+                   - {"low": 0., "medium": .3, "high": .6}[p["outside_option_strength"]]
+                   + {"within_two_weeks": -.3, "one_to_three_months": 0., "none_in_six_months": .25}[p["recent_travel"]]
+                   + .15*math.log1p(p.get("flexibility_days", 0)/7.)
+                   - (4.6 if p.get("price_sensitivity") == "very_high" else 3.8)*fare/max(1., p["base_fare_budget"]))
+    else:
+        # Preserve the historical broad-coverage oracle exactly.
+        offset = {"urgent_trip": 1., "visiting_friends": .45, "small_business": .6,
+                  "student": -.25, "infrequent": -.25}.get(p.get("segment"), 0.)
+        utility = 2.4 + offset + .04*p.get("flexibility_days", 0) - 4.2*fare/max(1., p["base_fare_budget"])
     return 1/(1+math.exp(-max(-40., min(40., utility))))
 
 
@@ -225,7 +250,9 @@ class DecisionClient:
                 self._stats["synthetic_choices"] += 1
             record = {"decision": clean, "observation": visible, "learning_eligible": learning,
                       "source": "synthetic_random_utility", "provider_call": False, "cache_hit": False,
-                      "forced": False, "latency_ms": 0, "synthetic_purchase_probability": probability}
+                      "forced": False, "latency_ms": 0, "synthetic_purchase_probability": probability,
+                      "synthetic_behavior": ("assumed_optional_motivation_utility_v2" if "trip_interest" in visible["person"]
+                                             else "legacy_assumed_utility_v1")}
             self._audit({"event": "customer_synthetic", **record})
             return record
         record = self._call("customer", visible, lambda value: validate_decision(value, visible))
@@ -235,12 +262,24 @@ class DecisionClient:
         context = copy.deepcopy(context)
         if self.mode == "synthetic":
             counts = dict.fromkeys(("price", "date", "companions", "availability", "other"), 0)
-            for row in _feedback_rows(context):
+            feedback = _feedback_rows(context)
+            for row in feedback:
                 code = str(row.get("decision", {}).get("reason_code", ""))
                 counts["price" if "PRICE" in code else "other"] += 1
             analysis = {"summary": "Synthetic feedback is recorded separately from live LLM feedback.", "reason_counts": counts,
                         "hypothesis": "Test whether a different basic fare improves the observed purchase and revenue tradeoff.",
-                        "evidence_customer_ids": [r["customer_id"] for r in _feedback_rows(context)[:3] if "customer_id" in r]}
+                        "evidence_customer_ids": [r["customer_id"] for r in feedback[:3] if "customer_id" in r],
+                        "suggested_direction": "insufficient_evidence"}
+            price_declines = [r for r in feedback if r.get("decision", {}).get("action") == "DECLINE"
+                              and "PRICE" in str(r.get("decision", {}).get("reason_code", ""))]
+            purchases = [r for r in feedback if r.get("decision", {}).get("action") == "BUY_MEMBER"]
+            if price_declines:
+                analysis.update(suggested_direction="lower", evidence_customer_ids=[r["customer_id"] for r in price_declines[:3]],
+                                hypothesis="A lower basic fare may convert some observed price objections; test on fresh paired customers before accepting it.")
+            elif purchases:
+                analysis.update(suggested_direction="higher", evidence_customer_ids=[r["customer_id"] for r in purchases[:3]],
+                                hypothesis="A higher basic fare may retain enough purchases to improve receipts; test on fresh paired customers before accepting it.")
+            analysis = validate_analysis(analysis, context)
             record = {"analysis": analysis, "source": "synthetic_analysis", "provider_call": False,
                       "cache_hit": False, "forced": False, "latency_ms": 0}
             self._audit({"event": "analyst_synthetic", **record})

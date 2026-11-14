@@ -7,6 +7,9 @@ const signedMoney = value => numeric(value) ? `${value > 0 ? '+' : value < 0 ? '
 const retainedRevenue = value => `${Number(((value?.revenue_fraction ?? run?.config?.revenue_fraction ?? .95) * 100).toFixed(2))}%`;
 const safeId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(value);
 const active = run => ['queued', 'running'].includes(run?.status);
+const paired = value => value?.version === 'member-thompson-v4-paired' || value?.config?.experiment_protocol === 'fresh_paired_cohorts';
+const budgetUpper = (rounds,members,panels) => rounds*(2*members+1)+3*panels*members;
+const hypothesisLabel = status => ({supported:'Above initial revenue',not_supported:'Below initial revenue'}[status] || String(status||'not_tested').replaceAll('_',' '));
 let flights = [], segments = [], defaultWeights = {}, scope = null, run = null, liveConfigured = false;
 let populations = new Map(), renderedProfile = null;
 const profileNames = {flexible_deal_seekers:'Flexible bargain travellers', broad_coverage:'Broad customer coverage (legacy)'};
@@ -77,7 +80,7 @@ function renderScope(value) {
   $('scope-day').textContent = value ? `D${value.as_of_day}` : 'Choose a flight';
   $('flight-title').textContent = value ? `${value.origin} → ${value.destination}` : 'Your selected flight';
   $('flight-description').textContent = value ? `${value.departure_date} · ${value.flight_id} · ${value.departure_time || ''}` : 'A separate experiment is created for each flight and release round.';
-  $('scope-message').textContent = value ? value.releasable_seats > 0 ? 'The starting price is 80% of the observed normal base fare. The NHPP quota is held fixed during price trials.' : 'No member quota is available at this release round. Choose another flight or round.' : 'Choose a flight to load its observed normal fare and NHPP member quota.';
+  $('scope-message').textContent = value ? value.releasable_seats > 0 ? 'The starting price is the 80% member-fare cap, rounded down to whole HKD. The NHPP quota is held fixed during price trials.' : 'No member quota is available at this release round. Choose another flight or round.' : 'Choose a flight to load its normal fare quote and NHPP member quota.';
   updateControls();
 }
 async function loadScope() {
@@ -100,8 +103,9 @@ function updateControls() {
   $('start').disabled = busy || !scope || !(scope.releasable_seats > 0) || !weightsValid || (isLive && !liveConfigured);
   $('start').textContent = submitting ? 'Starting experiment…' : isLive ? 'Start live LLM experiment' : 'Start mathematical simulation';
   const n=Number($('rounds').value), m=Number($('customers').value), v=Number($('validation-repeats').value);
-  const calls=n*(m+1)+(1+3*v)*m;
-  $('call-estimate').textContent = isLive ? `Up to ${calls.toLocaleString()} calls before forced choices or cache reuse. The configured call limit applies to the whole experiment.` : 'Uses simulated customer choices. No paid LLM calls are made in this mode.';
+  const calls=budgetUpper(n,m,v);
+  $('customers').min=String(Math.max(1,weights.filter(w=>w>0).length));
+  $('call-estimate').textContent = isLive ? `Up to ${calls.toLocaleString()} calls for fresh paired cohorts and independent confirmation, before forced choices or identical-policy reuse. The configured call limit applies to the whole experiment.` : 'Uses simulated customer choices. No paid LLM calls are made in this mode.';
 }
 function clearRun() {
   runSequence++; clearTimeout(pollTimer); run = null; auditLoaded=[];
@@ -135,8 +139,15 @@ function renderRounds(rounds) {
   $('round-section').hidden=!rounds.length;
   const rows=rounds.map((r,i)=>({...r,round:r.round??r.round_number??i+1}));
   plot($('round-chart'),rows,{xKey:'round',yKey:'price',xLabel:'Price round',yLabel:'Member base fare · HKD',lineClass:'round-line'});
-  $('round-table').replaceChildren(...rows.map(r=>{const row=tableRow([r.round,money(r.price),count(r.member_buyers),percentage(r.weighted_conversion),money(r.member_revenue),numeric(r.learning_updates)?String(r.learning_updates):'Not recorded',r.reused_analysis?'Cached summary':r.analysis_source==='provider_live'?'Fresh LLM summary':r.analysis_source==='synthetic_analysis'?'Rule summary':'Recorded summary']);if(run?.recommendation?.price===r.price)row.className='selected';return row;}));
-  $('round-caption').textContent=`${rounds.length} evaluated ${rounds.length===1?'fare':'fares'}`;
+  $('round-table').replaceChildren(...rows.map(r=>{
+    const observations=numeric(r.learning_updates)?String(r.learning_updates):'Not recorded';
+    const fresh=numeric(r.unique_customers)?`${r.unique_customers} / ${observations}`:observations;
+    const test=r.hypothesis_test;
+    const feedback=test ? hypothesisLabel(test.status) : r.reused_analysis?'Cached summary':r.analysis_source==='provider_live'?'Fresh LLM summary':r.analysis_source==='synthetic_analysis'?'Rule summary':'Recorded summary';
+    const row=tableRow([r.round,money(r.price),count(r.member_buyers),percentage(r.weighted_conversion),money(r.member_revenue),fresh,signedMoney(r.paired_delta_vs_initial),feedback]);
+    if(run?.recommendation?.price===r.price)row.className='selected';return row;
+  }));
+  $('round-caption').textContent=`${rounds.length} rounds · ${new Set(rows.map(r=>r.price)).size} different prices`;
   const previous=$('feedback-round').value;
   $('feedback-round').replaceChildren(...rows.map(r=>option(String(r.round),`Round ${r.round}`)));
   if(rows.some(r=>String(r.round)===previous))$('feedback-round').value=previous;else if(rows.length)$('feedback-round').value=String(rows.at(-1).round);
@@ -148,7 +159,9 @@ function renderCurve(value) {
   $('curve-section').hidden=!points.length;
   plot($('curve-chart'),points,{xKey:'price',yKey:'expected_revenue',xLabel:'Member base fare · HKD',yLabel:'Expected member revenue · HKD',priceX:true,selected:value.recommendation?.price});
   $('curve-table').replaceChildren(...points.map(r=>tableRow([money(r.price),count(r.expected_buyers),money(r.expected_revenue)])));
-  $('curve-caption').textContent=value.recommendation ? `The dashed line marks the selected tested fare. Selection favours more member buyers while retaining at least ${retainedRevenue(value.recommendation)} of the best estimated member revenue among tested fares. The full curve shows model estimates, including untested prices.` : 'The model updates after each round. These are estimates for the assumed customer mix, not validated airline demand.';
+  const currentProtocol=paired(value);
+  $('curve-table-caption').textContent=currentProtocol ? value.recommendation ? 'Final fitted model estimates, not observed sales' : 'Pre-round Thompson hypothesis before these choices' : 'Model estimates, not observed sales';
+  $('curve-caption').textContent=value.recommendation ? `${currentProtocol?'Final fitted posterior after all search choices. ':''}The dashed line marks the selected tested fare. Selection favours more member buyers while retaining at least ${retainedRevenue(value.recommendation)} of the best estimated member revenue among tested fares. The full curve shows model estimates, including untested prices.` : currentProtocol ? 'Pre-round Thompson hypothesis before these choices. This is the sampled curve used to propose the latest round’s fare, before that round’s customer decisions were observed; it is not the updated posterior after those choices.' : 'The model updates after each round. These are estimates for the assumed customer mix, not validated airline demand.';
 }
 const policyNames={initial:'Initial fare',selected:'Selected fare',no_offer:'No member offer'};
 function renderValidation(validation) {
@@ -171,6 +184,15 @@ function renderValidation(validation) {
     val.append(node('small',buyers));row.append(node('span',policyNames[c.policy]||c.policy,'comparison-label'),track,val);return row;
   }));
   $('validation-table').replaceChildren(...comparisons.map(c=>tableRow([policyNames[c.policy]||c.policy,c.policy==='no_offer'?'Normal fare only':money(c.price),count(c.mean_buyers),money(c.mean_revenue),money(c.mean_weighted_revenue)])));
+  const required=validation.break_even_conversion, observed=validation.observed_conversion;
+  const hasBreakEven=Object.hasOwn(validation,'break_even_conversion');
+  $('break-even-panel').hidden=!hasBreakEven;
+  if(hasBreakEven){
+    $('break-even-rate').textContent=numeric(required)?percentage(required):'Not attainable at HK$0';
+    $('observed-rate').textContent=percentage(observed);
+    const quotaLimit=numeric(validation.max_fulfilled_conversion)?validation.max_fulfilled_conversion:null;
+    $('break-even-note').textContent=!numeric(required) ? 'A zero member fare cannot recover positive initial revenue through more member ticket sales.' : required===0 ? 'Normal-ticket receipts under the candidate already match the initial ticket revenue; no additional member purchases are required to match it.' : quotaLimit!==null&&required>quotaLimit+1e-8 ? `The member quota allows at most ${percentage(quotaLimit)} fulfilled member purchases, below the required rate. This fare cannot match initial ticket revenue with this quota.` : required>1 ? 'The required rate exceeds 100%; this fare cannot match initial ticket revenue with the available audience.' : validation.break_even_attainable===false ? 'The required purchase rate cannot be fulfilled with the available member quota.' : 'The required rate matches initial basic-ticket revenue after allowing for normal-ticket receipts under the candidate. It is a revenue threshold, not a demand forecast.';
+  }
   const parts=[];
   const interval=weighted?validation.weighted_initial_delta_interval:validation.initial_delta_interval;
   if(interval&&numeric(interval.low)&&numeric(interval.high))parts.push(`Descriptive paired-world interval vs initial: ${signedMoney(interval.low)} to ${signedMoney(interval.high)} (${count(interval.worlds)} synthetic worlds).`);
@@ -187,6 +209,9 @@ function renderFeedback() {
   const analysis=r.analysis||{};
   $('analysis-summary').textContent=typeof analysis==='string'?analysis:analysis.summary||analysis.interpretation||'This round’s decision records are available below or in the experiment export.';
   $('analysis-source-note').textContent=r.reused_analysis?'Cached summary: the analysis from the earlier identical price is reused. No new analysis call or independent observation is implied.':r.analysis_source==='provider_live'?'Fresh LLM analysis of this round’s recorded decisions.':r.analysis_source==='synthetic_analysis'?'Rule-based summary of mathematical customer choices.':'Analysis provenance is available in the experiment export.';
+  const hypothesis=r.hypothesis_test;
+  $('hypothesis-note').hidden=!hypothesis;
+  if(hypothesis){const origin=numeric(hypothesis.source_round)?`From round ${hypothesis.source_round}: `:'';const direction=String(hypothesis.direction||'none').replaceAll('_',' ');$('hypothesis-note').textContent=`${origin}${direction} · ${hypothesisLabel(hypothesis.status)}. ${hypothesis.summary||''}`;}
   let decisions=r.decisions||[];
   if(!decisions.length)decisions=auditLoaded.filter(e=>!e.round||e.round===index).map(e=>e.record||e).filter(e=>e.decision);
   $('feedback-list').replaceChildren(...decisions.slice(0,28).map(item=>{
@@ -211,6 +236,8 @@ function renderRun(value) {
   const phase=String(['failed','interrupted','paused_at_budget'].includes(value.status)?value.status:value.progress?.phase||value.status||'').replaceAll('_',' ');
   $('run-status').textContent=value.error?`${phase}: ${value.error}`:value.status==='completed'?'Complete. Selection and independent validation are saved.':`${phase.charAt(0).toUpperCase()+phase.slice(1)}. Progress is saved; this page can be reopened.`;
   const counts=value.counts||{};
+  const unique=value.progress?.cumulative_unique_customers??value.cumulative_unique_customers;
+  $('run-people').textContent=numeric(unique)?`${count(unique)} unique search members · New people in every round; paired quotes share the same people.`:paired(value)?'Fresh paired search cohorts; exact budgets are private to customers.':'';
   $('run-counts').textContent=`${counts.provider_calls??0} provider calls · ${counts.cache_hits??0} cache hits · ${counts.forced??0} forced decisions · ${counts.failures??0} failures · ${counts.peak_parallel??0} peak parallel calls`;
   if(safeId(value.run_id)){$('export-run').href=`/api/adaptive-pricing/runs/${value.run_id}/export`;$('export-run').hidden=false;}
   renderRounds(value.rounds||[]);renderCurve(value);renderValidation(value.validation);renderFeedback();
@@ -220,9 +247,16 @@ function renderRun(value) {
     $('recommended-price').textContent=money(recommendation.price);
     $('recommendation-stage').textContent=value.validation?'Candidate checked on independent panels':'Selected for validation';
     $('recommendation-reason').textContent=recommendation.reason||`Prefer more member buyers among tested fares with at least ${retainedRevenue(recommendation)} of the best estimated member revenue.`;
+    const candidates=[];
+    if(numeric(recommendation.revenue_max_price))candidates.push(`Highest predicted revenue: ${money(recommendation.revenue_max_price)}`);
+    if(numeric(recommendation.volume_max_price))candidates.push(`Most predicted buyers: ${money(recommendation.volume_max_price)}`);
+    $('candidate-tradeoff').textContent=candidates.join(' · ');
+    const retained=value.validation?.retained_price, adoption=value.validation?.adoption_result;
+    $('retained-price-note').textContent=adoption==='NO_OFFER'?'No member offer retained.':numeric(retained)?`Retained fare after confirmation: ${money(retained)}. No offer is published automatically.`:'';
     const decision=value.validation?.decision;
     const verdicts={REJECT_OFFER:'Keep normal sales: this offer did not add revenue.',IMPROVED_IN_TEST:'Improved in this simulation.',KEEP_INITIAL:'Keep the initial fare.',DID_NOT_IMPROVE:'No improvement over the initial fare.'};
-    $('validation-verdict').textContent=decision?verdicts[decision]||String(decision).replaceAll('_',' '):'Waiting for independent validation.';
+    const adoptions={ADOPT_CANDIDATE:'Candidate passed the confirmation rule.',KEEP_INITIAL:'Keep the initial fare.',INCONCLUSIVE:'Insufficient evidence to change the initial fare.',NO_OFFER:'Keep normal sales; neither member offer passed confirmation.'};
+    $('validation-verdict').textContent=adoption?adoptions[adoption]||adoption:decision?verdicts[decision]||String(decision).replaceAll('_',' '):'Waiting for independent validation.';
   }
   updateControls();
 }
@@ -258,6 +292,7 @@ $('flight').addEventListener('change',()=>{clearRun();loadScope();});
 $('release-day').addEventListener('change',()=>{clearRun();loadScope();});
 $('profile').addEventListener('change',()=>{clearRun();const population=populations.get($('profile').value);if(population)renderPopulation(population,{reset:true});loadScope();});
 for(const id of ['mode','rounds','customers','validation-repeats'])$(id).addEventListener('input',updateControls);
+$('max-calls').addEventListener('input',()=>{$('max-calls').removeAttribute('aria-invalid');error();});
 $('reset-weights').addEventListener('click',()=>setWeights(defaultWeights));
 $('saved-run').addEventListener('change',()=>{$('load-run').disabled=!$('saved-run').value;});
 $('load-run').addEventListener('click',()=>showRun($('saved-run').value).catch(e=>error(e.message)));
@@ -273,8 +308,8 @@ $('experiment-form').addEventListener('submit',async event=>{
   const weights=readWeights();if(Math.abs(Object.values(weights).reduce((a,b)=>a+b,0)-1)>0.00001){error('Customer weights must total 100%.');return;}
   const body={flight_id:scope.flight_id,forecast_day:Number($('release-day').value),mode:$('mode').value,profile:$('profile').value,weights};
   for(const[id,key]of [['rounds','rounds'],['customers','customers'],['concurrency','concurrency'],['max-calls','max_calls'],['seed','seed'],['validation-repeats','validation_repeats']])body[key]=Number($(id).value);
-  const needed=body.rounds*(body.customers+1)+(1+3*body.validation_repeats)*body.customers;
-  if(body.mode==='live'&&body.max_calls<needed){error(`The call limit must be at least ${needed} for this configuration. Reduce the panel or rounds, or increase the explicit call limit.`);return;}
+  const needed=budgetUpper(body.rounds,body.customers,body.validation_repeats);
+  if(body.mode==='live'&&body.max_calls<needed){const field=$('max-calls');field.setAttribute('aria-invalid','true');error(`The call limit must be at least ${needed} for this configuration. Reduce the panel or rounds, or increase the explicit call limit.`);field.focus();return;}
   submitting=true;updateControls();error();
   try{
     const value=await api('/api/adaptive-pricing/runs',body);
