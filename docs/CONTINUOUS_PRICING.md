@@ -56,13 +56,15 @@ of `SHARED_MARKET.md` still apply.
 
 ## Run
 
-Windows:
+Mac, Windows and Linux (Docker Desktop / Engine with Compose 2.30+):
 
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m backend.server
+```sh
+docker compose up --build -d --wait
 ```
+
+See [Docker instructions](DOCKER.md). The larger customer panel retains POSIX
+`fcntl`; use the Linux container on Windows. Native Mac/Linux development remains
+available through the README commands.
 
 Open Fast screening: the new panel searches a range; the original tier screener
 below remains an explicitly labelled legacy comparison. Shared market offers

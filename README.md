@@ -15,11 +15,32 @@ automatic live repricing or global-optimum guarantee are claimed.
 
 Read [the updated method](docs/CONTINUOUS_PRICING.md). Historical tier-screening
 and LLM validation below remain labelled baselines, not new-method evidence.
-Windows users: `py -3.11 -m venv .venv`, then
-`.\.venv\Scripts\python.exe -m pip install -r requirements.txt` and
-`.\.venv\Scripts\python.exe -m backend.server`.
+Use Docker below on Windows: the current customer panel intentionally retains POSIX `fcntl`.
 
-## Quick start
+## Quick start with Docker (Mac, Windows and Linux)
+
+Start Docker Desktop / Docker Engine with Compose 2.30+, then run:
+
+```sh
+docker compose up --build -d --wait
+```
+
+Open [Admin](http://127.0.0.1:8000/admin) or [member booking](http://127.0.0.1:8000/members).
+The complete app, frozen datasets and Python dependencies run in one Linux container.
+No local Python, Node or API credentials are needed. SQLite, audit logs and experiment
+checkpoints persist in the `app-data` volume across container rebuilds. Existing host
+`data/private` is not imported automatically. Optional `.env.local` credentials are
+injected only at runtime and excluded from the image.
+
+```sh
+docker compose --profile test run --rm --build tests
+docker compose down
+```
+
+`down` preserves saved data; `down --volumes` deletes it. See [Docker instructions](docs/DOCKER.md)
+for optional API configuration, alternate ports, persistence checks and troubleshooting.
+
+## Native development (Mac / Linux)
 
 Python 3.11+ is required. No Node build or external service is needed for the default demo.
 
@@ -92,7 +113,7 @@ Copy `.env.example` to `.env.local`; real secrets and licensed responses are ign
 - OAG: set `OAG_FLIGHT_INFO_KEY`, optionally an authentication fallback. Run `python -m backend.oag --date 2026-11-15`. HTTP429 stops requests; no credential rotation to bypass quota. Raw responses remain private.
 - LLM: set `LLM_API_URL` to an HTTPS Chat Completions endpoint, `LLM_API_KEY`, and `LLM_MODEL`. DeepSeek was verified using `https://api.deepseek.com/chat/completions` and model `deepseek-flash`. The six-stage baseline contains **672 successful fresh provider decisions**; a further **60 uncached behavioural probes** are recorded. Shared-market calls apply actions to the same inventory and ledger used by rule decisions. The default mode needs no key. [Raw synthetic experiments](llm_agent/experiments/) are published without authentication headers or keys.
 
-The local server binds to loopback, validates Origin and serves only `frontend/`. External deployment requires authentication, TLS, worker limits and a production server; it is not enabled by the demo.
+The native server binds to loopback by default, validates Origin and serves only `frontend/`. Docker explicitly binds inside the container while Compose publishes only to host loopback. External deployment requires authentication, TLS, worker limits and a production server; it is not enabled by the demo.
 
 ## Shared-market workflow
 

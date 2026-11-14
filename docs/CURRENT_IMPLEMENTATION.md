@@ -115,3 +115,7 @@ POST需要JSON、同源Origin、有效數值與ID。服務只綁定127.0.0.1，�
 ## Continuous-pricing branch update — 2026-11-14
 
 The new continuous-price and probabilistic-user path is documented in [CONTINUOUS_PRICING.md](CONTINUOUS_PRICING.md). It uses the existing shared engine, a fixed membership fee/release share, bounded cent-resolution search, paired NO_OFFER, independent validation and sensitivity stresses. Historical fixed-tier and LLM reports remain unchanged. No online human learning or autonomous live repricing is implemented. Windows locks and frozen prompt byte copies are portable; checkout rules preserve frozen NHPP source bytes.
+
+## Docker 团队运行环境
+
+完整应用可通过 `docker compose up --build -d --wait` 启动。单一 Linux 容器包含前端、API、NHPP、定价和用户模拟；保留原生 fcntl。持久化卷保存数据库和实验，服务凭据仅运行时注入。构建固定基础镜像摘要与 Python 依赖，测试服务独立且无外网。详见 [DOCKER.md](DOCKER.md)。

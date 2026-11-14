@@ -78,3 +78,11 @@ The new continuous-price and probabilistic-user path is documented in [CONTINUOU
 - 118項backend測試全部通過。實際HTTP規模測試`panel-a859e0612fd24f0a`完成1,000人／6,000階段，耗時16.1秒，規則決策3,857、環境強制2,143、provider／cache／失敗均0，所有預算守恒；完整摘要與provenance在PANEL_SCALE_VALIDATION.json。另有100人／600階段實際瀏覽器測試。
 - Admin完整瀏覽器smoke及發布交易通過；100人摘要、14組圖、分頁／篩選、單人英文詳情、部分結果／續跑、候選會費草稿及599.75小數明確保存已驗證。桌面、390／768px無頁面溢出。會員端已實際完成HKD399入會和HKD280訂票，重載可查；另外涵蓋費用變更、售罄、空資料、帳戶切換、成功後刷新失敗，零新增LLM呼叫。
 - 新技術說明ADMIN_AND_MEMBER_UX.md及README／CURRENT_IMPLEMENTATION／LLM_SCENARIO_DESIGN／frontend README同步更新；NHPP、三輪放票規則、既有原始LLM實驗與模型校準未修改。這是本機Hackathon購票原型，沒有真實登入權限／付款／出票。
+
+
+## Docker containerisation — 2026-11-14
+
+- Added one Linux application image for the existing frontend/API/NHPP/pricing/customer modules, fixed multi-architecture Python base digest and dependency constraints. No model, calibration, pricing or fcntl behaviour changes.
+- Compose publishes only host loopback, injects optional credentials at runtime, and persists SQLite/audits/jobs in a named volume. Build context allowlist excludes private data and host environments. Added explicit server bind option and a lightweight database health endpoint.
+- Isolated, offline test service: 132 backend + 19 simulator tests passed, as did all frozen artifact checks. Three browser suites passed against the container on a custom port; real synthetic bookings and bounded rule/pricing jobs survived container recreation and a port change.
+- Native amd64 build and emulated arm64 build passed; 22 key tests also passed inside arm64. No physical Mac full-suite claim. No new provider calls. Setup, data lifecycle and validation are documented in DOCKER.md.

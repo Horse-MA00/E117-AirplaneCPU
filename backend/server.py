@@ -31,6 +31,9 @@ def forecast_for(flight,day):
  return forecast(data.history(flight),days_to_departure=day,seed=117)
 
 def get(path):
+ if path=='/api/health':
+  with store().connect() as connection:connection.execute('SELECT 1').fetchone()
+  return {'status':'ok'}
  if path.startswith('/api/pricing/runs/'):
   return pricing_jobs.read(ident(path.split('/')[-1]))
  if path in ('/api/member-portal/config','/api/member-portal/plan'):return member_portal.config(store())
@@ -201,6 +204,6 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__=='__main__':
  import argparse
- p=argparse.ArgumentParser();p.add_argument('--port',type=int,default=8000);a=p.parse_args();store()
+ p=argparse.ArgumentParser();p.add_argument('--port',type=int,default=8000);p.add_argument('--host',choices=('127.0.0.1','0.0.0.0'),default='127.0.0.1');a=p.parse_args();store()
  print(f'UOption Fly Pass: http://127.0.0.1:{a.port}',flush=True)
- ThreadingHTTPServer(('127.0.0.1',a.port),Handler).serve_forever()
+ ThreadingHTTPServer((a.host,a.port),Handler).serve_forever()

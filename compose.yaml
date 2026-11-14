@@ -1,0 +1,45 @@
+name: uoption-fly-pass
+
+services:
+  app:
+    build: .
+    image: uoption-fly-pass:local
+    init: true
+    # Optional credentials are injected at runtime, never copied into the image.
+    # Compose 2.30+ preserves literal $ characters with format: raw.
+    env_file:
+      - path: .env.local
+        required: false
+        format: raw
+    environment:
+      APP_PORT: ${APP_PORT:-8000}
+    command: ["python", "-m", "backend.server", "--host", "0.0.0.0", "--port", "${APP_PORT:-8000}"]
+    # The port inside/outside matches the existing same-origin validation.
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:${APP_PORT:-8000}"
+    volumes:
+      - app-data:/app/data/private
+    restart: unless-stopped
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+
+  tests:
+    profiles: [test]
+    build: .
+    image: uoption-fly-pass:local
+    init: true
+    command: ["python", "scripts/check_container.py"]
+    # Test runs cannot read production/demo volumes or invoke paid providers.
+    network_mode: none
+    tmpfs:
+      - /app/data/private:uid=10001,gid=10001,mode=0700
+    healthcheck:
+      disable: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+
+volumes:
+  app-data:
