@@ -1,5 +1,7 @@
 # 用 Docker 运行整个项目
 
+> 状态：现行 · 对应代码：`compose.yaml`、`Dockerfile`
+
 容器包含前端、Python API、NHPP、定价、用户模拟、已提交的合成数据与历史实验。
 前端是静态文件，由同一个 API 服务提供，因此不需要额外的 Node、Nginx、Redis
 或数据库服务。SQLite、实验检查点和缓存放在独立持久化卷。
@@ -85,6 +87,7 @@ docker compose --profile test run --rm --build tests
 ```
 
 运行 backend 测试、原模拟器测试和所有冻结实验校验，任一失败均返回非零状态。
+当前规模：`backend/tests` 226 项、`tests/` 28 项，外加发布链接检查与冻结证据校验（与本机 `python scripts/check_container.py` 相同）。下文各次验证记录中的测试数是当时的数字。
 测试服务没有外网、没有服务密钥、也不挂载演示数据卷；测试数据使用独立临时目录。
 
 对已启动的容器进行实际 HTTP 冒烟测试（会创建模拟会员、订单和两个有限实验）：

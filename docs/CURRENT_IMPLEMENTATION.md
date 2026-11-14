@@ -1,6 +1,8 @@
 # NHPP 會員優惠平台技術實作
 
-更新：2026-11-14。這份文件記錄現有程式；早期 TECHNICAL_DESIGN.md 及 PRICING_SIMULATION_PLAN.md 保留為歷史提案。使用者最新決定是先使用 NHPP，不使用 LightGBM。
+> 状态：现行 · 对应代码：`flight-policy-feedback-v4-original-fare`、`nhpp-regime-mixture-v2`、`shared-market-v3`、`three-round-release-v1`
+
+更新：2026-11-14。這份文件記錄現有程式；早期提案文件已刪除（Git 歷史可查），與原計劃的差異見下文「與原計劃的差異及限制」。使用者最新決定是先使用 NHPP，不使用 LightGBM。
 
 ## 最新主流程：雙軌逐輪優化
 
@@ -16,7 +18,7 @@ NHPP 本體及凍結校準保持不變；同一次價格搜尋和獨立驗證固
 
 SQLite 保存 run、world、round、event。Scoped Live 現在可在指定總額度內自動跨越內部小批次；總額度耗盡或 provider 失敗仍停止，UI 可追加額度。Manage offers 自行選航班／輪次，只建議同航班同輪次、版本符合且獨立驗證接受的結果，發布時再扣除已售會員位及前輪有效未售配額。Client 主要金額顯示 base fare，下方小字顯示費用及總付款；結帳核價不變。
 
-以下快速網格、多航班會員期搜尋和既有實驗仍保留為參考及歷史證據。[舊聯合優化引擎](OPTIMIZATION_ENGINE.md) 的兩維 P/V 搜尋不再是主要 Admin 的行為。
+以下快速網格、多航班會員期搜尋和既有實驗仍保留為參考及歷史證據。舊聯合優化引擎（`joint-policy-feedback-v1`）的兩維 P/V 搜尋只供測試及歷史實驗，不再是主要 Admin 的行為。
 
 ## 收入成本與 NO_OFFER 解釋
 
@@ -73,6 +75,8 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 
 ## 快速篩選用的定價市場
 
+> 參考工具：UI 位於 Optimize 頁底的 “Advanced tools · earlier pricing methods”（`#pricing`），不是主流程。
+
 一次比較完整會員期的同一客群、出行機會與正常購買意圖。會員費每個人只收一次；航班日程均在設定會員期內，期間所有模擬用票成本均計入。正常票價固定，因此原正常購買者轉去會員票可用配對基線衡量，不把原需求重新作一次獨立價格過濾。
 
 放票時點固定為D28、D14、D7三輪。搜尋P={0,30,70,100}、V={199,399,599,799}及可釋出量比例={.25,.5,.75,1}，最多64組；開放日不再是搜尋維度。每輪先計算保護後的目標未售配額，再扣除所有前輪尚未售出的有效配額，只新增差額。D13開始的全新篩選只包含未來D7輪；D6開始已沒有新的放票輪次。最終仍與NO_OFFER比較。服務限制包括合資格請求履約率與未用過會員比例。
@@ -85,7 +89,7 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 
 14個角色涵蓋不同預算、日期彈性、出行頻率、同行、協助與路線需求；權重是假設，沒有聲稱代表實際HK Express市場份額。
 
-`llm_agent/journey.py`目前以`traveller-journey-v2.2-en`輸出英文理由與HKD金額；畫面人物名稱同步英文，原背景語言不改變預算或回覆語言。新增單趟旅程＋會費預算說明與全體同行報價算術；新回覆先通過語言／幣別檢查，再執行合法動作。真實五人30回覆驗證全部通過，舊多語言raw紀錄保持原樣，詳見[場景說明](LLM_SCENARIO_DESIGN.md)。該旅程基線有訂閱、D28／D14／D7、行程變動和期末意向六階段。人物預算、會員、訂位、退款和記憶持續存在，但每個反事實世界庫存獨立。Codex子代理已實際產生168個決策；DeepSeek已完成112世界672個有效provider決策，完整raw回應及失敗紀錄公開於`llm_agent/experiments/`。見[基線分析](LLM_BASELINE_EXPERIMENTS.md)。
+`llm_agent/journey.py`目前以`traveller-journey-v2.2-en`輸出英文理由與HKD金額；畫面人物名稱同步英文，原背景語言不改變預算或回覆語言。新增單趟旅程＋會費預算說明與全體同行報價算術；新回覆先通過語言／幣別檢查，再執行合法動作。真實五人30回覆驗證全部通過，舊多語言raw紀錄保持原樣，詳見[場景說明](LLM_SCENARIO_DESIGN.md)。該旅程基線有訂閱、D28／D14／D7、行程變動和期末意向六階段。人物預算、會員、訂位、退款和記憶持續存在，但每個反事實世界庫存獨立。Codex子代理已實際產生168個決策；DeepSeek已完成112世界672個有效provider決策，完整raw回應及失敗紀錄公開於`llm_agent/experiments/`。見[基線分析](LLM_SCENARIO_DESIGN.md)。
 
 `backend/shared_market.py`及`llm_agent/market_experiment.py`建立後續共用市場：多班異質航班、全體旅客共用時間線及庫存、實際年度多次旅程、正常需求獨立生成、same-seed政策配對。LLM只選擇；環境驗證並扣款扣位，NHPP控制正常需求保護。數學策略與LLM策略使用同一觀察和帳本。
 
@@ -105,12 +109,16 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 
 | 方法及路徑 | 用途 |
 | --- | --- |
+| GET /api/health | 健康檢查（Docker healthcheck 使用） |
+| POST / GET /api/optimization/runs、GET /api/optimization/runs/{id}、POST …/{id}/resume、GET …/{id}/events、GET …/{id}/export | 指定航班優化實驗，完整契約見 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md#persistence-and-api) |
+| POST /api/optimization/initial-policy | 由所選航班快照計算 P₀ 與預設 V₀，不呼叫 LLM |
 | GET /api/optimization/suggestions | 指定 flight_id／forecast_day 的已驗證價格及即時可發布配額建議 |
+| POST / GET /api/pricing/runs、GET /api/pricing/runs/{id} | 參考用全期連續定價，見 [CONTINUOUS_PRICING](CONTINUOUS_PRICING.md) |
 | GET /api/summary | 列數、航班數、模型與LLM配置狀態 |
 | GET /api/flights | 航班目錄及 D28 預測需求分類 |
 | GET /api/flights/{id} | 航班與歷史快照 |
 | POST /api/forecast | flight_id、days_to_departure；返回風險預測及三輪放票狀態，讀取本身不發位 |
-| POST /api/optimize | flight_id、days_to_departure、config；返回候選／最佳／基線／測試 |
+| POST /api/optimize | 參考用 64 組快速篩選（Advanced tools · earlier pricing methods）；返回候選／最佳／基線／測試 |
 | GET /api/evaluation | 獨立測試報告 |
 | GET /api/export/snapshots | gzip資料下載 |
 | GET /api/personas | 客群覆蓋及假設人物 |
@@ -119,10 +127,10 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 | GET /api/agents/panels/{id} | 進度、來源計數、分組及精簡人物列 |
 | GET /api/agents/panels/{id}/people/{customer_id} | 按需讀取一人完整階段 |
 | POST /api/agents/panels/{id}/resume | 明確增加一批額度 |
-| GET /api/member-portal/config、flights、accounts/{id} | 會員plan、已發布航班、會員和行程 |
+| GET /api/member-portal/config（或 plan）、flights、accounts/{id} | 會員plan、已發布航班、會員和行程 |
 | POST /api/member-portal/plan、join、book | 管理會費、按plan入會、確認會員票 |
-| GET /api/agents/runs/{id} | 保存的審計與原始輸出；大實驗以gzip匯出讀取 |
-| POST /api/market/runs | 背景執行共用市場三組政策，逐批呼叫上限 |
+| GET /api/agents/runs、/api/agents/runs/{id} | 保存的審計與原始輸出；大實驗以gzip匯出讀取 |
+| POST / GET /api/market/runs | 背景執行共用市場三組政策（逐批呼叫上限）／列出實驗 |
 | GET /api/market/runs/{id} | 狀態、政策比較、財務及實驗統計 |
 | GET /api/market/runs/{id}/cases/{case_id} | 同一case的航班、旅客、行為與帳本 |
 | POST /api/market/runs/{id}/resume | 明確追加一批呼叫；不自動延長額度 |
@@ -136,9 +144,38 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 
 POST需要JSON、同源Origin、有效數值與ID。服務只綁定127.0.0.1，靜態檔案僅提供frontend/，不能下載.env或資料庫。會員購票永遠是模擬。新版SQLite示例允許同航班按D28→D14→D7推進，每輪最多發布一次，禁止時間倒退重開舊輪次。前輪仍有效未售位會結轉；售出會員位另計入物理佔用，避免靜態正常訂位快照漏算示例交易。非放票日仍可觀察預測，但不能新增優惠。詳見[三輪規則](THREE_ROUND_RELEASE.md)。
 
+## 與原計劃的差異及限制
+
+早期提案（LightGBM＋LLM循環）與現行實作的差異：
+
+| 原計劃／風險 | 現有實作 | 原因與影響 |
+| --- | --- | --- |
+| LightGBM預測正常需求 | NHPP參數推斷，沒有LightGBM依賴 | 遵從最新決定；形狀、參數與不確定性可解釋 |
+| 單一七天比例推斷beta | 最近多區間計數似然、先驗收縮、beta可負 | 降低單一小樣本的指數外推；仍需真實校準 |
+| 原文beta截斷0至0.06 | 明示工程網格與先驗，無業界上限聲稱 | 允許需求衰退並揭露邊界假設 |
+| 將需求均值直接當未售位 | 800條需求／取消／容量路徑 | 正確處理需求超容量與非線性截斷 |
+| 名義P90當90%保護 | 原始分位數＋逐時點分情境校準保護量，保留兩批獨立驗證 | v2不同批次D28突增82.5%／91.5%；未知未來突增仍有缺口 |
+| 用LLM虛擬人物當真實客群 | 14類情境、Codex實際pilot、DeepSeek真實呼叫，與規則來源分開 | 原始回應可稽核，但模型選擇仍不是真人ground truth |
+| 每輪重新訓練預測模型 | 固定NHPP及市場，搜尋商業參數 | 能分辨收益改變來自策略或世界假設 |
+| 直接最優化P與V | 固定D28/D14/D7三輪；主流程在指定航班上固定V₀、只搜尋會員票價P，與NO_OFFER配對比較 | 按最新業務規則把放票時點與數量分開；全期P/V搜尋只留作參考工具 |
+| 預設高級優化／RL | 參考用快速篩選器為完整有限網格（64組）；主流程為有界局部票價搜尋 | 固定三輪後移除開放日維度；不用先建立昂貴RL訓練 |
+| 一年會費與一班28天比較 | 固定會員期內多班合成目錄，全部用票成本計入 | 避免重複算會費或漏算後續使用 |
+| 全部資料混放 | frontend/backend/simulation/llm_agent獨立 | 各角色可獨立開發與驗證 |
+| OAG視為訂位／票價來源 | OAG背景私有快取，合成數據另列 | 實際取得10筆UO航班，座位是預測容量 |
+
+仍需披露的限制：
+
+1. **真實校準仍缺。** 全部 680,364 列均為合成數據，OAG Flight Info沒有每日訂位／報價或會員曝光轉換。優先取得真實計數、可售曝光、購買請求及促銷紀錄。
+2. **未知未來突增不可由相同歷史辨認。** 混合風險先驗與保守保護量能改善部分覆蓋，不能預知事件；較高釋位也提高擠出正常客的風險。保留D28需求MAE退步及D7子群缺口。
+3. **會員造成區間內售罄的exposure。** 如果會員在區間內用完位，正常gross=0不等於整日零需求。現時不超賣，但取消後的後續需求估計可能偏低。後續應記錄事件級可售時間並建立新的模型／校準版本。
+4. **LLM不是需求真值。** 固定temperature不保證選擇相同；60次probe沒有排序或語言翻轉也不證明無偏。以真人同題實驗與試點交易校準，再估價格反應。
+5. **有限目錄範圍。** 目前6–12班、有限已知出行機會；不是整個HK Express真實航網。基線以HKG出發為主，完整入境／來回聯程、競爭航司及全年未知新增出行仍需擴展。
+6. **財務口徑。** 顯示貢獻包含增量載客、行李、會員服務和計劃成本；必付費為明示代收代付假設。沒有完整固定機隊成本、實際稅務或正式收益確認，因此不稱航空公司淨利。
+7. **正式部署。** 本地服務與模擬SQLite不能公開當生產系統；需要身份授權、工作排程／限額、真實庫存、secret manager及票務整合。現時沒有真實付款或出票。
+
 ## 執行及驗證
 
-參見README安裝與啟動指令。兩組unittest分別覆蓋既有模擬器／新資料、NHPP／市場／交易；本次91＋19項全部通過。`scripts/smoke_api.py`對實際HTTP服務驗證資料、預測、64組搜尋、停售、人物、訂閱／購買及私有路徑保護。`scripts/smoke_three_round_api.py`驗證同班三輪發布、結轉、購票及不合法輪次拒絕。三輪回歸另檢查第二輪扣第一輪、第三輪扣前兩輪、售出不重扣、過期不結轉及輪次冪等。兩個API smoke及前端完整交易smoke皆重新通過。前端另有桌面及390px手機瀏覽器檢查，記錄於前端進度文件。
+參見README安裝與啟動指令。兩組unittest分別覆蓋既有模擬器／新資料、NHPP／市場／交易；目前 `backend/tests` 226 項、`tests/` 28 項，以 `python scripts/check_container.py` 一次執行。`scripts/smoke_api.py`對實際HTTP服務驗證資料、預測、64組搜尋、停售、人物、訂閱／購買及私有路徑保護。`scripts/smoke_three_round_api.py`驗證同班三輪發布、結轉、購票及不合法輪次拒絕。三輪回歸另檢查第二輪扣第一輪、第三輪扣前兩輪、售出不重扣、過期不結轉及輪次冪等。兩個API smoke及前端完整交易smoke皆重新通過。前端另有桌面及390px手機瀏覽器檢查，記錄於前端進度文件。
 
 新三輪環境另外完成40種子×3政策＝120個規則市場，3240筆逐輪公式和所有帳本／庫存檢查通過，沒有新增LLM呼叫。結果與限制見[本次三輪驗證](THREE_ROUND_RELEASE.md#本次三輪規則的獨立市場重播)；v2報告保留為歷史證據。
 

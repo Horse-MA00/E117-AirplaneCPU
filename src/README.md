@@ -1,6 +1,6 @@
 # D180 至 D0 訂位與正常票價模擬器
 
-更新：2026-11-13。此為已實作的數據模擬器，不是需求預測器或會員定價引擎。用於檢查訂位和價格曲線，以及之後建立原型訓練資料。它沒有以真實 HK Express 訂位、票價或價格彈性校準。
+更新：2026-11-13（2026-11-14 由 docs/SIMULATOR.md 移至此處）。此為 `src/simulator.py` 與 `configs/simulation.json` 的早期獨立模擬器，仍由 `tests/test_simulator.py` 及 `scripts/generate_demo_data.py` 使用；現行 app 資料由 `simulation/` 生成。此為已實作的數據模擬器，不是需求預測器或會員定價引擎。用於檢查訂位和價格曲線，以及之後建立原型訓練資料。它沒有以真實 HK Express 訂位、票價或價格彈性校準。
 
 ## 執行
 

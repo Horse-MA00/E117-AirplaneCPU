@@ -1,5 +1,7 @@
 # Client Portal：彈性日期及國家／地區搜尋
 
+> 状态：现行 · 对应代码：`frontend/members/search.js`、`frontend/members/airports.js`
+
 更新日期：2026-11-14。
 
 ## 使用方式

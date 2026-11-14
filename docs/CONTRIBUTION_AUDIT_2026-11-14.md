@@ -1,5 +1,7 @@
 # 6 戶會員購票為何仍少賺 HK$2,364
 
+> 状态：记录（2026-11-14），内容不再修改
+
 核對對象：`opt-2d56cc2c1c8844b1`，HKG–ICN 15 May 2027，D28，P84／V399，8 戶合成旅客，1 個搜尋候選及 2 個獨立驗證種子。原始 [report](../llm_agent/experiments/member_supply_live_context_20261114/report.json) 和 [audit](../llm_agent/experiments/member_supply_live_context_20261114/audit.jsonl.gz) 保持不變；本次使用保存的結果及逐筆行動重建帳目，沒有新增 LLM 呼叫。
 
 ## 結論

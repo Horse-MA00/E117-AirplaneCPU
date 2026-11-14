@@ -1,5 +1,7 @@
 # 額外40萬筆合成資料及擴大驗證
 
+> 状态：记录（2026-11-14），内容不再修改
+
 2026-11-14。使用者要求增加測試資料後，保持NHPP v2及其保護校準不變，預先指定20261121和20261122兩個新種子。沒有使用這次結果重新調參。
 
 ## 資料規模
@@ -28,3 +30,25 @@
 - 額外資料使用相同生成器家族，增加的是同一模擬假設下的樣本量，不能代替真實資料或全新需求機制的驗證。
 
 重現：`python -m simulation.extended_validation`。已存在報告會拒絕覆寫；現有報告、manifest及逐筆評分可以直接檢查。
+
+## 發布完整性檢查（原 EVIDENCE_PUBLICATION）
+
+`python scripts/check_publication.py` checks repository Markdown links and the
+mandatory frozen extended-evaluation package. It works without Git in a complete
+extracted source archive. `--git-ref HEAD` checks a clean Git export, so an
+untracked local file cannot hide a missing publication. Docker builds and the
+container test entry point also run the check.
+
+The extended-evaluation manifest pins the report, individual forecast records,
+and both input datasets. Verification checks file hashes and independently
+reconstructs the reported sample size and D28 surge coverage. A missing directory,
+missing referenced document, altered report or incomplete evidence package fails
+instead of being silently skipped. Existing frozen data is preserved; this fix
+does not regenerate, recalibrate or improve the model.
+
+`/api/evaluation/extended` returns the existing report when its required evidence
+is available. Missing required files or an invalid report/manifest returns HTTP503 with
+`status: unavailable` and a relative artifact path. No replacement result or
+invented metric is returned. Restore the full source package to resolve that
+condition; an API key is not needed. API reads check required-file presence and
+report integrity; full publication verification hashes all data payloads.
