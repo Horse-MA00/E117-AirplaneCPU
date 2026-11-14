@@ -212,3 +212,14 @@ Implemented on local `experiment/thompson-member-pricing`: an 80% member fare ca
 Full technical design and results are in [the current specification](FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing). The 80-case offline benchmark found mean TS member receipts 4.55% above equal-round greedy MAP: 37 wins, 25 ties and 18 losses. Live v1 and v2 candidates increased buyers but lost weighted revenue by 6.96% and 10.59% respectively; both negative outcomes are saved. The two runs used 409 fresh calls, four peak concurrent requests, two authorized key slots and zero failures.
 
 Final native checks: 290 backend and 31 publication/data/documentation tests, with artifact hashes passing. Chrome mock and real read-only desktop/mobile checks passed. Five pre-existing local research documents received only a record-status line and AGENTS index entries so the existing documentation checks pass; their content was preserved. No PR, merge or paid calls beyond the bounded experiments.
+
+
+## 2026-11-14 — Flexible bargain-member scenarios and validation
+
+- Added `weighted-member-panel-v2-flexible`: eight explicit target groups, optional bargain-triggered travel, broad date/destination flexibility; retained the exact `broad_coverage` generator and historical prompts/data.
+- Added versioned customer prompts v2/v3 and `adaptive-member-decisions-v3-fallback-contract`. The first 49-call attempt exposed two unaffordable normal-ticket fallbacks; it is preserved as failed evidence. The computed fallback allowlist remains strictly validated without retries or substituted choices.
+- `member-thompson-v3-flexible` persists profile across API, search, holdout and export; hashes the actual active prompt. Admin can switch target and legacy populations and restore old run weights. The old mathematical benchmark explicitly pins legacy people.
+- Completed run `adaptive-6f1c300f719e47f7`: seven rounds, 32 search members, three independent 32-person holdouts; 299 fresh calls, 104 cache replays, 144 forced decisions, zero failures, four-way parallelism, 125.42 s. Combined calls including failed attempt: 348/600.
+- Selected HK$269.54 versus initial HK$328: weighted holdout purchase rate 84.17% versus75.37%; basic receipts HK$7,259.47 versus HK$7,910.99 (−8.24%). It exceeds NO_OFFER but does not improve on the initial price. All228 affordable member choices still bought; no claims of calibrated human demand or successful optimization were made.
+- Saved new experiments under `thompson_flexible_failed_20261114_v3` and `thompson_flexible_live_20261114_v3`. Details and caveats are in [current pricing specification](FLIGHT_SCOPED_OPTIMIZATION.md#flexible-bargain-travellers--14-november-2026).
+- Validation: 305 backend and31 root tests, full native regression, publication/frozen checks, mocked and actual browser checks passed. Existing NHPP, datasets and historical experiment folders unchanged. No main merge or PR.

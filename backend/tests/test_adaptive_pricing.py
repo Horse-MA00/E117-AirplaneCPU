@@ -137,6 +137,8 @@ class ExperimentTests(unittest.TestCase):
         with patch.object(pricing, "PurchasePosterior", RecordingPosterior):
             report = pricing.start(self.config(), blocking=True)
         self.assertEqual(report["status"], "completed", report.get("error"))
+        self.assertEqual(report['config']['profile'], 'flexible_deal_seekers')
+        self.assertEqual(report['population']['profile'], 'flexible_deal_seekers')
         self.assertEqual(report["counts"]["provider_calls"], 0)
         self.assertGreater(report["counts"]["synthetic_choices"], 0)
         self.assertEqual(len(report["rounds"]), 2)
@@ -154,6 +156,25 @@ class ExperimentTests(unittest.TestCase):
         self.assertTrue(all(w["price"] == report["recommendation"]["price"] for w in selected_worlds))
         self.assertEqual(adaptive_store.read(report["run_id"])["status"], "completed")
         self.assertGreater(len(adaptive_store.events(report["run_id"])["events"]), 0)
+
+    def test_profile_is_validated_and_preserved_in_holdout_and_provenance(self):
+        with self.assertRaises(ValueError):
+            pricing.validate(self.config(profile='invented_profile'))
+        report = pricing.start(self.config(profile='broad_coverage'), blocking=True)
+        self.assertEqual(report['status'], 'completed', report.get('error'))
+        self.assertEqual(report['config']['profile'], 'broad_coverage')
+        self.assertEqual(len(report['population']['segments']), 14)
+        self.assertEqual({p['segment'] for p in report['panel']},
+                         {r['person']['segment'] for w in report['validation_worlds']
+                          for r in w['result']['decisions']})
+        self.assertIn('llm_agent/prompts/adaptive_customer_v3_en.txt', report['provenance']['files'])
+        self.assertNotIn('llm_agent/prompts/adaptive_customer_v1_en.txt', report['provenance']['files'])
+
+    def test_scope_returns_the_selected_profiles_weight_schema(self):
+        self.assertEqual(len(pricing.scope({'profile':'broad_coverage'})['population']['segments']), 14)
+        flexible = pricing.scope({'profile':'flexible_deal_seekers'})['population']
+        self.assertEqual(len(flexible['segments']), 8)
+        self.assertEqual(flexible['profile'], 'flexible_deal_seekers')
 
     def test_final_recommendation_is_not_automatically_last_draw(self):
         calls = []

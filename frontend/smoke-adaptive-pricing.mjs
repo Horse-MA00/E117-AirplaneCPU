@@ -14,44 +14,52 @@ const page=await browser.newPage({viewport:{width:1440,height:1050}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const weights=[.13,.09,.14,.10,.12,.10,.08,.04,.04,.05,.03,.02,.04,.02];
 const names=['Flexible budget traveller','Student on term breaks','Fixed-leave employee','Frequent leisure traveller','Family on school holidays','Couple on a short break','Visiting friends and relatives','Urgent essential traveller','Self-funded business traveller','Inbound and cross-market traveller','Small travel group','Traveller needing assistance','Infrequent traveller','No matching route or dates'];
-const population={source:'hypothetical_coverage_not_market_shares',segments:weights.map((weight,i)=>({id:`segment-${i}`,name:names[i],weight}))};
+const legacyPopulation={source:'hypothetical_coverage_not_market_shares',segments:weights.map((weight,i)=>({id:`segment-${i}`,name:names[i],weight}))};
+const population={profile:'flexible_deal_seekers',source:'assumed_target_mix',segments:['Students','Spontaneous solo travellers','Destination-flexible explorers','Frequent bargain travellers','Flexible weekday travellers','Flexible friends','Flexible couples','Deal-only occasional travellers'].map((name,i)=>({id:`flexible-${i}`,name,weight:[.20,.15,.15,.15,.1,.1,.08,.07][i]}))};
+const populations=[population,{...legacyPopulation,profile:'broad_coverage'}];
 const scope={flight_id:'TEST-HKG-KMQ',origin:'HKG',destination:'KMQ',departure_date:'2027-05-18',departure_time:'10:30',as_of_day:28,normal_base_fare:410,initial_member_fare:328,member_fare_cap:328,member_fare_cap_ratio:.8,releasable_seats:45};
 const flights=[scope,{...scope,flight_id:'TEST-HKG-KMQ-ZERO'},{...scope,flight_id:'TEST-HKG-FUK',destination:'FUK'}];
 const curve=[{price:0,expected_buyers:25,expected_member_revenue:0},{price:100,expected_buyers:20,expected_member_revenue:2000},{price:200,expected_buyers:16,expected_member_revenue:3200},{price:328,expected_buyers:8,expected_member_revenue:2624}];
 const rounds=[{round:1,learning_updates:24,reused_analysis:false,analysis_source:'provider_live',price:328,member_buyers:8,member_revenue:2624,weighted_conversion:.3,curve,analysis:{summary:'Several members declined because the fare exceeded their base-fare budget.'},decisions:[{person:{segment_label:'Flexible budget traveller',customer_id:'TEST-01'},decision:{action:'DECLINE',reason:'The base fare is above my travel budget. <img src=x onerror=alert(1)>'},source:'provider_live'}]},{round:2,learning_updates:0,reused_analysis:true,analysis_source:'provider_live',price:200,member_buyers:16,member_revenue:3200,weighted_conversion:.6,curve,analysis:{summary:'The lower fare increased the observed member purchases.'},decisions:[{person:{segment_label:'Student on term breaks',customer_id:'TEST-02'},decision:{action:'BUY_MEMBER',reason:'The date is suitable and this fare is within my base-fare budget.'},source:'provider_live'}]}];
 rounds.push({...rounds[1],round:3});
 rounds[1]={...rounds[1],learning_updates:24,reused_analysis:false};
-let run={run_id:'adaptive-test-117',status:'completed',scope,population,config:{flight_id:scope.flight_id,forecast_day:28,mode:'synthetic',rounds:3,customers:28,concurrency:4,max_calls:600,seed:117,validation_repeats:2},progress:{completed_rounds:3,total_rounds:3,phase:'completed'},counts:{provider_calls:20,cache_hits:2,forced:4,failures:0,peak_parallel:4},rounds,recommendation:{price:200,revenue_fraction:.9,model_curve:curve,curve:curve.filter(p=>[200,328].includes(p.price))},validation:{decision:'IMPROVED_IN_SIMULATION',delta_vs_initial:576,delta_vs_no_offer:-80,comparisons:[{policy:'initial',price:328,mean_buyers:8,mean_revenue:2624},{policy:'selected',price:200,mean_buyers:16,mean_revenue:3200},{policy:'no_offer',price:null,mean_buyers:8,mean_revenue:3280}]},elapsed_seconds:70};
+let run={run_id:'adaptive-test-117',status:'completed',scope,population,config:{profile:'flexible_deal_seekers',flight_id:scope.flight_id,forecast_day:28,mode:'synthetic',rounds:3,customers:28,concurrency:4,max_calls:600,seed:117,validation_repeats:2},progress:{completed_rounds:3,total_rounds:3,phase:'completed'},counts:{provider_calls:20,cache_hits:2,forced:4,failures:0,peak_parallel:4},rounds,recommendation:{price:200,revenue_fraction:.9,model_curve:curve,curve:curve.filter(p=>[200,328].includes(p.price))},validation:{decision:'IMPROVED_IN_SIMULATION',delta_vs_initial:576,delta_vs_no_offer:-80,comparisons:[{policy:'initial',price:328,mean_buyers:8,mean_revenue:2624},{policy:'selected',price:200,mean_buyers:16,mean_revenue:3200},{policy:'no_offer',price:null,mean_buyers:8,mean_revenue:3280}]},elapsed_seconds:70};
+const legacyRun={...run,run_id:'adaptive-legacy-117',population:legacyPopulation,config:{...run.config,profile:undefined,weights:Object.fromEntries(legacyPopulation.segments.map(s=>[s.id,s.weight]))}};
 let posts=[],scopeRequests=0;
 await page.route('**/api/**',async route=>{
  const u=new URL(route.request().url()),path=u.pathname,method=route.request().method();
  if(path==='/api/flights')return route.fulfill({json:{flights}});
- if(path==='/api/adaptive-pricing/status')return route.fulfill({json:{live_configured:true,population}});
+ if(path==='/api/adaptive-pricing/status')return route.fulfill({json:{live_configured:true,population,populations}});
  if(path==='/api/adaptive-pricing/scope'){
    scopeRequests++; const b=route.request().postDataJSON();
    if(b.flight_id==='TEST-HKG-FUK')await new Promise(r=>setTimeout(r,150));
-   return route.fulfill({json:{scope:{...flights.find(f=>f.flight_id===b.flight_id),as_of_day:b.forecast_day,releasable_seats:b.flight_id.endsWith('ZERO')?0:45},population}});
+   return route.fulfill({json:{scope:{...flights.find(f=>f.flight_id===b.flight_id),as_of_day:b.forecast_day,releasable_seats:b.flight_id.endsWith('ZERO')?0:45},population:populations.find(p=>p.profile===b.profile)||population}});
  }
- if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill({json:{runs:[run]}});
+ if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill({json:{runs:[run,legacyRun]}});
  if(path==='/api/adaptive-pricing/runs'&&method==='POST'){
    posts.push(route.request().postDataJSON());
-   run={...run,config:{...run.config,...posts.at(-1)}};
+   run={...run,population:populations.find(p=>p.profile===posts.at(-1).profile),config:{...run.config,...posts.at(-1)}};
    return route.fulfill({json:{...run,status:'running',rounds:[],recommendation:null,validation:null,progress:{phase:'search',completed_rounds:0,total_rounds:posts.at(-1).rounds}}});
  }
+ if(path==='/api/adaptive-pricing/runs/adaptive-legacy-117')return route.fulfill({json:legacyRun});
  if(path==='/api/adaptive-pricing/runs/adaptive-test-117')return route.fulfill({json:run});
  return route.fulfill({status:404,json:{error:'Unexpected mock API route'}});
 });
 try{
  await page.goto(origin+'/adaptive-pricing');
  await page.locator('#route:not([disabled])').waitFor();
- assert.equal(await page.locator('#weights input').count(),14);
+ assert.equal(await page.locator('#weights input').count(),8);
+ assert.equal(await page.locator('#profile').inputValue(),'flexible_deal_seekers');
+ await page.selectOption('#profile','broad_coverage');assert.equal(await page.locator('#weights input').count(),14);
+ await page.selectOption('#profile','flexible_deal_seekers');assert.equal(await page.locator('#weights input').count(),8);
+ assert.equal(posts.length,0,'Changing the scenario never starts a paid experiment');
  assert.equal(await page.locator('#start').isDisabled(),true);
  await page.selectOption('#route','HKG → KMQ');await page.selectOption('#flight','TEST-HKG-KMQ');
  await page.waitForFunction(()=>document.getElementById('starting-fare').textContent==='HK$328');
  assert.equal(await page.locator('#start').isEnabled(),true);
  await page.locator('#start').click();
  await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$200');
- assert.equal(posts.length,1);assert.equal(posts[0].mode,'synthetic');assert.equal(Object.keys(posts[0].weights).length,14);
+ assert.equal(posts.length,1);assert.equal(posts[0].mode,'synthetic');assert.equal(Object.keys(posts[0].weights).length,8);assert.equal(posts[0].profile,'flexible_deal_seekers');
  assert.equal(await page.locator('#round-table tr').count(),3);
  assert.match(await page.locator('#delta-initial').innerText(),/576/);
  assert.match(await page.locator('#delta-no-offer').innerText(),/−HK\$80/);
@@ -66,6 +74,18 @@ try{
  assert.equal(await page.locator('#feedback-list img').count(),0,'LLM output is text, never executable HTML');
  await page.reload();await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$200');
  assert.equal(posts.length,1,'Saved-run reload is read-only');
+ assert.match(await page.locator('#run-cohort').innerText(),/Flexible bargain travellers/);
+ await page.selectOption('#saved-run','adaptive-legacy-117');await page.locator('#load-run').click();
+ await page.waitForFunction(()=>document.getElementById('profile').value==='broad_coverage');
+ assert.equal(await page.locator('#weights input').count(),14,'Historical run restores its own broad-cohort weights');
+ assert.match(await page.locator('#run-cohort').innerText(),/Broad customer coverage.*14 assumed customer groups/);
+ assert.equal(posts.length,1,'Loading a historical population is read-only');
+ await page.reload();await page.waitForFunction(()=>document.getElementById('profile').value==='broad_coverage');
+ assert.equal(await page.locator('#weights input').count(),14);
+ await page.selectOption('#saved-run','adaptive-test-117');await page.locator('#load-run').click();
+ await page.waitForFunction(()=>document.getElementById('profile').value==='flexible_deal_seekers');
+ assert.equal(await page.locator('#weights input').count(),8);
+ assert.equal(posts.length,1);
  await mkdir(root+'test-results',{recursive:true});
  await page.screenshot({path:root+'test-results/adaptive-pricing-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});
@@ -92,5 +112,5 @@ try{
  await page.locator('#refresh-run').click();await page.getByText('failed: Live call budget exhausted.',{exact:false}).waitFor();
  assert.equal(await page.locator('#start').isEnabled(),true);
  assert.deepEqual(errors,[]);
- console.log('Adaptive pricing UI passed: scoped80%cap, weighted14groups, zeroquota, invalidweights, boundedlive explicitstart, read-onlyreload, modelcurve, roundtrace, independentvalidation, Englishsafeoutputs, failedrun, mobileoverflow. All API calls mocked; no paid calls.');
+ console.log('Adaptive pricing UI passed: scoped80%cap, target8groups, legacy14groups, explicitprofile, historicalprofile-reload, zeroquota, invalidweights, boundedlive explicitstart, read-onlyreload, modelcurve, roundtrace, independentvalidation, Englishsafeoutputs, failedrun, mobileoverflow. All API calls mocked; no paid calls.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

@@ -23,9 +23,9 @@ from .audit import sanitize
 from .journey_runner import _transport
 from .output_contract import validate_english_output
 
-VERSION = "adaptive-member-decisions-v1"
+VERSION = "adaptive-member-decisions-v3-fallback-contract"
 PROMPTS = {kind: Path(__file__).parent / "prompts" / filename for kind, filename in (
-    ("customer", "adaptive_customer_v1_en.txt"), ("analyst", "adaptive_analyst_v1_en.txt"))}
+    ("customer", "adaptive_customer_v3_en.txt"), ("analyst", "adaptive_analyst_v1_en.txt"))}
 
 
 def _canonical(value):
@@ -48,7 +48,9 @@ def public_observation(observation):
     original = observation["person"]
     person_fields = ("customer_id", "segment", "segment_label", "base_fare_budget", "flexibility_days",
                      "minimum_notice_days", "eligible", "eligibility_reason", "date_match", "companions_confirmed",
-                     "travel_party_context")
+                     "travel_party_context", "scenario_profile", "trip_purpose", "booking_trigger",
+                     "trip_commitment", "destination_openness", "travel_window_days",
+                     "departure_time_tolerance", "price_sensitivity", "value_context", "outside_option")
     person = {key: copy.deepcopy(original[key]) for key in person_fields if key in original}
     person.update(membership_active=True, membership_valid_at_departure=True, own_ticket_only=True, party_size=1)
     budget = _money(person["base_fare_budget"], "base_fare_budget")
@@ -65,11 +67,15 @@ def public_observation(observation):
         allowed.append("BUY_REGULAR")
     if eligible and quota > 0 and fare is not None and fare <= budget:
         allowed.append("BUY_MEMBER")
+    allowed_fallbacks = ["DECLINE"]
+    if "BUY_MEMBER" in allowed and "BUY_REGULAR" in allowed:
+        allowed_fallbacks.append("BUY_REGULAR")
     flight_fields = ("flight_id", "origin", "destination", "departure_date", "departure_time", "as_of_day")
     flight = {key: copy.deepcopy(observation.get("flight", {})[key]) for key in flight_fields
               if key in observation.get("flight", {})}
     return {"person": person, "flight": flight, "normal_fare": normal, "member_fare": fare,
-            "quota": quota, "allowed_actions": allowed, "response_language": "en", "currency": "HKD",
+            "quota": quota, "allowed_actions": allowed, "allowed_fallback_actions": allowed_fallbacks,
+            "response_language": "en", "currency": "HKD",
             "payment_scope": "One existing member's basic fare only; all other payments are outside this decision.",
             "inventory_rule": "Simultaneous intentions, no seat reserved; allocation is cleared in a recorded order afterwards."}
 
@@ -79,7 +85,7 @@ def validate_decision(value, observation):
     if value.get("action") not in observation["allowed_actions"]:
         raise ValueError("Customer selected an unavailable or unaffordable action")
     fallback = value.get("fallback_action", "DECLINE")
-    if fallback not in ("BUY_REGULAR", "DECLINE"):
+    if fallback not in observation["allowed_fallback_actions"]:
         raise ValueError("Invalid fallback action")
     if fallback == "BUY_REGULAR" and (value["action"] != "BUY_MEMBER" or "BUY_REGULAR" not in observation["allowed_actions"]):
         raise ValueError("Fallback regular purchase is not affordable or applicable")

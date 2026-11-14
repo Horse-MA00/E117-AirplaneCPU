@@ -11,7 +11,7 @@ import numpy as np
 from scripts.benchmark_adaptive_pricing import (
     run_benchmark, run_case, score_price, write_report, response_probability, train_policy,
 )
-from llm_agent.weighted_population import population
+from llm_agent.weighted_population import population, LEGACY_PROFILE
 
 
 class AdaptiveBenchmarkTests(unittest.TestCase):
@@ -33,7 +33,7 @@ class AdaptiveBenchmarkTests(unittest.TestCase):
             self.assertGreaterEqual(a["oracle_regret"], -1e-8)
 
     def test_exact_capacity_and_misspecified_family_are_exercised(self):
-        people = population(28, 117, scope={"as_of_day": 28})
+        people = population(28, 117, scope={"as_of_day": 28}, profile=LEGACY_PROFILE)
         ample = score_price(people, 150, 410, 28, 28, "reference_threshold")
         scarce = score_price(people, 150, 410, 1, 28, "reference_threshold")
         self.assertLessEqual(scarce["expected_member_sales"], 1)
@@ -49,6 +49,9 @@ class AdaptiveBenchmarkTests(unittest.TestCase):
                                families=("reference_threshold",), capacities=("scarce",))
         self.assertEqual(len(report["cases"]), 1)
         self.assertEqual(report["provider_calls"], 0)
+        self.assertEqual(report['config']['profile'], LEGACY_PROFILE)
+        self.assertEqual(report['population']['profile'], LEGACY_PROFILE)
+        self.assertEqual(len(report['population']['segments']), 14)
         self.assertEqual({m["method"] for m in report["cases"][0]["methods"]}, {"thompson", "greedy_map"})
         self.assertEqual(len(report["summary"]["groups"]), 4)  # family+capacity and all; both methods
         self.assertTrue(report["limitations"])
@@ -67,7 +70,7 @@ class AdaptiveBenchmarkTests(unittest.TestCase):
                 run_benchmark(**changes)
 
     def test_repeated_person_price_does_not_reweight_training_data(self):
-        people = population(14, 117, scope={"as_of_day": 28})
+        people = population(14, 117, scope={"as_of_day": 28}, profile=LEGACY_PROFILE)
         with patch("scripts.benchmark_adaptive_pricing.recommend", return_value={"price": 328.}):
             result = train_policy(people, 410, 14, "heterogeneous_logistic", "thompson", 5, 117, .95)
         self.assertEqual(result["synthetic_choice_opportunities"], 70)

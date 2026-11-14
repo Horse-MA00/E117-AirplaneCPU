@@ -21,11 +21,11 @@ from . import adaptive_store as store
 from .fare_policy import member_fare_cap
 from .initial_policy import flight_scope
 from .thompson import PurchasePosterior, recommend
-from llm_agent.adaptive_customers import DecisionClient
-from llm_agent.weighted_population import population, metadata
+from llm_agent.adaptive_customers import DecisionClient, prompt_metadata
+from llm_agent.weighted_population import population, metadata, DEFAULT_PROFILE, LEGACY_PROFILE
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'member-thompson-v2-replay'
+VERSION = 'member-thompson-v3-flexible'
 ROOT = Path(__file__).resolve().parents[1]
 _active = set()
 _guard = threading.Lock()
@@ -46,15 +46,17 @@ def status():
         os.environ['LLM_API_KEY_SECONDARY'] = secondary.read_text().strip()
     return {'version':VERSION, 'live_configured':all(os.environ.get(k) for k in ('LLM_API_URL','LLM_API_KEY','LLM_MODEL')),
             'model':os.environ.get('LLM_MODEL'), 'population':metadata(),
+            'populations':[metadata(profile=profile) for profile in (DEFAULT_PROFILE, LEGACY_PROFILE)],
             'member_fare_cap_ratio':.8, 'simulated':True,
-            'scenario':'Existing members, one base-fare seat per member, simultaneous purchase intentions.'}
+            'scenario':'Flexible bargain travellers who already hold membership; one optional leisure ticket per person, base fares only.'}
 
 
 def scope(body):
     if not isinstance(body, dict):
         raise ValueError('JSON object required')
     result = flight_scope(body.get('flight_id'), body.get('forecast_day', 28))
-    return {'scope':{k:v for k,v in result.items() if k != 'history'}, 'population':metadata(body.get('weights'))}
+    return {'scope':{k:v for k,v in result.items() if k != 'history'},
+            'population':metadata(body.get('weights'),profile=body.get('profile', DEFAULT_PROFILE))}
 
 
 def validate(body):
@@ -71,8 +73,8 @@ def validate(body):
            'validation_repeats':_number(body,'validation_repeats',2,2,8,True),
            'revenue_fraction':_number(body,'revenue_fraction',.95,.5,1),
            'flight_id':body.get('flight_id'), 'forecast_day':body.get('forecast_day',28),
-           'weights':body.get('weights')}
-    meta = metadata(cfg['weights'])
+           'weights':body.get('weights'), 'profile':body.get('profile', DEFAULT_PROFILE)}
+    meta = metadata(cfg['weights'],profile=cfg['profile'])
     selected = flight_scope(cfg['flight_id'], cfg['forecast_day'])
     if selected['releasable_seats'] < 1 or member_fare_cap(selected['normal_base_fare']) < .01:
         raise ValueError('This snapshot has no positive-price member inventory. Choose another flight or release day.')
@@ -88,7 +90,8 @@ def _provenance():
     paths = ['backend/adaptive_pricing.py','backend/adaptive_store.py','backend/thompson.py',
              'backend/nhpp.py','backend/fare_policy.py','backend/initial_policy.py','backend/release_policy.py',
              'backend/data.py','llm_agent/weighted_population.py','llm_agent/adaptive_customers.py',
-             'llm_agent/prompts/adaptive_customer_v1_en.txt','llm_agent/prompts/adaptive_analyst_v1_en.txt']
+             'llm_agent/population.py']
+    paths += [item['path'] for item in prompt_metadata()['prompts'].values()]
     paths += [str(p.relative_to(ROOT)) for p in (ROOT/'simulation').glob('*/manifest.json')]
     from urllib.parse import urlsplit
     return {'files':{p:hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in paths},
@@ -242,9 +245,9 @@ def _worker(run):
             store.save(run)
             client = DecisionClient(mode=cfg['mode'], max_calls=cfg['max_calls'], concurrency=cfg['concurrency'],
                                     audit_callback=lambda record:store.record(run_id,record), seed=cfg['seed'],use_cache=True)
-            people = population(cfg['customers'],cfg['seed'],weights=cfg['weights'],scope=selected)
+            people = population(cfg['customers'],cfg['seed'],weights=cfg['weights'],scope=selected,profile=cfg['profile'])
             run['panel'] = people
-            run['population'] = metadata(cfg['weights'],people)
+            run['population'] = metadata(cfg['weights'],people,profile=cfg['profile'])
             rng = np.random.default_rng(cfg['seed']+1907)
             model = PurchasePosterior([s['id'] for s in run['population']['segments']])
             rows = []
@@ -317,7 +320,7 @@ def _worker(run):
             worlds = []
             for j in range(cfg['validation_repeats']):
                 validation_seed = cfg['seed']+500003+1009*j
-                heldout = population(cfg['customers'],validation_seed,weights=cfg['weights'],scope=selected)
+                heldout = population(cfg['customers'],validation_seed,weights=cfg['weights'],scope=selected,profile=cfg['profile'])
                 replayed = {}
                 for policy,price in [('initial',selected['initial_member_fare']),('selected',chosen),('no_offer',None)]:
                     if price in replayed:

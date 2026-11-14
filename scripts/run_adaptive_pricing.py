@@ -53,6 +53,8 @@ def export(run_id, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    from llm_agent.weighted_population import DEFAULT_PROFILE, LEGACY_PROFILE
+    parser.add_argument('--profile', choices=(DEFAULT_PROFILE, LEGACY_PROFILE), default=DEFAULT_PROFILE)
     parser.add_argument('--flight-id',default='NET-HKG-KMQ-20270518')
     parser.add_argument('--day',type=int,choices=(28,14,7),default=28)
     parser.add_argument('--mode',choices=('synthetic','live'),default='synthetic')
@@ -77,7 +79,7 @@ def main():
         return
     config = {'flight_id':args.flight_id,'forecast_day':args.day,'mode':args.mode,'rounds':args.rounds,
               'customers':args.customers,'concurrency':args.concurrency,'max_calls':args.max_calls or 0,
-              'validation_repeats':args.validation_repeats,'seed':args.seed}
+              'validation_repeats':args.validation_repeats,'seed':args.seed,'profile':args.profile}
     report = start(config,blocking=True)
     summary = {k:report.get(k) for k in ('run_id','status','elapsed_seconds','error','counts','validation')}
     summary['prices'] = [r['price'] for r in report['rounds']]

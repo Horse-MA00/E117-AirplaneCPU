@@ -1,6 +1,6 @@
 # Flight-specific Admin workflow
 
-> 状态：现行 · 对应代码：`flight-policy-feedback-v7-cap80`、`fixed-seat-profile-local-fare-v1`、`formula-scan-v1`、`backend/fare_policy.py`、`nhpp-completed-market-feedback-v1`、`nhpp-d28-demand-catalog-v1`、`member-thompson-v2-replay`、`member-purchase-thompson-v1`、`weighted-member-panel-v1`、`adaptive-member-decisions-v1`
+> 状态：现行 · 对应代码：`flight-policy-feedback-v7-cap80`、`fixed-seat-profile-local-fare-v1`、`formula-scan-v1`、`backend/fare_policy.py`、`nhpp-completed-market-feedback-v1`、`nhpp-d28-demand-catalog-v1`、`member-thompson-v3-flexible`、`member-purchase-thompson-v1`、`weighted-member-panel-v2-flexible`、`adaptive-member-decisions-v3-fallback-contract`
 
 Current specification, updated 2026-11-14 for engine `flight-policy-feedback-v7-cap80` (`backend/optimization.py`) with price protocol `fixed-seat-profile-local-fare-v1`. This document is the single current contract for the selected-flight Admin workflow. Change records are preserved unchanged: the v2→v3 supply and evidence diagnosis in [member supply and evidence corrections](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md), and the v3→v4 demand filter, original-fare P₀ and economic scope in [demand filter and original fare](DEMAND_FILTER_AND_ORIGINAL_FARE.md). v5 capped member fares at 50% of the normal base fare (superseding the v4 original-fare P₀); v6 replaced the mathematical track's search with a formula scan plus a simulated fine grid. v7 changes the shared cap to 80% and adds the separate member-only Thompson experiment described below; v5/v6 reports retain their original settings. Release rounds and quota carry-over follow [the three-round release rule](THREE_ROUND_RELEASE.md). Previous v2/v3 experiments retain their original settings and evidence.
 
@@ -33,32 +33,32 @@ Base fares exclude mandatory charges. P₀ is only the first tested candidate, n
 
 ## Adaptive member-only pricing
 
-The separate `/adaptive-pricing` Admin page implements `member-thompson-v2-replay`. It is deliberately a **single purchase occasion for already-valid members at one flight/release snapshot**. The existing contribution/annual-fee engine below remains a separate reference workflow. Both share the current 80% normal-base-fare cap. NHPP, its frozen calibration, the source datasets and historical prompts/evidence remain unchanged.
+The separate `/adaptive-pricing` Admin page implements `member-thompson-v3-flexible`. It is deliberately a **single purchase occasion for already-valid members at one flight/release snapshot**. The existing contribution/annual-fee engine below remains a separate reference workflow. Both share the current 80% normal-base-fare cap. NHPP, its frozen calibration, the source datasets and historical prompts/evidence remain unchanged.
 
 ### Customer population and what is being purchased
 
-`llm_agent/weighted_population.py` uses the project's 14 test segments. These are **assumed test weights**, not measured HK Express passenger shares:
+`llm_agent/weighted_population.py` defaults to `flexible_deal_seekers`: a deliberately targeted audience for bargain-led optional leisure travel. It excludes fixed-date mandatory, urgent and business journeys. These are **assumed product-audience weights**, not measured HK Express passenger shares:
 
 | Test segment | Target weight |
 |---|---:|
-| Flexible budget | 13% |
-| Student | 9% |
-| Fixed leave | 14% |
-| Frequent leisure | 10% |
-| Family | 12% |
-| Couple | 10% |
-| Visiting friends/relatives | 8% |
-| Urgent trip | 4% |
-| Self-funded business | 4% |
-| Inbound/cross-market | 5% |
-| Small group | 3% |
-| Assistance needs | 2% |
-| Infrequent/first-time | 4% |
-| No matching route/date | 2% |
+| Flexible university student | 24% |
+| Destination-agnostic deal hunter | 20% |
+| Spontaneous solo short-break traveller | 16% |
+| Frequent budget travel enthusiast | 12% |
+| Flexible midweek bargain traveller | 10% |
+| Flexible friends seeking a cheap escape | 8% |
+| Flexible couple seeking a cheap break | 6% |
+| Deal-triggered occasional traveller | 4% |
 
-The reviewed [Cathay annual report](https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0409/2026040901998.pdf) and [traffic release](https://news.cathaypacific.com/the-cathay-group-releases-traffic-figures-for-december-2025-276edb) describe the airline and aggregate traffic; they do not establish these 14 numerical weights or member purchase probabilities. The UI accepts a complete nonnegative weight vector summing to one. Each positive segment receives one coverage slot; remaining panel slots use largest-remainder allocation. A respondent in segment g has estimation weight `w_g / n_g`. Reports retain target shares, actual sample counts and these individual weights.
+The reviewed [Cathay annual report](https://www1.hkexnews.hk/listedco/listconews/sehk/2026/0409/2026040901998.pdf) and [traffic release](https://news.cathaypacific.com/the-cathay-group-releases-traffic-figures-for-december-2025-276edb) do not establish these numerical shares, budget distributions or purchase probabilities. The UI's scenario selector also retains `broad_coverage`, the exact previous 14-segment person generator. New runs under either profile use the current customer prompt; choosing legacy people alone does not reproduce the historical v1 prompt or provider responses. Historical saved runs display their own recorded population and remain unchanged.
 
-Each respondent purchases **one personal seat**. Family/group context can prevent travel, but companions arrange their own tickets outside this experiment. Everyone is already a valid member. There is no joining, renewal, HK$399 deduction, fee sunk-cost argument, tax, fuel surcharge or airline operating cost. Per-ticket base-fare budgets are explicit synthetic assumptions derived from the old scenario budget scales, not inferred willingness to pay. Budget, route/date, notice and companion constraints are visible to the customer. Responses are English JSON with BUY_MEMBER, BUY_REGULAR or DECLINE and a conditional regular-ticket fallback if member inventory is exhausted.
+Each positive segment receives one coverage slot; remaining panel slots use largest-remainder allocation. A respondent in segment g has estimation weight `w_g / n_g`. The complete weight vector must be nonnegative and sum to one. Reports retain target shares, sample counts and individual weights; changing the selected profile resets its own weights.
+
+New personas are drawn **before seeing any candidate price**. They have 7–45 days of date flexibility, openness to any served destination, high/very-high price sensitivity, an optional trip trigger, a qualitative value context and a skip/save outside option. Their one-ticket hard budgets are drawn from explicit segment ranges (HK$160–850 across groups), not inferred willingness-to-pay labels. All default profiles can use D28/D14/D7 departures; no fixed-date exclusion or invented forced refusal is inserted to manufacture a price response. This conditions the experiment on a relevant offer being shown to an already-flexible member. It does not estimate network-wide exposure or simulate searching competing flights.
+
+Each respondent purchases **one personal seat**. Friends/couples can use the departure, but companions arrange their own tickets outside this experiment. Everyone is already a valid member. There is no joining, renewal, HK$399 deduction, tax, fuel surcharge, ancillary or airline operating cost. The new [English customer prompt v3](../llm_agent/prompts/adaptive_customer_v3_en.txt) distinguishes affordability from desire for an optional trip: a cheap offer can create a new trip, an affordable but unappealing fare can be declined, and the normal fare is a comparison rather than proof of value. It does not prescribe a conversion rate, numerical willingness to pay, guaranteed future discount, or airline revenue outcome. BUY_MEMBER, BUY_REGULAR and DECLINE remain the legal choices, with a willing/affordable regular-ticket fallback when member inventory is exhausted.
+
+Only allowed persona/quote fields reach the customer LLM. Target weights, optimizer objectives and future outcomes stay out of its observation. The original v1/v2 prompts and historical experiments are retained. The request explicitly lists `allowed_fallback_actions`; an illegal or unaffordable fallback fails validation and stops the run instead of silently changing the answer. The historical mathematical benchmark explicitly pins `broad_coverage` so the new default cannot silently change its test population. The mathematical synthetic fallback and Thompson model are unchanged: they do not consume all the new qualitative persona text, so offline and live modes remain distinct assumed behavior models.
 
 ### Learning and Thompson Sampling
 
@@ -101,7 +101,7 @@ The **search objective is member ticket revenue**. The holdout separately tests 
 
 ```
 python -m backend.server --port 8001
-python scripts/run_adaptive_pricing.py --mode synthetic --rounds 10 --customers 28 --max-calls 0
+python scripts/run_adaptive_pricing.py --mode synthetic --profile flexible_deal_seekers --rounds 10 --customers 28 --max-calls 0
 python scripts/run_adaptive_pricing.py --mode live --rounds 10 --customers 28 --concurrency 4 --max-calls 600
 python scripts/run_adaptive_pricing.py --export-run-id RUN_ID --output llm_agent/experiments/NEW_DIRECTORY
 python scripts/benchmark_adaptive_pricing.py --help
@@ -109,9 +109,33 @@ python scripts/benchmark_adaptive_pricing.py --help
 
 Live CLI execution requires an explicit finite `--max-calls`; the server checks the full worst-case call budget before starting. With N rounds, M members and H holdout cohorts, the upper bound is `N*(M+1) + (1+3*H)*M`. Forced actions/cache reuse can make actual calls much lower. Provider setup uses the existing server environment (`LLM_API_URL`, `LLM_MODEL`, `LLM_API_KEY`) and optional `LLM_API_KEY_SECONDARY`; an explicitly configured ignored private key file can supply the second slot. The UI never receives key values. Run state survives reload; orphaned work is marked interrupted after a stale heartbeat and free process lock, with no automatic paid resume.
 
+`profile` is saved in each new run and held fixed across search and holdout. GET status includes the default population plus `populations` for both profiles; scope accepts `profile` and returns that profile's weight schema. Prompt provenance hashes the actual active prompt paths rather than a hard-coded v1 file.
+
 API: GET `/api/adaptive-pricing/status`, GET/POST `/api/adaptive-pricing/runs`, POST `/api/adaptive-pricing/scope`, and GET `/api/adaptive-pricing/runs/{id}` with `/events` or `/export`. The new page is an experimental Admin view; it does not automatically publish an offer or change the Client Portal's live demo inventory.
 
-### Executed results — 14 November 2026
+### Flexible bargain travellers — 14 November 2026
+
+The current [completed flexible-cohort report](../llm_agent/experiments/thompson_flexible_live_20261114_v3/report.json) is `adaptive-6f1c300f719e47f7`. It used HKG→Komatsu `NET-HKG-KMQ-20270518`, D28, normal basic fare HK$410, initial member cap HK$328 and 73 available member seats. The search used 32 people, seed `20261116`, seven rounds and the new eight-group weights. Three fresh 32-person holdouts used seeds `20761119`, `20762128`, `20763137` (96 held-out personas). The seven tested prices were `[328,293.89,293.89,293.89,269.54,293.89,293.89]`; the tested selection HK$269.54 was frozen before evaluating holdouts.
+
+| Independent holdout policy | Member base fare | Weighted member purchase rate | Weighted basic-ticket revenue per 32-person cohort | Actual mean ticket sales |
+|---|---:|---:|---:|---:|
+| Initial offer | HK$328.00 | 75.37% | HK$7,910.99 | 24.33 |
+| Search-selected offer | HK$269.54 | 84.17% | HK$7,259.47 | 27.00 |
+| No member offer; normal fare HK$410 | — | 0%; only regular tickets available | HK$5,340.05 | 13.33 |
+
+The selected discount raised weighted purchasing by 8.79 percentage points but reduced weighted basic-ticket receipts by **HK$651.51 (8.24%)** against the initial offer: `DID_NOT_IMPROVE`. It still exceeded NO_OFFER by HK$1,919.43 (35.94%); the initial offer exceeded NO_OFFER by HK$2,570.94 (48.14%). These are simulated ticket receipts with fees/costs excluded, not net profit, market forecasts or proof of a true optimum. Capacity did not bind, so the reported verdict uses the weighted target mixture. The optimizer never refitted on the held-out outcomes or deployed this candidate automatically.
+
+Completed run: **299 fresh provider calls** (296 customer, 3 analyst), **104 cache replays**, **144 environment-forced declines**, **0 failures**, peak **4** concurrent requests, primary/secondary slots **150/149**, **504,627 tokens**, **125.42 seconds**. Cached responses are not additional observations. Forced declines arise from affordability/availability gates and are separate from LLM refusals.
+
+Behavioral audit: **228 unique affordable member exposures all chose BUY_MEMBER**, including search and held-out price/person pairs. In the three NO_OFFER holdouts, 15 affordable regular-ticket decisions did decline and 40 bought; the other 41 were environment-forced declines. Thus the new optional-trip framing produces some voluntary refusals at the normal fare, but has **not** resolved the near-deterministic affordable-member-purchase behavior. We did not add a forced refusal rate or retune the prompt until revenue improved. The observed response still depends heavily on hard synthetic budgets and the supplied normal-price comparison. More repetitions of the same personas do not validate real price elasticity. Future improvements should use fresh cohorts and externally calibrated value/choice scenarios; the small known-budget learner remains a limitation.
+
+A [failed preliminary attempt](../llm_agent/experiments/thompson_flexible_failed_20261114_v3/report.json), `adaptive-70f6996ca79e4b21`, is preserved separately with its raw [audit](../llm_agent/experiments/thompson_flexible_failed_20261114_v3/audit.jsonl.gz). It used prompt v2 and stopped after 49 fresh calls, with two invalid normal-ticket fallbacks (normal HK$410 exceeded budgets HK$372/HK$387.77). No holdout was evaluated. Prompt v3 and an explicit computed fallback allowlist fixed the contract; invalid answers remain rejected, never normalized into successful purchases. The new successful attempt used a fresh search seed, seven rather than eight rounds, and an explicit 551-call cap so the **combined 348 calls** stayed below the announced 600-call task budget. The failed report is not completed optimization evidence.
+
+The previous V1/V2 reports below retain their original broad population and prompt versions. Changes in budgets, profile, sample size and prompt mean differences across those runs cannot be attributed to prompt wording alone. The benchmark script pins the old broad population explicitly; its frozen 80-case evidence was not regenerated.
+
+Verification: 305 backend tests and 31 root data/documentation tests passed, including strict fallback rejection, target-profile propagation, legacy-generator SHA reproduction and frozen artifact integrity. Mocked and real browser checks cover both profiles, saved historical results and mobile layout; the real checks made no new experiment requests.
+
+### Historical broad-cohort results — 14 November 2026
 
 The result is mixed: Thompson exploration helped in the prescribed mathematical benchmark, but the live LLM experiments did **not** validate an improvement in revenue. Both negative live results are retained.
 

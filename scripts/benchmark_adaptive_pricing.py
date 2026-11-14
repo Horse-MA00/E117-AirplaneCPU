@@ -24,7 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.thompson import PurchasePosterior, capacity_expectation, fare_cap, recommend
-from llm_agent.weighted_population import population, metadata, DEFAULT_WEIGHTS
+from llm_agent.weighted_population import population, metadata, LEGACY_PROFILE, LEGACY_WEIGHTS
 
 VERSION = "weighted-member-thompson-benchmark-v2"
 FAMILIES = ("heterogeneous_logistic", "reference_threshold")
@@ -86,7 +86,7 @@ def train_policy(people, normal_fare, quota, family, method, rounds, seed, reven
     if method not in METHODS:
         raise ValueError("Unknown search method")
     started = time.monotonic()
-    model = PurchasePosterior(list(DEFAULT_WEIGHTS))
+    model = PurchasePosterior(list(LEGACY_WEIGHTS))
     rng = np.random.default_rng(seed + 1907)
     latent = np.array([_latent(p["customer_id"], "purchase") for p in people])
     rows, trace = [], []
@@ -159,13 +159,13 @@ def run_case(seed, family, capacity, customers=28, rounds=10, holdout_customers=
     if capacity not in CAPACITIES:
         raise ValueError("Unknown capacity regime")
     scope = {"as_of_day": 28}
-    people = population(customers, seed, scope=scope)
+    people = population(customers, seed, scope=scope, profile=LEGACY_PROFILE)
     quota = customers if capacity == "ample" else max(1, round(customers * .2))
     methods = [train_policy(people, normal_fare, quota, family, method, rounds, seed, revenue_fraction)
                for method in METHODS]
     # No holdout person or response exists until BOTH prices have been frozen.
     holdout_seed = seed + 50000003
-    heldout = population(holdout_customers, holdout_seed, scope=scope)
+    heldout = population(holdout_customers, holdout_seed, scope=scope, profile=LEGACY_PROFILE)
     assert {p["customer_id"] for p in people}.isdisjoint(p["customer_id"] for p in heldout)
     initial = score_price(heldout, fare_cap(normal_fare), normal_fare, quota, customers, family)
     candidates = _oracle_prices(heldout, normal_fare, family, [m["price"] for m in methods])
@@ -247,11 +247,11 @@ def run_benchmark(seed_count=20, seed_start=2026111400, customers=28, rounds=10,
                "llm_agent/population.py"]
     return {"version": VERSION, "source": "offline_synthetic_response_benchmark", "provider_calls": 0,
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "config": {"seeds": seed_count, "seed_start": seed_start, "seed_step": 1009,
+            "config": {"profile": LEGACY_PROFILE, "seeds": seed_count, "seed_start": seed_start, "seed_step": 1009,
                        "customers": customers, "rounds": rounds, "holdout_customers": holdout_customers,
                        "normal_fare": normal_fare, "member_fare_cap_ratio": .8,
                        "revenue_fraction": revenue_fraction, "families": list(families), "capacities": list(capacities)},
-            "population": metadata(), "cases": cases, "summary": summarize(cases),
+            "population": metadata(profile=LEGACY_PROFILE), "cases": cases, "summary": summarize(cases),
             "elapsed_seconds": round(time.monotonic() - started, 4),
             "provenance": {path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest() for path in sources},
             "limitations": [

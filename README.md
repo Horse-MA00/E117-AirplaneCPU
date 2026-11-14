@@ -18,7 +18,7 @@ This prototype turns a normal-demand forecast into concrete, auditable release a
 
 Open [Adaptive pricing](http://127.0.0.1:8000/adaptive-pricing) from Admin. This experiment treats every traveller as an existing member and compares **basic ticket fares only**, capped at **80% of the observed normal base fare**. It fits a small, weighted purchase-response model and uses Thompson Sampling to choose the next price. Customer LLM calls run concurrently; a deterministic clearing engine alone allocates integer seats.
 
-Fourteen explicitly assumed customer segments are sampled with poststratification weights. The final tested price is frozen before fresh holdout panels compare it with the starting price and no member offer. Separate charts show member purchases, actual panel receipts and weighted target-mix estimates. This is synthetic evidence, not observed HK Express conversion or airline profit. Full design, commands and results are in the [current technical specification](docs/FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing).
+Eight explicitly assumed groups of flexible, price-sensitive leisure members are sampled with poststratification weights. The earlier 14-group broad-coverage population remains selectable for comparison. The final tested price is frozen before fresh holdout panels compare it with the starting price and no member offer. Separate charts show member purchases, actual panel receipts and weighted target-mix estimates. This is synthetic evidence, not observed HK Express conversion or airline profit. Full design, commands and results are in the [current technical specification](docs/FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing).
 
 ## Joint optimisation and new portals (2026-11-14)
 

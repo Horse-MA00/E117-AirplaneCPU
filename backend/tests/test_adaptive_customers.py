@@ -36,7 +36,7 @@ class WeightedPopulationTests(unittest.TestCase):
     def test_strata_are_covered_without_equal_weighting(self):
         people = population(20, 117)
         self.assertEqual(len(people), 20)
-        self.assertEqual(len({p['segment'] for p in people}), 14)
+        self.assertEqual(len({p['segment'] for p in people}), len(DEFAULT_WEIGHTS))
         self.assertAlmostEqual(sum(p['population_weight'] for p in people), 1)
         for key, weight in DEFAULT_WEIGHTS.items():
             self.assertAlmostEqual(sum(p['population_weight'] for p in people if p['segment'] == key), weight)
@@ -47,14 +47,14 @@ class WeightedPopulationTests(unittest.TestCase):
         self.assertEqual(population(28, 42), population(28, 42))
         self.assertNotEqual(population(28, 42), population(28, 43))
         self.assertTrue(all(p['membership_active'] and p['party_size'] == 1 for p in population(28)))
-        self.assertFalse(any(p['eligible'] for p in population(28) if p['segment'] == 'no_match'))
+        self.assertTrue(all(p['trip_purpose'] == 'optional_leisure' for p in population(28)))
 
     def test_zero_weights_and_invalid_configuration(self):
         weights = {key: float(key == 'student') for key in DEFAULT_WEIGHTS}
         people = population(3, weights=weights)
         self.assertEqual({p['segment'] for p in people}, {'student'})
         self.assertAlmostEqual(sum(p['population_weight'] for p in people), 1.)
-        for count in (0, 13, True):
+        for count in (0, len(DEFAULT_WEIGHTS)-1, True):
             with self.assertRaises(ValueError): population(count)
         for weights in ({}, {**DEFAULT_WEIGHTS, 'student': -1}, {**DEFAULT_WEIGHTS, 'student': float('nan')},
                         {**DEFAULT_WEIGHTS, 'student': .5}):
@@ -80,6 +80,63 @@ class AdaptiveCustomerTests(unittest.TestCase):
         self.assertTrue(obj['person']['membership_active'])
         self.assertNotIn('membership_fee', obj)
 
+    def test_optional_travel_scenario_is_visible_without_optimizer_state(self):
+        obj = observation()
+        fields = {
+            'scenario_profile': 'flexible_deal_seekers', 'trip_purpose': 'optional_leisure',
+            'booking_trigger': 'An unusually attractive fare can inspire a short trip.',
+            'trip_commitment': 'not_planned_until_a_compelling_offer',
+            'destination_openness': 'any_served_destination', 'travel_window_days': 30,
+            'departure_time_tolerance': 'Can use early and late departures.',
+            'price_sensitivity': 'very_high',
+            'value_context': 'A ticket being affordable does not make this optional trip worthwhile.',
+            'outside_option': 'Skip the trip and retain the ticket budget.',
+        }
+        obj['person'].update(fields, target_conversion=.9, candidate_profit=9000)
+        visible = adapter.public_observation(obj)
+        for key, value in fields.items():
+            self.assertEqual(visible['person'][key], value)
+        text = json.dumps(visible)
+        for hidden in ('target_conversion', 'candidate_profit', 'population_weight', 'optimizer_goal'):
+            self.assertNotIn(hidden, text)
+
+    @patch.dict(os.environ, ENV)
+    def test_affordable_optional_trip_can_decline_and_is_audited_as_real_choice(self):
+        audit, requests = [], []
+        decision = {'action': 'DECLINE', 'fallback_action': 'DECLINE', 'reason_code': 'OPTIONAL_TRIP_VALUE',
+                    'reason': 'HKD 200 is affordable, but I only start an unplanned trip for a compelling bargain; I prefer to retain my ticket budget.'}
+        obj = observation()
+        obj['person'].update(scenario_profile='flexible_deal_seekers', trip_purpose='optional_leisure',
+                             outside_option='Skip the trip and retain the ticket budget.')
+        def transport(req):
+            requests.append(json.loads(req.data))
+            return io.BytesIO(json.dumps(response(decision)).encode())
+        client = adapter.DecisionClient(max_calls=1, audit_callback=audit.append)
+        with patch.object(adapter, '_transport', side_effect=transport):
+            result = client.choose(obj)
+        self.assertEqual(result['decision'], decision)
+        self.assertFalse(result['forced'])
+        self.assertTrue(result['learning_eligible'])
+        self.assertEqual(result['source'], 'provider_live')
+        self.assertEqual(requests[0]['messages'][0]['content'], adapter.PROMPTS['customer'].read_text())
+        sent_person = json.loads(requests[0]['messages'][1]['content'])['person']
+        self.assertEqual(sent_person['outside_option'], obj['person']['outside_option'])
+        self.assertTrue(any(row['event'] == 'customer_response' for row in audit))
+
+    @patch.dict(os.environ, ENV)
+    def test_scenario_change_invalidates_exact_request_cache(self):
+        first, second = observation(), observation()
+        first['person']['value_context'] = 'A cheap unplanned getaway would be appealing.'
+        second['person']['value_context'] = 'Only an exceptional bargain would trigger a trip.'
+        client = adapter.DecisionClient(max_calls=2, use_cache=True)
+        with patch.object(adapter, '_transport', side_effect=lambda req: io.BytesIO(json.dumps(response()).encode())) as call:
+            client.choose(first)
+            client.choose(second)
+            replay = client.choose(second)
+        self.assertEqual(call.call_count, 2)
+        self.assertEqual(replay['source'], 'provider_cache')
+        self.assertEqual(client.stats()['cache_hits'], 1)
+
     def test_ineligible_is_forced_without_provider_or_training_exposure(self):
         client = adapter.DecisionClient(mode='synthetic', max_calls=0)
         result = client.choose(observation(eligible=False))
@@ -103,6 +160,35 @@ class AdaptiveCustomerTests(unittest.TestCase):
         visible = adapter.public_observation(observation(budget=300))
         decision = response()['choices'][0]['message']['content']
         with self.assertRaises(ValueError): adapter.validate_decision(json.loads(decision), visible)
+
+    def test_fallback_permission_list_encodes_budget_and_member_availability(self):
+        for budget in (372, 387.77):
+            visible = adapter.public_observation(observation(fare=300, budget=budget))
+            self.assertIn('BUY_MEMBER', visible['allowed_actions'])
+            self.assertEqual(visible['allowed_fallback_actions'], ['DECLINE'])
+        visible = adapter.public_observation(observation(fare=300, budget=410))
+        self.assertEqual(visible['allowed_fallback_actions'], ['DECLINE', 'BUY_REGULAR'])
+        visible = adapter.public_observation(observation(quota=0, budget=500))
+        self.assertEqual(visible['allowed_fallback_actions'], ['DECLINE'])
+
+    @patch.dict(os.environ, ENV)
+    def test_unaffordable_fallback_is_rejected_audited_and_never_repaired(self):
+        audit = []
+        wrong = {'action': 'BUY_MEMBER', 'fallback_action': 'BUY_REGULAR', 'reason_code': 'PRICE',
+                 'reason': 'The member ticket is attractive and the normal ticket also fits my budget.'}
+        client = adapter.DecisionClient(max_calls=2, concurrency=1, audit_callback=audit.append)
+        with patch.object(adapter, '_transport', return_value=io.BytesIO(json.dumps(response(wrong)).encode())) as transport:
+            with self.assertRaisesRegex(ValueError, 'failed validation'):
+                client.choose(observation(fare=300, budget=387.77))
+            self.assertEqual(transport.call_count, 1)
+            with self.assertRaisesRegex(ValueError, 'stopped'):
+                client.choose(observation('NEXT', fare=300, budget=387.77))
+            self.assertEqual(transport.call_count, 1)
+        self.assertEqual(client.stats()['failures'], 1)
+        self.assertEqual(client.stats()['fresh_responses'], 1)
+        raw = next(row for row in audit if row['event'] == 'customer_response')
+        self.assertEqual(json.loads(json.loads(raw['raw_response_text'])['choices'][0]['message']['content']), wrong)
+        self.assertTrue(any(row['event'] == 'customer_failed' for row in audit))
 
     def test_synthetic_common_random_numbers_monotone(self):
         client = adapter.DecisionClient(mode='synthetic', seed=11)

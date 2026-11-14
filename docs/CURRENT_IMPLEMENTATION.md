@@ -2,7 +2,7 @@
 
 > 状态：现行 · 对应代码：`flight-policy-feedback-v7-cap80`、`formula-scan-v1`、`nhpp-regime-mixture-v2`、`shared-market-v3`、`three-round-release-v1`
 
-更新：2026-11-14。新增 `/adaptive-pricing`：既有會員、單張基本票價、分層加權客群、Logistic 近似後驗及 Thompson Sampling；並行 LLM 意向由程式統一扣位，獨立驗證保留收入下降的結果。詳細數學、口徑及運行命令以[現行規格](FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing)為準。這份文件記錄現有程式；早期提案文件已刪除（Git 歷史可查），與原計劃的差異見下文「與原計劃的差異及限制」。使用者最新決定是先使用 NHPP，不使用 LightGBM。
+更新：2026-11-14。新增 `/adaptive-pricing`：預設為八類彈性、價格敏感的休閒旅客，保留舊版十四類客群選項；所有人均已入會，只比較單張基本票價及分層加權客群、Logistic 近似後驗及 Thompson Sampling；並行 LLM 意向由程式統一扣位，獨立驗證保留收入下降的結果。詳細數學、口徑及運行命令以[現行規格](FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing)為準。這份文件記錄現有程式；早期提案文件已刪除（Git 歷史可查），與原計劃的差異見下文「與原計劃的差異及限制」。使用者最新決定是先使用 NHPP，不使用 LightGBM。
 
 ## 最新主流程：雙軌逐輪優化
 
