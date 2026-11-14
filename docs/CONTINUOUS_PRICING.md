@@ -1,5 +1,7 @@
 # Continuous member-fare optimisation
 
+> 状态：现行 · 对应代码：`continuous-shared-pricing-v1.1`
+
 New branch method, 2026-11-14. Earlier fixed-tier results are historical evidence;
 they do not validate the new behavioural assumptions. NHPP parameters, calibration
 and frozen reports have not been retuned.

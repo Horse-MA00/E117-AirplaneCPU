@@ -1,5 +1,7 @@
 # 用 Docker 运行整个项目
 
+> 状态：现行 · 对应代码：`compose.yaml`、`Dockerfile`
+
 容器包含前端、Python API、NHPP、定价、用户模拟、已提交的合成数据与历史实验。
 前端是静态文件，由同一个 API 服务提供，因此不需要额外的 Node、Nginx、Redis
 或数据库服务。SQLite、实验检查点和缓存放在独立持久化卷。

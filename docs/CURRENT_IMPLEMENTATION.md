@@ -1,5 +1,7 @@
 # NHPP 會員優惠平台技術實作
 
+> 状态：现行 · 对应代码：`flight-policy-feedback-v4-original-fare`、`nhpp-regime-mixture-v2`、`shared-market-v3`、`three-round-release-v1`
+
 更新：2026-11-14。這份文件記錄現有程式；早期提案文件已刪除（Git 歷史可查），與原計劃的差異見下文「與原計劃的差異及限制」。使用者最新決定是先使用 NHPP，不使用 LightGBM。
 
 ## 最新主流程：雙軌逐輪優化

@@ -1,5 +1,7 @@
 # NHPP v2 診斷與獨立驗證
 
+> 状态：现行 · 对应代码：`nhpp-regime-mixture-v2`
+
 2026-11-14。模型版本 `nhpp-regime-mixture-v2`。本次先以可重現的失敗案例定位問題，再加入需求轉折與未知衝擊的不確定性；維持 NHPP 路線，沒有加入 LightGBM。
 
 ## 結果與適用範圍

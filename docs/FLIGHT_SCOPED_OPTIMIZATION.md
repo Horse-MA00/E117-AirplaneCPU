@@ -1,5 +1,7 @@
 # Flight-specific Admin workflow
 
+> 状态：现行 · 对应代码：`flight-policy-feedback-v4-original-fare`、`fixed-seat-profile-local-fare-v1`、`nhpp-completed-market-feedback-v1`、`nhpp-d28-demand-catalog-v1`
+
 Current specification, updated 2026-11-14 for engine `flight-policy-feedback-v4-original-fare` (`backend/optimization.py`) with price protocol `fixed-seat-profile-local-fare-v1`. This document is the single current contract for the selected-flight Admin workflow. Change records are preserved unchanged: the v2→v3 supply and evidence diagnosis in [member supply and evidence corrections](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md), and the v3→v4 demand filter, original-fare P₀ and economic scope in [demand filter and original fare](DEMAND_FILTER_AND_ORIGINAL_FARE.md). Release rounds and quota carry-over follow [the three-round release rule](THREE_ROUND_RELEASE.md). Previous v2/v3 experiments retain their original settings and evidence.
 
 ## What each screen does

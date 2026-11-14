@@ -1,5 +1,7 @@
 # 共用市場、會員與財務模擬
 
+> 状态：现行 · 对应代码：`shared-market-v3`、`three-round-release-v1`
+
 2026-11-14。實作：`backend/shared_market.py`，目前環境版本`shared-market-v3`，放票規則版本`three-round-release-v1`。目前規則採D28、D14、D7三輪增量放票。舊`shared-market-v2`報告保留原設定，不作新規則的驗證。本文件記錄可執行的環境規則；旅客的決策由另一個可替換的 adapter 提供，不由航空公司的收益目標控制。
 
 ## 這次改了甚麼
