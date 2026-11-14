@@ -12,6 +12,7 @@ const baselineOf = r => Number.isFinite(r?.baseline_contribution) ? r.baseline_c
 const pct = v => v == null ? '—' : `${num(Number(v)*100,1)}%`;
 const name = mode => mode === 'live' ? 'Live LLM' : 'Mathematical';
 const running = status => ['queued','running'].includes(status);
+const promotionalTrack = track => state.data?.config?.final_member_fare_policy === 'member-marketing-fare-v1' || track.final_offer?.final_member_fare_policy === 'member-marketing-fare-v1';
 const scopeEligible = scope => Boolean(scope && scope.optimization_eligible!==false && Number(scope.member_supply_exposure??scope.releasable_seats)>0);
 // The NHPP release rule decides supply before any price is tested. Mirrors optimization.start().
 function releaseDecision(scope, share) {
@@ -131,18 +132,21 @@ function priceProfit(tracks){
 function renderCards(tracks) {
   $('optimization-track-cards').replaceChildren(...tracks.map(track=>{
     const latest=track.rounds.at(-1),best=track.best;
+    const final=promotionalTrack(track)?track.final_offer:null;
+    const result=final||latest;
     const card=node('section',undefined,`optimizer-track ${track.mode}`),heading=node('h2',name(track.mode));
-    heading.append(node('span',latest?`Round ${latest.round} · latest tested`:'Initial prices'));
+    heading.append(node('span',final?'Final quote · independently evaluated':latest?`Round ${latest.round} · latest tested`:'Initial prices'));
     const prices=node('div',undefined,'track-prices');
-    for(const [label,amount]of [['Member base fare',latest?.member_fare??state.data.config.initial_member_fare]]){
+    for(const [label,amount]of [[final?'Promotional base fare':promotionalTrack(track)?'Search base fare':'Member base fare',result?.member_fare??state.data.config.initial_member_fare]]){
       const item=node('div');item.append(node('span',label),node('strong',money(amount)));prices.append(item);
     }
     const profit=node('p',undefined,'track-profit');
-    if(latest){profit.append(node('strong',`${money(latest.incremental_contribution)} incremental`),document.createTextNode(` · ${pct(latest.service_rate)} mean new-member use`));}
+    if(result){profit.append(node('strong',`${money(result.incremental_contribution)} incremental`),document.createTextNode(` · ${pct(result.service_rate)} mean new-member use`));}
     else profit.textContent='Waiting for the first market replay to finish.';
     card.append(heading,prices,profit);
-    if(latest)card.append(node('p',`${evidenceLabel(latest)} · ${num(latest.mean_member_buyers,1)} member buyers · ${num(latest.mean_regular_buyers,1)} regular buyers · ${num(latest.member_supply_exposure,1)} member seats issued.`,'small muted'));
-    if(best){const retained=node('p',undefined,'small muted');retained.append(node('strong','Retained test candidate: '),document.createTextNode(`${money(best.member_fare)} member fare.${best.feasible?'':' Service target unmet.'}`));card.append(retained);}
+    if(result)card.append(node('p',`${evidenceLabel(result)} · ${num(result.mean_member_buyers,1)} member buyers · ${num(result.mean_regular_buyers,1)} regular buyers · ${num(result.member_supply_exposure,1)} member seats issued.`,'small muted'));
+    if(final)card.append(node('p',`Search selection ${money(final.raw_member_fare??best?.member_fare)} → promotional quote ${money(final.member_fare)}. Results above come from re-evaluating the adjusted quote on independent markets.`,'small muted'));
+    else if(best){const retained=node('p',undefined,'small muted');retained.append(node('strong','Retained test candidate: '),document.createTextNode(`${money(best.member_fare)} member fare.${best.feasible?'':' Service target unmet.'}`));card.append(retained);}
     return card;
   }));
 }
@@ -159,11 +163,14 @@ function renderFinal(tracks) {
   const root=$('optimization-final-content');root.replaceChildren();
   for(const track of tracks) {
     const item=node('div',undefined,'final-option'),body=node('div'),heading=node('strong',name(track.mode));
+    const formatted=promotionalTrack(track),offer=formatted?track.final_offer:track.best;
     const decision=track.decision||'PENDING';heading.append(node('span',decision==='OFFER'?'Validated offer':decision==='NO_OFFER'?(state.data.config.scope?'No offer for this flight':'No member offer'):'Validation pending','decision-chip'));body.append(heading);
-    if(decision==='OFFER' && track.best && track.validation){
-      body.append(node('p',`${money(track.best.member_fare)} member base fare`),node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} mean new-member use.`,'small muted'));
+    if(decision==='OFFER' && offer && track.validation){
+      const result=formatted?offer:track.validation;
+      body.append(node('p',`${money(offer.member_fare)} ${formatted?'promotional base fare':'member base fare'}`),node('p',`Independent market: ${money(result.incremental_contribution)} incremental contribution · ${pct(result.service_rate)} mean new-member use.`,'small muted'));
+      if(formatted)body.append(node('p',`Search price ${money(offer.raw_member_fare??track.best?.member_fare)} → final quote ${money(offer.member_fare)}. Round down to an amount ending in 9; any resulting fare below HK$30 becomes HK$0.`,'small muted'));
       body.append(node('p','Prepare a draft for this exact flight and release round. Current inventory is checked again.','small muted'));
-      const button=node('button','Use these prices','button primary');button.type='button';button.disabled=state.data.status!=='completed'||!state.data.config.scope;button.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('uoption:prepare-policy',{detail:{...track.best,run_id:state.data.run_id,mode:track.mode,flight_id:state.data.config.scope.flight_id,forecast_day:state.data.config.scope.as_of_day,release_fraction:state.data.config.release_fraction}})));item.append(body,button);
+      const button=node('button','Use these prices','button primary');button.type='button';button.disabled=state.data.status!=='completed'||!state.data.config.scope;button.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('uoption:prepare-policy',{detail:{...offer,run_id:state.data.run_id,mode:track.mode,flight_id:state.data.config.scope.flight_id,forecast_day:state.data.config.scope.as_of_day,release_fraction:state.data.config.release_fraction}})));item.append(body,button);
     }else if(decision==='NO_OFFER'){
       body.append(node('p',state.data.config.scope?'The tested offer did not pass this flight’s search and independent validation requirements. Later member trips and renewal revenue are outside this result.':'The tested member offer did not pass both the search and independent validation requirements.'));
       const reasons=track.contribution_explanation?.no_offer_reasons;
@@ -171,7 +178,7 @@ function renderFinal(tracks) {
       if(track.validation)body.append(node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} mean new-member use.`,'small muted'));
       item.append(body);
     }else{
-      body.append(node('p',track.rounds.length?'The current best candidate still needs a completed independent validation.':'Complete the market rounds to compare prices.'));item.append(body);
+      body.append(node('p',formatted&&decision==='OFFER'&&!offer?'The final promotional quote is unavailable. No price draft can be prepared from this run.':track.rounds.length?'The current best candidate still needs a completed independent validation.':'Complete the market rounds to compare prices.'));item.append(body);
     }
     root.append(item);
   }
@@ -179,7 +186,7 @@ function renderFinal(tracks) {
 function renderFeedback(tracks){
   const root=$('optimization-forecast-feedback');root.replaceChildren();
   for(const track of tracks){
-    const latest=track.rounds.at(-1),validated=Boolean(track.validation?.seat_feedback),profile=validated?track.best?.seat_calibration:latest?.seat_calibration,feedback=validated?track.validation.seat_feedback:latest?.seat_feedback;
+    const latest=track.rounds.at(-1),validated=Boolean(track.validation?.seat_feedback),profile=validated?(track.final_offer||track.best)?.seat_calibration:latest?.seat_calibration,feedback=validated?track.validation.seat_feedback:latest?.seat_feedback;
     if(!profile&&!feedback)continue;
     const section=node('section');section.append(node('h3',`${name(track.mode)} · ${validated?'independent validation':'search replay diagnostics'}`));
     if(profile){const d28=profile.horizons?.['28'];section.append(node('p',`Profile generation ${num(profile.generation??0)}${d28?` · D28 demand scale ${num(d28.rate_scale,3)} · additional protection ${num(d28.extra_protection,1)} seats`:''}.`,'small muted'));}

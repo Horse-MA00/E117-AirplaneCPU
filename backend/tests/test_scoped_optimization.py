@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from backend import data, optimization as engine, optimization_store as store
 from backend.initial_policy import suggest
+from backend.fare_policy import FINAL_MEMBER_FARE_VERSION
 
 
 # These tests pin flights, fares and expectations from the frozen legacy catalogue.
@@ -105,6 +106,67 @@ class ScopedOptimizationTests(unittest.TestCase):
         legacy = engine.validate({'legacy_market':True,'initial_membership_fee':49})
         self.assertEqual(legacy['initial_membership_fee'],49)
         self.assertFalse(legacy.get('membership_fee_fixed',False))
+        self.assertNotIn('final_member_fare_policy', legacy)
+
+    def test_final_marketing_fare_is_replayed_before_holdout_without_rewriting_search(self):
+        for raw, final in ((255, 249), (29, 0), (38, 0), (259, 259)):
+            with self.subTest(raw=raw), patch('backend.fare_estimate.estimate', return_value={'grid':[raw]}), \
+                    patch('llm_agent.experiment.load_local_env'):
+                run = engine.start({'flight_id':'NET-HKG-ICN-20270521','customers':14,'program_cost':0})['run_id']
+                report = self.finish(run)
+                self.assertEqual(report['status'], 'completed', report['error'])
+                self.assertEqual(report['config']['final_member_fare_policy'], FINAL_MEMBER_FARE_VERSION)
+                track = report['tracks'][0]
+                self.assertEqual(track['best']['member_fare'], raw)
+                self.assertEqual(track['rounds'][0]['member_fare'], raw)
+                self.assertEqual(track['final_offer']['member_fare'], final)
+                self.assertEqual(track['final_offer']['raw_member_fare'], raw)
+                self.assertTrue(track['final_offer']['validated'])
+                self.assertEqual(track['validation']['member_fare'], final)
+                worlds = engine.export_run(run)['worlds']
+                held = [world for world in worlds if world['phase'] == 'holdout']
+                self.assertEqual(len(held), 2)
+                self.assertEqual({world['policy']['member_fare'] for world in held}, {final})
+                self.assertEqual({world['result']['policy']['member_fare'] for world in held}, {final})
+                self.assertEqual(track['final_offer']['total_contribution'],
+                    round(sum(world['result']['contribution'] for world in held) / 2, 2))
+                self.assertEqual({world['policy']['membership_fee'] for world in worlds}, {399})
+                self.assertEqual(engine.read(run)['tracks'], report['tracks'])
+                self.assertEqual(report['counts']['provider_calls'], 0)
+
+    def test_final_fare_below_declared_minimum_retains_no_offer_without_invalid_replay(self):
+        with patch('backend.fare_estimate.estimate', return_value={'grid':[255]}), \
+                patch('llm_agent.experiment.load_local_env'):
+            run = engine.start({'flight_id':'NET-HKG-ICN-20270521','customers':14,'fare_min':250})['run_id']
+            report = self.finish(run)
+        track = report['tracks'][0]
+        self.assertEqual(report['status'], 'completed', report['error'])
+        self.assertEqual(track['best']['member_fare'], 255)
+        self.assertEqual(track['decision'], 'NO_OFFER')
+        self.assertIsNone(track['final_offer'])
+        self.assertIsNone(track['validation'])
+        self.assertIn('declared price bounds', track['decision_reason'])
+        self.assertFalse(any(world['phase'].startswith('holdout') for world in engine.export_run(run)['worlds']))
+
+    def test_legacy_scope_keeps_raw_final_fare_and_inconsistent_new_holdout_cannot_publish(self):
+        config = engine.validate({'flight_id':'NET-HKG-ICN-20270521','customers':14})
+        config.pop('final_member_fare_policy')
+        with patch.object(engine, 'validate', return_value=config), \
+                patch('backend.fare_estimate.estimate', return_value={'grid':[255]}), \
+                patch('llm_agent.experiment.load_local_env'):
+            run = engine.start({'flight_id':config['flight_id']})['run_id']
+            report = self.finish(run)
+        track = report['tracks'][0]
+        self.assertEqual(track['validation']['member_fare'], 255)
+        self.assertNotIn('final_offer', track)
+        # Marking a legacy 255 replay as the new 249 policy cannot manufacture
+        # supporting evidence for a price that was never actually evaluated.
+        store.update(run, config={**store.run(run)['config'], 'final_member_fare_policy':FINAL_MEMBER_FARE_VERSION})
+        viewed = engine.read(run)['tracks'][0]
+        self.assertEqual(viewed['decision'], 'NO_OFFER')
+        self.assertIsNone(viewed['final_offer'])
+        self.assertIsNone(viewed['validation'])
+        self.assertIn('do not match', viewed['decision_reason'])
 
     def test_both_tracks_use_fixed_fee_in_every_world_without_real_provider_calls(self):
         from backend.probabilistic_customer import choose as probability

@@ -280,6 +280,25 @@ Final native checks: 290 backend and 31 publication/data/documentation tests, wi
 - 合併後原生完整檢查通過 374 個後端及 31 個根測試，文檔／凍結制品驗證通過。瀏覽器驗證覆蓋 Experiments 回饋讀取、切換輪次、錯誤恢復、空狀態、純文字安全顯示、手機及整數價格。
 - 實際已保存的 `adaptive-1afc5c96d92f465d` 可讀到第六輪 16 個決策；查看頁面零 POST、零新 LLM 呼叫、零瀏覽器錯誤，切回 Forecast 正常載入。移除背景預測初始化，避免只看回饋時執行其他頁面的計算。
 
+
+## 2026-11-14 · 最終會員宣傳票價
+
+- 新增 `member-marketing-fare-v1`：原價255→249、103→99、259不變；低於30元歸零，30–38向下取尾數9後為29，也歸零，確保重複套用不再變價。搜尋報價、正常基本票價、會費與舊證據不改寫。
+- Adaptive 升至 `member-thompson-v5-marketing`：原始搜尋選價存為 `raw_price`；候選和初始備選在驗證前先格式化。三組獨立驗證仍為格式化初始價、格式化候選與無優惠，呼叫額度不增加。收益、保留價格及前端對照均使用實際驗證價。
+- 指定航班引擎升至 `flight-policy-feedback-v9-marketing`：`best` 保留原搜尋證據，`final_offer` 保存最終票價及實際 holdout 指標。Manage offers／套用草稿使用 `final_offer`；不符合價格下限或驗證政策不相符時保留 NO_OFFER，不能把原始收益套到新價格。
+- 全套原生回歸：380 個後端、31 個根測試通過；文檔與凍結制品檢查通過。瀏覽器覆蓋255→249、103→99、259不變、零價邊界、歷史回放、調整後草稿與手機排版。
+- 額外純數學驗證：`adaptive-771981d0c8f84850`，種子20261124，6輪×16人、3批獨立驗證，0 provider calls。搜尋價格328/164/163/170/214/213；原始候選163→159，初始對照328→319。結果INCONCLUSIVE並保留319，沒有將候選均值較高當作已通過規則；確認世界按159／319／無優惠計算。完整報告及352筆審計位於本機忽略的 `.runtime/marketing-validation-v5/`，新版制品驗證通過。
+- 歷史LLM輸出未重新呼叫或修改。HK$0僅為基本票宣傳價，沒有把未量化宣傳效益記成收入。
+
+
+## 2026-11-14 · 最終宣傳會員票價
+
+- 新增 `member-marketing-fare-v1`：最終基本票價向下取尾數9，取整後低於30元改為0；255→249、103→99、259不變，30–38亦歸零。搜尋報價、正常票價、會費和歷史證據保留原樣。
+- Adaptive v5 在獨立驗證前固定格式化候選及格式化初始對照，按實際報價重播；Scoped v9 保留 raw best，另以 final_offer 保存調整後獨立驗證。Manage offers 使用該 final_offer，不把原價格收益套到新價格。
+- 前端區分搜尋價、宣傳候選與最終保留價；更新製品驗證器以檢查 v5 原始選價／最終報價及配對驗證，舊制品不改寫。
+- 380 個後端及31個根目錄測試通過；完整文檔及凍結制品檢查通過。瀏覽器 mock 測試通過宣傳價邊界、格式化初始對照、最終草稿複製、歷史結果和手機版。
+- 新的純數學端到端 run `adaptive-14158362bab541cc`（seed20261124，3輪，16人，3批獨立驗證）完成：原始選價163→159，初始328→319；驗證 INCONCLUSIVE，保留319。0次provider呼叫。新本地匯出 `.runtime/marketing-fare-v5-check` 的244條audit紀錄通過製品驗證；結果不宣稱改善或真實客戶證據。
+
 ### 2026-11-14 — HK Express network catalogue (`hkx-network-2`) becomes the default
 
 The app's default catalogue is now `simulation/hkx_generated/`: 1,558 flights / 281,998 snapshots covering all 40 HK Express destinations in both directions (80 directed routes) and all four fleet types (A320 180, A320neo 188, A321 230, A321neo 236, one 239-seat A321neo). The legacy 8-route catalogue and its supplements are unchanged and available with `UOPTION_DATASET=legacy`; tests pinned to legacy flights switch with `data.use_dataset('legacy')`.

@@ -127,6 +127,31 @@ try{
  await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$200');
  assert.equal(posts.length,2);assert.equal(posts[1].mode,'live');
  const completedRun=run;
+ // The API owns final-fare projection. The UI must show its checked quote,
+ // keep search evidence unchanged, and preserve older unformatted reports.
+ for(const [raw,price] of [[255,249],[30,0],[38,0],[39,39],[103,99],[259,259]]){
+   run={...completedRun,version:'member-thompson-v5-marketing',config:{...completedRun.config,final_member_fare_policy:'member-marketing-fare-v1'},
+     recommendation:{...completedRun.recommendation,raw_price:raw,price,marketing_adjustment:{policy:'member-marketing-fare-v1',raw_price:raw,price,initial_price_before_marketing:328,initial_price:319}},
+     validation:{...completedRun.validation,final_member_fare_policy:'member-marketing-fare-v1',initial_price_before_marketing:328,initial_price:319,selected_price_before_marketing:raw,selected_price:price,retained_price:price,adoption_result:'ADOPT_CANDIDATE',delta_vs_initial:42,
+       comparisons:[{policy:'initial',price:319,mean_buyers:8,mean_revenue:2552},{policy:'selected',price,mean_buyers:16,mean_revenue:2594},{policy:'no_offer',price:null,mean_buyers:8,mean_revenue:3280}]}};
+   await page.locator('#refresh-run').click();
+   await page.waitForFunction(([raw,price])=>document.getElementById('marketing-fare-note').textContent.includes(`Search selection HK$${raw} → promotional quote HK$${price}`),[raw,price]);
+   assert.equal(await page.locator('#recommended-price').innerText(),`HK$${price}`);
+   assert.equal(await page.locator('#recommendation-title').innerText(),'Promotional base fare');
+   assert.match(await page.locator('#validation-table').innerText(),/Formatted initial fare\s+HK\$319/);
+   assert.match(await page.locator('#validation-detail').innerText(),/initial HK\$328 → HK\$319/);
+   assert.match(await page.locator('#delta-label-initial').innerText(),/formatted initial/);
+   assert.equal(await page.locator('#delta-initial').innerText(),'+HK$42','Holdout result is not recomputed using the raw search price');
+   assert.match(await page.locator('#curve-caption').innerText(),/adjusted promotional fare, which may not have been tested during search/);
+   assert.match(await page.locator('#retained-price-note').innerText(),new RegExp(`Retained promotional fare after confirmation: HK\\$${price}`));
+   assert.match(await page.locator('#round-table tr').first().innerText(),/HK\$328/,'Search observations keep their original quotes');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Promotional quote and formatted-initial labels fit on mobile');
+   if(raw===255){await page.locator('#recommendation').scrollIntoViewIfNeeded();await page.screenshot({path:root+'test-results/promotional-fare-mobile.png'});}
+ }
+ run=completedRun;
+ await page.locator('#refresh-run').click();
+ await page.waitForFunction(()=>document.getElementById('recommendation-title').textContent==='Selected test fare');
+ assert.equal(await page.locator('#marketing-fare-note').isHidden(),true,'Historical v4 reports do not acquire the new final-fare rule');
  for(const [validation,expected,rate] of [
    [{break_even_conversion:.82,max_fulfilled_conversion:.5,break_even_attainable:false},'at most 50.0%','82.0%'],
    [{break_even_conversion:0,max_fulfilled_conversion:.5,break_even_attainable:true},'no additional member purchases are required','0.0%'],
@@ -151,8 +176,9 @@ try{
  await page.locator('#refresh-run').click();await page.getByText('failed: Live call budget exhausted.',{exact:false}).waitFor();
  assert.equal(await page.locator('#start').isEnabled(),true);
  await verifyFeedbackPage(browser,origin,completedRun,legacyRun,errors);
+ await verifyPromotionalScopedOffer(browser,origin,errors);
  assert.deepEqual(errors,[]);
- console.log('Adaptive pricing UI passed: scoped80%cap, target8groups, legacy14groups, explicitprofile, historicalprofile-reload, zeroquota, invalidweights, boundedlive explicitstart, read-onlyreload, modelcurve, freshpairedcohorts, retainedfare, break-even-rate, groundedhypothesis, historicdecimalquotes, roundtrace, independentvalidation, Englishsafeoutputs, failedrun, mobileoverflow, Experiments-only-feedback, saved-run-and-round-links, read-only-feedback-navigation, safe-summary-and-reasons, feedback-errors-and-empty-state. All API calls mocked; no paid calls.');
+ console.log('Adaptive pricing UI passed: scoped80%cap, target8groups, legacy14groups, explicitprofile, historicalprofile-reload, zeroquota, invalidweights, boundedlive explicitstart, read-onlyreload, modelcurve, freshpairedcohorts, retainedfare, break-even-rate, groundedhypothesis, historicdecimalquotes, roundtrace, independentvalidation, Englishsafeoutputs, failedrun, mobileoverflow, Experiments-only-feedback, saved-run-and-round-links, read-only-feedback-navigation, safe-summary-and-reasons, feedback-errors-and-empty-state, promotional-boundaries, formatted-initial-holdout, final-offer-copy-and-matching-metrics, missing-final-no-raw-fallback. All API calls mocked; no paid calls.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 
 
@@ -227,4 +253,45 @@ async function verifyFeedbackPage(browser, origin, currentRun, historicalRun, er
    assert.ok(forecastReads>0,'Forecast loads lazily when the user opens Forecast seats');
    assert.equal(writes,0,'Lazy forecast does not start experiments');
  }finally{await page.close();}
+}
+
+async function verifyPromotionalScopedOffer(browser, origin, errors) {
+ const page=await browser.newPage({viewport:{width:1440,height:1000}});
+ page.on('pageerror',error=>errors.push(error.message));
+ const raw={round:1,member_fare:255,membership_fee:399,total_contribution:500,incremental_contribution:111,baseline_contribution:389,service_rate:.8,mean_member_buyers:5,mean_regular_buyers:2,member_supply_exposure:20,feasible:true,price_evidence_qualified:true,price_evidence_status:'observed_member_sales'};
+ const final={...raw,member_fare:249,raw_member_fare:255,incremental_contribution:90,total_contribution:479,final_member_fare_policy:'member-marketing-fare-v1',validated:true};
+ const config={mode:'math',rounds:1,customers:14,initial_member_fare:328,initial_membership_fee:399,release_fraction:.5,scope,final_member_fare_policy:'member-marketing-fare-v1'};
+ let saved={run_id:'opt-promo-test',status:'completed',config,counts:{},progress:{completed_rounds:1,total_rounds:1},tracks:[{mode:'math',rounds:[raw],best:raw,final_offer:final,validation:final,decision:'OFFER'}]};
+ await page.route('**/api/**',async route=>{
+   const path=new URL(route.request().url()).pathname;
+   if(path==='/api/summary')return route.fulfill({json:{dataset:{rows:0},llm:{configured:false}}});
+   if(path==='/api/flights')return route.fulfill({json:{flights:[]}});
+   if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_days:365}}});
+   if(path==='/api/optimization/runs')return route.fulfill({json:{runs:[saved]}});
+   if(path==='/api/optimization/runs/opt-promo-test')return route.fulfill({json:saved});
+   if(path==='/api/offers')return route.fulfill({json:{offers:[]}});
+   return route.fulfill({status:404,json:{error:'Unexpected promotional UI mock route'}});
+ });
+ try {
+   await page.goto(origin+'/admin#optimization');
+   await page.waitForFunction(()=>document.getElementById('optimization-final-content').textContent.includes('HK$249 promotional base fare'));
+   assert.match(await page.locator('#optimization-final-content').innerText(),/HK\$90 incremental contribution/);
+   assert.match(await page.locator('#optimization-track-cards').innerText(),/Promotional base fare\s+HK\$249/);
+   assert.match(await page.locator('#optimization-track-cards .track-profit').innerText(),/HK\$90/);
+   assert.match(await page.locator('#optimization-rounds-table').innerText(),/HK\$255/,'Raw search round stays unchanged');
+   await page.evaluate(()=>{window.addEventListener('uoption:prepare-policy',event=>{window.preparedPolicy=event.detail;});});
+   await page.locator('#optimization-final-content button').click();
+   const prepared=await page.evaluate(()=>window.preparedPolicy);
+   assert.equal(prepared.member_fare,249,'Offer draft uses the final validated quote, not track.best');
+   assert.equal(prepared.incremental_contribution,90,'Draft retains matching final-quote evaluation');
+   await page.goto(origin+'/admin#optimization');
+   saved={...saved,tracks:[{...saved.tracks[0],final_offer:null}]};
+   await page.locator('#optimization-refresh').click();
+   await page.waitForFunction(()=>document.getElementById('optimization-final-content').textContent.includes('final promotional quote is unavailable'));
+   assert.equal(await page.locator('#optimization-final-content button').count(),0,'Missing final quote never falls back to raw search in a new-policy run');
+   saved={...saved,config:{...config,final_member_fare_policy:undefined},tracks:[{...saved.tracks[0],best:{...raw,member_fare:255.5},validation:{...raw,member_fare:255.5},final_offer:undefined}]};
+   await page.locator('#optimization-refresh').click();
+   await page.waitForFunction(()=>document.getElementById('optimization-final-content').textContent.includes('HK$255.5 member base fare'));
+   assert.equal(await page.locator('#optimization-final-content button').count(),1,'Historical scoped records retain their original unformatted quote');
+ } finally { await page.close(); }
 }

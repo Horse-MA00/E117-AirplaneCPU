@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_FLOOR
 
 MEMBER_FARE_CAP_RATIO = 0.8
 PRICE_VERSION = 'whole-hkd-quotes-v1'
+FINAL_MEMBER_FARE_VERSION = 'member-marketing-fare-v1'
 
 
 def integer_price(value, name='price', low=0, high=None):
@@ -26,6 +27,20 @@ def member_fare_cap(normal_base_fare):
     """Highest whole-HKD member fare, at most 80% of the executable normal quote."""
     normal = quoted_base_fare(normal_base_fare)
     return int((Decimal(normal) * Decimal('0.8')).to_integral_value(rounding=ROUND_FLOOR))
+
+
+def final_member_fare(value):
+    """Project a final member quote down to zero or an amount ending in nine.
+
+    Apply the free-fare threshold after projection as well: 30..38 would
+    otherwise become 29 and change again if processed twice. Search quotes,
+    normal fares and membership fees do not use this final-offer rule.
+    """
+    price = quoted_base_fare(value)
+    if price < 30:
+        return 0
+    rounded = ((price - 9) // 10) * 10 + 9
+    return rounded if rounded >= 30 else 0
 
 
 def check_member_fare(fare, normal_base_fare):

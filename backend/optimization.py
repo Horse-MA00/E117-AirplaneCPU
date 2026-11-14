@@ -17,9 +17,10 @@ import time
 import uuid
 
 from . import optimization_store as store
+from .fare_policy import FINAL_MEMBER_FARE_VERSION, final_member_fare
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'flight-policy-feedback-v8-whole-hkd'
+VERSION = 'flight-policy-feedback-v9-marketing'
 FORMULA_GRID = 'formula-p-star-fine-grid-v2-whole-hkd'
 CONTROLLED_PRICE_PROTOCOL = 'fixed-seat-profile-local-fare-v2-whole-hkd'
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,7 +80,8 @@ def validate(body):
     if scope:
         cfg.update(scope=scope, flight_id=scope['flight_id'], forecast_day=scope['as_of_day'], flights=1,
                    membership_fee_fixed=True, annual_fee_allocation=1/3,
-                   price_comparison_protocol=CONTROLLED_PRICE_PROTOCOL)
+                   price_comparison_protocol=CONTROLLED_PRICE_PROTOCOL,
+                   final_member_fare_policy=FINAL_MEMBER_FARE_VERSION)
     total = body.get('total_live_budget', 1500 if scope and cfg['mode'] != 'math' else None)
     if total is not None:
         cfg['total_live_budget'] = _number(total,'total_live_budget',0,10000,True)
@@ -106,7 +108,7 @@ def _id(run_id):
 
 
 def provenance():
-    files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py', 'backend/data.py', 'backend/contribution_explanation.py',
+    files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py', 'backend/fare_policy.py', 'backend/data.py', 'backend/contribution_explanation.py',
              'backend/probabilistic_customer.py', 'backend/fare_estimate.py', 'backend/nhpp.py', 'backend/nhpp_v3.py', 'backend/forecast.py', 'simulation/generated/calibration_v3_robust.json', 'simulation/generated/nhpp_v3_robust_final.json', 'simulation/evaluate_nhpp_v3.py', 'simulation/calibrate_nhpp_v3_robust.py', 'simulation/generated/calibration_v3.json', 'backend/release_policy.py', 'backend/seat_feedback.py',
              'simulation/generate.py', 'simulation/generated/calibration_v2.json',
              'llm_agent/market_adapter.py', 'llm_agent/population.py', 'llm_agent/output_contract.py',
@@ -224,6 +226,17 @@ def _counts(run_id, **increments):
 
 class Paused(Exception):
     pass
+
+
+def _final_candidate(config, best):
+    """Freeze a new scoped offer before holdout; never mutate search evidence."""
+    prices = {key: best[key] for key in ('member_fare', 'membership_fee', 'seat_calibration')}
+    if config.get('final_member_fare_policy') != FINAL_MEMBER_FARE_VERSION:
+        return prices
+    prices['member_fare'] = final_member_fare(best['member_fare'])
+    if not config['fare_min'] <= prices['member_fare'] <= config['fare_max']:
+        return None
+    return prices
 
 
 def _world(run_id, mode, phase, round_number, seed, prices, enabled, budget):
@@ -405,11 +418,19 @@ def run_batch(run_id, max_calls=60):
         best = best_candidate(store.rounds(run_id, mode))
         if best is None:
             continue
-        prices = {key: best[key] for key in ('member_fare', 'membership_fee', 'seat_calibration')}
+        prices = _final_candidate(cfg, best)
+        if prices is None:
+            store.record(run_id, None, {'event': 'optimization_final_fare_out_of_bounds', 'mode': mode,
+                'raw_member_fare': best['member_fare'],
+                'member_fare': final_member_fare(best['member_fare']),
+                'final_member_fare_policy': cfg['final_member_fare_policy']})
+            continue
         test_baseline = [_world(run_id, mode, 'holdout_baseline', 0, seed, initial, False, budget) for seed in _seeds(cfg, True)]
         tests = [_world(run_id, mode, 'holdout', 0, seed, prices, True, budget) for seed in _seeds(cfg, True)]
         result = aggregate(prices, tests, test_baseline, cfg)
-        # Holdout only accepts/rejects a frozen hypothesis; it cannot replace it.
+        # Holdout accepts/rejects the already formatted offer, never selects a price.
+        if cfg.get('final_member_fare_policy') == FINAL_MEMBER_FARE_VERSION:
+            result.update(raw_member_fare=best['member_fare'], final_member_fare_policy=FINAL_MEMBER_FARE_VERSION)
         store.record(run_id, None, {'event': 'optimization_holdout_completed', 'mode': mode, 'result': result})
     _progress(run_id, phase='completed', active_mode=None, active_world=None)
     if cfg.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL:
@@ -547,26 +568,45 @@ def read(run_id):
         rows = store.rounds(run_id, mode)
         best = best_candidate(rows)
         with store.connection() as db:
-            world_rows = db.execute("SELECT mode,phase,round_number,seed,result,status FROM optimization_worlds WHERE run_id=? AND mode=? AND status='completed' AND (phase IN ('baseline','holdout','holdout_baseline') OR (phase='search' AND round_number=?)) ORDER BY seed", (run_id, mode, best['round'] if best else -1)).fetchall()
-        worlds = [{**dict(row), 'result':json.loads(row['result'])} for row in world_rows]
+            world_rows = db.execute("SELECT mode,phase,round_number,seed,policy,result,status FROM optimization_worlds WHERE run_id=? AND mode=? AND status='completed' AND (phase IN ('baseline','holdout','holdout_baseline') OR (phase='search' AND round_number=?)) ORDER BY seed", (run_id, mode, best['round'] if best else -1)).fetchall()
+        worlds = [{**dict(row), 'policy':json.loads(row['policy']), 'result':json.loads(row['result'])} for row in world_rows]
         actual = [row['result'] for row in worlds if row['phase']=='holdout']
         baseline = [row['result'] for row in worlds if row['phase']=='holdout_baseline']
         validation = None
+        final_offer = None
+        formatted = cfg.get('final_member_fare_policy') == FINAL_MEMBER_FARE_VERSION
+        candidate = _final_candidate(cfg, best) if best else None
+        final_reason = None
+        if formatted and best and candidate is None:
+            final_reason = 'The final member fare falls outside this run’s declared price bounds; no offer retained.'
         if best and len(actual) == len(baseline) == 2:
-            validation = aggregate({key: best[key] for key in ('member_fare', 'membership_fee', 'seat_calibration')}, actual, baseline, cfg)
-            from backend.seat_feedback import diagnostics
-            validation['seat_feedback'] = diagnostics([sample for report in actual for sample in report['seat_feedback_samples']])
+            # The recorded world policy is authoritative. In a new run the
+            # formatted price can differ from the unmodified search winner.
+            prices = ([{key: world['policy'].get(key) for key in ('member_fare', 'membership_fee', 'seat_calibration')}
+                       for world in worlds if world['phase'] == 'holdout'] if formatted else [candidate])
+            if formatted and (candidate is None or any(price != candidate for price in prices)):
+                final_reason = 'Saved holdout policies do not match the final member fare; no offer retained.'
+            else:
+                validation = aggregate(prices[0], actual, baseline, cfg)
+                from backend.seat_feedback import diagnostics
+                validation['seat_feedback'] = diagnostics([sample for report in actual for sample in report['seat_feedback_samples']])
+                if formatted:
+                    validation.update(raw_member_fare=best['member_fare'], final_member_fare_policy=FINAL_MEMBER_FARE_VERSION)
+                    final_offer = {**validation, 'validated': True}
         decision = 'PENDING'
         if validation is not None:
             decision = 'OFFER' if best['feasible'] and best['incremental_contribution'] > 0 and validation['feasible'] and validation['incremental_contribution'] > 0 else 'NO_OFFER'
-        elif rows and best is None and saved['status']=='completed':
+        elif rows and (best is None or final_reason) and saved['status']=='completed':
             decision = 'NO_OFFER'
         track = {'mode': mode, 'rounds': rows, 'best': best, 'validation': validation, 'decision': decision}
+        if formatted:
+            track['final_offer'] = final_offer
+            track['final_member_fare_policy'] = FINAL_MEMBER_FARE_VERSION
         if cfg.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL:
             track.update(price_comparison_protocol=CONTROLLED_PRICE_PROTOCOL,
                 proposed_next_seat_calibration=rows[-1].get('next_seat_calibration') if rows else None,
                 seat_feedback_application='proposed_only_fixed_during_price_comparison',
-                decision_reason='No informative member offer exposure; no price recommendation retained.' if rows and best is None else None)
+                decision_reason=final_reason or ('No informative member offer exposure; no price recommendation retained.' if rows and best is None else None))
         from .contribution_explanation import describe_track
         track['contribution_explanation'] = describe_track(cfg, track, worlds)
         tracks.append(track)
@@ -597,6 +637,8 @@ def read(run_id):
             'Profit is flight-attributed contribution: one third of new annual pass revenue and service cost, full per-flight costs; fees/taxes and aircraft fixed costs excluded.',
             'Normal demand continuation is independently sampled from observed booking pace with random growth/jumps. The forecast does not generate its own evaluation labels.',
             'Highest profit, highest margin and most buyers may be different tested prices; these are separate objectives.']
+    if cfg.get('final_member_fare_policy') == FINAL_MEMBER_FARE_VERSION:
+        saved['assumptions'] += ['The search winner stays in the audit unchanged. Its member fare is rounded down to an amount ending in 9 (or zero below HK$30), then that exact final offer is evaluated on holdout markets before publication.']
     if cfg.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL:
         saved['assumptions'] = [a for a in saved['assumptions'] if not a.startswith('Base NHPP parameters remain frozen.')]
         saved['assumptions'] += ['Base NHPP and the seat-feedback profile are fixed throughout this fare comparison and holdout. Completed outcomes produce a proposed next-run calibration, which is not applied within this experiment.',

@@ -18,14 +18,14 @@ import uuid
 import numpy as np
 
 from . import adaptive_store as store
-from .fare_policy import member_fare_cap
+from .fare_policy import member_fare_cap, final_member_fare, FINAL_MEMBER_FARE_VERSION
 from .initial_policy import flight_scope
 from .member_response import PurchasePosterior, recommend, learner_view, whole_price
 from llm_agent.adaptive_customers import DecisionClient, prompt_metadata
 from llm_agent.weighted_population import population, metadata, DEFAULT_PROFILE, LEGACY_PROFILE
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'member-thompson-v4-paired'
+VERSION = 'member-thompson-v5-marketing'
 ROOT = Path(__file__).resolve().parents[1]
 _active = set()
 _guard = threading.Lock()
@@ -83,6 +83,7 @@ def validate(body):
     cfg['estimated_calls_upper_bound'] = cfg['rounds']*(2*cfg['customers']+1)+3*cfg['validation_repeats']*cfg['customers']
     cfg['hypothesis_round_interval'] = 3
     cfg['prediction_support_size'] = 128
+    cfg['final_member_fare_policy'] = FINAL_MEMBER_FARE_VERSION
     if mode == 'live' and cfg['max_calls'] < cfg['estimated_calls_upper_bound']:
         raise ValueError(f"max_calls must cover this complete experiment's upper bound of {cfg['estimated_calls_upper_bound']} calls; reduce rounds/customers or increase the explicit budget")
     if mode == 'live' and not status()['live_configured']:
@@ -409,12 +410,21 @@ def _worker(run):
             final = recommend(model,support,selected['normal_base_fare'],selected['releasable_seats'],rng,
                               draw=False,revenue_fraction=cfg['revenue_fraction'],candidate_prices=tested_prices,
                               target_customers=cfg['customers'])
-            chosen = whole_price(final['price'])
+            raw_chosen = whole_price(final['price'])
+            chosen = final_member_fare(raw_chosen)
+            initial_confirmation_price = final_member_fare(selected['initial_member_fare'])
             full_curve = recommend(model,support,selected['normal_base_fare'],selected['releasable_seats'],
                                    np.random.default_rng(cfg['seed']+900019),draw=False,
                                    revenue_fraction=cfg['revenue_fraction'],target_customers=cfg['customers'])['curve']
-            run['recommendation'] = {'price':chosen,'selection':'max_buyers_within_revenue_fraction',
-                'revenue_fraction':cfg['revenue_fraction'],'reason':'Public-feature prediction over tested whole-HKD prices, frozen before fresh confirmation cohorts.',
+            run['recommendation'] = {'price':chosen,'raw_price':raw_chosen,
+                'selection':'max_buyers_within_revenue_fraction',
+                'marketing_adjustment':{'policy':FINAL_MEMBER_FARE_VERSION,
+                    'raw_price':raw_chosen,'price':chosen,'changed':chosen != raw_chosen,
+                    'initial_price_before_marketing':selected['initial_member_fare'],
+                    'initial_price':initial_confirmation_price,
+                    'rule':'Final fares round down to an amount ending in 9; any resulting fare below HK$30 becomes HK$0. Both final quotes are frozen before holdout.'},
+                'revenue_fraction':cfg['revenue_fraction'],
+                'reason':'Select using public-feature predictions over tested whole-HKD prices, then apply the final member-fare rule before fresh confirmation. Search-price estimates are not validation results for the adjusted fare.',
                 'revenue_max_price':final.get('best_revenue_candidate',final)['price'],
                 'volume_max_price':final.get('most_buyers_candidate',final)['price'],
                 'posterior':model.summary(),'curve':final['curve'],'model_curve':full_curve}
@@ -425,7 +435,7 @@ def _worker(run):
                 validation_seed = cfg['seed']+500003+1009*j
                 heldout = population(cfg['customers'],validation_seed,weights=cfg['weights'],scope=selected,profile=cfg['profile'])
                 replayed = {}
-                for policy,price in [('initial',selected['initial_member_fare']),('selected',chosen),('no_offer',None)]:
+                for policy,price in [('initial',initial_confirmation_price),('selected',chosen),('no_offer',None)]:
                     reused = price in replayed
                     if not reused:
                         replayed[price] = evaluate(client,heldout,selected,price,validation_seed)
@@ -436,7 +446,12 @@ def _worker(run):
                     run['counts'] = client.stats()
                     run['progress']['completed_validation_worlds'] = len(worlds)
                     store.save(run)
-            run['validation'] = compare_validation(worlds,selected['initial_member_fare'],chosen,cfg['seed'])
+            run['validation'] = compare_validation(worlds,initial_confirmation_price,chosen,cfg['seed'])
+            run['validation'].update(final_member_fare_policy=FINAL_MEMBER_FARE_VERSION,
+                initial_price_before_marketing=selected['initial_member_fare'],
+                selected_price_before_marketing=raw_chosen,
+                initial_price=initial_confirmation_price, selected_price=chosen,
+                comparison_reference='formatted_initial_fare')
             run['validation_worlds'] = worlds
             run['status'] = 'completed'
             run['progress']['phase'] = 'completed'
@@ -472,7 +487,8 @@ def start(body, *, blocking=False):
                 'Quoted fares are whole HKD; weighted averages and statistical estimates may have decimals.',
                 'Parallel intent elicitation followed by fixed-priority integer inventory clearing; no seat is reserved by an LLM.',
                 'Weighted demand estimates and actual panel cash/seat transactions are reported separately.',
-                'Independent validation is read once after freezing the selected tested price; no refitting on holdout.']}
+                'Final member quotes round down to an amount ending in nine, with any result below HK$30 becoming HK$0; raw search prices remain recorded.',
+                'Independent validation compares the formatted initial fallback, formatted selected fare and no offer after freezing both final quotes; no refitting on holdout.']}
     with _guard:
         if _active:
             raise ValueError('An adaptive experiment is already running; wait for its results')

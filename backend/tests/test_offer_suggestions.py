@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 from backend import offer_suggestions as subject, optimization_store as runs
 from backend.store import Store
+from backend.fare_policy import FINAL_MEMBER_FARE_VERSION
 
 
 class OfferSuggestionTests(unittest.TestCase):
@@ -155,6 +156,31 @@ class OfferSuggestionTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 subject.validate_draft(draft|change,self.inventory,self.forecast)
         subject.validate_draft({'flight_id':'SYN-B'},self.inventory,self.forecast)
+
+    def test_new_policy_publishes_only_the_replayed_final_fare_including_zero(self):
+        for index, (raw, final) in enumerate(((255, 249), (29, 0))):
+            with self.subTest(raw=raw):
+                run = self.add(str(index))
+                config = runs.run(run)['config']
+                runs.update(run, config={**config, 'final_member_fare_policy':FINAL_MEMBER_FARE_VERSION})
+                track = self.reports[run]['tracks'][0]
+                track['best']['member_fare'] = raw
+                track['validation'] = {**track['validation'], 'member_fare':final}
+                track['final_offer'] = {**track['best'], **track['validation'],
+                    'raw_member_fare':raw, 'final_member_fare_policy':FINAL_MEMBER_FARE_VERSION, 'validated':True}
+                result = subject.suggestions('SYN-A',14,self.inventory,self.forecast)
+                self.assertEqual(result['results'][0]['member_fare'], final)
+                self.assertEqual(result['suggestions'][0]['member_fare'], final)
+                self.assertEqual(result['suggestions'][0]['raw_member_fare'], raw)
+                draft = {'optimization_run_id':run,'optimization_mode':'math','flight_id':'SYN-A',
+                    'days_to_departure':14,'base_fare':final,'quantity':1}
+                subject.validate_draft(draft,self.inventory,self.forecast)
+                with self.assertRaisesRegex(ValueError, 'Draft exceeds'):
+                    subject.validate_draft({**draft, 'base_fare':raw},self.inventory,self.forecast)
+                track['final_offer'] = None
+                missing = subject.suggestions('SYN-A',14,self.inventory,self.forecast)
+                self.assertEqual(missing['suggestions'], [])
+                self.assertFalse(missing['results'][0]['validated'])
 
 
 if __name__ == '__main__': unittest.main()
