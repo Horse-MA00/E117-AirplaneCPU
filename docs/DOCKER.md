@@ -138,3 +138,36 @@ Docker 分支已纳入 main 的 0573d40：新版 Admin/Client Portal、联合票
 新版端到端检查包含六轮联合优化：18 个市场全部完成、零 provider 调用；管理端、会员端、价格曲线和联合优化浏览器检查通过。`scripts/smoke_container.py` 现在还验证联合优化 SQLite 持久化，可用 `--joint-run opt-...` 复用已完成的数学实验，避免重复运行。
 
 本次整合期间 main 又更新到 1b4e98f，Docker 分支一并纳入国家／地区与日期范围搜索。Temporal 兼容 bundle 已随前端静态文件进入镜像，运行时不需要 npm 或 CDN；原生和强制本地 fallback 两条浏览器路径均通过，会员模拟购票回归通过。
+
+## Apple Silicon 本机实际运行（2026-11-14）
+
+本次从 `6ee01e5` 快进拉取 GitHub main 到 `db2ca0d`，然后在实体 Mac 的 Docker
+Desktop 中完成原生 Linux **arm64** 构建和完整运行验证，不依赖 amd64 模拟。
+构建镜像为 `uoption-fly-pass:local`，ID 前缀 `a1f22ed1b7b0`；容器用户 UID 为 10001。
+
+本机原有 Python 服务占用 8000，因此 Git 忽略的 `.env` 保存 `APP_PORT=18080`：
+
+- Admin：http://127.0.0.1:18080/admin
+- Client：http://127.0.0.1:18080/members
+- Health：http://127.0.0.1:18080/api/health
+
+`docker compose up --build -d --wait --wait-timeout 180` 成功，容器
+`uoption-fly-pass-app-1` 为 healthy。之后在项目目录使用普通 `docker compose`
+命令即可沿用此本机端口；其他机器仍按自己的 `.env` 或默认 8000 运行。
+
+验证结果：
+
+- 隔离测试服务：151 项 backend、19 项原模拟器测试全部通过，冻结数据／历史实验校验通过。
+- 容器实际 HTTP：NHPP、发布会员配额、模拟入会／购票、4 人规则面板、连续定价、
+  3 轮联合数学优化全部完成；provider calls 为零。
+- Chrome 157 经 18080 访问真实容器，Admin、会员界面、38 航点／日期搜索和价格收益图
+  四套浏览器检查通过，包含 390px 手机布局。会员和航点特殊状态使用隔离 fixtures。
+- HTTP smoke 完成后执行 `docker compose up -d --force-recreate --wait app`，再执行
+  `docker compose exec -T app python scripts/smoke_container.py --url http://127.0.0.1:18080 --verify-only`，
+  原会员、订单、面板、连续定价和联合优化结果均保留。
+
+持久化验证记录在命名卷内的 `data/private/container-smoke.json`；本次联合优化为
+`opt-c33af54c87b84089`。卷 `uoption-fly-pass_app-data` 独立于宿主机旧数据，
+未自动迁入本机原有的会员、订单或私有实验。已提交的合成数据和历史实验随镜像提供。
+API 配置仅由 `.env.local` 在运行时注入；镜像内确认不存在 `.env`、`.env.local`、
+`.git`、虚拟环境、node_modules 或浏览器截图。本次无需修改容器化源码。

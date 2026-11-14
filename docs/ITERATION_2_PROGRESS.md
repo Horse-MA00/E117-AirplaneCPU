@@ -124,4 +124,11 @@ Docker integration follow-up: also incorporated main 1b4e98f flexible country/da
 - 修正新增確切日輸入的驗證與焦點：五位年份、未填完整日期拒絕；填寫新範圍或合法確切日可恢復；若進階欄已收起，驗證會先展開再聚焦錯誤欄。
 - 新 route-catalog 回歸於 Chrome 157 及 Chromium 141 通過，包含空／稀疏優惠下目錄完整、海外返回 HKG、未知代碼、自由選日、日期範圍、錯誤修復、刷新、重設及 390px 排版。既有 flexible-search／member-portal smoke 通過，獨立審查未留阻塞問題；全部 fixture 測試，零新增 LLM 呼叫或真實付款。
 
+### 在本機 Docker 運行最新完整專案（2026-11-14）
+
+- 按使用者要求由 `6ee01e5` 快進拉取至 `db2ca0d`，納入容器化、持久化卷、健康檢查、連續票價總貢獻圖及最新會員航點／日期修正；本地未追蹤使用者檔案保留。
+- 啟動 Docker Desktop，在實體 Apple Silicon 上原生建置 Linux arm64。原 Python 8000 服務保留，忽略的 `.env` 設定 Docker `APP_PORT=18080`；Admin／Client／API 共用一個 app 容器，健康檢查正常。
+- 容器內 151 backend＋19 模擬器測試及凍結資料校驗通過；真實 HTTP 模擬購票、規則面板、連續定價和三輪數學聯合優化完成。四套瀏覽器檢查經 18080 通過，無付費 LLM 或 OAG 呼叫。
+- 完成所有作業後重建 app，再以 `--verify-only` 確認會員、訂單及實驗均由命名卷保留。宿主機既有私有資料沒有導入，Docker 使用獨立資料卷；詳細命令與證據見 DOCKER.md 的 Apple Silicon 本機實際運行章節。
+
 Docker refresh: integrated main 6ee01e5 (airport/date choices independent of released inventory) on feature/docker-containerization. Rebuilt the full application image, passed 170 Python tests and frozen artifact verification, route-catalog browser regression, native/fallback Temporal search, and real simulated member checkout. Existing membership, booking, panel, fare-search and joint-optimization records survived recreation. Main remains untouched by this integration.
