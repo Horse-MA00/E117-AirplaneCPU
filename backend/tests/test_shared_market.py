@@ -37,6 +37,56 @@ def quoted_market(party=1):
 
 
 class SharedMarketTests(unittest.TestCase):
+    def test_subscription_reference_distinguishes_current_and_after_join_validity(self):
+        state=create_market({'flight_count':6,'customer_count':1},117,
+                            {'member_fare':84,'membership_fee':399})
+        observed=next_observation(state)
+        customer=state['customers'][observed['customer_id']]
+        customer.update(membership_started=None,membership_expires=None,budget_cents=61870,initial_budget_cents=61870)
+        customer['person'].update(party_size=1,checked_bags=0,minimum_notice_days=0)
+        for flight in state['flights'].values():
+            if flight['active']:
+                flight.update(base_fare=560,member_remaining=20,protection_remaining=0)
+                flight['quota_cohorts']=[{'round_day':28,'issued':20,'remaining':20,'sold':0,'expired':0}]
+        observed=next_observation(state)
+        self.assertEqual(observed['stage'],'subscription')
+        member=next(o for o in observed['current_quote_reference'] if o['action']=='BUY_MEMBER')
+        self.assertFalse(member['membership_valid_for_departure'])
+        self.assertTrue(member['membership_eligibility']['valid_if_join_now'])
+        self.assertEqual(member['membership_eligibility']['status'],'eligible_if_join_now')
+        facts=next(f for f in observed['subscription_comparisons'] if f['member_option_id']==member['id'])
+        self.assertEqual(facts['member_ticket_total'],334)
+        self.assertEqual(facts['total_outlay_for_pass_and_ticket'],733)
+        self.assertEqual(facts['wallet_shortfall'],114.3)
+        self.assertEqual(facts['ticket_savings_before_pass_fee'],476)
+        self.assertEqual(facts['net_savings_after_membership_fee'],77)
+        self.assertEqual(facts['membership_fee_vs_ticket_savings'],'less_than')
+        self.assertFalse(facts['affordable_with_current_wallet'])
+        self.assertIn('JOIN_PASS',observed['allowed_actions'])
+        self.assertFalse(observed['membership']['join_now']['reserves_a_seat'])
+        # A shorter pass that expires before departure really is ineligible.
+        state['config']['membership_days']=1
+        later=next_observation(state)
+        member=next(o for o in later['current_quote_reference'] if o['id']==member['id'])
+        self.assertFalse(member['membership_eligibility']['valid_if_join_now'])
+        self.assertEqual(member['membership_eligibility']['status'],'new_pass_expires_before_departure')
+
+    def test_subscription_existing_member_does_not_add_fee_to_reference_payment(self):
+        state=create_market({'flight_count':6,'customer_count':1},117,{'member_fare':84,'membership_fee':399})
+        observed=next_observation(state)
+        customer=state['customers'][observed['customer_id']]
+        customer.update(membership_started=0,membership_expires=365,budget_cents=100000)
+        customer['person'].update(party_size=1,checked_bags=0,minimum_notice_days=0)
+        for flight in state['flights'].values():
+            if flight['active']:
+                flight.update(base_fare=560,member_remaining=20,protection_remaining=0)
+                flight['quota_cohorts']=[{'round_day':28,'issued':20,'remaining':20,'sold':0,'expired':0}]
+        observed=next_observation(state)
+        facts=observed['subscription_comparisons'][0]
+        self.assertEqual(facts['additional_membership_fee'],0)
+        self.assertEqual(facts['total_outlay_for_pass_and_ticket'],334)
+        self.assertEqual(facts['net_savings_after_membership_fee'],476)
+
     def test_policy_pairing_and_json_resume(self):
         config = {"flight_count": 6, "customer_count": 6}
         baseline = create_market(config, 117, {"name": "NO_OFFER"})

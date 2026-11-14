@@ -33,7 +33,7 @@ def main():
     network = [f for f in flights if f['flight_id'].startswith('NET-')]
     assert len(network)==222 and len({(f['origin'],f['destination']) for f in network})==74
     records=[]
-    for flight_id in ('NET-HKG-HND-20270518','NET-HND-HKG-20270521'):
+    for flight_id in ('DEMO-HKG-ICN-20270515','DEMO-ICN-HKG-20270518'):
         suggestion = call('/api/optimization/initial-policy',{'flight_id':flight_id,'forecast_day':28})
         start = call('/api/optimization/runs',{'flight_id':flight_id,'forecast_day':28,'rounds':3,'customers':4,
             'mode':'math','max_calls':0,'initial_member_fare':1999,'initial_membership_fee':99,'program_cost':0})
@@ -50,7 +50,7 @@ def main():
         records.append({'run_id':start['run_id'],'scope':{k:scope[k] for k in ('flight_id','normal_base_fare','available_seats')},
                         'p0':suggestion['initial_member_fare'],'decision':report['tracks'][0]['decision']})
     if args.live:
-        start=call('/api/optimization/runs',{'flight_id':'NET-HKG-HND-20270518','forecast_day':28,
+        start=call('/api/optimization/runs',{'flight_id':'DEMO-HKG-ICN-20270515','forecast_day':28,
             'rounds':1,'customers':1,'mode':'live','max_calls':2,'total_live_budget':64,
             'initial_membership_fee':99,'program_cost':0})
         report=wait(start['run_id'])

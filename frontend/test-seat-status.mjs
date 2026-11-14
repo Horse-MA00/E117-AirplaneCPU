@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {seatStatus} from './seat-status.js';
+const base={protection_p90:103,risk_release_ceiling:7,releasable_seats:0,release_status:{safe_capacity:7,total_active_unsold:0,currently_bookable:0,member_sold:0,new_release_limit:0}};
+const off=seatStatus(base,180,70,13);
+assert.equal(off.headroom,7);assert.equal(off.newSeats,0);assert.equal(off.published,0);
+assert.match(off.reason,/7 seats of forecast headroom; next release D7/);
+const carried=seatStatus({...base,release_status:{...base.release_status,total_active_unsold:7,currently_bookable:7}},180,70,14);
+assert.equal(carried.newSeats,0);assert.equal(carried.published,7);assert.equal(carried.unpublished,0);
+assert.match(carried.reason,/quota already covers/);
+const sold=seatStatus({...base,protection_p90:95,release_status:{...base.release_status,member_sold:8}},180,70,13);
+assert.equal(sold.occupied,78);assert.equal(sold.sold,8);
+const fullyProtected=seatStatus({...base,protection_p90:300,release_status:{...base.release_status,member_sold:8}},180,70,28);
+assert.equal(fullyProtected.protection,102);assert.equal(fullyProtected.headroom,0);
+for(const result of [off,carried,sold,fullyProtected])assert.equal(result.parts.reduce((sum,p)=>sum+p.value,0),180);
+const authoritative=seatStatus({...base,seat_inventory:{capacity:180,normal_booked:70,member_booked:8,occupied:78,physical_available:102,normal_protected:95,member_headroom:7,published_bookable:3,unpublished_headroom:4,new_releasable_today:4,held_seats:0,next_release_day:7,release_reason:'Authoritative server reason.'}},999,999,14);
+assert.equal(authoritative.capacity,180);assert.equal(authoritative.newSeats,4);assert.equal(authoritative.reason,'Authoritative server reason.');
+console.log('Seat inventory passed: off-round headroom, carried quota, sold seats once, physical protection clamp, exact capacity, authoritative API contract.');
+
+const held=seatStatus({...base,seat_inventory:{capacity:180,normal_booked:70,member_booked:0,occupied:70,physical_available:110,normal_protected:103,member_headroom:7,published_bookable:0,unpublished_headroom:3,new_releasable_today:0,held_seats:4,held_published_headroom:4,next_release_day:null,release_state:'historical_view',release_reason:'Historical view.'}},180,70,13);
+assert.equal(held.unpublished+held.published+held.heldPublished,held.headroom);assert.equal(held.historical,true);
+assert.equal(held.parts.reduce((total,p)=>total+p.value,0),180);
+const conflict=seatStatus({...base,seat_inventory:{capacity:180,normal_booked:178,member_booked:2,confirmed_member_bookings:5,reported_occupied:183,member_inventory_overage:3,occupied:180,physical_available:0,normal_protected:0,member_headroom:0,published_bookable:0,unpublished_headroom:0,new_releasable_today:0,held_seats:0,next_release_day:null,release_reason:'No physical seats.'}},180,178,7);
+assert.equal(conflict.confirmedMembers,5);assert.equal(conflict.reportedOccupied,183);assert.equal(conflict.overage,3);assert.equal(conflict.parts.reduce((total,p)=>total+p.value,0),180);
+console.log('Seat inventory edge cases passed: held published headroom conserved; raw confirmed overcapacity reported separately from physical partition.');

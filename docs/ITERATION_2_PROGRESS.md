@@ -144,3 +144,23 @@ Docker refresh: integrated main 6ee01e5 (airport/date choices independent of rel
 本輪最終驗證：168 backend＋19 simulator測試通過，22組資料／實驗artifact校驗通過；五套Chrome桌面／手機流程通過。兩個不同方向／日期HTTP數學實驗各3輪8市場通過；實際DeepSeek 1人1輪6市場共21次新呼叫、0快取／失敗、27強制動作，2決策內部批次自動續跑10次，64總額度內完成。三次實驗均正確保留NO_OFFER。報告及redacted raw保存在flight_hnd_*_20261114，詳細限制與引用見FLIGHT_SCOPED_OPTIMIZATION.md。
 
 最後確認原8000端口已空出後，Docker恢復使用使用者原連結 `127.0.0.1:8000`；重建後health、兩個入口、222班資料及21次live實驗均保留。`.env`僅本機APP_PORT設定，仍不提交。
+
+### 會員供應與零配額診斷修正（2026-11-14）
+
+- 核實舊SYN-00004無會員配額，−110差額是正常票取消行為變動，不能當價格效果；原實驗原始輸出已封存，未改寫結果。
+- 新增獨立222班／40,182筆memberdemo，低需求組D28有71/74班正配額，中位65；D14/D7全74方向至少一班25位。NHPP、校準及所有既有資料保持不變。
+- API統一座位分解，UI分開風險空間／今日新增／已發布可訂。修正歷史held配額、Dnull、會員已售數、正常需求基線標示及超容量輸入衝突。
+- v3啟動前阻擋無當期配額，無會員報價曝光不排名，買家／票數／入會／取消／收益拆分；先局部票價探索、再明示邊界探索。價格比較固定seat profile，新的seat feedback僅記錄為下次提案。完整錯誤清單及範圍差異在MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md。
+
+### 2026-11-14 — member-supply integration verification
+
+- Docker regression passed 186 backend + 19 simulation tests. Real browser seat-supply/member checkout/flight-offer suites and real-data desktop/mobile inspection passed.
+- Added 222 transparent demo flights / 40,182 snapshots without changing frozen calibration or old cohorts. Default HKG–HND D28 exposes 55 headroom/new seats; D13 clearly distinguishes 42 headroom from 0 newly releasable.
+- HTTP workflow passed: zero-supply rejected before run creation; publish 5, buy 1, carry 4 forward; D14 subtracts carryover and D13 releases none.
+- Math opt-fb731533be904b95: 14 worlds, 4 prices, positive member sales with fully reconciled accounts. Holdout incremental contribution −641 means NO_OFFER remains correct.
+- Live opt-5630ee3d208e41a9: 54 provider calls, no failures; supply and offer exposure verified. Two budget-constrained travellers bought neither fare type. Preserve raw outputs for review, including imperfect rationales.
+- Evidence: docs/validation/member_supply_http_20261114.json; detailed issue list and plan changes: docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md.
+
+Final regression after prospective-membership context and provenance fixes: **193 backend + 19 simulation tests passed**. Shared-market prompt v3.2 now receives post-join validity and program-computed fee/ticket/budget comparisons. Narrow rationale diagnostics are nonblocking and preserve raw choices. New experiments pin the member-demo manifest and data loader; earlier exports remain byte-for-byte unchanged with a separate post-run attestation.
+
+Final live context check opt-2d56cc2c1c8844b1 completed: 8 travellers, 6 worlds, 175 provider calls / 174 accepted outputs / 1 preserved reason-code-format rejection, retried once inside the unchanged256 limit. Search has6 memberbuyer households,2 regularbuyer households,4 newjoins,40 released seats and18 offer observations. Holdout incremental −2364 => NO_OFFER. All world invariants reconcile; no narrow rationale-audit flags. Export: llm_agent/experiments/member_supply_live_context_20261114/. No real payment or ticket was issued.

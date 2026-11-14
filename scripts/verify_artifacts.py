@@ -49,7 +49,15 @@ def verify(manifest_path):
         for world in contents['worlds']:
             assert world['status'] == 'completed' and all(world['result']['checks'].values()), world['world_id']
         for track in contents['tracks']:
-            assert track['validation']['seat_calibration'] == track['best']['seat_calibration'], track['mode']
+            if track['best'] is None:
+                assert contents['config'].get('price_comparison_protocol') == 'fixed-seat-profile-local-fare-v1', track['mode']
+                assert track['decision'] == 'NO_OFFER' and track['validation'] is None and track['rounds'], track['mode']
+                assert all(r.get('price_evidence_qualified') is False
+                           and r.get('price_evidence_status') in ('uninformative_no_supply','uninformative_no_member_exposure')
+                           and r.get('accepted') is False and r.get('incumbent') is None
+                           for r in track['rounds']), track['mode']
+            else:
+                assert track['validation']['seat_calibration'] == track['best']['seat_calibration'], track['mode']
         assert result['audit_records'] == manifest['audit_records'], audit
         result['completed_market_cases'] = len(contents['worlds'])
     return result
@@ -58,6 +66,7 @@ def verify(manifest_path):
 if __name__ == "__main__":
     manifests = [ROOT / "simulation/generated/manifest.json"]
     manifests += sorted((ROOT / "simulation/network_generated").glob("manifest.json"))
+    manifests += sorted((ROOT / "simulation/member_demo_generated").glob("manifest.json"))
     manifests += sorted((ROOT / "simulation/validation_extended").glob("seed-*/manifest.json"))
     manifests += sorted((ROOT / "llm_agent/experiments").glob("*/manifest.json"))
     manifests += sorted((ROOT / "simulation/continuous_price_validation").glob("manifest.json"))

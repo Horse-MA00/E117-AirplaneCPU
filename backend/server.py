@@ -145,6 +145,8 @@ def post(path,body):
    current=dict(f); release=store().release_status(flight,day,f['releasable_seats'])
    current['risk_release_ceiling']=f['releasable_seats']
    current['release_status']=release
+   from .seat_inventory import describe
+   current['seat_inventory']=describe(f,release,day)
    current['releasable_seats']=release['new_release_limit']
    current['committed_member_seats']=release['member_sold']+release['total_active_unsold']
    current['assumptions']=list(f['assumptions'])+['New member quota is issued once per round at D28, D14 and D7 only. Earlier valid unsold quotas carry forward; sold demo seats are accounted once.']+([release['blocked_reason']] if release['blocked_reason'] else [])

@@ -1,3 +1,4 @@
+import { seatStatus } from './seat-status.js';
 const $ = (id) => document.getElementById(id);
 const RELEASE_DAYS = [28, 14, 7];
 const roundLabel = (days) => days?.length ? days.map((day) => `D${day}`).join(' / ') : 'No future rounds';
@@ -73,6 +74,7 @@ async function loadFlight() {
     const flight = state.flight;
     text('flight-date', (flight.departure_at || flight.departure_date || '').slice(0, 10));
     text('flight-capacity', `${number(flight.capacity || flight.sellable_capacity)} seats`);
+    text('flight-scenario-note',flight.demo_priority!=null?`Synthetic ${flight.demo_priority===0?'low-demand':flight.demo_priority===1?'moderate-demand':'normal-demand control'} scenario${flight.demo_d28_releasable!=null?` · audited D28 headroom ${number(flight.demo_d28_releasable)} seats`:''}. ${flight.demo_d28_releasable===0?'D28 has no safe capacity; try another release round.':'Each round recalculates safe capacity.'}`:'Synthetic flight history. Forecast capacity is recalculated at the selected day.');
     await loadForecast();
   } catch (e) { if (request === state.request) error(e.message); }
   finally { if (request === state.request) $('flight-main').classList.remove('loading'); }
@@ -93,12 +95,18 @@ function renderForecast() {
   const f = state.forecast; const history = state.history.filter((row) => Number(row.days_to_departure) >= state.day).sort((a, b) => b.days_to_departure - a.days_to_departure);
   const latest = history.at(-1) || {}; const capacity = Number(state.flight.capacity || latest.capacity || latest.sellable_capacity);
   const booked = Number(latest.booked_seats ?? latest.net_booked_seats ?? 0);
-  text('booked-value', number(booked)); text('booked-detail', `${percent(booked / capacity)} of ${number(capacity)} seats`);
+  const seats=seatStatus(f,capacity,booked,state.day);
+  text('booked-value', number(seats.reportedOccupied)); text('booked-detail', `${number(seats.normal)} normal + ${number(seats.confirmedMembers)} member · ${seats.overage?`${number(seats.overage)} over capacity`:`${percent(seats.occupied / capacity)} occupied`}`);
+  $('seat-inventory-warning').hidden=seats.overage<1;
+  text('seat-inventory-warning',seats.overage?`Snapshot conflict: ${number(seats.normal)} normal bookings + ${number(seats.confirmedMembers)} confirmed member bookings = ${number(seats.reportedOccupied)} bookings for ${number(capacity)} seats (${number(seats.overage)} over capacity). The bar is capped at physical capacity. Review inventory before publishing.`:'');
   text('demand-value', number(f.expected_remaining_demand, 1)); text('empty-value', number(f.expected_empty_seats, 1));
-  text('empty-detail', `${percent(f.expected_empty_rate)} expected unsold`);
+  text('empty-detail', `${percent(f.expected_empty_rate)} expected unsold in the normal-sales baseline; member bookings excluded`);
   text('protection-value', `${number(f.protection_p90)} seats`);
-  text('chart-caption', `Solid: booked seats so far. Dashed: expected bookings to departure. Shading: model forecast range.`); text('release-value', `${number(f.releasable_seats)} seats`);
-  renderReleaseStatus(f);
+  text('chart-caption', `Normal-demand baseline only. Solid: observed normal bookings; dashed: expected normal bookings to departure. Member demo bookings are excluded. Shading: model forecast range.`); text('release-value', `${number(seats.newSeats)} seats`);
+  text('headroom-value', `${number(seats.headroom)} seats`);text('bookable-value', `${number(seats.published)} seats`);
+  text('member-allocation-detail', seats.reason);text('headroom-detail', `${number(seats.unpublished)} unpublished + ${number(seats.published)} published and bookable${seats.heldPublished?` + ${number(seats.heldPublished)} published on hold`:''}`);
+  text('bookable-detail',seats.published?'Existing usable quota; checked again when booking':'No published seats can be booked now.');
+  renderReleaseStatus(f,seats);
   text('beta-label', `β ${number(f.beta, 4)} / day · ${number(f.rate_now, 2)} requests / day`);
   const context = `${state.flight.origin || '—'} → ${state.flight.destination || '—'} · ${(state.flight.departure_at || '').slice(0, 10)} · D${state.day}`;
   text('pricing-context', `${context} · ${number(f.risk_release_ceiling ?? f.releasable_seats)} forecast risk ceiling · future release rounds: ${roundLabel(RELEASE_DAYS.filter((d) => d <= state.day))}.`);
@@ -106,65 +114,45 @@ function renderForecast() {
   $('publish-button').disabled = !canPublish();
   const past = history.filter((r) => r.days_to_departure <= 28).map((r) => ({ day: Number(r.days_to_departure), value: Number(r.booked_seats ?? r.net_booked_seats) }));
   const future = (f.forecast_curve || []).map((r) => ({ day: Number(r.day ?? r.days_to_departure), value: Number(r.expected_booked), low: Number(r.p10), high: Number(r.p90) })).filter((r) => Number.isFinite(r.value) && r.day <= state.day).sort((a, b) => b.day - a.day);
-  drawChart('booking-chart', past, future, { maxY: capacity, yLabel: 'Booked seats' });
+  drawChart('booking-chart', past, future, { maxY: capacity, yLabel: 'Normal bookings' });
   const prices = history.filter((r) => r.days_to_departure <= 180 && r.normal_base_fare != null).map((r) => ({ day: Number(r.days_to_departure), value: Number(r.normal_base_fare) }));
   drawChart('price-chart', prices, [], { yLabel: 'HKD', width: 620, height: 260, minDay: 180 });
   const lastQuote=history.findLast(r=>r.normal_base_fare!=null);
   text('price-caption', `Base fares through D${state.day}.${lastQuote?` Last quote D${lastQuote.days_to_departure}: fees ${money(lastQuote.mandatory_fees)} · total payable ${money(lastQuote.normal_total_fare)}.`:' No observed quote is available.'} Future quotes are not shown.`);
-  renderSeatComposition(f, capacity, booked);
+  renderSeatComposition(seats);
+  const nextValid=RELEASE_DAYS.includes(seats.nextRound)&&seats.nextRound<state.day;
+  const blockedRelease=seats.overage>0||seats.historical||seats.salesClosed||seats.releaseState==='round_already_issued';
+  $('go-pricing').disabled=blockedRelease||(!RELEASE_DAYS.includes(state.day)&&!nextValid);
+  $('go-pricing').textContent=seats.overage>0?'Resolve inventory conflict first':seats.historical?'Historical view · release unavailable':seats.salesClosed?'Sales are closed':seats.releaseState==='round_already_issued'?'This release round is already published':RELEASE_DAYS.includes(state.day)?'Optimize this release round →':nextValid?`Optimize next release D${seats.nextRound} →`:'No release rounds remain';
 
   if (state.offers.length) renderOffers();
 }
-function renderSeatComposition(f, capacity, booked) {
-  const r = f.release_status || {};
-  const sold = Math.max(0, Math.min(capacity - booked, Number(r.member_sold || 0)));
-  const occupied = Math.max(0, Math.min(capacity, booked + sold));
-  const protection = Math.min(capacity - occupied, Math.max(0, Math.ceil(Number(f.protection_p90 || 0))));
-  const physicalSurplus = Math.max(0, capacity - occupied - protection);
-  const releaseLimit = Number(r.safe_capacity ?? Math.max(0, Number(f.risk_release_ceiling ?? 0) - sold));
-  const available = Math.max(0, Math.min(physicalSurplus, Number.isFinite(releaseLimit) ? releaseLimit : 0));
-  const held = physicalSurplus - available;
-  text('protection-value', `${number(protection)} seats`);
-  const parts = [
-    {label:'Booked', value:occupied, className:'occupied'},
-    {label:'Protected for normal demand', value:protection, className:'protected'},
-    {label:'Capacity for member offers', value:available, className:'available'},
-    ...(held > 0 ? [{label:'Held / not releasable', value:held, className:'held'}] : [])
-  ];
-  const bar = $('seat-composition');
-  bar.setAttribute('aria-label', parts.map(p => `${p.label}: ${number(p.value)} seats`).join('. '));
-  bar.replaceChildren(...parts.map(p => {
-    const segment = element('span', p.value ? number(p.value) : '', `seat-part ${p.className}`);
-    segment.style.setProperty('--seat-share', String(p.value / Math.max(1, capacity) * 100));
-    if (!p.value) segment.hidden = true;
-    return segment;
+function renderSeatComposition(seats) {
+  text('protection-value', `${number(seats.protection)} seats`);
+  const bar=$('seat-composition');
+  bar.setAttribute('aria-label', `${number(seats.capacity)} total seats. `+seats.parts.map(p=>`${p.label}: ${number(p.value)} seats`).join('. '));
+  bar.replaceChildren(...seats.parts.map(p=>{
+    const segment=element('span',p.value?number(p.value):'',`seat-part ${p.key}`);
+    segment.dataset.seats=p.value;segment.dataset.part=p.key;
+    segment.style.setProperty('--seat-share',String(p.value/Math.max(1,seats.capacity)*100));
+    if(!p.value)segment.hidden=true;return segment;
   }));
-  $('seat-composition-legend').replaceChildren(...parts.map(p => {
-    const label = element('div', undefined, `seat-legend-item ${p.className}`);
-    const dot = element('i'); dot.setAttribute('aria-hidden','true');
-    label.append(dot, element('span', p.label), element('strong', `${number(p.value)} seats`));
-    return label;
+  $('seat-composition-legend').replaceChildren(...seats.parts.filter(p=>p.value>0||p.key==='published'||p.key==='available').map(p=>{
+    const label=element('div',undefined,`seat-legend-item ${p.key}`),dot=element('i');dot.setAttribute('aria-hidden','true');
+    label.append(dot,element('span',p.label),element('strong',`${number(p.value)} seats`));return label;
   }));
-  text('member-allocation-detail', RELEASE_DAYS.includes(state.day) ? `Additional seats at D${state.day}; earlier unsold quota deducted` : `No new release today · ${number(r.currently_bookable || 0)} published seats bookable`);
 }
 function canPublish(ignoreFee=false) {
   const f = state.offerForecast;
   return Boolean(f && state.offerFlightId && RELEASE_DAYS.includes(state.offerDay) && f.releasable_seats > 0 && !f.release_status?.round_already_issued && !f.release_status?.blocked_reason && (ignoreFee || !state.offerBinding || state.publishedFee===state.offerRequiredFee));
 }
-function releaseExplanation(f) {
+function renderReleaseStatus(f,seats) {
   const r = f.release_status || {};
-  if (r.blocked_reason) return String(r.blocked_reason).replaceAll('_', ' ');
-  if (r.round_already_issued) return `D${state.day} has already been published. Each release round can be issued once.`;
-  if (!RELEASE_DAYS.includes(state.day)) return r.next_release_day ? `Observation only at D${state.day}. Next release round: D${r.next_release_day}. Existing valid offers remain available.` : 'No future release rounds. Existing valid offers can sell until cutoff; no new seats are issued.';
-  return `D${state.day} release round: subtract all earlier valid unsold quota before issuing additional seats. Publication closes this round.`;
-}
-function renderReleaseStatus(f) {
-  const r = f.release_status || {};
-  text('risk-release-value', `${number(r.safe_capacity ?? Math.max(0, Number(f.risk_release_ceiling ?? f.releasable_seats) - Number(r.member_sold || 0)))} seats`);
-  text('member-sold-value', `${number(r.member_sold ?? 0)} seats`);
+  text('risk-release-value', `${number(seats.headroom)} seats`);
+  text('member-sold-value', `${number(seats.confirmedMembers)} seats`);
   text('prior-quota-value', `${number(r.previous_valid_unsold ?? r.prior_valid_unsold ?? 0)} seats`);
   text('active-quota-value', `${number(r.total_active_unsold ?? 0)} seats`);
-  const explanation = releaseExplanation(f) + (r.currently_bookable == null ? '' : ` Currently bookable member seats: ${number(r.currently_bookable)}. Valid quota above the current safety capacity: ${number(r.protection_shortfall ?? 0)}.`);
+  const explanation = seats.reason + (Number(r.protection_shortfall)>0?` ${number(r.protection_shortfall)} outstanding quota seats are currently outside safe capacity.`:'');
   text('release-status', explanation);
   const rows = r.round_history || [];
   $('demo-round-table').replaceChildren(...rows.map((row) => {
@@ -738,7 +726,8 @@ async function init() {
     const configured = summary.llm?.live_configured || summary.llm?.configured || summary.llm?.live_available;
     document.dispatchEvent(new CustomEvent('uoption:provider', { detail: { configured: Boolean(configured) } }));
     if (configured) { $('live-mode-option').disabled = false; $('live-mode-option').textContent = 'Live LLM'; $('market-live-option').disabled = false; $('market-live-option').textContent = 'Live LLM · bounded calls'; }
-    $('flight-select').replaceChildren(...state.flights.map((flight) => { const option = element('option', `${flight.origin} → ${flight.destination} · ${(flight.departure_at || flight.departure_date || '').slice(0, 10)} · ${flight.flight_id}`); option.value = flight.flight_id; return option; }));
+    $('flight-select').replaceChildren(...state.flights.map((flight) => { const option = element('option', `${flight.origin} → ${flight.destination} · ${(flight.departure_at || flight.departure_date || '').slice(0, 10)} · ${flight.flight_id}${flight.demo_priority!=null?' · synthetic demo':''}`); option.value = flight.flight_id; return option; }));
+    const demo=state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0)||state.flights.find(f=>Number(f.demo_d28_releasable)>0);if(demo)$('flight-select').value=demo.flight_id;
     $('flight-select').disabled = !state.flights.length; initializeOfferSelectors();
     if (state.flights.length) await loadFlight(); else throw new Error('No flights available. Generate the simulation dataset and restart the backend.');
     loadPersonas(); loadAgentRuns(); loadPanelRuns(); loadMemberPlan();

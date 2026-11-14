@@ -17,6 +17,10 @@ fixed during the fare search. Mathematical and live-LLM tracks replay this fligh
 inventory, compare contributions and purchases, and validate the candidate on independent
 worlds. Price/profit plots distinguish maximum contribution, margin and buyer count.
 Matching validated results become Manage offers suggestions with current quota checks.
+The latest correction separates forecast headroom, new quota and published bookable seats.
+New member-opportunity examples supply inventory; zero-supply runs are blocked. Member and
+regular purchasers are counted separately, and each new fare comparison freezes its seat
+profile. See [the inventory and price-evidence corrections](docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md).
 
 SQLite saves rounds, seat-feedback profiles, redacted original LLM outputs and resumable
 market state. Live runs automatically cross internal batches within a selected total
@@ -65,7 +69,7 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 
 ## What is implemented
 
-- **640,182 daily snapshots** across **3,537 synthetic flight histories** (200,000 original demo rows, 40,182 route/date supplement rows and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
+- **680,364 daily snapshots** across **3,759 synthetic flight histories** (200,000 original demo rows, two 40,182-row route/date supplements and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
 - **Flight-specific optimisation:** 1–12 rounds per mathematical/LLM track, dataset-derived P₀, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
@@ -77,7 +81,7 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 
 ## Evidence and limitations
 
-This is a **synthetic-market decision prototype**, not a calibrated production revenue-management system or a representative survey of HK Express customers. OAG Flight Info supplies schedules and capacity estimates, not daily bookings or airfare history. All 640,182 simulation rows remain synthetic even when an OAG connection is available.
+This is a **synthetic-market decision prototype**, not a calibrated production revenue-management system or a representative survey of HK Express customers. OAG Flight Info supplies schedules and capacity estimates, not daily bookings or airfare history. All 680,364 simulation rows remain synthetic even when an OAG connection is available.
 
 On **240 fresh synthetic test flights**, v2's D28 sustained-surge protection coverage is **82.5%**. On the same flights, v1 with its original 16-seat margin scores **30.0%**, while v1 recalibrated using the same procedure scores **80.0%**. The historical 47.62% came from a different cohort. D14/D7 demand MAE improves, but D28 demand MAE worsens and D7 unseen-surges still have only 75% protection coverage. See the [full comparison and limitations](docs/NHPP_V2_REVIEW.md), [frozen final report](simulation/generated/nhpp_v2_final.json) and [calibration](simulation/generated/calibration_v2.json). Raw predictive bands and calibrated operational protection are separate.
 
@@ -95,7 +99,7 @@ The current **shared-market-v3** three-round policy has a separate **40-seed / 1
 | --- | --- |
 | `frontend/` | Admin vanilla HTML/CSS/JS; separate member storefront in `frontend/members/` |
 | `backend/` | NHPP, pricing simulation, local HTTP API, transactional SQLite |
-| `simulation/` | Generator, 640,182 compressed rows, separate truth and frozen evaluations |
+| `simulation/` | Generator, 680,364 compressed rows, separate truth and frozen evaluations |
 | `llm_agent/` | Journey/market prompts, real provider adapters, audits, experiments and probes |
 | `docs/` | Current architecture, progress, review and plan deviations |
 | `src/`, `configs/` | Preserved earlier standalone simulator and chart exporter |

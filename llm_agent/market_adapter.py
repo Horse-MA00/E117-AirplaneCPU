@@ -6,6 +6,8 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
+from decimal import Decimal
 import time
 import urllib.parse
 import urllib.request
@@ -16,7 +18,7 @@ from .journey import canonical
 from .journey_runner import _transport
 from .output_contract import CONTRACT_VERSION, CURRENCY, RESPONSE_LANGUAGE, validate_english_output
 
-VERSION = "shared-market-customer-v3.1-en"
+VERSION = "shared-market-customer-v3.2-en"
 PROMPTS = {lang: Path(__file__).parent / f"prompts/shared_market_v3_{lang}.txt" for lang in ("en", "zh")}
 HIDDEN_KEYS = {"latent_beta", "latent_rate", "latent_scale", "future_events", "future_quotes", "ground_truth",
                "baseline_normal_intent", "normal_intent", "airline_cost", "airline_profit", "profit", "objective",
@@ -52,11 +54,44 @@ def validate_decision(decision, observation):
             "confidence": decision.get("confidence", "medium") if decision.get("confidence", "medium") in ("low", "medium", "high") else "low"}
 
 
+def rationale_diagnostics(decision, observation):
+    """Narrow audit flags only, never a semantic proof or a replacement choice."""
+    flags=[]
+    reason=str(decision.get('reason',''))
+    money=r'\bHK(?:D\s*|\$\s*)([0-9][0-9,]*(?:\.[0-9]+)?)'
+    comparison=re.compile(money+r'([^.!?]{0,90}?)\b(exceeds?|is greater than|is more than|is less than|is below|is equal to)\s+(?:the\s+)?'+money,re.I)
+    for sentence in re.split(r'(?<=[.!?])\s+',reason):
+        if re.search(r'\b(if|unless|could|might|would)\b',sentence,re.I):continue
+        for match in comparison.finditer(sentence):
+            left,context,operator,right=match.groups()
+            # Do not mistake a sum, negation or another quoted amount for a
+            # simple two-value comparison. Free-form wording remains unproven.
+            if re.search(r'\b(?:plus|and|sum|combined|minus|not|HKD)\b|HK\$',context,re.I):continue
+            left,right=(Decimal(v.replace(',','')) for v in (left,right))
+            op=operator.lower()
+            valid=left<right if op in ('is less than','is below') else left==right if op=='is equal to' else left>right
+            if not valid:
+                flags.append('explicit_hkd_comparison_inconsistent');break
+    refs=[r for r in observation.get('current_quote_reference',[]) if r.get('action')=='BUY_MEMBER']
+    if observation.get('stage')=='subscription' and refs and all(r.get('membership_eligibility',{}).get('valid_if_join_now') is True for r in refs):
+        for sentence in re.split(r'(?<=[.!?])\s+',reason):
+            if re.search(r'\b(?:if|unless|without|current|currently|existing)\b',sentence,re.I):continue
+            if re.search(r'\b(?:membership|pass)\s+(?:would|will|is)\s+not\s+(?:be\s+)?valid\b[^.!?]{0,60}\b(?:departure|flight|trip)\b',sentence,re.I):
+                flags.append('post_join_validity_contradiction')
+    return {'version':'current-quote-rationale-audit-v1','flags':sorted(set(flags)),
+            'blocking':False,'coverage':'Limited explicit-comparison and prospective-validity checks; an unflagged reason is not verified as true.'}
+
+
 def choose(observation, mode, audit, language="en", use_cache=True):
     """Choose once. Illegal/failed provider outputs never become rule decisions."""
     if mode not in ("deterministic", "probabilistic", "live") or language not in PROMPTS:
         raise ValueError("Invalid market choice mode or prompt language")
     visible = public_observation(observation)
+    if visible.get('stage')=='subscription':
+        # Recompute from present quotes so isolated price probes cannot retain
+        # arithmetic from the earlier fee/fare fixture.
+        from backend.shared_market import subscription_comparisons
+        visible['subscription_comparisons']=subscription_comparisons(visible)
     # Traveller language remains scenario background, never an output-language
     # instruction. Both prompt-language research variants return English/HKD.
     visible.update(response_language=RESPONSE_LANGUAGE, currency=CURRENCY, output_contract=CONTRACT_VERSION)
@@ -135,11 +170,14 @@ def choose(observation, mode, audit, language="en", use_cache=True):
         raw_decision = json.loads(raw["choices"][0]["message"]["content"])
         validate_english_output(raw_decision)
         decision = validate_decision(raw_decision, visible)
-        audit.append({**record, "event": "market_choice", "decision": decision, "validation": "passed"})
+        diagnostics=rationale_diagnostics(decision,visible)
+        audit.append({**record, "event": "market_choice", "decision": decision, "validation": "passed",
+                      'rationale_diagnostics':diagnostics})
         if use_cache and not record["cache_hit"]:
             cache.write_text(json.dumps(sanitize({"raw_response_text": raw_text, "source": "provider_live", "prompt_version": VERSION}), ensure_ascii=False), encoding="utf-8")
         return {"decision": decision, "source": "provider_live", "forced": False,
-                "cache_hit": record["cache_hit"], "provider_call": not record["cache_hit"]}
+                "cache_hit": record["cache_hit"], "provider_call": not record["cache_hit"],
+                'rationale_diagnostics':diagnostics}
     except Exception as error:
         if isinstance(error, urllib.error.HTTPError):
             try:

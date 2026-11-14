@@ -1,0 +1,69 @@
+{
+  "attestation_type": "post_run_current_state_data_comparison",
+  "attested_at_utc": "2026-11-14T08:38:32.563530+00:00",
+  "proves_original_run_time_data_manifest_capture": false,
+  "purpose": "Record separately the member-demo data and loader present after the two completed experiments, while retaining their original reports, manifests and audits byte-for-byte.",
+  "current_source_sha256": {
+    "backend/data.py": "d12b166547fff4e08f207e16a0b5d041fab357665dacf01f0323e5815e673064",
+    "simulation/member_demo_generated/manifest.json": "029526c2f3495b1f5b966b152735c180498cdcb2865bf567e8bd388800202462"
+  },
+  "current_dataset_manifest_files_verified": [
+    "snapshots.csv.gz",
+    "truth.csv.gz",
+    "flights.json",
+    "parameters.json",
+    "catalog.json"
+  ],
+  "current_dataset_snapshots_sha256": "1b37be3b22122e1818e3bd0e98f3871b3dc5e94fdab0595b706787324de339b2",
+  "experiments": [
+    {
+      "run_id": "opt-fb731533be904b95",
+      "mode": "math",
+      "status": "completed",
+      "original_version": "flight-policy-feedback-v3",
+      "original_artifact_sha256": {
+        "llm_agent/experiments/member_supply_math_20261114/manifest.json": "491635241e19b32267e3593f2ff2c109e9b2171e3ac22976505e66f2ebf747d0",
+        "llm_agent/experiments/member_supply_math_20261114/report.json": "875f1926a27b4d67363b73410b66d0de284c589a016a5059512a4ee5442b8bac",
+        "llm_agent/experiments/member_supply_math_20261114/audit.jsonl.gz": "7ae7a347a242758778dd4c0b75d1b66357b763b283d6c6a185e4eb09bfa8ae00"
+      },
+      "missing_original_provenance_files": [
+        "backend/data.py",
+        "simulation/member_demo_generated/manifest.json"
+      ],
+      "scope_flight_id": "DEMO-HKG-ICN-20270515",
+      "as_of_day": 28,
+      "saved_as_of_history_sha256": "0ae1e7e12ecb9d8a667ba2599e26b484897e68c72b83a1b31df4d28b412c591c",
+      "current_as_of_history_sha256": "0ae1e7e12ecb9d8a667ba2599e26b484897e68c72b83a1b31df4d28b412c591c",
+      "saved_as_of_history_matches_current_data": true,
+      "completed_worlds": 14
+    },
+    {
+      "run_id": "opt-5630ee3d208e41a9",
+      "mode": "live",
+      "status": "completed",
+      "original_version": "flight-policy-feedback-v3",
+      "original_artifact_sha256": {
+        "llm_agent/experiments/member_supply_live_20261114/manifest.json": "f30b3d2d9d41ba2c2069dc2c5b4f53ea8d830abdfefe8d4e3cae085f8aa76da6",
+        "llm_agent/experiments/member_supply_live_20261114/report.json": "17f5b9d35afbb51c069fa941382003d6b59d570bd78a21bf4e78b4877aff1b7f",
+        "llm_agent/experiments/member_supply_live_20261114/audit.jsonl.gz": "192747476b7a27723e5dceec3b00ceb5f761fabaf855ca0e3fdf33d6d4d1823d"
+      },
+      "missing_original_provenance_files": [
+        "backend/data.py",
+        "simulation/member_demo_generated/manifest.json"
+      ],
+      "scope_flight_id": "DEMO-HKG-ICN-20270515",
+      "as_of_day": 28,
+      "saved_as_of_history_sha256": "0ae1e7e12ecb9d8a667ba2599e26b484897e68c72b83a1b31df4d28b412c591c",
+      "current_as_of_history_sha256": "0ae1e7e12ecb9d8a667ba2599e26b484897e68c72b83a1b31df4d28b412c591c",
+      "saved_as_of_history_matches_current_data": true,
+      "completed_worlds": 6
+    }
+  ],
+  "limitations": [
+    "The original experiment provenance omitted backend/data.py and the member-demo manifest. These current hashes were captured after both runs and are not retrospective per-call proof.",
+    "Current observed as-of histories match the histories and hashes embedded in both original reports. This comparison cannot prove that every future fare replay was read from this manifest during the original runs.",
+    "Future quotes are simulator-only exogenous replay inputs, never as-of predictor inputs. The original records keep their stored exogenous-world hashes, cash results and source fingerprints unchanged.",
+    "New optimization runs now pin backend/data.py and the member-demo manifest; resume rejects changed provenance. This attestation does not modify an old fingerprint or authorize resuming it under changed code.",
+    "The dataset remains synthetic member-opportunity demonstrations, not observed HK Express fare/booking data or customer demand evidence."
+  ]
+}
