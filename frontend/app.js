@@ -107,6 +107,9 @@ function renderForecast() {
   text('member-allocation-detail', seats.reason);text('headroom-detail', `${number(seats.unpublished)} unpublished + ${number(seats.published)} published and bookable${seats.heldPublished?` + ${number(seats.heldPublished)} published on hold`:''}`);
   text('bookable-detail',seats.published?'Existing usable quota; checked again when booking':'No published seats can be booked now.');
   renderReleaseStatus(f,seats);
+  const noRelease=nhppNoRelease(f,seats,state.day);
+  $('release-decision').hidden=!noRelease;$('release-decision').replaceChildren(...(noRelease?[element('strong',noRelease.title),document.createTextNode(noRelease.detail)]:[]));
+  if(noRelease)text('release-value','Do not release');
   text('beta-label', `β ${number(f.beta, 4)} / day · ${number(f.rate_now, 2)} requests / day`);
   const context = `${state.flight.origin || '—'} → ${state.flight.destination || '—'} · ${(state.flight.departure_at || '').slice(0, 10)} · D${state.day}`;
   text('pricing-context', `${context} · ${number(f.risk_release_ceiling ?? f.releasable_seats)} forecast risk ceiling · future release rounds: ${roundLabel(RELEASE_DAYS.filter((d) => d <= state.day))}.`);
@@ -122,10 +125,19 @@ function renderForecast() {
   renderSeatComposition(seats);
   const nextValid=RELEASE_DAYS.includes(seats.nextRound)&&seats.nextRound<state.day;
   const blockedRelease=seats.overage>0||seats.historical||seats.salesClosed||seats.releaseState==='round_already_issued';
-  $('go-pricing').disabled=blockedRelease||(!RELEASE_DAYS.includes(state.day)&&!nextValid);
-  $('go-pricing').textContent=seats.overage>0?'Resolve inventory conflict first':seats.historical?'Historical view · release unavailable':seats.salesClosed?'Sales are closed':seats.releaseState==='round_already_issued'?'This release round is already published':RELEASE_DAYS.includes(state.day)?'Optimize this release round →':nextValid?`Optimize next release D${seats.nextRound} →`:'No release rounds remain';
+  $('go-pricing').disabled=blockedRelease||Boolean(noRelease)||(!RELEASE_DAYS.includes(state.day)&&!nextValid);
+  $('go-pricing').textContent=noRelease?'NHPP: no member seats to price':seats.overage>0?'Resolve inventory conflict first':seats.historical?'Historical view · release unavailable':seats.salesClosed?'Sales are closed':seats.releaseState==='round_already_issued'?'This release round is already published':RELEASE_DAYS.includes(state.day)?'Optimize this release round →':nextValid?`Optimize next release D${seats.nextRound} →`:'No release rounds remain';
 
   if (state.offers.length) renderOffers();
+}
+// On a release round, NHPP leaving no member headroom means nothing should be released or priced.
+function nhppNoRelease(f,seats,day){
+  if(!RELEASE_DAYS.includes(day)||seats.historical||seats.salesClosed||seats.overage>0||seats.headroom>=1)return null;
+  const ceiling=Math.max(0,Math.floor(Number(f.risk_release_ceiling??f.releasable_seats)||0));
+  return {title:`NHPP decision: do not release member seats at D${day}`,
+    detail:ceiling<1
+      ?`The forecast expects ${number(f.expected_remaining_demand,1)} more normal bookings and protects ${number(seats.protection)} of ${number(seats.physicalRemaining)} empty seats, so 0 member seats are safe to release. There is no member fare to optimize for this round.`
+      :`The forecast allows ${number(ceiling)} member seat${ceiling===1?'':'s'}, and existing member bookings already use all of them. No further member seats should be released this round.`};
 }
 function renderSeatComposition(seats) {
   text('protection-value', `${number(seats.protection)} seats`);

@@ -8,7 +8,7 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
 page.on('pageerror',e=>errors.push(e.message));
 const flight={flight_id:'DEMO-UI-ICN',origin:'HKG',destination:'ICN',departure_at:'2027-05-15T10:00:00+08:00',capacity:180,demo_priority:0,demo_d28_releasable:44};
 const history=[28,14,13,7,1,0].map(days_to_departure=>({days_to_departure,capacity:180,booked_seats:70,available_seats:110,normal_base_fare:500,normal_total_fare:750,mandatory_fees:250}));
-let scenario='off',starts=0,exposed=false;
+let scenario='off',starts=0,exposed=false,scopeSeats=0;
 const row=(round,member_fare)=>({round,member_fare,membership_fee:399,total_contribution:1000+member_fare,incremental_contribution:member_fare,profit_margin:.5,mean_member_buyers:exposed?2:0,mean_regular_buyers:3,mean_new_members:exposed?1:0,mean_member_tickets:exposed?3:0,mean_regular_tickets:4,mean_member_offer_customers:exposed?4:0,member_supply_exposure:exposed?7:0,price_evidence_qualified:exposed,price_evidence_status:exposed?'observed_member_sales':'uninformative_no_supply',feasible:exposed,service_rate:exposed?1:0,accepted:false});
 function report(){return {run_id:'opt-ui-supply',status:'completed',config:{scope:{...flight,departure_date:'2027-05-15',as_of_day:28},mode:'math',initial_member_fare:75,initial_membership_fee:399,rounds:2,customers:7,price_comparison_protocol:'fixed-seat-profile-local-fare-v1'},progress:{completed_rounds:2,total_rounds:2},counts:{},tracks:[{mode:'math',rounds:[row(1,0),row(2,70)],best:null,decision:'NO_OFFER'}]};}
 function forecast(day){
@@ -29,7 +29,7 @@ await page.route('**/*',async route=>{
   if(path==='/api/flights')return reply({flights:[flight]});
   if(path===`/api/flights/${flight.flight_id}`)return reply({flight,history});
   if(path==='/api/forecast')return reply({forecast:forecast(route.request().postDataJSON().days_to_departure)});
-  if(path==='/api/optimization/initial-policy')return reply({initial_member_fare:75,scope:{...flight,departure_date:'2027-05-15',as_of_day:28,available_seats:110,normal_base_fare:500,releasable_seats:0,member_supply_exposure:0,optimization_eligible:false,optimization_unavailable_reason:'No member supply at this snapshot.'}});
+  if(path==='/api/optimization/initial-policy')return reply({initial_member_fare:75,scope:{...flight,departure_date:'2027-05-15',as_of_day:28,available_seats:110,normal_base_fare:500,releasable_seats:scopeSeats,member_supply_exposure:scopeSeats,optimization_eligible:scopeSeats>0?true:false,optimization_unavailable_reason:'No member supply at this snapshot.'}});
   if(path==='/api/optimization/runs'){
     if(route.request().method()==='POST'){starts++;return route.fulfill({status:400,json:{error:'No supply'}});}
     return reply({runs:[report()]});
@@ -59,6 +59,10 @@ try{
   scenario='protected';await page.locator('[data-day="28"]').click();
   await page.waitForFunction(()=>document.getElementById('headroom-value').textContent==='0 seats');
   assert.equal(await page.locator('#protection-value').innerText(),'110 seats');assert.equal(await sum(),180);
+  assert.equal(await page.locator('#release-decision').isVisible(),true);
+  assert.match(await page.locator('#release-decision').innerText(),/NHPP decision: do not release member seats at D28/);
+  assert.equal(await page.locator('#release-value').innerText(),'Do not release');
+  assert.equal(await page.locator('#go-pricing').isDisabled(),true);
   for(const [mode,day,message] of [['quality',14,'data quality'],['issued',7,'already published']]){scenario=mode;await page.locator(`[data-day="${day}"]`).click();await page.waitForFunction(text=>document.getElementById('member-allocation-detail').textContent.includes(text),message);}
   scenario='historical';await page.locator('#day-slider').fill('15');
   await page.waitForFunction(()=>document.getElementById('headroom-detail').textContent.includes('4 published on hold'));
@@ -81,7 +85,16 @@ try{
   await page.screenshot({path:'test-results/forecast-seat-status-mobile.png',fullPage:true});
   await page.locator('a[href="#optimization"]').first().click();await page.waitForFunction(()=>document.getElementById('optimization-status').textContent==='Completed');
   await page.locator('#optimization-route').selectOption('HKG-ICN');await page.locator('#optimization-flight').selectOption(flight.flight_id);
-  await page.waitForFunction(()=>document.getElementById('optimization-scope').textContent.includes('No member supply'));
+  await page.waitForFunction(()=>document.getElementById('optimization-no-release').textContent.includes('NHPP decision: do not release member seats at D28'));
+  assert.equal(await page.locator('#optimization-start').isDisabled(),true);assert.equal(starts,0);
+  scopeSeats=1;await page.locator('#optimization-suggest').click();
+  await page.waitForFunction(()=>document.getElementById('optimization-no-release').textContent.includes('rounds down to 0'));
+  assert.equal(await page.locator('#optimization-start').isDisabled(),true);
+  await page.evaluate(()=>{const share=document.getElementById('optimization-share');share.value='1';share.dispatchEvent(new Event('change'));});
+  assert.equal(await page.locator('#optimization-no-release').isHidden(),true);
+  assert.equal(await page.locator('#optimization-start').isDisabled(),false);
+  scopeSeats=0;await page.locator('#optimization-suggest').click();
+  await page.waitForFunction(()=>!document.getElementById('optimization-no-release').hidden);
   assert.equal(await page.locator('#optimization-start').isDisabled(),true);assert.equal(starts,0);
   assert.equal(await page.locator('#optimization-price-profit circle').count(),0);
   assert.match(await page.locator('#optimization-price-evidence').innerText(),/No member-price evidence/);

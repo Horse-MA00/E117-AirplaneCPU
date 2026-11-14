@@ -65,3 +65,5 @@ footer{border-top:1px solid var(--line);padding:22px 4%;display:flex;gap:25px;ju
 @media(max-width:600px){.forecast-estimates{display:grid;grid-template-columns:1fr 1fr;gap:18px}.forecast-metrics .stat-card small{grid-column:1/-1}.forecast-metrics .stat-card strong{grid-row:1}.forecast-metrics .stat-card{gap:12px}.forecast-metrics .stat-card>span{line-height:1.5}}
 
 .seat-part.published-held{background:#D3C1DF;color:var(--ink)}.seat-legend-item.published-held i{background:#D3C1DF;border:1px solid var(--purple)}#seat-inventory-warning{margin:18px 0}
+
+.release-decision{font-weight:500}.release-decision strong{display:block;font-size:15px;margin-bottom:4px}

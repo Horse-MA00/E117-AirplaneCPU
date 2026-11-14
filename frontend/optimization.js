@@ -6,6 +6,17 @@ const pct = v => v == null ? '—' : `${num(Number(v)*100,1)}%`;
 const name = mode => mode === 'live' ? 'Live LLM' : 'Mathematical';
 const running = status => ['queued','running'].includes(status);
 const scopeEligible = scope => Boolean(scope && scope.optimization_eligible!==false && Number(scope.member_supply_exposure??scope.releasable_seats)>0);
+// The NHPP release rule decides supply before any price is tested. Mirrors optimization.start().
+function releaseDecision(scope, share) {
+  if(!scope)return null;
+  const day=`D${scope.as_of_day}`;
+  if(!scopeEligible(scope))return {title:`NHPP decision: do not release member seats at ${day}`,
+    detail:`The forecast expects ${num(scope.expected_remaining_demand,1)} more normal bookings for ${num(scope.available_seats)} empty seats. After protecting normal demand, 0 member seats can be released, so there is no member fare to test. Choose another flight or release round.`};
+  const seats=Number(scope.releasable_seats)||0;
+  if(Math.floor(seats*share)<1)return {title:`Do not release member seats at ${day} with a ${num(share*100)}% release share`,
+    detail:`NHPP allows ${num(seats)} member seat${seats===1?'':'s'}, but ${num(share*100)}% of that rounds down to 0. Raise the release share to test prices.`};
+  return null;
+}
 const evidenceLabel = row => ({uninformative_no_supply:'No member supply',uninformative_no_member_exposure:'No traveller saw a member offer',no_member_sales:'Offers seen; no member sales',observed_member_sales:'Member purchases observed'})[row.price_evidence_status]||'Historical exposure not recorded';
 const canResume = status => ['paused','paused_at_budget','interrupted','failed'].includes(status);
 const node = (tag, text, className) => { const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el; };
@@ -18,11 +29,17 @@ async function api(path, body) {
   return data;
 }
 function showError(message) {text('optimization-error',message);$('optimization-error').hidden=!message;}
+function showDecision(){
+  const decision=releaseDecision(state.scope,val('optimization-share')),box=$('optimization-no-release');
+  box.hidden=!decision;box.replaceChildren(...(decision?[node('strong',decision.title),document.createTextNode(decision.detail)]:[]));
+  return decision;
+}
 function controls() {
   const live=$('optimization-mode').value!=='math';
   $('optimization-budget-field').hidden=!live && !['both','live'].includes(state.data?.config?.mode);
   $('optimization-budget').disabled=$('optimization-budget-field').hidden; $('optimization-total-budget').disabled=$('optimization-budget-field').hidden;
-  $('optimization-start').disabled=state.loading || running(state.data?.status) || !scopeEligible(state.scope);
+  const blocked=showDecision();
+  $('optimization-start').disabled=state.loading || running(state.data?.status) || !state.scope || Boolean(blocked);
   text('optimization-start',state.loading?'Starting…':running(state.data?.status)?'Optimization is running…':'Start optimization');
   $('optimization-resume').disabled=state.loading || running(state.data?.status);
   document.querySelector('label[for=optimization-total-budget]').textContent=canResume(state.data?.status)?'Additional LLM decisions':'Total LLM decision budget';
@@ -203,7 +220,6 @@ async function loadScope(){
     const scope=result.scope;
     text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${num(scope.available_seats)} physical empty seats / ${num(scope.capacity)} capacity; ${num(scope.releasable_seats)} forecast member seats.`);
     $('optimization-load-demo').hidden=scopeEligible(scope);
-    if(!scopeEligible(scope))text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${scope.optimization_unavailable_reason||'No usable member supply at this snapshot.'} Choose a low-demand demo or another release round.`);
     text('optimization-initial-source',`P₀ ${money(result.initial_member_fare)} from this flight’s simulated normal base fare ${money(scope.normal_base_fare)}${scope.quote_age_days?` (last available quote ${scope.quote_age_days} days earlier)`:''} and seat snapshot. V₀ stays fixed during this run.`);
     showError('');
   }catch(error){if(token===state.scopeRequest)showError(error.message);}finally{if(token===state.scopeRequest)controls();}
@@ -219,6 +235,7 @@ async function initializeFlights(){
 $('optimization-route').addEventListener('change',()=>{fillFlights();loadScope();});
 $('optimization-flight').addEventListener('change',loadScope);
 $('optimization-day').addEventListener('change',loadScope);
+$('optimization-share').addEventListener('change',controls);
 $('optimization-suggest').addEventListener('click',loadScope);
 $('optimization-load-demo').addEventListener('click',async()=>{const route=$('optimization-route').value;const demo=state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0&&routeKey(f)===route)||state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);if(!demo){showError('Choose another flight or release round with positive member supply.');return;}$('optimization-route').value=routeKey(demo);fillFlights(demo.flight_id);$('optimization-day').value='28';await loadScope();});
 window.addEventListener('uoption:optimize-flight',async event=>{
@@ -229,7 +246,7 @@ window.addEventListener('uoption:optimize-flight',async event=>{
 });
 initializeFlights();
 $('optimization-form').addEventListener('submit',async event=>{
-  event.preventDefault();if(state.loading)return;if(!scopeEligible(state.scope)){showError('Select a release round with positive member supply before testing prices.');return;}showError('');state.loading=true;controls();
+  event.preventDefault();if(state.loading)return;const blocked=state.scope?releaseDecision(state.scope,val('optimization-share')):{title:'Select a flight and release round first.'};if(blocked){showError(blocked.title);return;}showError('');state.loading=true;controls();
   const body={flight_id:$('optimization-flight').value,forecast_day:val('optimization-day'),mode:$('optimization-mode').value,rounds:val('optimization-rounds'),customers:val('optimization-customers'),initial_membership_fee:val('optimization-fee'),fare_min:val('optimization-fare-min'),fare_max:val('optimization-fare-max'),fee_min:val('optimization-fee-min'),fee_max:val('optimization-fee-max'),seed:val('optimization-seed'),replicates:val('optimization-replicates'),release_fraction:val('optimization-share'),min_service_rate:val('optimization-service'),program_cost:val('optimization-cost'),max_calls:val('optimization-budget'),total_live_budget:$('optimization-mode').value==='math'?0:val('optimization-total-budget')};
   if(val('optimization-fare')<body.fare_min||val('optimization-fare')>body.fare_max||body.initial_membership_fee<body.fee_min||body.initial_membership_fee>body.fee_max||body.fare_min>=body.fare_max||body.fee_min>=body.fee_max){showError('Search limits must contain the starting prices and have a minimum lower than the maximum.');state.loading=false;controls();return;}
   try{const data=await api('/api/optimization/runs',body);clearTimeout(state.timer);state.runId=data.run_id;state.data=null;await listRuns();await poll(state.runId);}
