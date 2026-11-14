@@ -57,3 +57,11 @@
 - `scripts/smoke_three_round_api.py`實際HTTP測試通過：三輪發布5／3／2位，售出2位，D14結轉4、D7結轉6、最後有效未售8；拒絕D13發布、重複D7及倒退D14。新市場逐輪公式核對通過；D14有121筆、D7有178筆實際結轉案例，共36,987筆動作、0失敗及0外部provider呼叫。
 - 整體API smoke重新通過：200000列、1105班、64組候選及HK$280示例購票。測試會跳過已執行輪次的航班，避免將既有QA庫存誤判為服務失敗。前端完整`--transactions`瀏覽器smoke亦通過；新畫面顯示三輪新增／結轉、當前可成交量及歷史實驗標示。
 - 文件相對連結及`git diff --check`通過。本次沒有更改NHPP模型或校準，也沒有追加付費LLM實驗。
+
+### Live LLM英文／HKD場景修正（2026-11-14）
+
+- 重現原prompt允許人物語言、reason未檢查語言導致中／英／日混用及港元誤寫円。新版journey為`traveller-journey-v2.2-en`，shared adapter為`shared-market-customer-v3.1-en`；新理由全部要求英文及HKD，英文客群名稱保留原數值與RNG序列。
+- 加入明確單趟旅程＋新會費預算、全體同行報價、會費前後節省，前端顯示六階段情境與獨立庫存限制。共享市場放票規則、NHPP、校準和成本沒有修改。
+- 輸出合約在provider接受／有效快取寫入／外部Agent匯入前檢查；失敗原文留存、不改成規則決策。新舊prompt快取分開；舊suite不能混用新版續跑，歷史摘要保留原版本。
+- 真實DeepSeek五人六階段：30新回覆、0快取、0失敗、73,625 tokens，全部英文HKD；原始audit及結果已匯出`english_journey_20261114`。加入比較資訊會影響決策，不能把新舊差異當作語言因果或真人購買率。
+- 完整backend回歸最終105項全部通過（包括新增外部Agent英文匯入檢查）；14人84階段Chromium測試通過，390px無溢出，保留歷史原文。詳見LLM_SCENARIO_DESIGN.md與PROGRESS_FRONTEND.md。

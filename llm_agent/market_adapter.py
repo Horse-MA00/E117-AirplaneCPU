@@ -14,8 +14,9 @@ import urllib.error
 from .audit import sanitize
 from .journey import canonical
 from .journey_runner import _transport
+from .output_contract import CONTRACT_VERSION, CURRENCY, RESPONSE_LANGUAGE, validate_english_output
 
-VERSION = "shared-market-customer-v3"
+VERSION = "shared-market-customer-v3.1-en"
 PROMPTS = {lang: Path(__file__).parent / f"prompts/shared_market_v3_{lang}.txt" for lang in ("en", "zh")}
 HIDDEN_KEYS = {"latent_beta", "latent_rate", "latent_scale", "future_events", "future_quotes", "ground_truth",
                "baseline_normal_intent", "normal_intent", "airline_cost", "airline_profit", "profit", "objective",
@@ -56,6 +57,9 @@ def choose(observation, mode, audit, language="en", use_cache=True):
     if mode not in ("deterministic", "live") or language not in PROMPTS:
         raise ValueError("Invalid market choice mode or prompt language")
     visible = public_observation(observation)
+    # Traveller language remains scenario background, never an output-language
+    # instruction. Both prompt-language research variants return English/HKD.
+    visible.update(response_language=RESPONSE_LANGUAGE, currency=CURRENCY, output_contract=CONTRACT_VERSION)
     choices = legal_choices(visible)
     if not choices:
         raise ValueError("Environment supplied no legal choices")
@@ -84,7 +88,8 @@ def choose(observation, mode, audit, language="en", use_cache=True):
     if parsed.hostname == "api.deepseek.com":
         body["thinking"] = {"type": "disabled"}
     record = {"event": "market_request", "source": "provider_live", "prompt_version": VERSION,
-              "prompt_language": language, "model": model, "request": body,
+              "prompt_language": language, "response_language": RESPONSE_LANGUAGE,
+              "currency": CURRENCY, "output_contract": CONTRACT_VERSION, "model": model, "request": body,
               "context_sha256": context_hash, "cache_hit": False, "provider_call": False, "validation": "pending"}
     audit.append(record)
     raw_text = None
@@ -116,7 +121,9 @@ def choose(observation, mode, audit, language="en", use_cache=True):
         audit.append({**record, "event": "market_response"})
         if raw["choices"][0].get("finish_reason") != "stop":
             raise ValueError("Provider output did not finish normally")
-        decision = validate_decision(json.loads(raw["choices"][0]["message"]["content"]), visible)
+        raw_decision = json.loads(raw["choices"][0]["message"]["content"])
+        validate_english_output(raw_decision)
+        decision = validate_decision(raw_decision, visible)
         audit.append({**record, "event": "market_choice", "decision": decision, "validation": "passed"})
         if use_cache and not record["cache_hit"]:
             cache.write_text(json.dumps(sanitize({"raw_response_text": raw_text, "source": "provider_live", "prompt_version": VERSION}), ensure_ascii=False), encoding="utf-8")

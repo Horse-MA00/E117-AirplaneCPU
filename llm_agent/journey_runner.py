@@ -14,6 +14,7 @@ import urllib.request
 from .audit import Audit, sanitize
 from .journey import PROMPT, PROMPT_VERSION, STAGES, apply_decision, canonical, context_for, deterministic, enrich, initial_world, packet_for, validate_decision
 from .population import population
+from .output_contract import RESPONSE_LANGUAGE, CURRENCY, CONTRACT_VERSION, validate_english_output
 
 
 def _transport(request):
@@ -33,12 +34,15 @@ def provider_decision(packet, audit):
         request_body["thinking"] = {"type": "disabled"}
     record = {"packet_id": packet["packet_id"], "context_sha256": packet["context_sha256"],
               "prompt_version": PROMPT_VERSION, "model": model or None, "request": request_body,
+              "response_language": RESPONSE_LANGUAGE, "currency": CURRENCY, "output_contract": CONTRACT_VERSION,
               "source": "provider_live", "validation": "pending", "cache_hit": False}
     # Persist request before network dispatch. Headers/credentials are never recorded.
     audit.append({**record, "event": "request_prepared"})
     start = time.monotonic()
     raw_text = None
     try:
+        if packet.get("prompt_version") != PROMPT_VERSION or packet.get("system_prompt_sha256") != hashlib.sha256(PROMPT.read_bytes()).hexdigest():
+            raise ValueError("Journey packet uses a different prompt; create a new English scenario")
         parsed = urllib.parse.urlsplit(endpoint)
         if not (endpoint and key and model):
             raise ValueError("Live LLM is not configured; no deterministic fallback is used")
@@ -72,6 +76,7 @@ def provider_decision(packet, audit):
             raise ValueError("Provider response did not finish normally; truncated or filtered output is not accepted")
         decision = json.loads(raw["choices"][0]["message"]["content"])
         record["raw_decision"] = decision
+        validate_english_output(decision)
         clean = validate_decision(decision, context)
         audit.append({**record, "event": "decision_validated", "validation": "passed", "validated_decision": clean})
         if not record["cache_hit"]:
@@ -100,6 +105,7 @@ def run_journey(mode="deterministic", count=14, seed=117, membership_fee=399, me
     people = [enrich(p, i) for i, p in enumerate(population(count, seed))]
     worlds = [initial_world(p, member_fare, membership_fee, "panel") for p in people]
     audit = Audit(source, {"mode": mode, "scenario_mode": "journey", "prompt_version": PROMPT_VERSION,
+                           "response_language": RESPONSE_LANGUAGE, "currency": CURRENCY, "output_contract": CONTRACT_VERSION,
                            "customers": count, "seed": seed, "membership_fee": membership_fee, "member_fare": member_fare})
     results = []
     try:
@@ -132,6 +138,7 @@ def run_journey(mode="deterministic", count=14, seed=117, membership_fee=399, me
                    "cancelled": sum(w["state"]["booking_cancelled"] for w in worlds),
                    "completed_stages": sum(w["stage_index"] for w in worlds)}
         result = {"mode": mode, "scenario_mode": "journey", "source": source, "prompt_version": PROMPT_VERSION,
+                  "response_language": RESPONSE_LANGUAGE, "currency": CURRENCY, "output_contract": CONTRACT_VERSION,
                   "run_id": audit.run_id, "audit_path": f"data/private/llm_runs/{audit.run_id}", "results": results,
                   "summary": summary, "limitations": ["Synthetic scenario decisions, not observed HK Express market behaviour.",
                   "One detailed trip is followed across six stages; full-term benefit and future trips are stated expectations, not fabricated usage.",

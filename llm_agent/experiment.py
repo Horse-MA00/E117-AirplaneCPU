@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 from .audit import Audit, read_run, sanitize
-from .journey import PROMPT_VERSION, STAGES, _save, apply_decision, export_pending, export_suite, packet_for, summarize
+from .journey import PROMPT_VERSION, STAGES, _save, apply_decision, export_pending, export_suite, packet_for, require_current_suite, summarize
 from .journey_runner import provider_decision
 
 
@@ -62,6 +62,7 @@ def _run_batch(output, max_decisions=30, workers=3):
     suite = json.loads((output / "state.json").read_text())
     if suite["source"] != "provider_live":
         raise ValueError("Do not run provider calls on a Codex pilot suite")
+    require_current_suite(output, suite)
     audit = Audit("provider_live", {"prompt_version": PROMPT_VERSION, "suite_path": str(output), "model": os.environ.get("LLM_MODEL"),
                                     "worlds": len(suite["worlds"]), "maximum_decisions": len(suite["worlds"]) * len(STAGES)},
                   run_id=suite["suite_id"], resume=True)

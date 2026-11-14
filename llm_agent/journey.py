@@ -12,10 +12,11 @@ import random
 import uuid
 
 from .population import population
+from .output_contract import RESPONSE_LANGUAGE, CURRENCY, CONTRACT_VERSION
 
 ROOT = Path(__file__).resolve().parents[1]
 PROMPT = Path(__file__).parent / "prompts/journey_system.txt"
-PROMPT_VERSION = "traveller-journey-v2.1"
+PROMPT_VERSION = "traveller-journey-v2.2-en"
 STAGES = ("subscription", "quote_d28", "quote_d14", "quote_d7", "plan_change", "term_end")
 
 
@@ -135,6 +136,8 @@ def context_for(world):
     context = {
         "world_id": world["world_id"], "stage": stage, "source": "assumed_customer_journey",
         "person": visible_person, "state": copy.deepcopy(s),
+        "response_language": RESPONSE_LANGUAGE, "currency": CURRENCY, "output_contract": CONTRACT_VERSION,
+        "budget_scope": "The whole party's available budget for one detailed trip, including any new membership fee. Future term trips are expectations, not funded transactions.",
         "membership": {**config, "coverage": ["HKG-FUK", "HKG-KIX"], "personal_nontransferable": True,
                        "companions_require_regular_fares": True, "seat_availability_guaranteed": False,
                        "no_automatic_renewal": True, "membership_fee_nonrefundable": True,
@@ -145,7 +148,19 @@ def context_for(world):
         context["allowed_actions"] = ["KEEP_MEMBERSHIP"] if s["membership_active"] else ["DECLINE"]
         if not s["membership_active"] and config["membership_fee"] <= s["remaining_budget"]:
             context["allowed_actions"].append("JOIN_PASS")
-            context["legal_options"] = [{"id": "pass", "action": "JOIN_PASS", "price": config["membership_fee"], "term_days": 365}]
+            context["legal_options"] = [{"id": "pass", "action": "JOIN_PASS", "price": config["membership_fee"], "term_days": 365, "currency": CURRENCY}]
+        member_total = config["member_base_fare"] + (p["party_size"] - 1) * 600 + p["party_size"] * 250 + p["checked_bags"] * 80
+        regular_total = p["party_size"] * 850 + p["checked_bags"] * 80
+        new_fee = 0 if s["membership_active"] else config["membership_fee"]
+        context["current_quote_comparison"] = {
+            "currency": CURRENCY, "whole_party_regular_trip": regular_total,
+            "whole_party_member_trip": member_total, "membership_fee_due_now": new_fee,
+            "new_membership_plus_member_trip": new_fee + member_total,
+            "saving_on_one_trip_before_membership_fee": regular_total - member_total,
+            "saving_on_one_trip_after_new_membership_fee": regular_total - member_total - new_fee,
+            "budget_after_fee_and_member_trip": s["remaining_budget"] - new_fee - member_total,
+            "scope": "Illustrative D28 main-itinerary totals including required baggage. Eligibility and seats must still be checked at booking; future savings are not guaranteed.",
+        }
         context["upcoming_trip_reference"] = {"regular_total_per_person_excluding_baggage": 850,
                                                 "member_total_for_holder_excluding_baggage": config["member_base_fare"] + 250,
                                                 "current_seats_not_reserved": True}
@@ -281,6 +296,7 @@ def export_suite(output: Path | str, pilot=True, seed=117):
     offers = [(0, 199), (100, 599)] if pilot else [(p, v) for p in (0, 30, 70, 100) for v in (199, 599)]
     worlds = [initial_world(enrich(p, i), fare, fee, f"P{fare}-V{fee}") for i, p in enumerate(population(14, seed)) for fare, fee in offers]
     suite = {"suite_id": "journey-" + uuid.uuid4().hex[:12], "source": "codex_subagent_pilot", "prompt_version": PROMPT_VERSION,
+             "system_prompt_sha256": hashlib.sha256(PROMPT.read_bytes()).hexdigest(),
              "seed": seed, "counterfactual_design": {"persons": 14, "offers": offers, "same_person_across_offers": True}, "worlds": worlds}
     _save(output / "state.json", suite)
     (output / "system_prompt.txt").write_text(PROMPT.read_text(), encoding="utf-8")
@@ -288,9 +304,22 @@ def export_suite(output: Path | str, pilot=True, seed=117):
     return {"suite_id": suite["suite_id"], "worlds": len(worlds), "packets": str(output / "pending.jsonl")}
 
 
+def require_current_suite(output, suite):
+    """Reject continuation across prompt contracts; historical reports stay readable."""
+    current_hash = hashlib.sha256(PROMPT.read_bytes()).hexdigest()
+    frozen_prompt = Path(output) / "system_prompt.txt"
+    if (suite.get("prompt_version") != PROMPT_VERSION
+            or suite.get("system_prompt_sha256") != current_hash
+            or not frozen_prompt.is_file()
+            or hashlib.sha256(frozen_prompt.read_bytes()).hexdigest() != current_hash):
+        raise ValueError("Journey suite uses a different or unverified prompt contract. "
+                         "Create a new suite; historical results remain available for reading.")
+
+
 def export_pending(output):
     output = Path(output)
     suite = json.loads((output / "state.json").read_text())
+    require_current_suite(output, suite)
     pending = [packet_for(w) for w in suite["worlds"] if w["stage_index"] < len(STAGES)]
     batch = max((p["stage_index"] for p in pending), default=len(STAGES))
     content = "".join(canonical(p) + "\n" for p in pending)
@@ -304,8 +333,10 @@ def export_pending(output):
 
 def import_responses(output, responses):
     from .audit import Audit
+    from .output_contract import validate_english_output
     output = Path(output)
     suite = json.loads((output / "state.json").read_text())
+    require_current_suite(output, suite)
     audit = Audit("codex_subagent_pilot", {"prompt_version": suite["prompt_version"], "suite_path": str(output),
                                            "worlds": len(suite["worlds"])}, run_id=suite["suite_id"], resume=True)
     pending = {p["packet_id"]: p for p in (json.loads(line) for line in (output / "pending.jsonl").read_text().splitlines() if line)}
@@ -337,6 +368,7 @@ def import_responses(output, responses):
                 unchanged = packet["context"]["state"] == world["state"]
             if not unchanged:
                 raise ValueError("World changed after packet export")
+            validate_english_output(item.get("decision"))
             validate_decision(item.get("decision"), packet["context"])
             clean = apply_decision(world, item.get("decision"))
             seen.add(pid)
@@ -365,7 +397,7 @@ def import_responses(output, responses):
 
 def summarize(suite):
     worlds = suite["worlds"]
-    return {"suite_id": suite["suite_id"], "source": suite["source"], "prompt_version": PROMPT_VERSION,
+    return {"suite_id": suite["suite_id"], "source": suite["source"], "prompt_version": suite.get("prompt_version", "unknown"),
             "worlds": len(worlds), "completed_worlds": sum(w["stage_index"] == len(STAGES) for w in worlds),
             "joined": sum(w["state"]["joined_this_run"] for w in worlds),
             "booked": sum(w["state"]["ticket_spend"] > 0 for w in worlds),

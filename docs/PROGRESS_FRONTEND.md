@@ -4,6 +4,16 @@
 
 Current state: five views, including Shared market; real DeepSeek is configured locally and its completed experiments are documented separately. The earlier entries below describe the first implementation stage. Journey live runs allow up to five people (six stages each); shared live batches have their own explicit call budget.
 
+## English journey explanation — 2026-11-14
+
+- The Journey baseline now states English response language and HKD currency for new v2.2-en results, and identifies the exact prompt version. Historical result text is preserved in its original language rather than translated and mislabelled as a fresh model response.
+- Added a keyboard-operable native disclosure explaining all six stages, the single-trip budget including a new membership fee, expected annual trips versus recorded transactions, existing members, cancellation and unpaid renewal intention. It explicitly distinguishes the isolated scripted 4 / 0 / 1 member-seat checkpoints from Shared market's D28 / D14 / D7 releases and carried quotas.
+- Customer cards use English population labels and show trip-plus-fee budget, singular/plural party size, existing membership and each stage's remaining budget, fee paid, ticket spend and refunds. Independent disclosures can remain open together for comparison; the existing Swiss design is preserved.
+- `frontend/smoke-english-journey.mjs` passed with 14 current deterministic personas / 84 stages, English card and coverage text, HKD budgets, keyboard disclosure behavior, preserved historical Chinese fixture text and no overflow at 390px. It intercepts only the panel response using output generated from current Python code and makes zero live-provider calls. Desktop, mobile and expanded-card screenshots were visually checked; no JavaScript errors were reported. `node --check` and `git diff --check` also passed.
+- Applied modern-web-guidance `accordion`: text-only native summaries and non-exclusive disclosures, allowing scenario instructions and multiple traveller histories to stay visible together.
+
+## Initial implementation
+
 - Read the requested frontend-design skill and modern-web-guidance responsive-table, accessibility and tabs guides.
 - Implemented Swiss visual system and responsive static HTML/CSS in frontend/.
 - Implemented four API-connected views and native form flows in frontend/app.js.

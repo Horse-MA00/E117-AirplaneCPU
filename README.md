@@ -101,6 +101,7 @@ For live experiments, create with `--modes live`, then use a bounded `--max-call
 - [Shared-market agent, auditing and probes](docs/SHARED_MARKET_AGENT.md)
 - [40-seed mathematical market results](docs/SHARED_MARKET_MATH_RESULTS.md)
 - [Live shared-market validation](docs/SHARED_MARKET_VALIDATION.md)
+- [English scenario, budget scope and six-stage walkthrough](docs/LLM_SCENARIO_DESIGN.md)
 - [Actual baseline LLM experiments](docs/LLM_BASELINE_EXPERIMENTS.md)
 - [Review, improvements and deviations from the original plan](docs/OPTIMIZATION_REVIEW.md)
 - [Data generation and evaluation](simulation/README.md)

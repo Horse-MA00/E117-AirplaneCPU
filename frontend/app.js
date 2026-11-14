@@ -216,14 +216,16 @@ $('export-candidates').addEventListener('click', () => {
 
 function renderAgents(data) {
   const results = data.results || []; const mode = data.mode || 'deterministic';
-  text('agent-mode-message', `${mode === 'live' ? 'Live LLM' : 'Reproducible scenario model'} · ${number(results.length)} synthetic travellers · ${number(data.summary?.completed_stages || 0)} journey stages. These decisions are not observed HK Express customer purchases.${data.run_id ? ` Saved run: ${data.run_id}.` : ''}`);
+  const language = data.response_language === 'en' ? 'English explanations · HKD amounts.' : 'Original response language preserved.';
+  text('agent-mode-message', `${mode === 'live' ? 'Live LLM' : 'Reproducible scenario model'} · ${number(results.length)} synthetic travellers · ${number(data.summary?.completed_stages || 0)} journey stages. ${language} These decisions are not observed HK Express customer purchases.${data.prompt_version ? ` Prompt: ${data.prompt_version}.` : ''}${data.run_id ? ` Saved run: ${data.run_id}.` : ''}`);
   $('agent-results').replaceChildren(...results.map((row, index) => {
     const person = row.person || row.persona || row; const decision = row.decision || row; const booking = row.booking_decision;
     const card = element('article', undefined, 'customer-card');
     card.append(element('div', person.customer_id || `Synthetic customer ${index + 1}`, 'persona-number'));
     card.append(element('h2', person.segment_label || person.segment || person.purpose || 'Synthetic traveller'));
-    const traits = [person.expected_trips && `${person.expected_trips} expected trips / term`, person.total_budget && `Budget ${money(person.total_budget)}`, person.budget_hkd && `Budget ${money(person.budget_hkd)}`, person.party_size && `${person.party_size} travellers`, person.flexibility && `Flexibility: ${person.flexibility}`].filter(Boolean);
+    const traits = [person.expected_trips && `${person.expected_trips} expected trips / term`, person.total_budget != null && `Trip + new fee budget ${money(person.total_budget)}`, person.budget_hkd != null && `Trip + new fee budget ${money(person.budget_hkd)}`, person.party_size && `${person.party_size} ${person.party_size === 1 ? 'traveller' : 'travellers'}`, person.flexibility && `Flexibility: ${person.flexibility}`].filter(Boolean);
     card.append(element('p', traits.join(' · '), 'traits'));
+    if (person.membership_active) card.append(element('p', 'Existing member: no new subscription fee is charged.', 'small'));
     card.append(element('p', String(decision.action || decision.choice || 'No action').replaceAll('_', ' '), 'action'));
     card.append(element('p', decision.reason || decision.explanation || 'No reason returned.'));
     if (booking) card.append(element('p', `Booking: ${String(booking.action || '').replaceAll('_',' ')}. ${booking.reason || ''}`, 'small'));
@@ -231,11 +233,13 @@ function renderAgents(data) {
       const details = element('details');
       details.append(element('summary', 'Follow the six-stage journey'));
       const list = element('ol', undefined, 'journey-events');
+      const stages = { subscription: 'Subscription', quote_d28: 'D28 quote', quote_d14: 'D14 quote', quote_d7: 'D7 quote', plan_change: 'D3 plan change', term_end: 'Term-end intention' };
       for (const event of row.events) {
         const item = element('li');
-        item.append(element('strong', `${event.packet.context.stage.replaceAll('_', ' ')} · ${event.decision.action.replaceAll('_', ' ')}`));
+        const stage = event.packet.context.stage;
+        item.append(element('strong', `${stages[stage] || stage.replaceAll('_', ' ')} · ${event.decision.action.replaceAll('_', ' ')}`));
         item.append(element('p', event.decision.reason, 'small'));
-        item.append(element('p', `Budget left: ${money(event.state_after.remaining_budget)} · Membership paid: ${money(event.state_after.membership_fee_paid)}`, 'traits'));
+        item.append(element('p', `Budget left: ${money(event.state_after.remaining_budget)} · New membership fee paid: ${money(event.state_after.membership_fee_paid)} · Tickets paid: ${money(event.state_after.ticket_spend)} · Refunds received: ${money(event.state_after.refund_received)}`, 'traits'));
         list.append(item);
       }
       details.append(list); card.append(details);

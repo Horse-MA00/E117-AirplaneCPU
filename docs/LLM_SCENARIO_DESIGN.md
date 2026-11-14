@@ -1,6 +1,20 @@
 # LLM 旅客情境與原始決策紀錄
 
-2026-11-14。此版本把原先簡短的「入會／買票」面板擴展為六階段、可重播的旅客旅程，保存每一次實際模型輸入、原始輸出、驗證及狀態變動。DeepSeek `deepseek-flash` 已完成一位旅客六階段的真實 API smoke test；完整 112 世界實驗另有逐步進度紀錄，未完成前不能把預計呼叫數當成完成數。
+2026-11-14 更新。Customer Agent 面板使用六階段、可重播的旅客旅程，保存每一次實際模型輸入、原始輸出、驗證及狀態變動。最新輸出契約為 `traveller-journey-v2.2-en`：英文理由與客群名稱、HKD 金額。歷史 `v2.1` 的完整 112 世界／672 個 DeepSeek 決策已完成，見 [基線實驗](LLM_BASELINE_EXPERIMENTS.md)；它們仍是舊版證據，不會因新 prompt 上線而自動成為新版測試結果。
+
+## 為甚麼以前出現中英日混合，現在如何統一
+
+原先人物資料的 `language` 隨機使用 `zh-HK`、`en` 或 `ja`，system prompt 又明確允許理由使用人物語言，因此日文與中文不是前端翻譯產生的。客群名稱本身也以中文儲存。日文回應把港元誤稱為「円」，則是另一個幣別錯誤。
+
+新版把人物背景與報告語言分開：
+
+- 人物原有 `language` 只表示背景，不能用它推斷預算或願付價格；所有新決策的 `reason` 使用英文。
+- 客群名稱使用英文；動作仍為 `JOIN_PASS`、`BUY_MEMBER` 等既有代碼。
+- 全部預算、會費、票價、附加費及退款以 HKD 計算；不能因目的地在日本或人物語言為日文而換成 JPY。
+- prompt 與結構化 context 說明完整價格、預算範圍及可用性限制。輸出在執行前接受驗證；失敗原文仍保存，不能偷偷替換成規則決策或翻譯後冒充原始模型回答。
+- 舊 audit、舊實驗及其中的原始中日文保持原樣。新 prompt 改變 request hash，舊快取不會作為新 prompt 的回應使用。要取得新版顯示結果，需執行新版場景。
+
+統一語言有助閱讀及比較，不會令生成選擇自動變成真實客戶行為，也不能保證所有簡短理由的算術或判斷正確。可執行金額、資格和庫存由環境驗證。
 
 ## 情境與客群範圍
 
@@ -20,6 +34,29 @@
 | 會員期末 | 這次旅程的購買、取消、總支出及未來需要 | 續會意向、不續會、日後考慮 | 只記意向，不產生續費或虛構新交易 |
 
 第一版追蹤一個細緻旅程，而非虛構一整年的交易。訂閱時的期內價值與期末未來旅行仍是期望；財務優化器另負責完整會員期的市場模擬。兩者不應混合成「模型已觀察到全年使用」。
+
+## 面板實際使用的示例與讀法
+
+預設會員基本票價為 HKD70、會費為 HKD399／365 日。以下是環境內的測試劇本；Agent 在每一步只看到當下報價，不提前看到下一輪：
+
+| 項目 | 目前設定 | 用意 |
+| --- | --- | --- |
+| 主行程 | HKG → FUK，2027-05-30 10:30 | 測試日期、時間與目的地是否合適 |
+| 替代行程 | HKG → KIX，2027-05-31 18:30，正常基本票價比主行程低 HKD100 | 測試旅客是否願意接受可行的替代日期／目的地 |
+| 主行程正常基本票價 | D28：HKD600；D14：HKD650；D7：HKD800 | 測試等待時的價格與機會成本 |
+| 主行程示例會員位 | D28：4；D14：0；D7：1 | 測試早訂、售罄及後期少量可用的不同情境 |
+| 每人必付費用 | HKD250 | 避免把零基本票價理解為零總價 |
+| 託運行李 | 每件 HKD80；數量由人物情境設定 | 比較整組旅客完整付款 |
+| 既有會員 | 14 人中的第 3、7 人已入會，剩餘 120 日 | 測試已有會籍時不再次收費 |
+| 預算 | 本次旅程、全體同行人可用總額，包含這次新會費 | 驗證先入會後，剩餘預算是否還能付機票 |
+
+這些設定不是實際 HK Express 售價、時刻或會員條款。以沒有行李的單人為例，D28 會員票完整付款為 `70 + 250 = HKD320`，正常票為 `600 + 250 = HKD850`；新會員第一次的合計支出為 `399 + 320 = HKD719`。預算 HKD807 的人可負擔這次入會及買票，但之後只餘 HKD88，亦可能因供應不確定而拒絕入會。拒絕入會後仍可買 HKD750 的次日大阪正常票。
+
+「3 expected trips / term」表示全年預期三次，並不表示系統已安排或售出三次，也不代表上述 HKD807 是整年的旅遊預算。若三次均成功使用同等優惠，理論淨節省是 `3 × (850 − 320) − 399 = HKD1,191`；這個條件算例不能改寫成三次一定能用，也不能無依據稱為「淨節省有限」。
+
+畫面上的第一個動作是**入會階段**決定；`Booking:` 是第一次成功買票的決定，沒有買票則顯示最後報價階段的決定。兩者可以是 `DECLINE` 與 `BUY_REGULAR`，沒有矛盾。展開 `Follow the six-stage journey` 才能看到後續保留、取消和期末意向；已付款後取消仍會保留最初購票紀錄。
+
+**獨立旅程與共享市場的界線：**這一頁每個人物有獨立示例庫存，4／0／1 不是其他畫面人物搶購後的結果，也不是 NHPP 計算的實際放票數。新版共享市場才執行 [D28／D14／D7 三輪配額](THREE_ROUND_RELEASE.md)，以所有旅客共用的航班和歷史有效未售配額計算新增供應。Customer Agent 適合讀取個別行為理由；共享市場適合比較搶票、庫存後果及收益。
 
 ## 價格與約束
 
@@ -53,25 +90,25 @@
 
 伺服器環境變數為 `LLM_API_URL`、`LLM_API_KEY`、`LLM_MODEL`，只存在本地私有設定。模型可配置；本次使用經 `/models` 核對可用的 `deepseek-flash`。只有 `api.deepseek.com` 主機的請求加入 `thinking: {type: "disabled"}`；其他供應商不會收到這個擴充欄位。回應要求 JSON，且 `finish_reason` 必須是 `stop` 才能接受，截斷的有效 JSON 也不採用。
 
-模型是綁定當前實驗的一部分。實驗開始後不能改 prompt、人物或場景語義再把結果合併；改動應建立新版本和新實驗。
+模型是綁定當前實驗的一部分。實驗開始後不能改 prompt、人物或場景語義再把結果合併；改動應建立新版本和新實驗。新版 suite 保存 `prompt_version` 與 `system_prompt_sha256`，續跑、重新輸出 pending packets、匯入回應前會核對版本、雜湊及凍結的 `system_prompt.txt`。舊版或缺少有效證據的 suite 可繼續查閱報告，不能以新版契約接續，亦不會被改寫成新版成果。
 
 ```bash
 # 建立完整 14 人 × 4 個票價 × 2 個會費 = 112 個獨立世界
 python -m llm_agent.experiment create \
-  --output data/private/deepseek_factorial_20261114 --full
+  --output data/private/deepseek_factorial_english_v22 --full
 
 # 每次最多 30 次決策呼叫，3 個平行工作；可重複執行以續跑
 python -m llm_agent.experiment run \
-  --output data/private/deepseek_factorial_20261114 \
+  --output data/private/deepseek_factorial_english_v22 \
   --max-decisions 30 --workers 3
 
 python -m llm_agent.experiment report \
-  --output data/private/deepseek_factorial_20261114
+  --output data/private/deepseek_factorial_english_v22
 
 # 明確要分享合成紀錄時才執行；不匯出認證 headers 或 API key
 python -m llm_agent.experiment export \
-  --output data/private/deepseek_factorial_20261114 \
-  --destination llm_agent/experiments/deepseek_factorial_20261114
+  --output data/private/deepseek_factorial_english_v22 \
+  --destination llm_agent/experiments/deepseek_factorial_english_v22
 ```
 
 完整 112 世界各最多六個決策，共 672 次決策機會。快取重播不等於新增 Provider 呼叫。每批限制是上限；實際呼叫、完成、快取與失敗數以 audit 記錄為準。CLI 每批最多 168 次，最多五個工作者；UI 另由 API 設較小上限。
@@ -83,14 +120,14 @@ python -m llm_agent.experiment export \
 ```bash
 # 14 人，每人兩組方案：P0/V199 與 P100/V599，共 28 個世界
 python -m llm_agent.journey export \
-  --output data/private/codex_pilot_20261114
+  --output data/private/codex_pilot_english_v22
 
 # 子 Agent 只讀 system_prompt.txt 和當前 pending.jsonl。
 # 不讀 state.json：其中有環境尚未揭露的未來事件。
 # 回答逐列包含 packet_id、context_sha256 以及 decision。
 python -m llm_agent.journey import \
-  --output data/private/codex_pilot_20261114 \
-  --responses data/private/codex_pilot_20261114/responses-stage-0.jsonl
+  --output data/private/codex_pilot_english_v22 \
+  --responses data/private/codex_pilot_english_v22/responses-stage-0.jsonl
 ```
 
 匯入會驗證 packet ID、原始 context hash、當前狀態及合法動作。批次全部合法才提交狀態；失敗原始輸出仍會保留。`pending.jsonl` 推進到下一階段，歷史 `packets-stage-N.jsonl` 保持可查。舊回應不能再次套用或跨世界混用。
@@ -114,3 +151,15 @@ python -m llm_agent.journey import \
 ## 驗證
 
 `backend/tests/test_llm_journey.py` 覆蓋：六階段預算守恆、會費一次、既有會員、家人正常票價、售罄、最低安排時間、取消退款、不重複買票、未來事件隱藏、packet hash、錯誤批次不改狀態、錯誤輸出保存、Provider 快取來源、認證遮蔽、截斷輸出拒絕、批次續跑及匯出。舊 `runner.run()` 的 legacy 模式仍供相容性測試；產品端應使用 `scenario_mode="journey"`。
+
+`backend/tests/test_journey_versioning.py` 覆蓋新版 prompt 凍結、舊版續跑與匯入拒絕、prompt 雜湊缺失／改變、凍結檔案遭修改時停止 Provider 呼叫，以及歷史報告保留原始版本。
+
+## 英文版本實際驗證（2026-11-14）
+
+新版 `traveller-journey-v2.2-en` 以相同 seed117、前五位人物、P70/V399，實際呼叫 `deepseek-flash` 完成六階段：30份新有效回覆、0快取、0失敗，供應商回報73,625 total tokens。所有接受的理由為英文、金額使用HKD。四名原未入會者均選擇入會，另一名保留既有會員；五人都曾購票，一人後來取消。這是該情境的新回覆，不能推論真實轉換率。
+
+本次除語言外也補充了預算範圍和程式計算的全體同行報價，因此不能把相較舊版的行動差異全部歸因於語言。語言／幣別驗證器檢查非拉丁文字、常見外幣代碼／符號與reason_code；它不是完整自然語言辨識器，也不能證明所有敘述算術或消費偏好正確。英文使用拉丁字母的其他語言仍可能通過字元層檢查，需持續觀察真實回應。
+
+原始輸入、原始輸出、狀態變化、完整畫面結果與SHA-256保存在 [english_journey_20261114](../llm_agent/experiments/english_journey_20261114/)，私有run為 `journey-7aefaac1284f4f99`。既有多語言實驗未翻譯或覆寫。新程式以prompt與context雜湊隔離快取；舊suite不可套用新版prompt續跑，但仍可讀取歷史報告。
+
+驗證涵蓋中日文與JPY拒絕、失敗原文留存、不更新狀態、不存有效快取、快取再驗證、英文標點、同seed數值保持、外部Agent匯入、舊suite續跑拒絕。前端另以14人84階段檢查英文卡片、預算／會員標示、鍵盤操作、歷史原文保留與390px佈局。

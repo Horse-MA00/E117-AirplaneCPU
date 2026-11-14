@@ -2,20 +2,20 @@
 import random
 
 SEGMENTS = [
- ('flexible_budget','彈性低預算旅客',.13,3,600,5),
- ('student','學生與學期假期',.09,2,500,3),
- ('fixed_holiday','固定假期上班族',.14,2,1000,0),
- ('frequent_leisure','高頻休閒旅客',.10,6,900,4),
- ('family','家庭及學校假期',.12,2,1200,1),
- ('couple','雙人短途旅行',.10,3,1000,2),
- ('visiting_friends','探親訪友',.08,4,1100,2),
- ('urgent_trip','臨時必要出行',.04,2,1600,0),
- ('small_business','自費商務出行',.04,5,1500,1),
- ('inbound','入境及跨市場旅客',.05,2,1000,2),
- ('group','同行小組',.03,2,900,1),
- ('access_needs','有協助與安排需求',.02,2,1100,1),
- ('infrequent','低頻及首次旅行',.04,1,650,1),
- ('no_match','無合適航線或日期',.02,2,700,0),
+ ('flexible_budget','Flexible budget traveller',.13,3,600,5),
+ ('student','Student on term breaks',.09,2,500,3),
+ ('fixed_holiday','Fixed-leave employee',.14,2,1000,0),
+ ('frequent_leisure','Frequent leisure traveller',.10,6,900,4),
+ ('family','Family on school holidays',.12,2,1200,1),
+ ('couple','Couple on a short break',.10,3,1000,2),
+ ('visiting_friends','Visiting friends and relatives',.08,4,1100,2),
+ ('urgent_trip','Urgent essential traveller',.04,2,1600,0),
+ ('small_business','Self-funded business traveller',.04,5,1500,1),
+ ('inbound','Inbound and cross-market traveller',.05,2,1000,2),
+ ('group','Small travel group',.03,2,900,1),
+ ('access_needs','Traveller needing assistance',.02,2,1100,1),
+ ('infrequent','Infrequent or first-time traveller',.04,1,650,1),
+ ('no_match','No matching route or dates',.02,2,700,0),
 ]
 
 def population(count=100, seed=117):
@@ -35,5 +35,5 @@ def population(count=100, seed=117):
 
 def coverage():
     return dict(source='hypothetical_coverage_not_market_shares',segments=[dict(id=s[0],name=s[1],assumed_weight=s[2]) for s in SEGMENTS],
-      dimensions=['出行目的','頻次','日期彈性','預算','同行人數','提前安排時間','入境或出境','語言','航線匹配','會員狀態'],
-      limitations=['沒有真實 HK Express 客群權重或支付資料','群體情境不能證明代表整個實際市場','機票稅費與會員可用性均需展示'])
+      dimensions=['Travel purpose','Frequency','Date flexibility','Budget','Party size','Minimum notice','Inbound or outbound','Background language','Route match','Membership status'],
+      limitations=['No observed HK Express segment weights or payment data.','Coverage scenarios do not establish representation of the actual market.','Full payable prices and uncertain member availability must be shown.'])

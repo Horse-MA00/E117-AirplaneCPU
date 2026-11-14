@@ -1,0 +1,23 @@
+{
+  "run_id": "journey-7aefaac1284f4f99",
+  "prompt_version": "traveller-journey-v2.2-en",
+  "response_language": "en",
+  "currency": "HKD",
+  "summary": {
+    "customers": 5,
+    "joined": 4,
+    "existing_members": 1,
+    "booked": 5,
+    "cancelled": 1,
+    "completed_stages": 30
+  },
+  "fresh_provider_responses": 30,
+  "cache_hits": 0,
+  "failures": 0,
+  "provider_model": "deepseek-flash",
+  "usage_total_tokens": 73625,
+  "limitations": [
+    "Synthetic independent one-trip scenarios, not observed customers or a shared-market profitability test.",
+    "Language and currency checks do not validate economic preferences or all arithmetic."
+  ]
+}

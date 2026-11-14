@@ -37,7 +37,7 @@ class SharedAdapterTests(unittest.TestCase):
             transport.assert_not_called()
 
     def test_raw_live_cache_and_nonstop_rejection(self):
-        raw={"choices":[{"finish_reason":"stop","message":{"content":json.dumps({"action":"DECLINE","option_id":None})}}],"usage":{"total_tokens":20}}
+        raw={"choices":[{"finish_reason":"stop","message":{"content":json.dumps({"action":"DECLINE","option_id":None,"reason":"I prefer to preserve my budget."})}}],"usage":{"total_tokens":20}}
         with tempfile.TemporaryDirectory() as temporary,patch.object(audit,"BASE",Path(temporary)/"runs"),patch.dict("os.environ",self.ENV),patch.object(market_adapter,"_transport",return_value=io.BytesIO(json.dumps(raw).encode())) as transport:
             first=audit.Audit("test")
             market_adapter.choose(self.observation(),"live",first)

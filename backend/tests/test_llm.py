@@ -34,6 +34,7 @@ class LiveAgentContractTests(unittest.TestCase):
             received.append(context)
             decision = ({"action": "JOIN_PASS", "option_id": "pass"} if context["stage"] == "subscription"
                         else {"action": "BUY_MEMBER", "option_id": "member"})
+            decision["reason"] = "The HKD amount is affordable within my budget."
             return io.BytesIO(json.dumps({"choices": [{"message": {"content": json.dumps(decision)}}]}).encode())
 
         with tempfile.TemporaryDirectory() as temporary, patch.dict("os.environ", settings), patch.object(runner, "__file__", str(Path(temporary)/"llm_agent/runner.py")), patch.object(runner, "population", return_value=[dict(PERSON)]), patch.object(runner, "_open", side_effect=respond) as transport:

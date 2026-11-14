@@ -35,3 +35,7 @@ with gzip.open("llm_agent/experiments/shared_validation_20261311/audit.jsonl.gz"
 ```
 
 The earlier isolated journey has different inventory semantics from the shared market. Its conversion counts must not be combined with shared-market policy contribution. Three live holdouts give limited simulation evidence, not real-world price elasticity or an optimal membership fee.
+
+## English journey verification
+
+`english_journey_20261114/` contains 5 synthetic travellers × 6 stages, P70/V399, seed117, using `traveller-journey-v2.2-en` and `deepseek-flash`: 30 fresh English/HKD responses, no cache or failures. It includes `result.json`, `report.json`, redacted original `audit.jsonl.gz` and SHA-256 manifest. Budget scope and computed price comparisons changed alongside language; this is neither a language-only causal test nor shared-market price validation. Historical multilingual artifacts are unchanged.
