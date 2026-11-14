@@ -1,0 +1,39 @@
+{
+  "source": "llm_feedback_pricing",
+  "run_id": "feedback-3b6169dd14c442cd",
+  "decision_source": "provider_live",
+  "synthetic": true,
+  "objective": "base_ticket_revenue",
+  "completed_worlds": 8,
+  "audit_records": 1354,
+  "counts": {
+    "total_attempts": 227,
+    "proposer_calls": 2,
+    "customer_calls": 225,
+    "provider_calls": 221,
+    "cache_hits": 6,
+    "forced": 223,
+    "failures": 0
+  },
+  "accepted_provider_origin_outputs": 227,
+  "credentials": "No authorization headers; known credentials redacted.",
+  "limitations": [
+    "Generated traveller choices are not human observations.",
+    "Base-ticket revenue excludes all costs and is not profit.",
+    "Provider-origin cache replay is not a new independent call."
+  ],
+  "files": {
+    "report.json": {
+      "sha256": "ec4038f97dc7fd30279089d30e71adf8d9096cc0dd677b504086ccc697c840df",
+      "bytes": 201131
+    },
+    "worlds.json.gz": {
+      "sha256": "a98fca4ca296c82ab8a3d342d698e4865c944f622ba930d75f9ff26a9bfb9ff7",
+      "bytes": 107223
+    },
+    "audit.jsonl.gz": {
+      "sha256": "b7d74016af44287db788205311546bb904c383d6ff6064e9704ac59b596ed515",
+      "bytes": 551000
+    }
+  }
+}

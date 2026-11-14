@@ -82,10 +82,11 @@ def rationale_diagnostics(decision, observation):
             'blocking':False,'coverage':'Limited explicit-comparison and prospective-validity checks; an unflagged reason is not verified as true.'}
 
 
-def choose(observation, mode, audit, language="en", use_cache=True):
+def choose(observation, mode, audit, language="en", use_cache=True, *, system_prompt=None, prompt_version=None):
     """Choose once. Illegal/failed provider outputs never become rule decisions."""
     if mode not in ("deterministic", "probabilistic", "live") or language not in PROMPTS:
         raise ValueError("Invalid market choice mode or prompt language")
+    version = prompt_version or VERSION
     visible = public_observation(observation)
     if visible.get('stage')=='subscription':
         # Recompute from present quotes so isolated price probes cannot retain
@@ -104,13 +105,13 @@ def choose(observation, mode, audit, language="en", use_cache=True):
         decision = {"action": action, "option_id": oid, "reason_code": "ENVIRONMENT_FORCED",
                     "reason": "Only one legal action is available; no model choice was requested.", "confidence": "high"}
         audit.append({"event": "market_choice", "source": "environment_forced", "mode_requested": mode,
-                      "prompt_version": VERSION, "observation": visible, "context_sha256": context_hash,
+                      "prompt_version": version, "observation": visible, "context_sha256": context_hash,
                       "decision": decision, "validation": "passed", "model": None, "usage": None, "cache_hit": False})
         return {"decision": decision, "source": "environment_forced", "forced": True, "cache_hit": False, "provider_call": False}
     if mode == "deterministic":
         from backend.shared_market import deterministic_decision
         decision = validate_decision(deterministic_decision(visible), visible)
-        audit.append({"event": "market_choice", "source": "deterministic_assumption", "prompt_version": VERSION,
+        audit.append({"event": "market_choice", "source": "deterministic_assumption", "prompt_version": version,
                       "observation": visible, "context_sha256": context_hash, "decision": decision,
                       "validation": "passed", "model": None, "usage": None, "cache_hit": False})
         return {"decision": decision, "source": "deterministic_assumption", "forced": False, "cache_hit": False, "provider_call": False}
@@ -127,13 +128,13 @@ def choose(observation, mode, audit, language="en", use_cache=True):
                 "cache_hit": False, "provider_call": False}
 
     endpoint, key, model = (os.environ.get(k, "") for k in ("LLM_API_URL", "LLM_API_KEY", "LLM_MODEL"))
-    body = {"model": model, "messages": [{"role": "system", "content": PROMPTS[language].read_text(encoding="utf-8")},
+    body = {"model": model, "messages": [{"role": "system", "content": system_prompt if system_prompt is not None else PROMPTS[language].read_text(encoding="utf-8")},
             {"role": "user", "content": canonical(visible)}], "temperature": 0, "max_tokens": 700,
             "response_format": {"type": "json_object"}}
     parsed = urllib.parse.urlsplit(endpoint)
     if parsed.hostname == "api.deepseek.com":
         body["thinking"] = {"type": "disabled"}
-    record = {"event": "market_request", "source": "provider_live", "prompt_version": VERSION,
+    record = {"event": "market_request", "source": "provider_live", "prompt_version": version,
               "prompt_language": language, "response_language": RESPONSE_LANGUAGE,
               "currency": CURRENCY, "output_contract": CONTRACT_VERSION, "model": model, "request": body,
               "context_sha256": context_hash, "cache_hit": False, "provider_call": False, "validation": "pending"}
@@ -174,7 +175,7 @@ def choose(observation, mode, audit, language="en", use_cache=True):
         audit.append({**record, "event": "market_choice", "decision": decision, "validation": "passed",
                       'rationale_diagnostics':diagnostics})
         if use_cache and not record["cache_hit"]:
-            cache.write_text(json.dumps(sanitize({"raw_response_text": raw_text, "source": "provider_live", "prompt_version": VERSION}), ensure_ascii=False), encoding="utf-8")
+            cache.write_text(json.dumps(sanitize({"raw_response_text": raw_text, "source": "provider_live", "prompt_version": version}), ensure_ascii=False), encoding="utf-8")
         return {"decision": decision, "source": "provider_live", "forced": False,
                 "cache_hit": record["cache_hit"], "provider_call": not record["cache_hit"],
                 'rationale_diagnostics':diagnostics}

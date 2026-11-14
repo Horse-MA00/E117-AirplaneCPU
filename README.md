@@ -4,6 +4,14 @@
 
 A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for Cathay Hackathon 2026, **Low-cost Travel — Smart Offer & Borderless Booking**. The proposed HK Express membership offers zero or low base fares plus mandatory charges.
 
+## Experimental LLM feedback pricing
+
+Branch `experiment/llm-feedback-pricing` adds a separate [pricing lab](http://127.0.0.1:8000/feedback-pricing), also linked from Admin → Optimize prices. After evaluating the selected flight's original P₀, a **pricing LLM** reads completed revenue measurements and traveller feedback and proposes the next bounded fare. Separate **traveller LLMs** choose purchases; the existing shared market executes inventory and accounting. There are no preset price probes or automatic zero-price tests.
+
+This lab intentionally removes joining fees: everyone has complimentary eligibility, and purchases use **base ticket prices only**. Its objective is total new base-ticket revenue, including normal sales displaced by discounts, **not profit**. It compares P₀, the best tested fare and no offer on fresh matched validation markets. NHPP and D28/D14/D7 quota rules stay unchanged. Full prompts, raw responses, transactions, checkpoints and call limits are stored in a separate SQLite database. A configured live provider is required; no offer is automatically published.
+
+See [the design, workflow, trade-offs and API](docs/LLM_FEEDBACK_PRICING.md). The original membership-price optimizer and its historical reports remain available.
+
 ## Joint optimisation and new portals (2026-11-14)
 
 Admin now follows **Forecast seats → Optimize prices → Experiments → Manage offers**,

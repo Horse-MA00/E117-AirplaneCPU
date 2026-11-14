@@ -52,6 +52,17 @@ def get(path,query=None):
  if path=='/api/health':
   with store().connect() as connection:connection.execute('SELECT 1').fetchone()
   return {'status':'ok'}
+ if path=='/api/feedback-pricing/runs':
+  from . import feedback_pricing
+  return {'runs':feedback_pricing.list_runs()}
+ if path.startswith('/api/feedback-pricing/runs/'):
+  from . import feedback_pricing,feedback_store
+  parts=path.strip('/').split('/')
+  if len(parts)==4:return feedback_pricing.read(parts[3])
+  if len(parts)==5 and parts[4]=='export':return feedback_pricing.export_run(parts[3])
+  if len(parts)==5 and parts[4]=='events':
+   return feedback_store.events(parts[3],query_int(query or {},('limit',),100),query_int(query or {},('offset',),0))
+  raise NotFound('Feedback pricing endpoint not found')
  if path=='/api/optimization/runs':
   from . import optimization
   return {'runs':optimization.list_runs()}
@@ -125,6 +136,14 @@ def get(path,query=None):
 
 _optimizer_lock=threading.Lock()
 def post(path,body):
+ if path=='/api/feedback-pricing/runs':
+  from . import feedback_pricing
+  return feedback_pricing.start(body)
+ if path.startswith('/api/feedback-pricing/runs/') and path.endswith('/resume'):
+  from . import feedback_pricing
+  parts=path.strip('/').split('/')
+  if len(parts)==5:return feedback_pricing.resume(parts[3],body)
+  raise NotFound('Feedback pricing endpoint not found')
  if path=='/api/optimization/initial-policy':
   from .initial_policy import suggest
   return suggest(body)
@@ -239,7 +258,8 @@ class Handler(BaseHTTPRequestHandler):
       compressed.write(line)
     return
    if path.startswith('/api/'):return self.json(200,get(path,parse_qs(urlparse(self.path).query)))
-   aliases={'/admin':'index.html','/admin/':'index.html','/members':'members/index.html','/members/':'members/index.html'}
+   aliases={'/admin':'index.html','/admin/':'index.html','/members':'members/index.html','/members/':'members/index.html',
+            '/feedback-pricing':'feedback-pricing.html','/feedback-pricing/':'feedback-pricing.html'}
    root=(ROOT/'frontend').resolve();file=(root/aliases.get(path,path.lstrip('/') or 'index.html')).resolve()
    if root not in file.parents or not file.is_file():return self.json(404,{'error':'Not found'})
    payload=file.read_bytes();self.send_response_headers(200,mimetypes.guess_type(file.name)[0] or 'application/octet-stream',len(payload));self.wfile.write(payload)
