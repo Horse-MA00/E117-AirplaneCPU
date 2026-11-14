@@ -58,3 +58,13 @@ Current state: five views, including Shared market; real DeepSeek is configured 
 - Hardened comparisons for saved multi-seed experiments: policy rows now show group means, paired differences average matched seeds, and mixed decision modes/splits never share one winning headline. The regression fixture verifies that fixed deltas +100/+100 beat candidate deltas +1000/−900; the best individual seed cannot select the winner.
 - Re-ran the full frontend smoke after this change successfully. Static checks also pass (`node --check`, `git diff --check`, no duplicate HTML IDs, no malformed option closers). No live provider requests were made by frontend QA; the pause/resume and ranking edge cases use intercepted test fixtures only.
 - Final independent review passed frontend and API smoke tests, real CLI-running status and polling, incomplete ranking disclosure, and the streaming gzip audit download (2,775 complete records). No automatic market POST or provider spending was triggered by polling.
+
+
+## Admin and member storefront — 2026-11-14
+
+- Reworked Admin information hierarchy with action-oriented navigation and separate `/members` entry. Customer panels now show outcomes first, segment comparison bars,20-row searchable/filterable tables and one selected six-stage journey. Live size100/offline1000 is independent of the bounded decision budget.
+- Native labelled progress and polite status preserve keyboard focus; manual resume never auto-starts another paid batch. Published-price drafts survive navigation and require explicit saving; currency inputs accept cents.
+- Moved member signup/reservation out of Admin. New `members/` storefront searches actual published synthetic offers, explains full price and new-pass fee, reviews two explicit transactions, and shows persisted My trips. The same SQLite inventory and canonical membership plan power both interfaces.
+- Native modal review supports Escape and focus return. Submit controls prevent duplicate posts, price/availability changes require re-review, and a successful mutation followed by failed GET retains success rather than encouraging another charge.
+- Verified real100-person600-stage panel,14groups,partialdenominators,pagination,filtering,manualresume fixture,fee draft599.75,desktop390/768px. Updated fullAdmin smoke and actualSQLite portal join/book/reload both passed. New portal fixtures cover empty/no-match,exact cents,changedfee,soldout,accountswitch,successwithrefreshfailure. Screenshots inspected and remain ignored.
+- Applied modern-web-guidance `progress`, `responsive-table`, `forms`, `dialog` and maintained Swiss white/Helvetica/blue tokens. No provider calls made by browser QA.

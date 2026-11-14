@@ -1,6 +1,6 @@
 /** Run against an already-running backend. No production browser dependencies.
  * npm install && npx playwright install chromium && npm run test:smoke
- * Add -- --transactions to create explicit demo membership / booking records.
+ * Add -- --transactions to publish an explicit demo offer. Member booking is tested separately in the member portal.
  */
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
@@ -21,7 +21,7 @@ const waitForecast = () => page.waitForFunction(() => document.querySelector('#f
 const navigate = (view) => page.locator(`.primary-nav a[href="#${view}"]`).click();
 
 try {
-  await page.goto(origin, { waitUntil: 'networkidle' });
+  await page.goto(origin + '/admin', { waitUntil: 'networkidle' });
   await page.waitForFunction(() => document.getElementById('demand-value').textContent !== '—');
   assert.equal(await page.locator('#error').isVisible(), false);
   assert.ok((await page.locator('#dataset-label').textContent()).includes('synthetic'));
@@ -68,8 +68,10 @@ try {
   await navigate('customers');
   await page.locator('#agent-count').fill('14');
   await page.locator('#agent-button').click();
-  await page.waitForFunction(() => document.querySelectorAll('.customer-card').length === 14);
-  assert.ok((await page.locator('#agent-mode-message').textContent()).includes('not observed'));
+  await page.waitForFunction(() => document.getElementById('panel-run-status').textContent.startsWith('Complete'), null, {timeout:120000});
+  assert.equal(await page.locator('#panel-people tr').count(), 14);
+  assert.equal(await page.locator('#panel-completed').textContent(), '14');
+  assert.ok((await page.locator('#agent-mode-message').textContent()).includes('independent one-trip'));
   await page.screenshot({ path: `${output}customers-desktop.png`, fullPage: true });
 
   await navigate('market');
@@ -115,37 +117,15 @@ try {
     await page.waitForFunction(() => document.getElementById('release-value').textContent === '0 seats');
     assert.equal(await page.locator('#publish-button').isDisabled(), true, 'A published round cannot be issued twice.');
     await page.waitForFunction(() => document.querySelectorAll('.offer-card').length > 0);
-    await page.locator('#customer-id').fill(`frontend-qa-${Date.now()}`);
-    await page.locator('#join-button').click();
-    await page.waitForFunction(() => document.getElementById('membership-status').textContent.startsWith('Membership active'));
-    const bookingPromise = page.waitForResponse((response) => response.url().endsWith('/api/bookings'));
-    await page.locator(`[data-offer-id="${published.offer.id}"] button:not(:disabled)`).click();
-    const booking = await (await bookingPromise).json();
-    assert.ok(booking.booking, JSON.stringify(booking));
-    assert.equal(booking.booking.total, 70 + published.offer.fees);
-    await page.waitForFunction(() => !document.getElementById('booking-result').hidden);
-    await page.screenshot({ path: `${output}members-desktop.png`, fullPage: true });
+    assert.equal(await page.locator('#customer-id').count(), 0, 'Consumer identity does not belong in Admin.');
+    assert.equal(await page.locator('#join-button').count(), 0, 'Consumer joining is on the separate member site.');
+    const publishedCard = page.locator(`[data-offer-id="${published.offer.id}"]`);
+    assert.equal(await publishedCard.locator('a').getAttribute('href'), '/members');
+    assert.equal(await publishedCard.locator('button').count(), 0, 'Admin must not contain a reserve-seat action.');
+    await page.screenshot({ path: `${output}offers-desktop.png`, fullPage: true });
     await navigate('flights'); await page.locator('[data-day="14"]').click(); await waitForecast();
-    assert.equal(await page.locator('#prior-quota-value').textContent(), '1 seats');
+    assert.equal(await page.locator('#prior-quota-value').textContent(), '2 seats');
     assert.equal(await page.locator('#demo-round-table tr').count(), 1);
-    // Keep an unspent entitlement visible while a current protection check
-    // makes it temporarily unsellable. No reservation request is submitted.
-    await page.route('**/api/forecast', async (route) => {
-      const response = await route.fetch(), json = await response.json();
-      json.forecast.release_status.currently_bookable = 0;
-      json.forecast.release_status.protection_shortfall = 1;
-      await route.fulfill({ json });
-    });
-    await page.locator('[data-day="7"]').click();
-    await page.waitForFunction(() => document.getElementById('release-status').textContent.includes('Currently bookable member seats: 0'));
-    await navigate('members');
-    const protectedCard = page.locator(`[data-offer-id="${published.offer.id}"]`);
-    await protectedCard.waitFor();
-    assert.ok((await protectedCard.textContent()).includes('unspent quota'));
-    assert.equal(await protectedCard.locator('button').textContent(), 'Unavailable now');
-    assert.equal(await protectedCard.locator('button').isDisabled(), true);
-    await page.unroute('**/api/forecast');
-    await navigate('flights'); await page.locator('[data-day="14"]').click(); await waitForecast();
 
   }
 
@@ -196,7 +176,7 @@ try {
   assert.equal(await page.locator('#market-round-table tr td').nth(1).textContent(), '—', 'Historical missing carry must not be invented.');
   assert.deepEqual(errors, []);
   console.log('PASS: as-of forecast, cost propagation, 64 three-round candidates, 14 synthetic customers, between-round issuance guard and round audit, three shared-market policies, manual bounded resume and five mobile layouts.');
-  if (process.argv.includes('--transactions')) console.log('PASS: simulated offer, membership, itemised booking and inventory-backed reservation.');
+  if (process.argv.includes('--transactions')) console.log('PASS: Admin publishes the offer once, carries its unsold quota and links to the separate member booking site.');
 } finally {
   await browser.close();
 }

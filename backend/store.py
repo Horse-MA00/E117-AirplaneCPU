@@ -18,6 +18,8 @@ class Store:
                 CREATE TABLE IF NOT EXISTS members(customer_id TEXT PRIMARY KEY,fee REAL,created REAL,expires REAL);
                 CREATE TABLE IF NOT EXISTS bookings(id TEXT PRIMARY KEY,offer_id TEXT,flight_id TEXT,customer_id TEXT,total REAL,created REAL,UNIQUE(flight_id,customer_id));
                 CREATE TABLE IF NOT EXISTS flight_clocks(flight_id TEXT PRIMARY KEY,day INTEGER,risk_limit INTEGER,cutoff REAL);
+                CREATE TABLE IF NOT EXISTS membership_plan(id INTEGER PRIMARY KEY CHECK(id=1),fee REAL NOT NULL);
+                INSERT OR IGNORE INTO membership_plan VALUES(1,399);
             ''')
             columns = {row['name'] for row in c.execute('PRAGMA table_info(offers)')}
             if 'release_version' not in columns:
@@ -144,6 +146,39 @@ class Store:
                 return dict(row)
             c.execute('INSERT INTO members VALUES(?,?,?,?)', (customer_id, fee, now, now + 365 * 86400))
             return dict(c.execute('SELECT * FROM members WHERE customer_id=?', (customer_id,)).fetchone())
+
+    def plan(self, fee=None):
+        if fee is not None and (isinstance(fee, bool) or not isinstance(fee, (int, float)) or not math.isfinite(fee) or not 0 <= fee <= 5000):
+            raise ValueError('Membership fee must be between HKD 0 and 5000')
+        with self.connect() as c:
+            if fee is not None:
+                c.execute('UPDATE membership_plan SET fee=? WHERE id=1', (fee,))
+            return {'name': 'UOption Fly Pass', 'fee': c.execute('SELECT fee FROM membership_plan WHERE id=1').fetchone()['fee'],
+                    'term_days': 365, 'personal_nontransferable': True}
+
+    def join_plan(self, customer_id, expected_fee=None):
+        """Member-facing signup takes the price from the stored plan atomically."""
+        now = time.time()
+        with self.connect() as c:
+            c.execute('BEGIN IMMEDIATE')
+            existing = c.execute('SELECT * FROM members WHERE customer_id=?', (customer_id,)).fetchone()
+            if existing:
+                if existing['expires'] <= now:
+                    raise ValueError('Membership expired; renewal is not implemented in this demo')
+                return dict(existing)
+            fee = c.execute('SELECT fee FROM membership_plan WHERE id=1').fetchone()['fee']
+            if expected_fee is not None and expected_fee != fee:
+                raise ValueError('The membership price changed. Refresh and review the current fee before joining.')
+            c.execute('INSERT INTO members VALUES(?,?,?,?)', (customer_id, fee, now, now + 365 * 86400))
+            return dict(c.execute('SELECT * FROM members WHERE customer_id=?', (customer_id,)).fetchone())
+
+    def account(self, customer_id):
+        with self.connect() as c:
+            member = c.execute('SELECT * FROM members WHERE customer_id=?', (customer_id,)).fetchone()
+            membership = {**dict(member), 'active': member['expires'] > time.time()} if member else None
+            bookings = [dict(row) for row in c.execute('''SELECT b.*,o.base_fare,o.fees AS mandatory_fees
+                FROM bookings b JOIN offers o ON o.id=b.offer_id WHERE b.customer_id=? ORDER BY b.created DESC''', (customer_id,))]
+            return {'customer_id': customer_id, 'membership': membership, 'bookings': bookings, 'simulated': True}
 
     def book(self, offer_id, customer_id, day=None, max_release=None):
         with self.connect() as c:

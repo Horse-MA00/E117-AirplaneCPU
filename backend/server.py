@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from urllib.parse import urlparse,unquote
 from pathlib import Path
 from functools import lru_cache
-from . import data,market_jobs
+from . import data,market_jobs,member_portal
 from .store import Store
 from .oag import load_env
 from llm_agent import runner,audit
@@ -31,6 +31,20 @@ def forecast_for(flight,day):
  return forecast(data.history(flight),days_to_departure=day,seed=117)
 
 def get(path):
+ if path in ('/api/member-portal/config','/api/member-portal/plan'):return member_portal.config(store())
+ if path=='/api/member-portal/flights':return member_portal.flights(store(),forecast_for)
+ if path.startswith('/api/member-portal/accounts/'):
+  if len(path.strip('/').split('/'))!=4:raise KeyError('Account endpoint not found')
+  return member_portal.account(store(),ident(path.split('/')[-1]))
+ if path=='/api/agents/panels':
+  from . import panel_jobs
+  return {'runs':panel_jobs.list_runs()}
+ if path.startswith('/api/agents/panels/'):
+  from . import panel_jobs
+  parts=path.strip('/').split('/')
+  if len(parts)==6 and parts[4]=='people':return panel_jobs.read_person(ident(parts[3]),ident(parts[5]))
+  if len(parts)==4:return panel_jobs.read(ident(parts[3]))
+  raise KeyError('Panel endpoint not found')
  if path=='/api/summary':return {'dataset':{'rows':data.manifest()['rows'],'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':runner.status()}
  if path=='/api/evaluation':
   p=ROOT/'simulation/generated/nhpp_v2_final.json'
@@ -67,6 +81,24 @@ def get(path):
 
 _optimizer_lock=threading.Lock()
 def post(path,body):
+ if path=='/api/member-portal/plan':
+  store().plan(number(body.get('membership_fee'),'membership_fee',0,5000))
+  return member_portal.config(store())
+ if path=='/api/member-portal/join':
+  expected=number(body['expected_fee'],'expected_fee',0,5000) if 'expected_fee' in body else None
+  member=store().join_plan(ident(body.get('customer_id')),expected)
+  return {'member':member,'simulated':True,'currency':'HKD'}
+ if path=='/api/member-portal/book':
+  expected=number(body['expected_total'],'expected_total',0,10000) if 'expected_total' in body else None
+  return member_portal.book(store(),forecast_for,ident(body.get('customer_id')),ident(body.get('offer_id')),expected)
+ if path=='/api/agents/panels':
+  from . import panel_jobs
+  return panel_jobs.start(body)
+ if path.startswith('/api/agents/panels/') and path.endswith('/resume'):
+  from . import panel_jobs
+  parts=path.strip('/').split('/')
+  if len(parts)==5:return panel_jobs.start(body,ident(parts[3]))
+  raise KeyError('Panel endpoint not found')
  if path=='/api/market/runs':return market_jobs.start(body)
  if path.startswith('/api/market/runs/') and path.endswith('/resume'):
   parts=path.strip('/').split('/')
@@ -97,7 +129,7 @@ def post(path,body):
  if path=='/api/agents/run':
   mode=body.get('mode','deterministic')
   return runner.run(mode=mode,count=number(body.get('count',5 if mode=='live' else 14),'count',1,5 if mode=='live' else 100,True),membership_fee=body.get('membership_fee',399),member_fare=body.get('member_fare',70),scenario_mode='journey')
- if path=='/api/members':return {'member':store().member(ident(body.get('customer_id')),number(body.get('membership_fee',399),'membership_fee',0,10000)),'simulated':True}
+ if path=='/api/members':return {'member':store().join_plan(ident(body.get('customer_id'))),'simulated':True}
  if path=='/api/bookings':
   offer=store().offer_info(body.get('offer_id'))
   day=number(body.get('days_to_departure',offer['sim_day']),'day',0,28,True)
@@ -141,7 +173,8 @@ class Handler(BaseHTTPRequestHandler):
       compressed.write(line)
     return
    if path.startswith('/api/'):return self.json(200,get(path))
-   root=(ROOT/'frontend').resolve();file=(root/(path.lstrip('/') or 'index.html')).resolve()
+   aliases={'/admin':'index.html','/admin/':'index.html','/members':'members/index.html','/members/':'members/index.html'}
+   root=(ROOT/'frontend').resolve();file=(root/aliases.get(path,path.lstrip('/') or 'index.html')).resolve()
    if root not in file.parents or not file.is_file():return self.json(404,{'error':'Not found'})
    payload=file.read_bytes();self.send_response_headers(200,mimetypes.guess_type(file.name)[0] or 'application/octet-stream',len(payload));self.wfile.write(payload)
   except (KeyError,ValueError) as e:self.json(404,{'error':str(e)})

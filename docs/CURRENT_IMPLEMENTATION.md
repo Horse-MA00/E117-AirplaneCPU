@@ -65,6 +65,12 @@ OAG回應與200000列合成資料沒有混成「真實訂位」。本地 HTTP �
 
 審計記錄包含prompt版本、情境雜湊、無授權header的request、原始response、usage、latency、cache標記、解析、合法性與狀態轉移。失敗不換成離線答案。唯一合法行動由環境執行，標示environment_forced；快取與新provider呼叫分開統計。真實金鑰只存於忽略的`.env.local`。
 
+## Admin與會員入口
+
+新增`/admin`及`/members`兩個介面。Admin的Customer panel改為背景工作，Live上限100人、規則模式1,000人，預設100；先看結果摘要、客群分組及可搜尋分頁名單，再載入單人的六階段。每批Live預設60、最多120個決策嘗試，唯一合法動作不呼叫LLM，快取與真正dispatch分開。每人checkpoint與prompt／model／實作hash支持安全續跑，輪詢不自動延長額度。
+
+會員端從同一SQLite已發布優惠查詢航班、確認完整價格、按伺服器plan入會及購票，並保存My trips。Admin只管理會費和發布庫存，不再混放旅客入會／購買控制。這是UI與路徑分開，沒有宣稱生產權限隔離。詳見[新介面與API](ADMIN_AND_MEMBER_UX.md)。
+
 ## HTTP介面
 
 | 方法及路徑 | 用途 |
@@ -77,7 +83,13 @@ OAG回應與200000列合成資料沒有混成「真實訂位」。本地 HTTP �
 | GET /api/evaluation | 獨立測試報告 |
 | GET /api/export/snapshots | gzip資料下載 |
 | GET /api/personas | 客群覆蓋及假設人物 |
-| POST /api/agents/run | 六階段deterministic或live旅程；Web live最多5人／30呼叫 |
+| POST /api/agents/run | 保留的小型同步相容介面；新Admin改用背景panel |
+| POST / GET /api/agents/panels | 背景啟動／清單；live最多100人，rules最多1,000人 |
+| GET /api/agents/panels/{id} | 進度、來源計數、分組及精簡人物列 |
+| GET /api/agents/panels/{id}/people/{customer_id} | 按需讀取一人完整階段 |
+| POST /api/agents/panels/{id}/resume | 明確增加一批額度 |
+| GET /api/member-portal/config、flights、accounts/{id} | 會員plan、已發布航班、會員和行程 |
+| POST /api/member-portal/plan、join、book | 管理會費、按plan入會、確認會員票 |
 | GET /api/agents/runs/{id} | 保存的審計與原始輸出；大實驗以gzip匯出讀取 |
 | POST /api/market/runs | 背景執行共用市場三組政策，逐批呼叫上限 |
 | GET /api/market/runs/{id} | 狀態、政策比較、財務及實驗統計 |
@@ -86,7 +98,7 @@ OAG回應與200000列合成資料沒有混成「真實訂位」。本地 HTTP �
 | GET /api/evaluation/extended | 額外1200班凍結模型驗證 |
 | GET /api/offers | 尚未到期的展示優惠 |
 | POST /api/offers | 只在D28/D14/D7的未執行輪次發出新增配額，扣除前輪有效未售位 |
-| POST /api/members | 以customer_id建立一年示例會員，重複呼叫不再收費 |
+| POST /api/members | 相容入會路徑，亦使用伺服器plan會費；重複呼叫不再收費 |
 | POST /api/bookings | 原子扣位、要求有效會員、阻擋重複購買 |
 | GET /api/oag | 私有快取的正常化班表與預測容量 |
 | GET /api/status | 外部服務狀態及限制 |

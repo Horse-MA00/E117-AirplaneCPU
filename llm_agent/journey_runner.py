@@ -61,6 +61,7 @@ def provider_decision(packet, audit):
         else:
             request = urllib.request.Request(endpoint, data=canonical(request_body).encode(),
                                              headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
+            audit.append({**record, "event": "provider_dispatched"})
             with _transport(request) as response:
                 raw_bytes = response.read(2_000_001)
                 if len(raw_bytes) > 2_000_000:

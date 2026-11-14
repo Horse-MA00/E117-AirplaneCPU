@@ -1,15 +1,15 @@
 const $ = (id) => document.getElementById(id);
 const RELEASE_DAYS = [28, 14, 7];
 const roundLabel = (days) => days?.length ? days.map((day) => `D${day}`).join(' / ') : 'No future rounds';
-const state = { flights: [], flight: null, history: [], forecast: null, day: 28, candidates: [], best: null, loadedFlightId: null, request: 0, forecastRequest: 0, summary: null, offers: [], marketRun: null, marketReport: null, marketCases: [], marketRequest: 0, marketTimer: null, marketLoading: false };
+const state = { flights: [], flight: null, history: [], forecast: null, day: 28, candidates: [], best: null, loadedFlightId: null, request: 0, forecastRequest: 0, summary: null, offers: [], marketRun: null, marketReport: null, marketCases: [], marketRequest: 0, marketTimer: null, marketLoading: false, panelRun: null, panelData: null, panelTimer: null, panelRequest: 0, panelLoading: false, panelPage: 0, panelPerson: null, panelPersonRequest: 0, panelDetailStage: null, planDraft: false };
 const number = (value, digits = 0) => value === null || value === undefined || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-HK', { maximumFractionDigits: digits });
-const money = (value) => value === null || value === undefined ? '—' : `HK$${number(value)}`;
+const money = (value) => value === null || value === undefined ? '—' : `HK$${number(value, Number.isInteger(Number(value)) ? 0 : 2)}`;
 const percent = (value) => value === null || value === undefined ? '—' : `${number(Number(value) * 100, 1)}%`;
 const value = (id) => Number($(id).value);
 function text(id, content) { $(id).textContent = content; }
 function clearError() { $('error').hidden = true; }
 function error(message) { text('error', message); $('error').hidden = false; }
-function notify(message) { text('notice', message); $('notice').hidden = false; }
+function notify(message) { text('notice', message); $('notice').hidden = false; state.noticeView = location.hash.slice(1) || 'flights'; }
 function element(tag, content, className) { const el = document.createElement(tag); if (content !== undefined) el.textContent = content; if (className) el.className = className; return el; }
 function list(id, rows) { $(id).replaceChildren(...rows.map((row) => element('li', typeof row === 'string' ? row : JSON.stringify(row)))); }
 async function api(path, body, options = {}) {
@@ -26,10 +26,12 @@ function setView() {
   const name = ['flights', 'pricing', 'customers', 'market', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
   for (const section of document.querySelectorAll('.view')) section.hidden = section.id !== `view-${name}`;
   for (const anchor of document.querySelectorAll('.primary-nav a')) { if (anchor.hash === `#${name}`) anchor.setAttribute('aria-current', 'page'); else anchor.removeAttribute('aria-current'); }
-  document.title = `${({ flights: 'Flight decisions', pricing: 'Fast screening', customers: 'Journey baseline', market: 'Shared market', members: 'Member experience' })[name]} — UOption Fly Pass`;
+  if (state.noticeView !== name) $('notice').hidden = true;
+  document.title = `${({ flights: 'Flight decisions', pricing: 'Fast screening', customers: 'Customer panel', market: 'Test the market', members: 'Manage offers' })[name]} — UOption Fly Pass`;
   const selected = document.querySelector('.primary-nav [aria-current=page]');
   if (selected) { const nav = selected.parentElement; if (selected.offsetLeft < nav.scrollLeft || selected.offsetLeft + selected.offsetWidth > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = Math.max(0, selected.offsetLeft - nav.offsetLeft - 20); }
-  if (name === 'members') loadOffers();
+  if (name === 'members') { loadOffers(); loadMemberPlan(); }
+  if (name === 'customers') { loadPanelRuns(); if (state.panelRun) pollPanel(); }
   if (name === 'market') loadMarketRuns();
 }
 window.addEventListener('hashchange', setView);
@@ -204,8 +206,8 @@ $('apply-policy').addEventListener('click', () => {
   const target = Math.floor(safe * Number(state.best.release_fraction ?? 1));
   const quantity = Math.min(Number(f.releasable_seats), Math.max(0, target - Number(r.total_active_unsold || 0)));
   if (quantity < 1) { notify('Earlier valid quota already meets this policy target. No additional seats can be prepared.'); return; }
-  $('offer-fare').value = fare(state.best); $('member-fee').value = fee(state.best); $('offer-quantity').value = quantity;
-  location.hash = 'members'; notify('New allocation after prior valid quota has been copied into the offer form. Review its quantity and price before publishing.');
+  $('offer-fare').value = fare(state.best); $('member-fee').value = fee(state.best); state.planDraft = true; $('offer-quantity').value = quantity;
+  location.hash = 'members'; notify('New allocation and candidate prices copied. Publish seats and save the membership price separately when ready.');
 });
 $('export-candidates').addEventListener('click', () => {
   const keys = ['member_fare','membership_fee','release_days','release_fraction','incremental_profit','members','member_bookings','service_rate','feasible'];
@@ -214,59 +216,193 @@ $('export-candidates').addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); const a = element('a'); a.href = url; a.download = 'uoption-candidate-policies.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
-function renderAgents(data) {
-  const results = data.results || []; const mode = data.mode || 'deterministic';
-  const language = data.response_language === 'en' ? 'English explanations · HKD amounts.' : 'Original response language preserved.';
-  text('agent-mode-message', `${mode === 'live' ? 'Live LLM' : 'Reproducible scenario model'} · ${number(results.length)} synthetic travellers · ${number(data.summary?.completed_stages || 0)} journey stages. ${language} These decisions are not observed HK Express customer purchases.${data.prompt_version ? ` Prompt: ${data.prompt_version}.` : ''}${data.run_id ? ` Saved run: ${data.run_id}.` : ''}`);
-  $('agent-results').replaceChildren(...results.map((row, index) => {
-    const person = row.person || row.persona || row; const decision = row.decision || row; const booking = row.booking_decision;
-    const card = element('article', undefined, 'customer-card');
-    card.append(element('div', person.customer_id || `Synthetic customer ${index + 1}`, 'persona-number'));
-    card.append(element('h2', person.segment_label || person.segment || person.purpose || 'Synthetic traveller'));
-    const traits = [person.expected_trips && `${person.expected_trips} expected trips / term`, person.total_budget != null && `Trip + new fee budget ${money(person.total_budget)}`, person.budget_hkd != null && `Trip + new fee budget ${money(person.budget_hkd)}`, person.party_size && `${person.party_size} ${person.party_size === 1 ? 'traveller' : 'travellers'}`, person.flexibility && `Flexibility: ${person.flexibility}`].filter(Boolean);
-    card.append(element('p', traits.join(' · '), 'traits'));
-    if (person.membership_active) card.append(element('p', 'Existing member: no new subscription fee is charged.', 'small'));
-    card.append(element('p', String(decision.action || decision.choice || 'No action').replaceAll('_', ' '), 'action'));
-    card.append(element('p', decision.reason || decision.explanation || 'No reason returned.'));
-    if (booking) card.append(element('p', `Booking: ${String(booking.action || '').replaceAll('_',' ')}. ${booking.reason || ''}`, 'small'));
-    if (row.events?.length) {
-      const details = element('details');
-      details.append(element('summary', 'Follow the six-stage journey'));
-      const list = element('ol', undefined, 'journey-events');
-      const stages = { subscription: 'Subscription', quote_d28: 'D28 quote', quote_d14: 'D14 quote', quote_d7: 'D7 quote', plan_change: 'D3 plan change', term_end: 'Term-end intention' };
-      for (const event of row.events) {
-        const item = element('li');
-        const stage = event.packet.context.stage;
-        item.append(element('strong', `${stages[stage] || stage.replaceAll('_', ' ')} · ${event.decision.action.replaceAll('_', ' ')}`));
-        item.append(element('p', event.decision.reason, 'small'));
-        item.append(element('p', `Budget left: ${money(event.state_after.remaining_budget)} · New membership fee paid: ${money(event.state_after.membership_fee_paid)} · Tickets paid: ${money(event.state_after.ticket_spend)} · Refunds received: ${money(event.state_after.refund_received)}`, 'traits'));
-        list.append(item);
-      }
-      details.append(list); card.append(details);
-    }
-    card.append(element('p', `Source: ${row.source || data.source || mode}`, 'traits'));
+// Large panels render a summary and one selected journey, never hundreds of
+// full transcripts. Polling reads progress only; paid continuation is explicit.
+const panelRunning = (status) => ['queued', 'running'].includes(status);
+const panelCanResume = (status) => ['paused_at_budget', 'paused_after_errors', 'interrupted'].includes(status);
+const panelAction = (action) => ({ JOIN_PASS: 'Joined', DECLINE: 'Declined', KEEP_MEMBERSHIP: 'Existing member', BUY_MEMBER: 'Member ticket', BUY_REGULAR: 'Regular ticket', WAIT: 'Waiting', KEEP_BOOKING: 'Booking kept', CANCEL_BOOKING: 'Cancelled', RENEW_INTENT: 'Would renew', DO_NOT_RENEW: 'Would not renew', CONSIDER_LATER: 'Consider later' })[action] || (action ? action.replaceAll('_', ' ').toLowerCase() : 'Pending');
+const panelStatusLabel = (status) => ({ queued: 'Queued', running: 'Running', completed: 'Complete', paused_at_budget: 'Batch limit reached', paused_after_errors: 'Paused after an error', interrupted: 'Interrupted', failed: 'Unable to continue' })[status] || status || 'Not started';
+function panelControls() {
+  const live = $('agent-mode').value === 'live';
+  $('agent-count').max = live ? 100 : 1000;
+  $('agent-count').value = Math.min(value('agent-count'), live ? 100 : 1000);
+  text('agent-count-hint', live ? 'Up to 100 synthetic travellers.' : 'Up to 1,000 synthetic travellers.');
+  $('agent-budget-field').hidden = !live && state.panelData?.mode !== 'live';
+  $('agent-call-budget').disabled = $('agent-budget-field').hidden;
+  const running = panelRunning(state.panelData?.status);
+  $('agent-button').disabled = running || state.panelLoading;
+  $('agent-button').textContent = running ? 'Panel is running…' : state.panelLoading ? 'Starting…' : 'Run customer panel';
+  $('panel-resume').disabled = running || state.panelLoading;
+}
+function renderPanel(data) {
+  state.panelData = data;
+  const rows = data.results || [], summary = data.summary || {}, progress = data.progress || {}, runtime = data.runtime || {};
+  const total = Number(progress.total_customers ?? data.count ?? rows.length);
+  const completed = Number(progress.completed_customers ?? summary.completed_customers ?? 0);
+  const stages = Number(progress.completed_stages ?? 0), totalStages = Number(progress.total_stages ?? total * 6);
+  $('panel-progress').hidden = false;
+  $('panel-progress-bar').max = Math.max(1, totalStages); $('panel-progress-bar').value = stages;
+  text('panel-progress-count', `${number(stages)} / ${number(totalStages)} stages`);
+  text('panel-run-status', `${panelStatusLabel(data.status)} · ${number(completed)} of ${number(total)} travellers finished.${data.error ? ` ${data.error}` : ''}`);
+  text('panel-call-counts', `${number(runtime.provider_calls || 0)} new provider requests · ${number(runtime.cache_hits || 0)} cached responses · ${number(runtime.forced_actions || 0)} forced actions · ${number(runtime.rule_decisions || 0)} rule decisions · ${number(runtime.failures || 0)} failed attempts`);
+  $('panel-resume-controls').hidden = !panelCanResume(data.status);
+  text('panel-pause-message', data.status === 'paused_at_budget' ? 'This batch used its decision allowance. Completed choices are saved. Continue only when you want to run the next batch.' : 'Saved choices are preserved. Review the error or interruption before continuing this panel.');
+  $('panel-audit-link').hidden = !data.audit_run_id;
+  if (data.audit_run_id) $('panel-audit-link').href = `/api/agents/runs/${encodeURIComponent(data.audit_run_id)}/export`;
+  text('agent-mode-message', `${data.mode === 'live' ? 'Live LLM' : 'Rules'} · ${number(total)} synthetic travellers · ${money(data.member_fare)} member base fare + HK$250 mandatory fees · ${money(data.membership_fee)} pass fee. English explanations; independent one-trip scenarios.${panelRunning(data.status) || panelCanResume(data.status) ? ' Results below are partial.' : ''}`);
+  $('panel-empty').hidden = rows.length > 0; $('panel-results').hidden = !rows.length; $('panel-overview').hidden = !rows.length;
+  text('panel-overview-status', `${panelStatusLabel(data.status)} · ${number(total)} travellers · ${money(data.member_fare)} member base fare · ${money(data.membership_fee)} pass fee${data.status !== 'completed' ? ' · Results are still partial' : ''}`);
+  const currentOption = [...$('panel-run-select').options].find((o) => o.value === data.run_id);
+  if (currentOption) currentOption.textContent = `${data.mode === 'live' ? 'Live LLM' : 'Rules'} · ${number(total)} travellers · ${panelStatusLabel(data.status)} · ${data.run_id}`;
+  text('panel-joined', number(summary.joined || 0));
+  text('panel-joined-detail', `Of ${number(summary.eligible_decided || 0)} eligible travellers who have decided`);
+  text('panel-booked', number(summary.booked || 0)); text('panel-cancelled', number(summary.cancelled || 0));
+  text('panel-completed', number(completed)); text('panel-completed-detail', `Of ${number(total)} configured travellers`);
+  renderPanelSegments(data.segments || []);
+  renderPanelTable(); panelControls();
+  if (!state.panelPerson && rows.length) selectPanelPerson(rows[0].person.customer_id, false);
+  else if (state.panelPerson) {
+    const row = rows.find((r) => r.person.customer_id === state.panelPerson);
+    if (row && row.completed_stages !== state.panelDetailStage) selectPanelPerson(state.panelPerson, false);
+  }
+}
+function renderPanelSegments(segments) {
+  $('panel-segments').replaceChildren(...segments.map((segment) => {
+    const card = element('div', undefined, 'segment-result');
+    const label = element('div', undefined, 'segment-label');
+    const outcome = segment.eligible_decided ? `${number(segment.joined || 0)} / ${number(segment.eligible_decided)}` : segment.eligible_new_members === 0 ? 'Existing members only' : 'Waiting for decisions';
+    label.append(element('span', segment.segment_label || segment.segment), element('strong', outcome));
+    const track = element('div', undefined, 'segment-track'); track.setAttribute('aria-hidden', 'true');
+    const fill = element('div'); fill.style.width = `${Math.min(100, (segment.joined || 0) / Math.max(1, segment.eligible_decided || 0) * 100)}%`; track.append(fill);
+    card.append(label, track, element('small', `${number(segment.booked || 0)} booked · ${number(segment.completed_customers || 0)} / ${number(segment.customers || 0)} finished`));
     return card;
   }));
-  if (!results.length) $('agent-results').append(element('p', 'No customer results returned.', 'empty-state'));
-  loadAgentRuns();
+}
+function panelRows() {
+  const query = $('panel-search').value.trim().toLowerCase(), filter = $('panel-decision-filter').value;
+  return (state.panelData?.results || []).filter((r) => {
+    const person = r.person || {}, action = r.decision?.action;
+    return (!query || `${person.customer_id} ${person.segment_label} ${person.segment}`.toLowerCase().includes(query)) && (filter === 'all' || filter === 'pending' && !action || action === filter);
+  });
+}
+function renderPanelTable() {
+  const rows = panelRows(), pageSize = 20;
+  state.panelPage = Math.min(state.panelPage, Math.max(0, Math.ceil(rows.length / pageSize) - 1));
+  const start = state.panelPage * pageSize, visible = rows.slice(start, start + pageSize);
+  const focused = document.activeElement?.dataset?.panelPerson;
+  $('panel-people').replaceChildren(...visible.map((row) => {
+    const person = row.person, tr = element('tr');
+    tr.classList.toggle('selected', person.customer_id === state.panelPerson);
+    const name = element('th'); name.scope = 'row';
+    const button = element('button', person.segment_label, 'person-row-button'); button.type = 'button'; button.dataset.panelPerson = person.customer_id;
+    button.setAttribute('aria-label', `View journey for ${person.customer_id}, ${person.segment_label}`);
+    button.setAttribute('aria-pressed', String(person.customer_id === state.panelPerson));
+    button.addEventListener('click', () => selectPanelPerson(person.customer_id, true));
+    name.append(button, element('small', person.customer_id)); tr.append(name);
+    const stateAfter = row.final_state || {};
+    for (const v of [money(person.total_budget), panelAction(row.decision?.action), stateAfter.booking_cancelled ? 'Cancelled after booking' : panelAction(row.booking_decision?.action), `${row.completed_stages || 0} / 6`]) tr.append(element('td', v));
+    return tr;
+  }));
+  if (!visible.length) { const row = element('tr'); const cell = element('td', 'No travellers match these filters.'); cell.colSpan = 5; row.append(cell); $('panel-people').append(row); }
+  if (focused) $('panel-people').querySelector(`[data-panel-person="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
+  text('panel-page-label', rows.length ? `${number(start + 1)}–${number(Math.min(start + pageSize, rows.length))} of ${number(rows.length)}` : '0 travellers');
+  text('panel-result-note', `${number(rows.length)} matching travellers · select a row for details`);
+  $('panel-prev').disabled = state.panelPage === 0; $('panel-next').disabled = start + pageSize >= rows.length;
+}
+async function selectPanelPerson(customerId, requested) {
+  const runId = state.panelRun; if (!runId) return;
+  state.panelPerson = customerId; renderPanelTable(); const request = ++state.panelPersonRequest;
+  const region = $('panel-person-detail');
+  if (requested) { region.replaceChildren(element('h2', 'Loading journey…')); }
+  try {
+    const data = await api(`/api/agents/panels/${encodeURIComponent(runId)}/people/${encodeURIComponent(customerId)}`);
+    if (request !== state.panelPersonRequest || runId !== state.panelRun) return;
+    state.panelDetailStage = data.completed_stages;
+    const person = data.person || {}, title = element('h2', person.segment_label || 'Traveller journey'); title.id = 'panel-person-title'; title.tabIndex = -1;
+    const info = element('p', `${person.customer_id} · ${person.party_size} ${person.party_size === 1 ? 'traveller' : 'travellers'} · ${person.expected_trips} expected trips / term`, 'small muted');
+    const budget = element('div', undefined, 'person-budget'); budget.append(element('span', 'Trip + new fee budget'), element('strong', money(person.total_budget)));
+    const steps = element('ol', undefined, 'panel-journey');
+    const stages = ['subscription', 'quote_d28', 'quote_d14', 'quote_d7', 'plan_change', 'term_end'];
+    const labels = ['Subscription', 'D28 quote', 'D14 quote', 'D7 quote', 'D3 plan change', 'Renewal intention'];
+    for (let index = 0; index < stages.length; index++) {
+      const event = (data.events || []).find((e) => (e.packet?.context?.stage || e.stage) === stages[index]);
+      const item = element('li'); item.classList.toggle('pending', !event);
+      item.append(element('span', String(index + 1).padStart(2, '0'), 'journey-step-number'));
+      const content = element('div'); content.append(element('h3', labels[index]));
+      if (event) {
+        content.append(element('strong', panelAction(event.decision?.action), 'decision-label'), element('p', event.decision?.reason || 'No explanation returned.'));
+        content.append(element('p', `Budget left ${money(event.state_after?.remaining_budget)} · Tickets paid ${money(event.state_after?.ticket_spend)} · Refunds ${money(event.state_after?.refund_received)}`, 'small muted'));
+        content.append(element('p', `Source: ${event.source || data.source || state.panelData?.mode || 'unknown'}`, 'event-source'));
+      } else content.append(element('p', 'Not reached yet.', 'small muted'));
+      item.append(content); steps.append(item);
+    }
+    region.replaceChildren(title, info, budget);
+    if (person.membership_active) region.append(element('p', 'Existing member: no new subscription fee is charged.', 'small'));
+    region.append(steps);
+    if (requested && matchMedia('(max-width: 900px)').matches) { region.scrollIntoView({ block: 'start' }); title.focus({ preventScroll: true }); }
+  } catch (e) { if (request === state.panelPersonRequest) region.replaceChildren(element('h2', 'Journey unavailable'), element('p', e.message, 'small')); }
+}
+async function pollPanel() {
+  const runId = state.panelRun; if (!runId) return;
+  clearTimeout(state.panelTimer); const request = ++state.panelRequest;
+  try {
+    const data = await api(`/api/agents/panels/${encodeURIComponent(runId)}`);
+    if (request !== state.panelRequest || runId !== state.panelRun) return;
+    renderPanel(data);
+    if (panelRunning(data.status)) state.panelTimer = setTimeout(() => { if (!document.hidden) pollPanel(); }, 2000);
+  } catch (e) { if (request === state.panelRequest) { text('panel-run-status', `Progress could not be loaded: ${e.message}. Refresh to reconnect; saved work is not discarded.`); state.panelTimer = null; } }
+}
+function selectPanelRun(runId) {
+  clearTimeout(state.panelTimer); state.panelRequest++; state.panelPersonRequest++;
+  state.panelRun = runId || null; state.panelPerson = null; state.panelDetailStage = null; state.panelPage = 0; state.panelData = null;
+  $('panel-search').value = ''; $('panel-decision-filter').value = 'all';
+  $('panel-person-detail').replaceChildren(element('h2', 'Select a traveller'), element('p', 'Their journey will appear here.', 'small muted'));
+  if (runId) pollPanel(); else { $('panel-progress').hidden = true; $('panel-results').hidden = true; $('panel-overview').hidden = true; $('panel-empty').hidden = false; panelControls(); }
+}
+async function loadPanelRuns() {
+  try {
+    const data = await api('/api/agents/panels'); const runs = data.runs || [];
+    const select = $('panel-run-select'); const current = state.panelRun;
+    select.replaceChildren(element('option', 'Start a panel or select a saved run'));
+    select.firstElementChild.value = '';
+    for (const run of runs) { const option = element('option', `${run.mode === 'live' ? 'Live LLM' : 'Rules'} · ${number(run.count)} travellers · ${panelStatusLabel(run.status)} · ${run.run_id}`); option.value = run.run_id; select.append(option); }
+    if (current && runs.some((r) => r.run_id === current)) select.value = current;
+  } catch (e) { text('panel-run-status', `Saved panels could not be loaded: ${e.message}`); }
 }
 async function loadAgentRuns() {
   try {
     const data = await api('/api/agents/runs');
     $('agent-runs').replaceChildren(...data.runs.slice(0, 20).map((run) => {
-      const item = element('li');
-      const link = element('a', `${run.run_id} · ${run.source} · ${run.status} · ${number(run.event_records)} records`, 'text-link');
-      link.href = `/api/agents/runs/${encodeURIComponent(run.run_id)}`;
-      item.append(link); return item;
+      const item = element('li'); const link = element('a', `${run.run_id} · ${run.source} · ${run.status} · ${number(run.event_records)} records`, 'text-link');
+      link.href = `/api/agents/runs/${encodeURIComponent(run.run_id)}/export`; item.append(link); return item;
     }));
     if (!data.runs.length) $('agent-runs').append(element('li', 'No saved runs yet.'));
-  } catch (error) { text('agent-runs', `Saved runs unavailable: ${error.message}`); }
+  } catch (e) { text('agent-runs', `Saved records unavailable: ${e.message}`); }
 }
 $('refresh-agent-runs').addEventListener('click', loadAgentRuns);
-$('agent-mode').addEventListener('change', () => { const live = $('agent-mode').value === 'live'; $('agent-count').max = live ? 5 : 100; $('agent-count').value = Math.min(value('agent-count'), live ? 5 : 100); });
-$('agent-form').addEventListener('submit', (event) => { event.preventDefault(); busy($('agent-button'), async () => {
-  const data = await api('/api/agents/run', { mode: $('agent-mode').value, count: value('agent-count'), member_fare: value('agent-fare'), membership_fee: value('agent-fee'), seed: 117 }); renderAgents(data);
-}); });
+$('agent-mode').addEventListener('change', panelControls);
+$('agent-form').addEventListener('submit', async (event) => {
+  event.preventDefault(); clearError(); state.panelLoading = true; panelControls();
+  try {
+    const data = await api('/api/agents/panels', { mode: $('agent-mode').value, count: value('agent-count'), member_fare: value('agent-fare'), membership_fee: value('agent-fee'), seed: 117, max_calls: $('agent-mode').value === 'live' ? value('agent-call-budget') : 0 });
+    selectPanelRun(data.run_id); await loadPanelRuns();
+  } catch (e) { error(e.message); }
+  finally { state.panelLoading = false; panelControls(); }
+});
+$('panel-resume').addEventListener('click', async () => {
+  if (!state.panelRun || !panelCanResume(state.panelData?.status) || !$('agent-call-budget').reportValidity()) return;
+  const runId = state.panelRun; state.panelLoading = true; panelControls(); clearError();
+  try { await api(`/api/agents/panels/${encodeURIComponent(runId)}/resume`, { max_calls: state.panelData?.mode === 'live' ? value('agent-call-budget') : 0 }); await pollPanel(); }
+  catch (e) { error(e.message); }
+  finally { state.panelLoading = false; panelControls(); }
+});
+$('panel-refresh').addEventListener('click', () => { loadPanelRuns(); if (state.panelRun) pollPanel(); });
+$('panel-run-select').addEventListener('change', () => selectPanelRun($('panel-run-select').value));
+for (const id of ['panel-search', 'panel-decision-filter']) $(id).addEventListener(id === 'panel-search' ? 'input' : 'change', () => { state.panelPage = 0; renderPanelTable(); });
+$('panel-prev').addEventListener('click', () => { state.panelPage--; renderPanelTable(); });
+$('panel-next').addEventListener('click', () => { state.panelPage++; renderPanelTable(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && state.panelRun && panelRunning(state.panelData?.status)) pollPanel(); });
+panelControls();
 async function loadPersonas() {
   try { const data = await api('/api/personas'); const segments = data.segments || []; $('coverage').replaceChildren(...segments.map((s) => element('span', `${s.name || s.label || s.id}${s.assumed_weight != null ? ` · ${percent(s.assumed_weight)} assumed` : ''}`))); }
   catch (e) { text('coverage', `Customer coverage could not be loaded: ${e.message}`); }
@@ -478,11 +614,8 @@ function renderOffers() {
     const inventory = element('div'); const remaining = offer.remaining ?? offer.remaining_seats ?? offer.available ?? offer.quantity;
     inventory.append(element('h3', `${number(remaining)} unspent quota`)); inventory.append(element('p', `D${offer.day} allocation · ${offer.release_version === 'three-round-release-v1' ? 'valid until cutoff' : 'historical expiry rule'}`));
     inventory.append(element('p', 'Subject to current protection and physical seats; checked on booking.'));
-    const protectionBlocked = offer.flight_id === state.loadedFlightId && state.forecast?.release_status?.currently_bookable === 0;
-    const button = element('button', Number(remaining) <= 0 ? 'Sold out' : protectionBlocked ? 'Unavailable now' : 'Reserve a seat', 'button primary'); button.type = 'button'; button.disabled = !(Number(remaining) > 0) || protectionBlocked;
-    button.setAttribute('aria-label', `${button.textContent} · ${offer.flight_id} · D${offer.day} allocation`);
-    button.addEventListener('click', () => busy(button, async () => { const result = await api('/api/bookings', { offer_id: offer.offer_id || offer.id, customer_id: $('customer-id').value, days_to_departure: offer.flight_id === state.loadedFlightId ? state.day : (offer.sim_day ?? offer.day) }); const booking = result.booking || result; text('booking-result', `Simulated booking confirmed: ${booking.booking_id || booking.id || 'record saved'}. ${money(booking.total_payable ?? booking.total ?? offer.total_payable)} due for this flight. No payment was taken and no real ticket was issued.`); $('booking-result').hidden = false; await loadOffers(); if (offer.flight_id === state.loadedFlightId) { await loadForecast(); renderOffers(); } }));
-    card.append(intro, price, inventory, button); return card;
+    const link = element('a', Number(remaining) > 0 ? 'View member site' : 'Sold out', 'text-link'); link.href = '/members';
+    card.append(intro, price, inventory, link); return card;
   }));
   if (!state.offers.length) $('offers-list').append(element('p', 'No member offers yet. Publish an offer from the selected flight above.', 'empty-state'));
 }
@@ -492,7 +625,19 @@ $('offer-form').addEventListener('submit', (event) => { event.preventDefault(); 
   if (value('offer-quantity') > Number(state.forecast.releasable_seats)) throw new Error('Requested seats exceed the current forecast release limit.');
   const data = await api('/api/offers', { flight_id: state.loadedFlightId, days_to_departure: state.day, quantity: value('offer-quantity'), base_fare: value('offer-fare') }); notify(`Member offer published: ${(data.offer || data).offer_id || (data.offer || data).id || 'saved'}.`); await loadOffers(); await loadForecast();
 }); });
-$('member-form').addEventListener('submit', (event) => { event.preventDefault(); busy($('join-button'), async () => { const data = await api('/api/members', { customer_id: $('customer-id').value, membership_fee: value('member-fee') }); const member = data.member || data; text('membership-status', `Membership active for ${member.customer_id || $('customer-id').value}. ${money(member.membership_fee ?? member.fee ?? value('member-fee'))} recorded once in the simulation.`); notify('Simulated membership is ready. Choose an available flight below.'); }); });
+async function loadMemberPlan() {
+  try { const data = await api('/api/member-portal/plan'); const plan = data.membership;
+    if (!state.planDraft && document.activeElement !== $('member-fee')) $('member-fee').value = plan.fee;
+    text('membership-status', `Published membership: ${money(plan.fee)} for ${number(plan.term_days)} days. This is the price shown on the member site.`);
+  } catch (e) { text('membership-status', `Membership plan unavailable: ${e.message}`); }
+}
+$('member-fee').addEventListener('input', () => { state.planDraft = true; });
+$('member-plan-form').addEventListener('submit', (event) => { event.preventDefault(); busy($('save-plan-button'), async () => {
+  const data = await api('/api/member-portal/plan', { membership_fee: value('member-fee') });
+  state.planDraft = false;
+  text('membership-status', `Published membership: ${money(data.membership.fee)} for ${number(data.membership.term_days)} days. Existing members are not charged again.`);
+  notify('Membership price saved. New members see this price on the member site.');
+}); });
 $('refresh-offers').addEventListener('click', loadOffers);
 
 async function init() {
@@ -505,7 +650,7 @@ async function init() {
     $('flight-select').replaceChildren(...state.flights.map((flight) => { const option = element('option', `${flight.origin} → ${flight.destination} · ${(flight.departure_at || flight.departure_date || '').slice(0, 10)} · ${flight.flight_id}`); option.value = flight.flight_id; return option; }));
     $('flight-select').disabled = !state.flights.length;
     if (state.flights.length) await loadFlight(); else throw new Error('No flights available. Generate the simulation dataset and restart the backend.');
-    loadPersonas(); loadAgentRuns();
+    loadPersonas(); loadAgentRuns(); loadPanelRuns(); loadMemberPlan();
     api('/api/evaluation').then((report) => {
       if (!report.summary) throw new Error('Evaluation pending');
       text('validation-summary', `${number(report.flights)} fresh synthetic flights, evaluated at D28, D14 and D7 after model freeze. Protection includes a separate calibrated safety margin; it is not a posterior P90 or a real-airline guarantee. The comparison below uses the same flights for both models.`);

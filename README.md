@@ -15,7 +15,7 @@ python -m pip install -r requirements.txt
 python -m backend.server
 ```
 
-Open **http://127.0.0.1:8000**. The committed compressed dataset loads automatically. Choose a flight and D28–D0, inspect the forecast, compare membership policies, run hypothetical customers, and publish/join/book a **simulated** offer. SQLite enforces limited inventory and duplicate-booking prevention. No payment or real ticket is issued.
+Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices, run customer panels, and publish member offers. Open the separate **[member booking site](http://127.0.0.1:8000/members)** to search released flights, join the pass, review full prices and book a simulated seat. Both use the same SQLite inventory, memberships and saved trips. The committed compressed dataset loads automatically. No payment or real ticket is issued.
 
 ## What is implemented
 
@@ -24,7 +24,8 @@ Open **http://127.0.0.1:8000**. The committed compressed dataset loads automatic
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
 - Up to **64 fee × fare × allocation policies**; full-term hypothetical membership economics, paired ordinary-sales baseline, independent seeds and stress cases. The release schedule is fixed, and later as-of dates use only remaining rounds; after D7, a fresh screening experiment cannot issue a new offer.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
-- Airline dashboard, fast price screening, shared policy/flight/traveller inspections, customer journeys and transactional demo bookings.
+- **Separate Admin and member interfaces:** actionable analysis navigation, panel outcome summaries, segment comparisons, searchable/paginated traveller lists, and a member-facing flight search, price review, membership and My trips flow.
+- **Larger background panels:** up to **100 live LLM travellers** or **1,000 rule-based travellers**, with a default of 100. Live batches default to 60 decision attempts (maximum120), checkpoint each traveller, show progress and resume only on explicit request. Sole legal actions need no model call.
 - Fourteen assumed customer archetypes; audited **actual DeepSeek calls**, Codex subagent pilot outputs, bounded/resumable batches and repeated-choice/price/order/language probes. Forced actions, cache replay and fresh calls are separate.
 - Optional OAG Flight Info integration, private caching, timeouts and quota-aware failure handling.
 
@@ -46,7 +47,7 @@ The current **shared-market-v3** three-round policy has a separate **40-seed / 1
 
 | Folder | Purpose |
 | --- | --- |
-| `frontend/` | Responsive vanilla HTML/CSS/JS, Swiss visual direction |
+| `frontend/` | Admin vanilla HTML/CSS/JS; separate member storefront in `frontend/members/` |
 | `backend/` | NHPP, pricing simulation, local HTTP API, transactional SQLite |
 | `simulation/` | Generator, 600k compressed rows, separate truth and frozen evaluations |
 | `llm_agent/` | Journey/market prompts, real provider adapters, audits, experiments and probes |
@@ -64,6 +65,7 @@ python scripts/verify_artifacts.py
 python -m backend.evaluate --flight SYN-00001 --day 28
 # With the local server running; creates synthetic demo transactions:
 python scripts/smoke_api.py
+python scripts/smoke_member_portal.py
 ```
 
 V2 calibration is a separate explicit operation: `python -m simulation.evaluate_nhpp_v2 calibration`. The committed final report must not be overwritten to retune against it. Do not repeatedly tune on the final holdout. Read [simulation instructions](simulation/README.md) before changing generator or forecast assumptions.
@@ -94,6 +96,7 @@ For live experiments, create with `--modes live`, then use a bounded `--max-call
 
 ## Documentation
 
+- [Admin and member flows, panel limits and APIs](docs/ADMIN_AND_MEMBER_UX.md)
 - [Current technical architecture](docs/CURRENT_IMPLEMENTATION.md)
 - [Three-round release rule and verification](docs/THREE_ROUND_RELEASE.md)
 - [Latest progress](docs/ITERATION_2_PROGRESS.md)

@@ -65,3 +65,12 @@
 - 輸出合約在provider接受／有效快取寫入／外部Agent匯入前檢查；失敗原文留存、不改成規則決策。新舊prompt快取分開；舊suite不能混用新版續跑，歷史摘要保留原版本。
 - 真實DeepSeek五人六階段：30新回覆、0快取、0失敗、73,625 tokens，全部英文HKD；原始audit及結果已匯出`english_journey_20261114`。加入比較資訊會影響決策，不能把新舊差異當作語言因果或真人購買率。
 - 完整backend回歸最終105項全部通過（包括新增外部Agent英文匯入檢查）；14人84階段Chromium測試通過，390px無溢出，保留歷史原文。詳見LLM_SCENARIO_DESIGN.md與PROGRESS_FRONTEND.md。
+
+### 大型Panel及Admin／會員網站分離（2026-11-14）
+
+- 新`backend/panel_jobs.py`支援預設100人、live最多100／rules最多1,000人。背景批次、三工作者、逐人checkpoint、部分結果分母、model／prompt／impl凍結及明確續跑；每批live預設60、最多120次有選擇的決策嘗試。唯一合法動作與provider／cache分開，不自動延長付費額度。
+- Admin改為摘要、客群比較、搜尋／篩選／20人分頁及單人六階段；移除旅客加入／預訂控制，保留發布優惠與獨立保存的會員plan。會員入口`/members`新增航班搜尋、完整價格拆解、分步入會／預訂、My trips及本機測試身份；兩端共用SQLite已發布配額和帳本。
+- 會費從伺服器plan取得，兼容`/api/members`也不再接受任意成交會費。已有會員不重收；過時價格會拒絕，購票仍重查NHPP保護及目前模擬日，最後一位競爭不超賣。客戶端確認成功後即保留receipt，之後讀取失敗不誤報為購買失敗或自動再購買。
+- 118項backend測試全部通過。實際HTTP規模測試`panel-a859e0612fd24f0a`完成1,000人／6,000階段，耗時16.1秒，規則決策3,857、環境強制2,143、provider／cache／失敗均0，所有預算守恒；完整摘要與provenance在PANEL_SCALE_VALIDATION.json。另有100人／600階段實際瀏覽器測試。
+- Admin完整瀏覽器smoke及發布交易通過；100人摘要、14組圖、分頁／篩選、單人英文詳情、部分結果／續跑、候選會費草稿及599.75小數明確保存已驗證。桌面、390／768px無頁面溢出。會員端已實際完成HKD399入會和HKD280訂票，重載可查；另外涵蓋費用變更、售罄、空資料、帳戶切換、成功後刷新失敗，零新增LLM呼叫。
+- 新技術說明ADMIN_AND_MEMBER_UX.md及README／CURRENT_IMPLEMENTATION／LLM_SCENARIO_DESIGN／frontend README同步更新；NHPP、三輪放票規則、既有原始LLM實驗與模型校準未修改。這是本機Hackathon購票原型，沒有真實登入權限／付款／出票。

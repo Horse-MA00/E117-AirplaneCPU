@@ -1,31 +1,32 @@
 # Frontend
 
-No bundler or third-party browser dependency is required. The Python backend serves this folder at the origin root. Start the repository server and open http://127.0.0.1:8000.
+The Python backend serves two separate interfaces with no bundler or third-party browser dependency:
 
-The four hash-navigation views connect directly to same-origin APIs: flight decisions, pricing experiments, synthetic customer decisions, and inventory-backed member transactions. There is no hard-coded revenue, forecast, or customer output. Synthetic data, assumed customer weights and unavailable live LLM mode remain explicit.
+- `/admin` (also `/`): forecast seats, compare prices, customer panels, shared markets and offer management.
+- `/members`: flight search, complete member pricing, membership signup, booking review and persistent My trips. Assets live in `members/`.
 
-Visual direction: Swiss. White / neutral #F7F7F8, Helvetica Neue, Yves Klein Blue #002FA7, hairline grids. The D28-to-cutoff date scrubber is the primary interaction. API content is inserted using textContent, SVG DOM nodes, or native form options rather than HTML interpolation.
+Admin panels default to100 travellers, up to100live or1,000rules. The browser starts a background job, polls progress, and displays outcome metrics, group comparisons, a searchable20-row page and one person's detailed six-stage journey. Partial decisions have explicit denominators. Resume requires an explicit action; polling never spends another provider budget.
 
-Accessibility: semantic navigation (not ARIA tabs for page navigation), persistent form labels, native controls, keyboard focus, reduced-motion support, chart captions and an observed-data table. Wide comparison tables retain semantic headers inside labeled keyboard-scrollable regions. Mobile layout reflows major panels without horizontal page overflow.
+Member offers, paid demo memberships and bookings use the same SQLite state as Admin. Published offers appear in the storefront, and booking reduces their available quota. Membership fee comes from the saved server plan. Prices include mandatory fees; new membership is a separate, explicitly confirmed step. This is a local simulated identity and checkout flow, not production authentication or real payment.
 
-Modern web guidance consulted:
-- responsive-table: "Use standard `<table>` elements with `<thead>`, `<tbody>`, and `<th>` elements." Tables preserve column semantics in keyboard-scrollable regions; fixed-width mini-cards would hide comparable values.
-- accessibility: "Provide semantic data tables as accessible alternatives" and "Prefer HTML elements and attributes to ARIA" shaped the observation table, native controls and non-colour state cues.
-- tabs: "DO NOT use this or the WAI-ARIA tabs pattern for page navigation" led to hash links with aria-current instead of unsupported focusgroup tab semantics.
+Visual direction: Swiss white / neutral `#F7F7F8`, Helvetica Neue, Yves Klein Blue `#002FA7`, hairline grids. Admin prioritizes numerical comparisons; the member site uses airline-style date/route/fare cards. API values use `textContent`, SVG nodes and native controls, not untrusted HTML interpolation.
 
-Browser support: modern Chrome, Safari and Firefox using established DOM, fetch, CSS Grid and SVG; no focusgroup, scroll-driven-animation or hidden-until-found dependency.
+Accessibility includes labelled native progress, semantic keyboard-scrollable tables, non-colour decision labels, persistent form labels, a native checkout dialog, Escape/focus return and mobile layouts. No focusgroup or experimental animation dependency.
 
-## Repeat the browser smoke checks
+## Browser checks
 
-With the backend already running:
+With the backend running:
 
 ```sh
 cd frontend
 npm install
 npx playwright install chromium
 npm run test:smoke
-# Optional: also creates test offers, a demo membership and a simulated booking.
 npm run test:smoke -- --transactions
+node smoke-english-journey.mjs
+node smoke-member-portal.mjs
+# Also completes a real local SQLite membership and simulated booking:
+node smoke-member-portal.mjs --real
 ```
 
-`APP_URL` can override the default local origin. `CHROMIUM_EXECUTABLE_PATH` can select an already-installed Chromium binary. Screenshots are saved under the Git-ignored `test-results/` folder. The optional transaction check requires remaining member inventory on the first synthetic flight; use a fresh local demo database when repeating it many times. Neither mode calls a paid LLM provider.
+`APP_URL` overrides the local origin. `CHROMIUM_EXECUTABLE_PATH` selects installed Chromium. Screenshots remain ignored under `test-results/`. Admin transaction testing publishes an offer only; member checkout lives in its own smoke. All test-driven live/error states use intercepted fixtures; none of these checks calls a paid LLM. The dedicated panel check runs100real deterministic travellers and verifies600stages, filters, pagination, partial counts and manual resume.
