@@ -8,7 +8,7 @@ import urllib.error
 import urllib.request
 from unittest.mock import patch
 
-from backend import market_jobs, pricing, server
+from backend import server
 from backend.errors import NotFound
 from backend.store import Store
 
@@ -78,10 +78,9 @@ class ServerHTTPFixes(unittest.TestCase):
         self.assertEqual(self.status('/api/health', headers={'Host': '[bad'})[0], 403)
 
     def test_bad_query_is_400_and_missing_resource_is_404(self):
-        code, body = self.status('/api/optimization/suggestions?flight_id=SYN-00001&forecast_day=abc')
+        code, body = self.status('/api/adaptive-pricing/runs/missing/events?limit=abc')
         self.assertEqual(code, 400)
-        self.assertEqual(body['error'], 'forecast_day must be an integer')
-        self.assertEqual(self.status('/api/optimization/suggestions?flight_id=SYN-00001&forecast_day=10')[0], 400)
+        self.assertEqual(body['error'], 'limit must be an integer')
         self.assertEqual(self.status('/api/flights/NOPE')[0], 404)
         self.assertEqual(self.status('/api/optimization/runs/opt-0123456789abcdef')[0], 404)
         self.assertEqual(self.status('/api/agents/panels/panel-0123456789abcdef')[0], 404)
@@ -92,57 +91,38 @@ class ServerHTTPFixes(unittest.TestCase):
         with patch.object(server, 'get', side_effect=KeyError('bug')), patch('traceback.print_exc'):
             self.assertEqual(self.status('/api/summary')[0], 500)
 
-    def test_bound_offer_without_day_uses_validated_default(self):
+    def test_retired_offer_binding_is_rejected_before_forecasting(self):
         code, body = self.status('/api/offers', {'flight_id': 'SYN-00001', 'quantity': 1, 'base_fare': 70,
                                                  'optimization_run_id': 'opt-0123456789abcdef'})
         self.assertEqual(code, 400)
-        self.assertIn('stale', body['error'])
+        self.assertIn('Retired optimization bindings', body['error'])
+
+    def test_removed_methods_and_assets_return_404_without_redirects(self):
+        routes = ('/api/optimize', '/api/pricing', '/api/pricing/status', '/api/pricing/runs',
+                  '/api/optimization/status', '/api/optimization/runs', '/api/optimization/suggestions',
+                  '/api/market', '/api/market/status', '/api/market/runs',
+                  '/api/agents', '/api/agents/status', '/api/agents/panels',
+                  '/api/personas', '/api/members', '/api/bookings',
+                  '/api/agents/audits/old/export', '/api/continuous-pricing/status')
+        for path in routes:
+            for body in (None, {}):
+                with self.subTest(path=path, method='GET' if body is None else 'POST'):
+                    self.assertEqual(self.status(path, body)[0], 404)
+        for path in ('/optimization.js', '/continuous.js', '/contribution-explanation.js',
+                     '/price-chart.js', '/pricing-navigation.js'):
+            with self.subTest(path=path):
+                self.assertEqual(self.status(path)[0], 404)
+
+    def test_current_status_exposes_only_eight_flexible_segments(self):
+        code, status = self.status('/api/adaptive-pricing/status')
+        self.assertEqual(code, 200)
+        self.assertEqual(status['version'], server.adaptive_pricing.VERSION)
+        self.assertEqual(len(status['populations']), 1)
+        self.assertEqual(len(status['population']['segments']), 8)
 
 
-class LegacyBookingFixes(unittest.TestCase):
-    def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.store = Store(Path(self.temp.name) / 'demo.sqlite3')
-        patcher = patch.object(server, 'store', return_value=self.store)
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        forecast = patch.object(server, 'forecast_for', side_effect=lambda *_: {'releasable_seats': 10})
-        forecast.start()
-        self.addCleanup(forecast.stop)
-        self.offer = self.store.offer('SYN-00001', 28, 3, 70, 250, 10)
-        self.store.join_plan('alice')
-        self.store.join_plan('bob')
-
-    def test_booking_cannot_move_the_simulation_clock(self):
-        with self.assertRaisesRegex(ValueError, 'current simulation day D28'):
-            server.post('/api/bookings', {'offer_id': self.offer['id'], 'customer_id': 'alice', 'days_to_departure': 20})
-        self.assertEqual(self.store.release_status('SYN-00001', 28, 10)['simulation_day'], 28)
-        booked = server.post('/api/bookings', {'offer_id': self.offer['id'], 'customer_id': 'alice', 'days_to_departure': 28})
-        self.assertEqual(booked['booking']['total'], 320)
-
-    def test_booking_checks_expected_total(self):
-        with self.assertRaisesRegex(ValueError, 'price changed'):
-            server.post('/api/bookings', {'offer_id': self.offer['id'], 'customer_id': 'bob', 'expected_total': 1})
-
-    def test_unknown_offer_is_not_found(self):
-        with self.assertRaises(NotFound):
-            server.post('/api/bookings', {'offer_id': 'missing', 'customer_id': 'bob'})
 
 
-class ValidationFixes(unittest.TestCase):
-    def test_pricing_config_rejects_strings_and_null(self):
-        for bad in ('300', 'many', None):
-            with self.assertRaisesRegex(ValueError, 'customers must be a number'):
-                pricing._config({'customers': bad})
-        self.assertEqual(pricing._config({'customers': 300})['customers'], 300)
-
-    def test_market_start_failure_releases_active_slot(self):
-        with tempfile.TemporaryDirectory() as temporary, patch.object(market_jobs, 'BASE', Path(temporary)), \
-                patch.object(market_jobs.threading, 'Thread', side_effect=RuntimeError('no threads')):
-            with self.assertRaises(RuntimeError):
-                market_jobs.start({'mode': 'deterministic'})
-            self.assertEqual(market_jobs._active, set())
 
 
 if __name__ == '__main__':

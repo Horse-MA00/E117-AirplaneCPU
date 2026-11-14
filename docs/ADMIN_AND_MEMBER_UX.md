@@ -1,89 +1,66 @@
 # Admin 與會員購票介面
 
-> 状态：现行 · 对应代码：`customer-panel-v1`、`frontend/index.html`、`frontend/experiments.js`、`frontend/adaptive-pricing.html`、`frontend/members/index.html`
+> 状态：现行 · 对应代码：`frontend/index.html`、`frontend/adaptive-pricing.html`、`frontend/experiments.js`、`frontend/members/index.html`、`member-thompson-v5-marketing`
 
-2026-11-14。這次更新擴大 Customer panel、重新安排 Admin 資訊，並加入獨立會員購票網站。全部介面使用英文，金額使用 HKD；航班及購買仍為 Hackathon 合成示例，沒有實際付款或航空出票。
+更新：2026-11-15。所有介面使用英文及HKD；紫 `#6F2C91`、青 `#24BCDC`、白為主配色。Admin只保留目前Thompson流程，舊定價、panel、journey和共用市場頁面已刪除。所有付款及出票都是模擬。
 
-後續全面重設已完成：主配色改為紫 `#6F2C91`、青 `#24BCDC`、白。Admin 使用 Forecast / Optimize / Experiments / Manage offers；Optimize 已加入數學／LLM 雙軌價格搜尋與 SQLite 保存，Experiments 現在只顯示已保存的會員購票回饋。Client 加入票價排序、只看可售座位、清楚的完整票價／會員費及三步購票流程。最新畫面及演算法以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準；下文保留原交易 API 與 panel 規則。
+## Forecast seats
 
-## 最新簡化操作（2026-11-14）
+選擇需求分類、航線、日期／航班及觀測日。四張數字卡區分：
 
-- Forecast 保留四個座位指標、座位分配及預測／票價圖；移除底部三輪明細、已發布批次表、β 說明及 Admin footer。D28／D14／D7 的後端扣減規則不變。
-- Optimize 不再要求輸入 P₀／V₀、輪數、旅客數或進階搜尋參數。P₀ 由該航班資料導出，新指定航班實驗的會費由後端固定 HK$399。預設為 14 位旅客、2 個搜尋市場、6 輪 Live LLM、50% 放票比例；數學模型仍使用公式與細網格。LLM 總呼叫額度和每批額度保留。
-- Manage offers 選定航班後自動載入該航班／輪次的結果。已通過驗證者顯示票價與建議座位；尚未執行者提供帶入航班及輪次的 Optimize 連結。NO_OFFER、執行中及舊版本結果各有狀態，不當作可發布建議。返回頁面會重新讀取結果。
-- 固定 HK$399 只適用於新指定航班 Optimize；歷史結果及會員網站已保存的 plan 不會被瀏覽或試算偷偷改價。套用建議後，發布時仍核對實際會員 plan 的會費。
+| 指標 | 含義 |
+|---|---|
+| NHPP recommended member seats | 正常訂位快照的空位減去正常需求保護量 |
+| Forecast headroom | 考慮示例已售會員位後，仍可容許的會員空間 |
+| New seats releasable today | 本輪扣除前輪有效未售配額後，可新增發布多少位 |
+| Published seats bookable now | 已發布且通過目前實際庫存保護的可購買位 |
 
-## 最終宣傳票價
+座位分配圖將已訂位、正常需求保護、已發布及未發布空間分開；下方顯示正常訂位預測和已觀測正常基本票價。非放票日可觀察預測，但不能新增配額；按鈕標示下一個有效D28／D14／D7。沒有會員供應時不啟動定價。
 
-新定價實驗在選出原始候選後，先把會員基本票價向下取到尾數9；低於HK$30的結果改為HK$0（包括30–38向下取整得到29的情況）。前端顯示原始選價與最終宣傳價，驗證數字來自實際調整後票價，並非只修改顯示。Adaptive 的初始對照也先格式化；舊實驗保留原有價格與標籤。Manage offers 建議使用經驗證的最終票價，人工輸入的草稿不會被靜默改價。
+## Optimize prices
 
-## 兩個入口
+`/adaptive-pricing`是唯一票價實驗頁，Admin導航直接進入此頁。Forecast與Manage offers會帶入航班及有效放票日。舊`#optimization`／`#pricing`／`#panel`／`#market`顯示頁面已不可用，不讀取舊資料，也不轉成另一個流程。
 
-| 入口 | 使用者 | 可以做甚麼 |
-|---|---|---|
-| `/admin`（原 `/` 亦可使用） | 團隊／管理員 | 航班預測、價格篩選、客群分析、共享市場實驗、發布會員位及設定會員費 |
-| `/members` | 模擬旅客 | 查詢已發布航班、查看完整價格、加入會員、確認預訂、查看已保存行程 |
+設定航線、航班／日期、放票輪次、價格輪數及每輪新會員數。所有實驗固定八類彈性優惠旅客；沒有Target customer scenario或Legacy選項，八類權重仍可調整。進階設定包括種子、獨立驗證批數、並行呼叫及明確的總呼叫上限。
 
-兩者共用 SQLite 的已發布優惠、會員及訂位。Admin 發布配額後，會員端才可購買；購買會實際扣除這個示例資料庫的配額，Admin 重新讀取庫存即可看到變化。兩者是介面與路徑分開，並非已完成生產環境的身份驗證或權限隔離。示例身份為本機測試 ID，不收集旅客個人資料。
+`Simulated customers (offline)`和Live LLM只改變顧客決策來源；兩者都由Thompson Sampling選價。P₀由航班正常基本票價的80%上限導出。旅客已入會，票價實驗不收會費。
+
+結果包含：
+
+- 航班的正常票價、初始會員價和NHPP配額。
+- 已保存的目前v5實驗、每輪價位、會員購買和基本票款。
+- 模型估計的價格／預期收入曲線；不是每個點都真的呼叫LLM測試。
+- 原始選價、向下取尾數9／低於30歸零後的候選價及獨立確認。
+- 初始、候選與無優惠的配對比較，以及最後保留價／無定論／NO_OFFER。
+- 新LLM呼叫、快取、強制動作與失敗的獨立計數。
+
+已刪除的舊實驗ID會顯示不可用，不會偷偷換成另一份結果。保存結果及回饋瀏覽不啟動新實驗。
 
 ## Experiments：What members said
 
-`/admin#customers` 只顯示自適應定價實驗的會員回饋：選擇已保存實驗及輪次，閱讀該輪分析摘要、分析來源與個別會員的購買／拒絕理由。它直接讀取已保存的資料；開頁、切換或重新整理都不啟動實驗或呼叫付費 LLM。無結果、讀取失敗及尚無完成輪次各有明確狀態。
+`/admin#customers`只顯示目前v5實驗的已保存回饋：選擇實驗和輪次，閱讀分析摘要與個別會員的購買／拒絕理由。可用`/admin?run=<run_id>&round=<round>#customers`分享。輸出以純文字呈現，並標示來源；它是合成角色回答，並非真人研究。
 
-`/admin?run=<run_id>&round=<round>#customers` 可分享指定實驗／輪次；未指定輪次時選最後一輪。摘要保持原始輸出並以純文字呈現，不能當作真實客戶研究。快取摘要、規則摘要及 LLM 摘要分開標示，個別決策保留來源。
+## Manage offers
 
-自適應定價頁 `/adaptive-pricing` 的「Read member feedback in Experiments」連結攜帶當前 run ID。原「How the price changes」折線圖已移除；該頁保留輪次結果表、價格與收入關係圖及獨立驗證。六階段舊工具仍可由 `/admin#panel` 存取，共享市場保留在 `/admin#market`；兩者不再放在 Experiments 主頁。
+管理員選擇航線、日期／航班、放票日，查看當前配額，再人工輸入會員基本票價及新增位數。沒有舊optimizer建議或自動套用功能；可開啟同航班Thompson實驗供參考。
 
-## 大型 Customer panel
+發布會核對80%票價上限、整數價格、合法放票日、正常需求保護、前輪未售及已售會員位。每班每輪只能發行一次，不能倒退模擬時間。實驗完成不等於發布，會員網站只顯示正式儲存的優惠。
 
-- 規則模式：1–1,000 人；Live LLM：1–100 人，預設面板100人。
-- 每人仍為六階段獨立旅程，使用原本英文/HKD情境；擴大人數不會把14種假想需要變成已驗證的HK Express客群比例。
-- 採背景批次執行，HTTP啟動請求立即返回run ID。每名旅客單獨保存checkpoint，重新整理頁面不會重開一輪。
-- Live每批預設60次有選擇的決策嘗試，最多120次；這個上限包含快取讀取。介面另列真正provider dispatch、快取、唯一合法動作、規則決策和失敗，避免把所有階段都當成新LLM回覆。
-- 唯一合法動作由環境執行，來源為`environment_forced`。有多個合法選擇才需要LLM。失敗會保留原文與已完成狀態，不用規則回覆代替。
-- 額度耗盡或錯誤後暫停；只有明確按Continue才開下一批。背景輪詢不增加呼叫額度。最多三個工作者同時決策。
-- 新panel凍結prompt、相關實作hash、模型及endpoint hash。版本改變後可以查看歷史，但不能續跑混合不同模型／規則。
+會員plan在此獨立管理。保存會費改變之後的新入會報價，不會向舊會員再收費，也不是Thompson的待優化參數。
 
-Admin先顯示入會、曾購票、取消、完成進度，再按客群比較；可搜尋或篩選分頁名單，最後選一人查看六階段。入會分母排除既有會員與尚未決策的人；購票數包括後來取消者，取消另列。尚未完成的結果必須標為partial。
+## Client Portal
 
-## 會員購票流程
+`/members`可設定起點、目的地或國家／地區，以及單日或彈性日期範圍；細節見[彈性搜尋](CLIENT_FLEXIBLE_SEARCH.md)。查詢只讀取已發布優惠，不會自動創造庫存。
 
-1. 使用本機生成的demo ID，查閱有效會員及已訂行程。
-2. 以起點、目的地和日期查詢Admin已發布優惠。沒有配額時顯示空狀態，不能在瀏覽或搜尋時偷偷建立庫存。
-3. 每張票顯示會員基本票價、必付稅費及完整票價。正常票價只供同時點比較，這個會員網站不提供正常票結帳。
-4. 未入會者先看到當前年費及首次購票合計，再明確確認模擬入會。既有有效會員不再付一次會費。
-5. 再確認所選會員票。結帳以後端價格、最新模擬日及NHPP保護量檢查，SQLite交易避免搶最後一位時超賣。瀏覽不保留座位。
-6. 成功後在My trips查看資料庫保存的訂位。重新整理或重開同一個本機demo ID仍能查看。
+1. 每張卡片大字顯示基本票價，下方列必付費用及完整付款。
+2. 未入會者先確認當前會員費，再模擬入會；有效會員不再付一次會費。
+3. 確認會員票，伺服器重新核對價格、會員狀態及可售庫存；瀏覽不保留座位。
+4. 成功後在My trips查看SQLite保存行程；同一個本機demo ID可重新載入。
 
-這版每次訂一位持卡人的會員票，未增加行李購買、同行者購票、退款或真實支付。會員費與航班付款是兩個明確步驟；入會後若航班售罄，會員仍然有效，不自動退款或假稱已出票。
+每次購買一名持卡人的一張會員票。未提供真實支付、航空出票、退款或取消操作。優惠售罄不會自動退會費。示例身份沒有生產環境的登入與權限隔離。
 
-## 價格及庫存的來源
+## 資料與檢查
 
-`membership_plan`資料表保存會員端會費，預設HKD399。Admin在Offer management明確保存新會費；價格篩選或panel中的假想會費不會自動改變會員網站。舊會員保留實際已付費用，新用戶依當前plan入會。
+會員plan、優惠批次及訂位共用SQLite；Thompson實驗則使用隔離的合成世界。帳本核對含必要費用，只有票價實驗的收入指標排除稅費與成本。
 
-會員入會POST不接受前端自行指定成交會員費；選填`expected_fee`核對使用者已看見的價格，若Admin改價則拒絕並要求重新確認。買票同樣可用`expected_total`核對總價。優惠票價來自已發布的不可變批次，不能靠送出`total:0`或倒退模擬日繞過檢查。
-
-多輪同航班優惠共用保護上限。會員搜尋每航班選出最便宜的可售批次，其顯示數量為`min(該批未售, 當前可成交上限)`；不能把同航班各批的可售數量相加，否則會重複計入同一個安全額度。D28／D14／D7新增配額規則保持不變。
-
-## API
-
-| 方法 | 路徑 | 用途 |
-|---|---|---|
-| POST / GET | `/api/agents/panels` | 新背景panel／panel清單 |
-| GET | `/api/agents/panels/{id}` | 進度、摘要、分組及精簡旅客列 |
-| GET | `/api/agents/panels/{id}/people/{customer_id}` | 單人的完整六階段 |
-| POST | `/api/agents/panels/{id}/resume` | 明確增加一批決策額度 |
-| GET | `/api/member-portal/config` | 當前會員plan與示例範圍 |
-| GET / POST | `/api/member-portal/plan` | 讀取／由Admin更新會費 |
-| GET | `/api/member-portal/flights` | 已發布的航班、完整票價及可售量 |
-| GET | `/api/member-portal/accounts/{id}` | 會員狀態及已訂行程 |
-| POST | `/api/member-portal/join` | 按後端plan入會，只收一次 |
-| POST | `/api/member-portal/book` | 按當前庫存與保護條件確認會員票 |
-
-原`POST /api/agents/run`保留小型同步相容介面；新版Admin使用背景panel API，不受舊5人UI上限限制。Shared market和panel仍是不同實驗；會員網站的SQLite交易也不會覆寫已完成的LLM市場結果。
-
-## 驗證
-
-執行結果及具體數量見[最新進度](ITERATION_2_PROGRESS.md)。`backend/tests/test_panel_jobs.py`覆蓋批次、續跑、大小限制、來源計數及版本凍結；`backend/tests/test_member_portal.py`覆蓋後端會費、過時價格、庫存保護、跨輪模擬日、持久資料及最後一位併發。
-
-`python scripts/smoke_member_portal.py`會對實際本機API建立一名測試會員、買一張已發布的示例票，並核對保存行程及會費不重收。它會改變示例庫存，但不會呼叫LLM或支付金錢。
+瀏覽器檢查涵蓋導航、當前v5回饋、空狀態、手機版、價格格式、表單和購票核價；實際檢查紀錄見[維護紀錄](ITERATION_2_PROGRESS.md)。API清單見[技術實作](CURRENT_IMPLEMENTATION.md#http介面)。

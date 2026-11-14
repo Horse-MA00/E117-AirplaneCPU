@@ -39,7 +39,7 @@ class ContainerHTTPTests(unittest.TestCase):
     def test_health_and_both_sites_on_wildcard_listener(self):
         with self.request('/api/health') as response:
             self.assertEqual(json.load(response), {'status': 'ok'})
-        for path in ('/admin', '/members', '/continuous.js'):
+        for path in ('/admin', '/members', '/adaptive-pricing'):
             with self.request(path) as response:
                 self.assertEqual(response.status, 200)
                 self.assertTrue(response.read())

@@ -8,9 +8,8 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
 page.on('pageerror',e=>errors.push(e.message));
 const flight={flight_id:'DEMO-UI-ICN',origin:'HKG',destination:'ICN',departure_at:'2027-05-15T10:00:00+08:00',capacity:180,demo_priority:0,demo_d28_releasable:44};
 const history=[28,14,13,7,1,0].map(days_to_departure=>({days_to_departure,capacity:180,booked_seats:70,available_seats:110,normal_base_fare:500,normal_total_fare:750,mandatory_fees:250}));
-let scenario='off',starts=0,exposed=false,scopeSeats=0,protocol='fixed-seat-profile-local-fare-v1';
-const row=(round,member_fare)=>({round,member_fare,membership_fee:399,total_contribution:1000+member_fare,incremental_contribution:member_fare,profit_margin:.5,mean_member_buyers:exposed?2:0,mean_regular_buyers:3,mean_new_members:exposed?1:0,mean_member_tickets:exposed?3:0,mean_regular_tickets:4,mean_member_offer_customers:exposed?4:0,member_supply_exposure:exposed?7:0,price_evidence_qualified:exposed,price_evidence_status:exposed?'observed_member_sales':'uninformative_no_supply',feasible:exposed,service_rate:exposed?1:0,accepted:false});
-function report(){return {run_id:'opt-ui-supply',status:'completed',config:{scope:{...flight,departure_date:'2027-05-15',as_of_day:28},mode:'math',initial_member_fare:400,initial_membership_fee:399,rounds:2,customers:7,price_comparison_protocol:protocol},progress:{completed_rounds:2,total_rounds:2},counts:{},tracks:[{mode:'math',rounds:[row(1,0),row(2,70)],best:null,decision:'NO_OFFER'}]};}
+let scenario='off',starts=0,scopeSeats=0;
+const population={profile:'flexible_deal_seekers',segments:Array.from({length:8},(_,i)=>({id:`flexible-${i}`,name:`Flexible travellers ${i+1}`,weight:1/8}))};
 function forecast(day){
   const carry=scenario==='carry',sold=scenario==='sold',protectedAll=scenario==='protected';
   const occupied=sold?78:70,protection=protectedAll?180-occupied:sold?95:103,headroom=protectedAll?0:7,published=carry?7:0;
@@ -23,18 +22,19 @@ function forecast(day){
 await page.route('**/*',async route=>{
   const u=new URL(route.request().url()),path=u.pathname,reply=json=>route.fulfill({json});
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
-  if(['/app.js','/experiments.js','/demand-filter.js','/optimization.js','/contribution-explanation.js','/seat-status.js','/styles.css','/continuous.js','/price-chart.js'].includes(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
+  if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
   if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:365}});
   if(path==='/api/flights')return reply({flights:[flight]});
   if(path===`/api/flights/${flight.flight_id}`)return reply({flight,history});
   if(path==='/api/forecast')return reply({forecast:forecast(route.request().postDataJSON().days_to_departure)});
-  if(path==='/api/optimization/initial-policy')return reply({initial_member_fare:400,initial_membership_fee:399,scope:{...flight,departure_date:'2027-05-15',as_of_day:route.request().postDataJSON().forecast_day,available_seats:110,normal_base_fare:500,member_fare_cap:400,member_fare_cap_ratio:.8,releasable_seats:scopeSeats,member_supply_exposure:scopeSeats,optimization_eligible:scopeSeats>0?true:false,optimization_unavailable_reason:'No member supply at this snapshot.'}});
-  if(path==='/api/optimization/runs'){
-    if(route.request().method()==='POST'){starts++;return route.fulfill({status:400,json:{error:'No supply'}});}
-    return reply({runs:[report()]});
+  if(path==='/adaptive-pricing')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./adaptive-pricing.html',import.meta.url),'utf8')});
+  if(path==='/api/adaptive-pricing/status')return reply({live_configured:false,population,populations:[population]});
+  if(path==='/api/adaptive-pricing/scope')return reply({population,scope:{...flight,departure_date:'2027-05-15',as_of_day:route.request().postDataJSON().forecast_day,normal_base_fare:500,initial_member_fare:400,member_fare_cap:400,member_fare_cap_ratio:.8,releasable_seats:scopeSeats}});
+  if(path==='/api/adaptive-pricing/runs'){
+    if(route.request().method()==='POST'){starts++;return route.fulfill({status:400,json:{error:'Test does not start experiments'}});}
+    return reply({runs:[]});
   }
-  if(path==='/api/optimization/runs/opt-ui-supply')return reply(report());
   if(path.startsWith('/api/'))return reply({runs:[],panels:[],segments:[],offers:[]});
   return route.continue();
 });
@@ -83,34 +83,22 @@ try{
   assert.match(await page.locator('#empty-detail').innerText(),/member bookings excluded/);
   await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await page.screenshot({path:'test-results/forecast-seat-status-mobile.png',fullPage:true});
-  await page.locator('a[href="#optimization"]').first().click();await page.waitForFunction(()=>document.getElementById('optimization-status').textContent==='Completed');
-  await page.locator('#optimization-route').selectOption('HKG-ICN');await page.locator('#optimization-flight').selectOption(flight.flight_id);
-  await page.waitForFunction(()=>document.getElementById('optimization-no-release').textContent.includes('NHPP decision: do not release member seats at D28'));
-  assert.equal(await page.locator('#optimization-start').isDisabled(),true);assert.equal(starts,0);
-  scopeSeats=1;await page.locator('#optimization-day').selectOption('14');
-  await page.waitForFunction(()=>document.getElementById('optimization-no-release').textContent.includes('rounds down to 0'));
-  assert.match(await page.locator('#optimization-scope').innerText(),/D14\./);
-  assert.equal(await page.locator('#optimization-start').isDisabled(),true);
-  assert.equal(await page.locator('#optimization-share').count(),0);
-  scopeSeats=2;await page.locator('#optimization-day').selectOption('7');
-  await page.waitForFunction(()=>!document.getElementById('optimization-start').disabled);
-  assert.equal(await page.locator('#optimization-no-release').isHidden(),true);
-  assert.equal(await page.locator('#optimization-start').isDisabled(),false);
-  assert.match(await page.locator('#optimization-scope').innerText(),/D7\./);
-  scopeSeats=0;await page.locator('#optimization-day').selectOption('28');
-  await page.waitForFunction(()=>!document.getElementById('optimization-no-release').hidden);
-  assert.equal(await page.locator('#optimization-start').isDisabled(),true);assert.equal(starts,0);
-  assert.equal(await page.locator('#optimization-price-profit circle').count(),0);
-  assert.match(await page.locator('#optimization-price-evidence').innerText(),/No member-price evidence/);
-  assert.equal(await page.locator('#optimization-rounds-table tr').count(),2);
-  assert.match(await page.locator('#optimization-curve-protocol').innerText(),/matched markets stay fixed/);
-  exposed=true;protocol='fixed-seat-profile-local-fare-v2-whole-hkd';await page.locator('#optimization-refresh').click();
-  await page.waitForFunction(()=>document.querySelectorAll('#optimization-price-profit circle').length===2);
-  assert.match(await page.locator('#optimization-tradeoffs').innerText(),/Most member buyers/);
-  assert.match(await page.locator('#optimization-curve-protocol').innerText(),/matched markets stay fixed/);
-  await page.locator('#optimization-price-profit circle').first().focus();
-  assert.match(await page.locator('#optimization-price-detail').innerText(),/2 member buyers \/ 3 regular buyers/);
-  assert.match(await page.locator('#optimization-price-detail').innerText(),/1 joins/);
+  await page.getByRole('link',{name:'Optimize prices',exact:true}).click();
+  await page.locator('#route:not([disabled])').waitFor();
+  await page.locator('#route').selectOption('HKG → ICN');await page.locator('#flight').selectOption(flight.flight_id);
+  await page.waitForFunction(()=>document.getElementById('scope-message').textContent.includes('No member quota'));
+  assert.equal(await page.locator('#start').isDisabled(),true);assert.equal(starts,0);
+  scopeSeats=1;await page.locator('#release-day').selectOption('14');
+  await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D14');
+  assert.equal(await page.locator('#member-quota').innerText(),'1');
+  assert.equal(await page.locator('#start').isDisabled(),false,'Thompson uses the full current scope quota');
+  scopeSeats=2;await page.locator('#release-day').selectOption('7');
+  await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D7');
+  assert.equal(await page.locator('#member-quota').innerText(),'2');
+  scopeSeats=0;await page.locator('#release-day').selectOption('28');
+  await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D28');
+  assert.equal(await page.locator('#start').isDisabled(),true);assert.equal(starts,0);
+  assert.equal(await page.locator('#optimization-price-profit, #optimization-rounds-table').count(),0);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-  assert.deepEqual(errors,[]);console.log('Seat-supply UI passed: 7 headroom/0 new, carried bookable quota, sold once, reserve clamp, reason states, fixed 50% release guard and round refresh, split buyer metrics, exposure-qualified chart, held quota, historical action guard, raw overcapacity warning, normal-only baseline labels, mobile.');
-}catch(error){console.error(JSON.stringify({pageErrors:errors,banner:await page.locator('#error').textContent(),headroom:await page.locator('#headroom-value').textContent()}));throw error;}finally{await browser.close();}
+  assert.deepEqual(errors,[]);console.log('Seat-supply UI passed: 7 headroom/0 new, carried bookable quota, sold once, reserve clamp, reason states, Thompson zero/positive quota guard and round refresh, held quota, historical action guard, raw overcapacity warning, normal-only baseline labels, mobile.');
+}catch(error){console.error(JSON.stringify({pageErrors:errors,url:page.url()}));throw error;}finally{await browser.close();}

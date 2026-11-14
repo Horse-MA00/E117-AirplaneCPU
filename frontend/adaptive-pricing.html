@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>Adaptive member pricing — UOption Fly Pass</title>
+<title>Optimize prices — Thompson Sampling · UOption Fly Pass</title>
 <link rel="stylesheet" href="/adaptive-pricing.css">
 <script type="module" src="/adaptive-pricing.js"></script>
 </head>
 <body>
 <a class="skip" href="#page-title">Skip to content</a>
-<header class="masthead"><a class="brand" href="/admin#optimization">UOption<span>Fly Pass · Admin</span></a><nav aria-label="Workspace"><a href="/admin#optimization">Back to Optimize prices</a><a href="/members">Client Portal</a></nav></header>
+<header class="masthead"><a class="brand" href="/admin#flights" aria-label="UOption Admin home">UOption<span>Fly Pass · Admin</span></a><a class="portal-link" href="/members">Open Client Portal</a></header>
+<nav class="primary-nav" aria-label="Workspace"><a href="/admin#flights">Forecast seats</a><a href="/adaptive-pricing" aria-current="page">Optimize prices</a><a id="experiments-nav-link" href="/admin#customers">Experiments</a><a href="/admin#members">Manage offers</a></nav>
 <main>
-<div class="page-head"><div><p class="eyebrow">Adaptive member pricing</p><h1 id="page-title" tabindex="-1">Test a price.<br>Learn what changes.</h1></div><p class="intro">Existing members decide whether to buy. Each round compares two whole-HKD fares with new members. Thompson Sampling learns from their choices, then separate panels check the selected fare.</p></div>
+<div class="page-head"><div><p class="eyebrow">Thompson Sampling</p><h1 id="page-title" tabindex="-1">Optimize member<br>prices.</h1></div><p class="intro">Existing members decide whether to buy. Each round compares two whole-HKD fares with new members. Thompson Sampling learns from their choices, then separate panels check the selected fare.</p></div>
 <ol class="workflow"><li><span>01</span><div><strong>Offer a base fare</strong><small>At least 20% below the normal fare</small></div></li><li><span>02</span><div><strong>Hear from members</strong><small>Fresh, paired customer scenarios</small></div></li><li><span>03</span><div><strong>Learn and explore</strong><small>Update the purchase-rate model</small></div></li><li><span>04</span><div><strong>Check the result</strong><small>Fresh panels and a no-offer comparison</small></div></li></ol>
 <div id="page-error" class="message error" role="alert" hidden></div>
 <div class="workspace">
@@ -22,11 +23,10 @@
 <div class="field"><label for="flight">Departure / flight</label><select id="flight" required disabled><option value="">Choose a route first</option></select></div>
 <div class="field"><label for="release-day">Release round</label><select id="release-day"><option value="28">D28 · 28 days before departure</option><option value="14">D14 · 14 days before departure</option><option value="7">D7 · 7 days before departure</option></select></div>
 <p id="scope-message" class="hint">Choose a flight to load its observed normal fare and NHPP member quota.</p>
-<div class="field"><label for="profile">Target customer scenario</label><select id="profile" name="profile" aria-describedby="profile-note" disabled><option value="flexible_deal_seekers">Flexible bargain travellers</option><option value="broad_coverage">Broad customer coverage (legacy)</option></select><small id="profile-note">Students, spontaneous trips and destination-flexible bargain seekers. Assumed target audience, not measured HK Express customer shares.</small></div>
-<div class="field"><label for="mode">Customer decisions</label><select id="mode"><option value="synthetic">Mathematical simulation</option><option value="live" disabled>Live LLM · checking connection</option></select><small id="provider-note">Checking the configured provider…</small></div>
+<div class="field"><label for="mode">Customer decisions</label><select id="mode"><option value="synthetic">Simulated customers (offline)</option><option value="live" disabled>Live LLM · checking connection</option></select><small>Thompson Sampling sets prices in both modes; only the source of customer choices changes.</small><small id="provider-note">Checking the configured provider…</small></div>
 <div class="field-pair"><div class="field"><label for="rounds">Price rounds</label><input id="rounds" type="number" min="2" max="30" step="1" value="10" required></div><div class="field"><label for="customers">New members per round</label><input id="customers" type="number" min="8" max="200" step="1" value="16" required></div></div>
 <details class="settings"><summary>Customer mix and run settings</summary>
-<p class="hint">These are test-population weights, not measured HK Express market shares. Positive groups receive at least one test member; reporting corrects for their sampling proportions.</p>
+<p class="hint">New experiments use eight groups of flexible bargain travellers. These are test-population weights, not measured HK Express market shares. Positive groups receive at least one test member; reporting corrects for their sampling proportions.</p>
 <div id="weights" class="weights"></div>
 <div class="weight-total"><span id="weight-total">Total: —</span><button id="reset-weights" class="text-button" type="button">Reset weights</button></div>
 <div class="field-pair"><div class="field"><label for="concurrency">Parallel calls</label><input id="concurrency" type="number" min="1" max="8" step="1" value="4" required></div><div class="field"><label for="max-calls">LLM call limit</label><input id="max-calls" type="number" min="1" max="10000" step="1" value="600" required></div></div>
@@ -34,7 +34,7 @@
 <p class="hint">Parallel calls collect purchase intentions. The market then clears the shared inventory in a fixed order.</p>
 </details>
 <p id="call-estimate" class="hint"></p><p class="hint">New fares use whole HKD. Each round compares the candidate and initial fare using the same new people in separate scenarios. Personal budgets are hidden from the price learner.</p>
-<button id="start" class="button primary" type="submit" disabled>Start mathematical simulation</button>
+<button id="start" class="button primary" type="submit" disabled>Start Thompson simulation</button>
 <p id="start-note" class="hint">No membership charge is included. Taxes, fuel surcharges and operating costs are outside this experiment.</p>
 </fieldset>
 </form>

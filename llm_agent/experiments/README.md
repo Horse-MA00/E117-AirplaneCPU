@@ -1,41 +1,34 @@
-# Published synthetic experiment evidence
+# Current Thompson v5 evidence
 
-The current three-round v3 policy is tested in `three_round_40seeds/` (40 seeds, 120 complete rule markets, no provider calls). The earlier `shared_*` exports retain historical v2 rules; their live choices are not evidence for the new release policy.
+This directory contains the retained **member-thompson-v5-marketing** experiments using the eight-group `flexible_deal_seekers` population. Every folder includes the original report, redacted compressed audit and a file manifest. Obsolete pricing/population experiments have been removed from the working tree; they remain in Git history. NHPP evaluation data lives separately under `simulation/`.
 
-These files contain synthetic personas, model-generated choices and simulator outcomes. They are not observed HK Express customers. Authentication headers and keys are excluded. Each experiment manifest records SHA256 checksums; run `python scripts/verify_artifacts.py` from the repository root to verify exports without provider calls.
+These six completed experiments were already present before this cleanup. Exporting them did **not** make new provider calls. Original prices, failed adoption attempts, source counts and provenance are retained; this is not a newly controlled six-case benchmark.
 
-| Folder | Purpose | Actual decision provenance |
-| --- | --- | --- |
-| `codex_pilot_20261114` | 28 isolated six-stage worlds | 168 actual Codex subagent decisions; not DeepSeek API requests |
-| `deepseek_factorial_20261114` | 14 personas × 4 base fares × 2 fees × 6 stages | 672 fresh successful DeepSeek choices, no cache; one transport failure retained |
-| `behavior_probes_20261114` | Repeats, price, order and language checks | 60 fresh successful choices; earlier 60 transport failures retained separately |
-| `three_round_40seeds` | Current fixed D28/D14/D7 additive quota policy | 120 complete rule markets, 3,240 checked round decisions; no provider requests |
-| `shared_deterministic_40seeds` | 40 seeds × 3 policies, shared inventory | 120 complete rule markets; no provider requests |
-| `shared_math_matched` | Same four worlds as live runs | 12 complete rule markets; exact exogenous hashes match live worlds |
-| `shared_development` | One development seed × 3 policies | 265 fresh choices, 160 exact-context cache replays, 500 forced transitions |
-| `shared_validation_20261311` | Independent holdout, 3 policies | 477 fresh choices, 447 forced transitions; no cache/failures |
-| `shared_validation_20261312` | Independent holdout, 3 policies | 447 fresh choices, 477 forced transitions; no cache/failures |
-| `shared_validation_20261313` | Independent holdout, 3 policies | 459 fresh choices, 466 forced transitions; no cache/failures |
-| `superseded_shared_v1` | Interrupted development, retained for audit | 240 successful fresh responses and one request with no recorded response; excluded from validation |
+| Experiment | Customer source | Flight / day | Rounds × people | Candidate → retained fare | Confirmation |
+|---|---|---|---:|---:|---|
+| [771981d0c8f84850](current_thompson_v5_771981d0c8f84850/report.json) | Offline | NET-HKG-KMQ-20270518 / D28 | 6 × 16 | 159 → 319 | INCONCLUSIVE |
+| [14158362bab541cc](current_thompson_v5_14158362bab541cc/report.json) | Offline | NET-HKG-KMQ-20270518 / D28 | 3 × 16 | 159 → 319 | INCONCLUSIVE |
+| [cd44adfcd5564d74](current_thompson_v5_cd44adfcd5564d74/report.json) | Offline | NET-HKG-KMQ-20270518 / D28 | 3 × 16 | 319 → 319 | KEEP_INITIAL |
+| [db38e6e4495641ce](current_thompson_v5_db38e6e4495641ce/report.json) | Offline | NET-HKG-KMQ-20270518 / D28 | 3 × 16 | 319 → 319 | KEEP_INITIAL |
+| [612add209e864fdc](current_thompson_v5_612add209e864fdc/report.json) | Offline | NET-HKG-KMQ-20270518 / D28 | 3 × 16 | 319 → 319 | KEEP_INITIAL |
+| [749c60ea38b34eb2](current_thompson_v5_749c60ea38b34eb2/report.json) | Live LLM | SYN-00017 / D7 | 10 × 16 | 269 → 269 | ADOPT_CANDIDATE |
 
-Forced transitions have only one legal action. Cache replay is not an independent new answer. Some cached development contexts originate in the superseded run, so do not sum repeated answers as new model calls. The unfinished historical request's provider-side outcome and token usage are unknown.
+All fares are base fares in HKD. The first two runs preserve raw selection163 → promotional159; their confirmation retained the formatted initial319. The next three retained319. Repeated offline scenarios are not independent evidence of market performance.
 
-`shared_validation_summary.json` combines the three holdouts and keeps development separate. See [analysis and cost sensitivity](../../docs/SHARED_MARKET_VALIDATION.md) and the [calibration provenance attestation](../../docs/SHARED_MARKET_CALIBRATION_ATTESTATION.json). Original experiment specifications were preserved; the attestation does not claim missing hashes were captured at request time.
+## Live example
 
-Every `audit.jsonl.gz` is a gzip-compressed stream of JSON objects. Shared-market events include the customer-visible observation and request, raw provider response, parsed/validated action and resulting environment transition. Case IDs connect the records to `experiment.json` and `report.json`; only completed worlds with valid accounting checks enter rankings.
+The live run's normal base fare was690, starting search fare552 and formatted initial comparison549. Its raw selected273 became269 before three independent confirmation panels of16 new people each.
 
-```python
-import gzip, json
-with gzip.open("llm_agent/experiments/shared_validation_20261311/audit.jsonl.gz", "rt") as stream:
-    for line in stream:
-        record = json.loads(line)
-        if record.get("event") == "market_response":
-            print(record)
-            break
-```
+| Held-out measure | Initial549 | Selected269 |
+|---|---:|---:|
+| Weighted member purchase rate | 8.22% | 58.67% |
+| Mean actual panel base receipts | HK$732.00 | HK$2,421.00 |
+| Mean weighted target-mix base receipts | HK$722.24 | HK$2,525.01 |
 
-The earlier isolated journey has different inventory semantics from the shared market. Its conversion counts must not be combined with shared-market policy contribution. Three live holdouts give limited simulation evidence, not real-world price elasticity or an optimal membership fee.
+The report records **213 fresh provider calls** (203 customer,10 analyst), **0 cache hits**, **245 forced actions**, **0 failures**, and peak concurrency4. The five offline runs each made0 provider calls; their forced and synthetic decision counts remain in their own reports.
 
-## English journey verification
+`ADOPT_CANDIDATE` means this selected fare passed the implementation's descriptive confirmation rule on these synthetic panels. It does not establish real HK Express willingness to pay, global optimality, annual membership profit or a general improvement rate. No membership fee or operating cost is included in these base receipts.
 
-`english_journey_20261114/` contains 5 synthetic travellers × 6 stages, P70/V399, seed117, using `traveller-journey-v2.2-en` and `deepseek-flash`: 30 fresh English/HKD responses, no cache or failures. It includes `result.json`, `report.json`, redacted original `audit.jsonl.gz` and SHA-256 manifest. Budget scope and computed price comparisons changed alongside language; this is neither a language-only causal test nor shared-market price validation. Historical multilingual artifacts are unchanged.
+The quoted values come from the saved report's `recommendation`, `validation` and `counts`, not a new replay. Provenance hashes preserve the source and prompts used when the run happened; they are not relabelled as a validation of later code refactoring.
+
+See the [current method](../../docs/FLIGHT_SCOPED_OPTIMIZATION.md) for weighted learning, paired cohorts, marketing fares and adoption rules. Run `python scripts/verify_artifacts.py` from the repository root to check the committed artifacts.
