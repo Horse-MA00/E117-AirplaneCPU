@@ -14,7 +14,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 
 ### 现行规格
 
-- [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（v8：票价／会费为整数港元，会员价上限为正常基本票价的 80%，P₀ = 上限；数学轨先用公式算 P*，再模拟附近 9 个价格；新增八类弹性优惠客群／旧版十四类对照、公开特征 Thompson Sampling、新客群配对及 LLM 假说实验）、需求筛选、座位口径、会计公式、SQLite 和 API。
+- [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（v9：票价／会费为整数港元，最终会员价向下取尾数9、低于30归零，会员价上限为正常基本票价的 80%，P₀ = 上限；数学轨先用公式算 P*，再模拟附近 9 个价格；新增八类弹性优惠客群／旧版十四类对照、公开特征 Thompson Sampling、新客群配对及 LLM 假说实验）、需求筛选、座位口径、会计公式、SQLite 和 API。
 - [THREE_ROUND_RELEASE](docs/THREE_ROUND_RELEASE.md)：D28/D14/D7 放票规则；新一轮扣除前几轮仍有效的未售配额。
 - [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：整体架构、HTTP 路由表、与原计划的差异及限制。
 - [PITCHING_BRIEF](docs/PITCHING_BRIEF.md)：当前方案、路演讲稿、校准覆盖与证据边界。[NHPP_V3_REVIEW](docs/NHPP_V3_REVIEW.md)：平滑模型、收入校准、D28 回退及独立验证。
@@ -71,7 +71,7 @@ python scripts/verify_artifacts.py                # 实验与数据的 SHA256 �
 ## 目录与模块
 
 - `backend/`：stdlib HTTP API（`server.py`）和 SQLite 持久化（`store.py`、`optimization_store.py`）。
-  - 预测入口 `forecast.py`、候选 `nhpp_v3.py` 与冻结 `nhpp.py`；放票 `release_policy.py`；座位口径 `seat_inventory.py`；指定航班优化 `optimization.py`、`scoped_market.py`、`initial_policy.py`；自适应票价 `adaptive_pricing.py`、`member_response.py`（公开特征新模型）、`thompson.py`（历史基准）、审计 `adaptive_store.py`；共享市场 `shared_market.py`；座位反馈 `seat_feedback.py`。
+  - 预测入口 `forecast.py`、候选 `nhpp_v3.py` 与冻结 `nhpp.py`；放票 `release_policy.py`；座位口径 `seat_inventory.py`；指定航班优化 `optimization.py`、`scoped_market.py`、`initial_policy.py`；最终宣传票价 `fare_policy.py`；自适应票价 `adaptive_pricing.py`、`member_response.py`（公开特征新模型）、`thompson.py`（历史基准）、审计 `adaptive_store.py`；共享市场 `shared_market.py`；座位反馈 `seat_feedback.py`。
   - 测试在 `backend/tests/`。
 - `frontend/`：Admin，原生 HTML/JS，路径 `/admin`；`frontend/members/` 是会员端，路径 `/members`。不需要构建，由后端直接提供；`experiments.js` 在 `#customers` 只读展示已保存的会员回馈；旧工具在 `#panel` / `#market`。`*.mjs` 是浏览器 smoke 测试。
 - `simulation/`：合成数据生成器、NHPP 评估脚本和已提交的冻结数据集。

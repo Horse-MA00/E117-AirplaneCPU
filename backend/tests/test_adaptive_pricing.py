@@ -153,7 +153,8 @@ class ExperimentTests(unittest.TestCase):
         self.assertGreater(report["counts"]["synthetic_choices"], 0)
         self.assertEqual(len(report["rounds"]), 2)
         self.assertTrue(all(0 <= r["price"] <= 328 for r in report["rounds"]))
-        self.assertIn(report["recommendation"]["price"], [r["price"] for r in report["rounds"]])
+        self.assertIn(report["recommendation"]["raw_price"], [r["price"] for r in report["rounds"]])
+        self.assertEqual(report["recommendation"]["price"], pricing.final_member_fare(report["recommendation"]["raw_price"]))
         self.assertTrue(report["validation"]["selected_price_frozen_before_validation"])
         search_ids = {p["customer_id"] for panel in report["search_panels"] for p in panel["people"]}
         heldout_ids = {r["person"]["customer_id"] for w in report["validation_worlds"]
@@ -232,9 +233,48 @@ class ExperimentTests(unittest.TestCase):
             report = pricing.start(self.config(rounds=3), blocking=True)
         self.assertEqual(report["status"], "completed", report.get("error"))
         self.assertEqual([r["price"] for r in report["rounds"]], [328, 200, 150])
-        self.assertEqual(report["recommendation"]["price"], 200)
+        self.assertEqual(report["recommendation"]["raw_price"], 200)
+        self.assertEqual(report["recommendation"]["price"], 199)
         self.assertNotEqual(report["recommendation"]["price"], report["rounds"][-1]["price"])
         self.assertEqual(len(calls), 5)
+
+    def test_formatted_candidate_and_fallback_are_replayed_at_actual_quotes(self):
+        original_evaluate = pricing.evaluate
+
+        def controlled_holdout(client, people, selected, price, seed):
+            if seed < 500000:
+                return original_evaluate(client, people, selected, price, seed)
+            # Hold purchase intentions constant to expose any stale-price
+            # accounting: every eligible member can afford either final quote.
+            people = [{**p, 'eligible':True, 'base_fare_budget':1000} for p in people]
+            decisions = [request('DECLINE' if price is None else 'BUY_MEMBER','DECLINE') for _ in people]
+            result = pricing.settle(people, decisions, selected, price, seed)
+            result['decisions'] = [{'person':p, **d} for p,d in zip(people,decisions)]
+            return result
+
+        for raw, final in ((255,249),(35,0)):
+            with self.subTest(raw=raw), patch.object(pricing, 'recommend', return_value={'price':raw,'curve':[]}), \
+                 patch.object(pricing, 'evaluate', side_effect=controlled_holdout):
+                report = pricing.start(self.config(), blocking=True)
+            self.assertEqual(report['status'], 'completed', report.get('error'))
+            self.assertEqual([r['price'] for r in report['rounds']], [328,raw])
+            self.assertEqual(report['scope']['initial_member_fare'], 328)
+            self.assertEqual(report['scope']['normal_base_fare'], 410)
+            self.assertEqual(report['recommendation']['raw_price'], raw)
+            self.assertEqual(report['recommendation']['price'], final)
+            self.assertEqual(report['config']['final_member_fare_policy'], pricing.FINAL_MEMBER_FARE_VERSION)
+            validation = report['validation']
+            self.assertEqual(validation['initial_price_before_marketing'],328)
+            self.assertEqual(validation['selected_price_before_marketing'],raw)
+            self.assertEqual(validation['comparison_reference'],'formatted_initial_fare')
+            self.assertEqual(validation['adoption_result'],'KEEP_INITIAL')
+            self.assertEqual(validation['retained_price'],319)
+            for world in report['validation_worlds']:
+                expected = {'initial':319,'selected':final,'no_offer':None}[world['policy']]
+                self.assertEqual(world['price'],expected)
+                self.assertEqual(world['result']['member_revenue'],14*(expected or 0))
+            self.assertEqual(len(report['validation_worlds']),9)
+            self.assertEqual(report['counts']['provider_calls'],0)
 
     def test_repeated_price_new_people_add_evidence_but_paired_identical_quote_is_reused(self):
         with patch.object(pricing, "recommend", return_value={"price": 328., "curve": []}):

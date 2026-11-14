@@ -140,7 +140,8 @@ class AdaptiveReplayTests(unittest.TestCase):
         self.assertEqual(recommendation['revenue_fraction'], .8)
         self.assertNotIn('95', recommendation['selection'])
         tested = {r['price'] for r in report['rounds']}
-        self.assertIn(recommendation['price'], tested)
+        self.assertIn(recommendation['raw_price'], tested)
+        self.assertEqual(recommendation['price'], pricing.final_member_fare(recommendation['raw_price']))
         self.assertEqual({r['price'] for r in recommendation['curve']}, tested)
         self.assertGreater(len(recommendation['model_curve']), len(tested))
         self.assertTrue(any(not call['draw'] and call.get('candidate_prices') is None for call in self.proposals))

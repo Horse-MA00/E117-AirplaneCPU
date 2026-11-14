@@ -1,8 +1,8 @@
 # Flight-specific Admin workflow
 
-> 状态：现行 · 对应代码：`flight-policy-feedback-v8-whole-hkd`、`fixed-seat-profile-local-fare-v2-whole-hkd`、`formula-scan-v2-whole-hkd`、`backend/fare_policy.py`、`nhpp-completed-market-feedback-v1`、`nhpp-d28-demand-catalog-v1`、`member-thompson-v4-paired`、`public-member-response-v1`、`weighted-member-panel-v3-motivation`、`adaptive-member-decisions-v4-hypotheses`、`whole-hkd-quotes-v1`、`backend/forecast.py`
+> 状态：现行 · 对应代码：`flight-policy-feedback-v9-marketing`、`fixed-seat-profile-local-fare-v2-whole-hkd`、`formula-scan-v2-whole-hkd`、`backend/fare_policy.py`、`nhpp-completed-market-feedback-v1`、`nhpp-d28-demand-catalog-v1`、`member-thompson-v5-marketing`、`public-member-response-v1`、`weighted-member-panel-v3-motivation`、`adaptive-member-decisions-v4-hypotheses`、`whole-hkd-quotes-v1`、`backend/forecast.py`、`member-marketing-fare-v1`
 
-Current specification, updated 2026-11-14 for engine `flight-policy-feedback-v8-whole-hkd` (`backend/optimization.py`) with price protocol `fixed-seat-profile-local-fare-v2-whole-hkd`. This document is the single current contract for the selected-flight Admin workflow. Change records are preserved unchanged: the v2→v3 supply and evidence diagnosis in [member supply and evidence corrections](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md), and the v3→v4 demand filter, original-fare P₀ and economic scope in [demand filter and original fare](DEMAND_FILTER_AND_ORIGINAL_FARE.md). v5 capped member fares at 50% of the normal base fare (superseding the v4 original-fare P₀); v6 replaced the mathematical track's search with a formula scan plus a simulated fine grid. v7 changed the shared cap to 80%; v8 enforces whole-HKD executable quotes and updates the separate member-only Thompson experiment described below; v5/v6 reports retain their original settings. Release rounds and quota carry-over follow [the three-round release rule](THREE_ROUND_RELEASE.md). Previous v2/v3 experiments retain their original settings and evidence.
+Current specification, updated 2026-11-14 for engine `flight-policy-feedback-v9-marketing` (`backend/optimization.py`) with price protocol `fixed-seat-profile-local-fare-v2-whole-hkd`. This document is the single current contract for the selected-flight Admin workflow. Change records are preserved unchanged: the v2→v3 supply and evidence diagnosis in [member supply and evidence corrections](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md), and the v3→v4 demand filter, original-fare P₀ and economic scope in [demand filter and original fare](DEMAND_FILTER_AND_ORIGINAL_FARE.md). v5 capped member fares at 50% of the normal base fare (superseding the v4 original-fare P₀); v6 replaced the mathematical track's search with a formula scan plus a simulated fine grid. v7 changed the shared cap to 80%; v8 enforces whole-HKD executable quotes; v9 adds final promotional member fares and the separate adaptive v5 workflow described below; v5/v6 reports retain their original settings. Release rounds and quota carry-over follow [the three-round release rule](THREE_ROUND_RELEASE.md). Previous v2/v3 experiments retain their original settings and evidence.
 
 ## What each screen does
 
@@ -32,13 +32,36 @@ P₀  = cap;  fare_max = min(requested fare_max, cap)
 
 New quoted fares and pass fees are whole HKD. Fractional submitted prices are rejected; historical observations are retained as `observed_normal_base_fare` and NHPP history is unchanged. Weighted revenue estimates, costs and historical reports may retain decimals. Base fares exclude mandatory charges. P₀ is only the first tested candidate, not a recommended member fare or a willingness-to-pay estimate. A wider requested `fare_max` is narrowed to the cap; a narrower one must still contain P₀. The same cap filters the legacy pricing grid and is enforced again by `POST /api/offers`. The v4 rule (P₀ = full normal fare, ceiling `max(500, P₀)`) is superseded. The older `member_initial_base_fare = 0.15 × normal_base_fare` column and historical P₀ values (e.g. P84) are kept only for reproducing v2/v3 records. A sold-out snapshot uses the last available **earlier** quote and records `quote_age_days`; a missing price is never interpreted as HK$0. Spoofing P₀ in a request cannot override the data-derived value. User-selected search bounds must contain it.
 
+## Final promotional member fares
+
+`member-marketing-fare-v1` is a final-quote product rule, not a change to the search model, raw P₀, normal fare, membership fee, tax or surcharge. Select the raw candidate first; **before** independent validation, map it to the highest whole-HKD price ending in 9 that does not exceed it. If the raw or rounded value is below HK$30, use a promotional **HK$0 base fare**.
+
+```text
+ending9 = 10 * floor((floor(raw_price) + 1) / 10) - 1
+final_member_fare = 0 if ending9 < 30 else ending9
+```
+
+| Raw member fare | Final base fare |
+|---:|---:|
+| 0–29 | 0 |
+| 30–38 | 0 (rounding would produce 29) |
+| 39 | 39 |
+| 40 | 39 |
+| 103 | 99 |
+| 255 | 249 |
+| 259 | 259 |
+
+The rule is idempotent and never increases the fare; it therefore preserves the 80% cap. HK$0 describes only the base fare and has zero member-ticket receipts. Marketing value is not invented as monetary profit. Existing acceptance gates can still return NO_OFFER. Old reports, price rounds, metrics and published offers are not rewritten.
+
+For the scoped engine, `track.best` remains the raw search evidence. New runs store the final-price policy marker, replay the adjusted quote on holdout markets, and expose `track.final_offer` with the actual adjusted-price metrics. Manage offers and the copied draft consume that final quote. A manually configured positive lower bound that excludes the adjusted fare does not authorize a price outside the bound.
+
 ## Adaptive member-only pricing
 
 The Admin **Experiments** page (`/admin#customers`) is a read-only view of saved adaptive member feedback. Choose a run and round to see **What members said**, including the stored analysis and individual decisions. Adaptive pricing links to the current run's feedback; its round-price line chart has been removed while the round table, revenue curve and validation comparison remain. Legacy journey and market tools remain on `#panel` / `#market`; see [UI behavior](ADMIN_AND_MEMBER_UX.md#experimentswhat-members-said).
 
 After integration with main, new adaptive scopes use `backend/forecast.py`: the accepted v2 distribution/guard at D28 and smooth v3 at D14/D7. New run provenance hashes the active wrapper, v3 implementation and its calibration/validation dependencies. Historical adaptive reports retain their original v2 scopes and source hashes; the historical pricing gains below are not a validation of the newly combined pipeline.
 
-The separate `/adaptive-pricing` Admin page runs `member-thompson-v4-paired`: existing members, one optional leisure ticket per person, fresh paired search cohorts and independent confirmation. Only basic ticket receipts enter its objective; no membership fee, tax, fuel surcharge, ancillary or operating cost is deducted. The contribution/annual-fee engine below remains a separate workflow. All new executable quotes use whole HKD and the 80% normal-fare cap. Frozen NHPP, source data, earlier prompts and historical experiment reports remain unchanged.
+The separate `/adaptive-pricing` Admin page runs `member-thompson-v5-marketing`: existing members, one optional leisure ticket per person, fresh paired search cohorts and independent confirmation. Only basic ticket receipts enter its objective; no membership fee, tax, fuel surcharge, ancillary or operating cost is deducted. The contribution/annual-fee engine below remains a separate workflow. All new executable quotes use whole HKD and the 80% normal-fare cap. Frozen NHPP, source data, earlier prompts and historical experiment reports remain unchanged.
 
 ### Target population and private motivation
 
@@ -80,9 +103,9 @@ The proposed candidate is compared with the initial quote on that round's new pe
 
 ### Final choice, confirmation and accounting
 
-The final candidate comes only from tested prices. Among those with at least the configured fraction (default 95%) of the best posterior mean **member receipts**, choose the one with most predicted member purchasers. The report separately exposes the revenue-maximizing and buyer-maximizing tested candidates. The dense full-domain chart is a model estimate, not a list of live-tested fares. The 95% model preference is not a guarantee of actual retained revenue.
+The raw selected candidate comes only from tested prices; `recommendation.raw_price` preserves it. `recommendation.price` is its promotional quote after the rule above, which need not have appeared in search. Among those with at least the configured fraction (default 95%) of the best posterior mean **member receipts**, choose the one with most predicted member purchasers. The report separately exposes the revenue-maximizing and buyer-maximizing tested candidates. The dense full-domain chart is a model estimate, not a list of live-tested fares. The 95% model preference is not a guarantee of actual retained revenue.
 
-Freeze the selected candidate, then draw H>=3 fresh cohorts using `seed+500003+1009*j`. Initial, selected and NO_OFFER are replayed on the same people within each confirmation cohort. No holdout decision enters learning or chooses a replacement candidate. When no rationing occurs, comparisons use poststratified target-mix receipts. With capacity binding, or when reweighted expected ticket counts would exceed available inventory, use the actual feasible panel ledger consistently.
+Freeze the formatted selected candidate and the formatted initial fallback, then draw H>=3 fresh cohorts using `seed+500003+1009*j`. Formatted initial (e.g. raw P₀328 →319), formatted selected (e.g.255→249) and NO_OFFER are replayed on the same people within each confirmation cohort. The validation compares these actual formatted prices; it does not report raw-P₀ receipts as if collected at319. Search cohorts and their original P₀ controls remain unchanged. `validation.comparison_reference = formatted_initial_fare` and the before/after metadata make this distinction explicit. No holdout decision enters learning or chooses a replacement candidate. When no rationing occurs, comparisons use poststratified target-mix receipts. With capacity binding, or when reweighted expected ticket counts would exceed available inventory, use the actual feasible panel ledger consistently.
 
 `adoption_result` is distinct from the model's selection:
 
@@ -91,7 +114,7 @@ Freeze the selected candidate, then draw H>=3 fresh cohorts using `seed+500003+1
 - `INCONCLUSIVE`: insufficient confirmation to change the reference price.
 - `NO_OFFER`: both initial and selected mean receipts fail to exceed the no-offer control.
 
-Three cohorts and bootstrap intervals are a conservative **prototype rule**, not a statistically certified airline guarantee. No result automatically publishes an offer. The UI shows `retained_price`, observed purchase rate and the member conversion required to match initial receipts. The break-even diagnostic subtracts selected regular-ticket receipts before dividing by candidate fare and cohort size; at zero fare it is null unless initial receipts are already matched, and feasibility is bounded by member quota as well as 100% of the cohort. It does not forecast how regular sales would change at that conversion rate.
+Three cohorts and bootstrap intervals are a conservative **prototype rule**, not a statistically certified airline guarantee. No result automatically publishes an offer. The UI shows `retained_price` (a formatted quote or null), observed purchase rate and the member conversion required to match initial receipts. The break-even diagnostic subtracts selected regular-ticket receipts before dividing by candidate fare and cohort size; at zero fare it is null unless initial receipts are already matched, and feasibility is bounded by member quota as well as 100% of the cohort. It does not forecast how regular sales would change at that conversion rate.
 
 ### Audit, costs of experiments and optional human pilot
 

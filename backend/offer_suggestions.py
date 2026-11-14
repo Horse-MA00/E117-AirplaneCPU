@@ -3,6 +3,7 @@
 Inventory is recalculated at read time; experiment results never mint quota.
 """
 from . import optimization, optimization_store
+from .fare_policy import FINAL_MEMBER_FARE_VERSION
 from .release_policy import release_budget
 
 
@@ -37,12 +38,16 @@ def suggestions(flight_id, day, inventory, forecast_for):
             continue
         for track in report['tracks']:
             mode = track['mode']
-            best, validation = track.get('best') or {}, track.get('validation') or {}
+            formatted = saved['config'].get('final_member_fare_policy') == FINAL_MEMBER_FARE_VERSION
+            best = (track.get('final_offer') if formatted else track.get('best')) or {}
+            validation = track.get('validation') or {}
             if mode not in displayed_modes:
                 displayed_modes.add(mode)
                 result['results'].append({**run, 'mode': mode, 'decision': track.get('decision', 'PENDING'),
-                    'validated': bool(validation), 'member_fare': best.get('member_fare'),
+                    'validated': bool(validation) and bool(best), 'member_fare': best.get('member_fare'),
                     'membership_fee': best.get('membership_fee'),
+                    'raw_member_fare': best.get('raw_member_fare'),
+                    'final_member_fare_policy': best.get('final_member_fare_policy'),
                     'incremental_contribution': validation.get('incremental_contribution'),
                     'decision_reason': track.get('decision_reason')})
             if not run['provenance_current']:
@@ -65,6 +70,8 @@ def suggestions(flight_id, day, inventory, forecast_for):
                 'run_id': run_id, 'mode': mode, 'decision': 'OFFER', 'flight_id': flight_id,
                 'forecast_day': day, 'scope': scope, 'member_fare': best['member_fare'],
                 'membership_fee': best['membership_fee'], 'release_fraction': fraction,
+                'raw_member_fare': best.get('raw_member_fare'),
+                'final_member_fare_policy': best.get('final_member_fare_policy'),
                 'release_seats': seats, 'suggested_new_seats': seats,
                 'validated_release_ceiling': candidate_ceiling,
                 'incremental_contribution': track['validation']['incremental_contribution'],

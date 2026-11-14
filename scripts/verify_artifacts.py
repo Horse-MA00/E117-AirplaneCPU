@@ -52,14 +52,21 @@ def verify(manifest_path):
             assert world['status'] == 'completed' and all(world['result']['checks'].values()), world['world_id']
         for track in contents['tracks']:
             if track['best'] is None:
-                assert contents['config'].get('price_comparison_protocol') == 'fixed-seat-profile-local-fare-v1', track['mode']
+                assert contents['config'].get('price_comparison_protocol') in ('fixed-seat-profile-local-fare-v1', 'fixed-seat-profile-local-fare-v2-whole-hkd'), track['mode']
                 assert track['decision'] == 'NO_OFFER' and track['validation'] is None and track['rounds'], track['mode']
                 assert all(r.get('price_evidence_qualified') is False
                            and r.get('price_evidence_status') in ('uninformative_no_supply','uninformative_no_member_exposure')
                            and r.get('accepted') is False and r.get('incumbent') is None
                            for r in track['rounds']), track['mode']
+            elif track['validation'] is None:
+                assert contents['config'].get('final_member_fare_policy') == 'member-marketing-fare-v1', track['mode']
+                assert track['decision'] == 'NO_OFFER' and track.get('decision_reason') and track.get('final_offer') is None, track['mode']
             else:
                 assert track['validation']['seat_calibration'] == track['best']['seat_calibration'], track['mode']
+                if contents['config'].get('final_member_fare_policy') == 'member-marketing-fare-v1':
+                    from backend.fare_policy import final_member_fare
+                    quote = final_member_fare(track['best']['member_fare'])
+                    assert track['final_offer']['member_fare'] == track['validation']['member_fare'] == quote, track['mode']
         assert result['audit_records'] == manifest['audit_records'], audit
         result['completed_market_cases'] = len(contents['worlds'])
     if manifest.get('source') == 'adaptive_thompson_pricing':
@@ -71,11 +78,26 @@ def verify(manifest_path):
         assert contents['counts']['failures'] == 0, report
         cap = contents['scope']['member_fare_cap']
         assert all(0 <= row['price'] <= cap for row in contents['rounds']), report
-        assert contents['recommendation']['price'] in {r['price'] for r in contents['rounds']}, report
+        marketing = contents['config'].get('final_member_fare_policy') == 'member-marketing-fare-v1'
+        selected = contents['recommendation']
+        assert selected['raw_price' if marketing else 'price'] in {r['price'] for r in contents['rounds']}, report
+        if marketing:
+            from backend.fare_policy import final_member_fare
+            initial = final_member_fare(contents['scope']['initial_member_fare'])
+            assert selected['price'] == final_member_fare(selected['raw_price']), report
+            assert contents['validation']['comparison_reference'] == 'formatted_initial_fare', report
+            assert contents['validation']['initial_price'] == initial, report
+            assert contents['validation']['selected_price'] == selected['price'], report
+            expected_prices = {'initial': initial, 'selected': selected['price'], 'no_offer': None}
+            assert contents['validation']['retained_price'] in expected_prices.values(), report
+            for world in contents['validation_worlds']:
+                assert world['price'] == expected_prices[world['policy']], report
+                if world['price'] is not None:
+                    assert abs(world['result']['member_revenue'] - world['price']*world['result']['member_buyers']) < .01, report
         assert contents['validation']['selected_price_frozen_before_validation'], report
         training_ids = {p['customer_id'] for p in contents['panel']}
         assert abs(sum(p['population_weight'] for p in contents['panel'])-1) < 1e-8, report
-        if contents['version'] == 'member-thompson-v4-paired':
+        if contents['version'] in ('member-thompson-v4-paired', 'member-thompson-v5-marketing'):
             cohorts = contents['search_panels']
             assert len(cohorts) == contents['config']['rounds'], report
             ids = [p['customer_id'] for cohort in cohorts for p in cohort['people']]

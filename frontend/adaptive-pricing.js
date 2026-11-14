@@ -7,7 +7,8 @@ const signedMoney = value => numeric(value) ? `${value > 0 ? '+' : value < 0 ? '
 const retainedRevenue = value => `${Number(((value?.revenue_fraction ?? run?.config?.revenue_fraction ?? .95) * 100).toFixed(2))}%`;
 const safeId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(value);
 const active = run => ['queued', 'running'].includes(run?.status);
-const paired = value => value?.version === 'member-thompson-v4-paired' || value?.config?.experiment_protocol === 'fresh_paired_cohorts';
+const paired = value => ['member-thompson-v4-paired','member-thompson-v5-marketing'].includes(value?.version) || value?.config?.experiment_protocol === 'fresh_paired_cohorts';
+const promotional = value => value?.config?.final_member_fare_policy === 'member-marketing-fare-v1' || value?.recommendation?.marketing_adjustment?.policy === 'member-marketing-fare-v1' || value?.validation?.final_member_fare_policy === 'member-marketing-fare-v1';
 const budgetUpper = (rounds,members,panels) => rounds*(2*members+1)+3*panels*members;
 const hypothesisLabel = status => ({supported:'Above initial revenue',not_supported:'Below initial revenue'}[status] || String(status||'not_tested').replaceAll('_',' '));
 let flights = [], segments = [], defaultWeights = {}, scope = null, run = null, liveConfigured = false;
@@ -144,7 +145,7 @@ function renderRounds(rounds) {
     const test=r.hypothesis_test;
     const feedback=test ? hypothesisLabel(test.status) : r.reused_analysis?'Cached summary':r.analysis_source==='provider_live'?'Fresh LLM summary':r.analysis_source==='synthetic_analysis'?'Rule summary':'Recorded summary';
     const row=tableRow([r.round,money(r.price),count(r.member_buyers),percentage(r.weighted_conversion),money(r.member_revenue),fresh,signedMoney(r.paired_delta_vs_initial),feedback]);
-    if(run?.recommendation?.price===r.price)row.className='selected';return row;
+    if((promotional(run)?run?.recommendation?.raw_price:run?.recommendation?.price)===r.price)row.className='selected';return row;
   }));
   $('round-caption').textContent=`${rounds.length} rounds · ${new Set(rows.map(r=>r.price)).size} different prices`;
 }
@@ -158,14 +159,18 @@ function renderCurve(value) {
   const currentProtocol=paired(value);
   $('curve-table-caption').textContent=currentProtocol ? value.recommendation ? 'Final fitted model estimates, not observed sales' : 'Pre-round Thompson hypothesis before these choices' : 'Model estimates, not observed sales';
   $('curve-caption').textContent=value.recommendation ? `${currentProtocol?'Final fitted posterior after all search choices. ':''}The dashed line marks the selected tested fare. Selection favours more member buyers while retaining at least ${retainedRevenue(value.recommendation)} of the best estimated member revenue among tested fares. The full curve shows model estimates, including untested prices.` : currentProtocol ? 'Pre-round Thompson hypothesis before these choices. This is the sampled curve used to propose the latest round’s fare, before that round’s customer decisions were observed; it is not the updated posterior after those choices.' : 'The model updates after each round. These are estimates for the assumed customer mix, not validated airline demand.';
+  if(value.recommendation && promotional(value)) $('curve-caption').textContent=`Final fitted posterior after all search choices. Search selection retains at least ${retainedRevenue(value.recommendation)} of the best estimated member revenue among tested fares. The dashed line marks the adjusted promotional fare, which may not have been tested during search. Curve values are model estimates; the final quoted fare is checked separately on independent panels.`;
 }
 const policyNames={initial:'Initial fare',selected:'Selected fare',no_offer:'No member offer'};
 function renderValidation(validation) {
   const comparisons=validation?.comparisons||[];
   $('validation-section').hidden=!comparisons.length;
   if(!comparisons.length)return;
+  const formatted=promotional(run);
+  const names=formatted?{...policyNames,initial:'Formatted initial fare',selected:'Promotional candidate'}:policyNames;
   const weighted=validation.decision_basis==='poststratified_target_mix';
-  $('delta-label-initial').textContent=weighted?'Target-weighted revenue vs initial':'Panel revenue change vs initial';
+  $('delta-label-initial').textContent=formatted?(weighted?'Target-weighted revenue vs formatted initial':'Panel revenue change vs formatted initial'):(weighted?'Target-weighted revenue vs initial':'Panel revenue change vs initial');
+  $('validation-intro').textContent=formatted?'Independent validation panels compare the formatted initial fare, the promotional candidate and no member offer.':'Independent validation panels compare the initial fare, the selected fare and no member offer.';
   $('delta-label-no-offer').textContent=weighted?'Target-weighted revenue vs no offer':'Panel revenue change vs no offer';
   $('delta-initial').textContent=signedMoney(weighted?validation.weighted_delta_vs_initial:validation.delta_vs_initial);
   $('delta-no-offer').textContent=signedMoney(weighted?validation.weighted_delta_vs_no_offer:validation.delta_vs_no_offer);
@@ -177,9 +182,9 @@ function renderValidation(validation) {
     const track=node('div',undefined,'comparison-track');track.setAttribute('aria-hidden','true');const fill=node('div',undefined,'comparison-fill');fill.style.width=`${Math.max(0,(revenue(c)||0)/maximum*100)}%`;track.append(fill);
     const val=node('div',money(revenue(c)),'comparison-value');
     const buyers=weighted&&numeric(c.mean_weighted_buyers)?`${count(c.mean_weighted_buyers)} weighted buyers`:`${count(c.mean_buyers)} panel buyers`;
-    val.append(node('small',buyers));row.append(node('span',policyNames[c.policy]||c.policy,'comparison-label'),track,val);return row;
+    val.append(node('small',buyers));row.append(node('span',names[c.policy]||c.policy,'comparison-label'),track,val);return row;
   }));
-  $('validation-table').replaceChildren(...comparisons.map(c=>tableRow([policyNames[c.policy]||c.policy,c.policy==='no_offer'?'Normal fare only':money(c.price),count(c.mean_buyers),money(c.mean_revenue),money(c.mean_weighted_revenue)])));
+  $('validation-table').replaceChildren(...comparisons.map(c=>tableRow([names[c.policy]||c.policy,c.policy==='no_offer'?'Normal fare only':money(c.price),count(c.mean_buyers),money(c.mean_revenue),money(c.mean_weighted_revenue)])));
   const required=validation.break_even_conversion, observed=validation.observed_conversion;
   const hasBreakEven=Object.hasOwn(validation,'break_even_conversion');
   $('break-even-panel').hidden=!hasBreakEven;
@@ -190,6 +195,7 @@ function renderValidation(validation) {
     $('break-even-note').textContent=!numeric(required) ? 'A zero member fare cannot recover positive initial revenue through more member ticket sales.' : required===0 ? 'Normal-ticket receipts under the candidate already match the initial ticket revenue; no additional member purchases are required to match it.' : quotaLimit!==null&&required>quotaLimit+1e-8 ? `The member quota allows at most ${percentage(quotaLimit)} fulfilled member purchases, below the required rate. This fare cannot match initial ticket revenue with this quota.` : required>1 ? 'The required rate exceeds 100%; this fare cannot match initial ticket revenue with the available audience.' : validation.break_even_attainable===false ? 'The required purchase rate cannot be fulfilled with the available member quota.' : 'The required rate matches initial basic-ticket revenue after allowing for normal-ticket receipts under the candidate. It is a revenue threshold, not a demand forecast.';
   }
   const parts=[];
+  if(formatted)parts.push(`Confirmation uses the actual promotional quotes: initial ${money(validation.initial_price_before_marketing)} → ${money(validation.initial_price)}, selected ${money(validation.selected_price_before_marketing)} → ${money(validation.selected_price)}. Search-price revenue is not reused as the adjusted fare’s result.`);
   const interval=weighted?validation.weighted_initial_delta_interval:validation.initial_delta_interval;
   if(interval&&numeric(interval.low)&&numeric(interval.high))parts.push(`Descriptive paired-world interval vs initial: ${signedMoney(interval.low)} to ${signedMoney(interval.high)} (${count(interval.worlds)} synthetic worlds).`);
   if(validation.caveat)parts.push(validation.caveat);
@@ -220,18 +226,22 @@ function renderRun(value) {
   const recommendation=value.recommendation;
   $('recommendation').hidden=!recommendation;
   if(recommendation){
+    const formatted=promotional(value), adjustment=recommendation.marketing_adjustment;
     $('recommended-price').textContent=money(recommendation.price);
-    $('recommendation-stage').textContent=value.validation?'Candidate checked on independent panels':'Selected for validation';
+    $('recommendation-title').textContent=formatted?'Promotional base fare':'Selected test fare';
+    $('recommendation-stage').textContent=value.validation?'Candidate checked on independent panels':formatted?'Promotional candidate for validation':'Selected for validation';
+    $('marketing-fare-note').hidden=!formatted;
+    $('marketing-fare-note').textContent=formatted?`Search selection ${money(recommendation.raw_price)} → promotional quote ${money(recommendation.price)}. Round down to an amount ending in 9; a resulting fare below HK$30 becomes HK$0. The adjusted quote is validated before it can be retained.${adjustment?` Initial comparison: ${money(adjustment.initial_price_before_marketing)} → ${money(adjustment.initial_price)}.`:''}`:'';
     $('recommendation-reason').textContent=recommendation.reason||`Prefer more member buyers among tested fares with at least ${retainedRevenue(recommendation)} of the best estimated member revenue.`;
     const candidates=[];
     if(numeric(recommendation.revenue_max_price))candidates.push(`Highest predicted revenue: ${money(recommendation.revenue_max_price)}`);
     if(numeric(recommendation.volume_max_price))candidates.push(`Most predicted buyers: ${money(recommendation.volume_max_price)}`);
-    $('candidate-tradeoff').textContent=candidates.join(' · ');
+    $('candidate-tradeoff').textContent=(formatted&&candidates.length?'Search-price estimates: ':'')+candidates.join(' · ');
     const retained=value.validation?.retained_price, adoption=value.validation?.adoption_result;
-    $('retained-price-note').textContent=adoption==='NO_OFFER'?'No member offer retained.':numeric(retained)?`Retained fare after confirmation: ${money(retained)}. No offer is published automatically.`:'';
+    $('retained-price-note').textContent=adoption==='NO_OFFER'?'No member offer retained.':numeric(retained)?`${formatted?'Retained promotional fare':'Retained fare'} after confirmation: ${money(retained)}. No offer is published automatically.`:'';
     const decision=value.validation?.decision;
     const verdicts={REJECT_OFFER:'Keep normal sales: this offer did not add revenue.',IMPROVED_IN_TEST:'Improved in this simulation.',KEEP_INITIAL:'Keep the initial fare.',DID_NOT_IMPROVE:'No improvement over the initial fare.'};
-    const adoptions={ADOPT_CANDIDATE:'Candidate passed the confirmation rule.',KEEP_INITIAL:'Keep the initial fare.',INCONCLUSIVE:'Insufficient evidence to change the initial fare.',NO_OFFER:'Keep normal sales; neither member offer passed confirmation.'};
+    const adoptions={ADOPT_CANDIDATE:'Candidate passed the confirmation rule.',KEEP_INITIAL:formatted?'Keep the formatted initial fare.':'Keep the initial fare.',INCONCLUSIVE:formatted?'Insufficient evidence to change the formatted initial fare.':'Insufficient evidence to change the initial fare.',NO_OFFER:'Keep normal sales; neither member offer passed confirmation.'};
     $('validation-verdict').textContent=adoption?adoptions[adoption]||adoption:decision?verdicts[decision]||String(decision).replaceAll('_',' '):'Waiting for independent validation.';
   }
   updateControls();

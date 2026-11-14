@@ -6,12 +6,33 @@ from unittest.mock import patch
 from backend import server, optimization
 from backend.initial_policy import flight_scope, suggest
 from backend.continuous_pricing import adaptive_search, optimize
-from backend.fare_policy import integer_price, quoted_base_fare, member_fare_cap
+from backend.fare_policy import integer_price, quoted_base_fare, member_fare_cap, final_member_fare
 from backend.pricing import _config as legacy_pricing_config
 from backend.store import Store
 
 
 class IntegerPriceTests(unittest.TestCase):
+    def test_final_member_quote_threshold_and_ending_nine(self):
+        cases = {0:0, 29:0, 29.99:0, 30:0, 38:0, 38.99:0,
+                 39:39, 40:39, 99:99, 103:99, 249:249, 255:249,
+                 259:259, 259.99:259, 328:319}
+        for raw, expected in cases.items():
+            with self.subTest(raw=raw):
+                self.assertEqual(final_member_fare(raw), expected)
+        for raw in range(5001):
+            quote = final_member_fare(raw)
+            self.assertIsInstance(quote, int)
+            self.assertLessEqual(quote, raw)
+            self.assertEqual(final_member_fare(quote), quote)
+            self.assertTrue(quote == 0 or quote >= 30 and quote % 10 == 9)
+        for invalid in (True, '255', -1, float('nan'), float('inf')):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                final_member_fare(invalid)
+        # Marketing is an explicit final-offer operation, not ordinary quoting.
+        self.assertEqual(quoted_base_fare(328.99), 328)
+        self.assertEqual(member_fare_cap(410), 328)
+        self.assertEqual(integer_price(399), 399)
+
     def test_decimal_observations_are_preserved_but_quotes_are_whole(self):
         self.assertEqual(quoted_base_fare(293.90), 293)
         self.assertEqual(member_fare_cap(410.99), 328)
