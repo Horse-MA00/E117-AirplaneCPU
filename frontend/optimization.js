@@ -1,4 +1,5 @@
 import { renderContributionExplanation } from './contribution-explanation.js';
+import { demandDescription, matchesDemand, populateDemandFilter } from './demand-filter.js';
 const $ = id => document.getElementById(id);
 const state = { runId:null, data:null, timer:null, request:0, loading:false, configured:false, listed:false, flights:[], scope:null, scopeRequest:0 };
 const num = (v, digits=0) => v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toLocaleString('en-HK',{maximumFractionDigits:digits});
@@ -145,13 +146,13 @@ function renderFinal(tracks) {
   const root=$('optimization-final-content');root.replaceChildren();
   for(const track of tracks) {
     const item=node('div',undefined,'final-option'),body=node('div'),heading=node('strong',name(track.mode));
-    const decision=track.decision||'PENDING';heading.append(node('span',decision==='OFFER'?'Validated offer':decision==='NO_OFFER'?'Keep normal sales':'Validation pending','decision-chip'));body.append(heading);
+    const decision=track.decision||'PENDING';heading.append(node('span',decision==='OFFER'?'Validated offer':decision==='NO_OFFER'?(state.data.config.scope?'No offer for this flight':'No member offer'):'Validation pending','decision-chip'));body.append(heading);
     if(decision==='OFFER' && track.best && track.validation){
       body.append(node('p',`${money(track.best.member_fare)} member base fare · ${money(track.best.membership_fee)} membership fee`),node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} mean new-member use.`,'small muted'));
       body.append(node('p','Prepare a draft for this exact flight and release round. Current inventory is checked again.','small muted'));
       const button=node('button','Use these prices','button primary');button.type='button';button.disabled=state.data.status!=='completed'||!state.data.config.scope;button.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('uoption:prepare-policy',{detail:{...track.best,run_id:state.data.run_id,mode:track.mode,flight_id:state.data.config.scope.flight_id,forecast_day:state.data.config.scope.as_of_day,release_fraction:state.data.config.release_fraction}})));item.append(body,button);
     }else if(decision==='NO_OFFER'){
-      body.append(node('p','The tested member offer did not pass both the search and independent validation requirements.'));
+      body.append(node('p',state.data.config.scope?'The tested offer did not pass this flight’s search and independent validation requirements. Later member trips and renewal revenue are outside this result.':'The tested member offer did not pass both the search and independent validation requirements.'));
       const reasons=track.contribution_explanation?.no_offer_reasons;
       if(reasons?.length){const list=node('ul',undefined,'decision-reasons');for(const reason of reasons)list.append(node('li',reason));body.append(list);}
       if(track.validation)body.append(node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} mean new-member use.`,'small muted'));
@@ -179,6 +180,7 @@ function render(data){
   const progress=data.progress||{},counts=data.counts||{},tracks=data.tracks||[];
   text('optimization-status',statusLabel(data.status));
   const scope=data.config.scope; text('optimization-result-scope',scope?`${scope.origin} → ${scope.destination} · ${scope.departure_date} · ${scope.flight_id} · D${scope.as_of_day} · fixed V₀ ${money(data.config.initial_membership_fee)}`:'Historical unscoped experiment · unavailable for flight-specific publishing');
+  $('optimization-horizon-note').hidden=!scope;
   text('optimization-round-count',`${num(progress.completed_rounds||0)} / ${num(progress.total_rounds??data.config.rounds*tracks.length)} rounds`);
   $('optimization-progress-bar').max=Math.max(1,progress.total_rounds??data.config.rounds*tracks.length);$('optimization-progress-bar').value=progress.completed_rounds||0;
   text('optimization-phase',`${progress.phase?String(progress.phase).replaceAll('_',' '):'Preparing markets'}${progress.active_mode?` · ${name(progress.active_mode)}`:''} · ${num(progress.completed_worlds||0)} / ${num(progress.total_worlds||0)} markets completed · ${num(data.config.customers)} travellers per market`);
@@ -203,48 +205,58 @@ async function listRuns(openLatest=false){
   }catch(error){showError(`Saved experiments unavailable: ${error.message}`);}
 }
 function routeKey(flight){return `${flight.origin}-${flight.destination}`;}
+function filteredFlights(){return state.flights.filter(f=>matchesDemand(f,$('optimization-demand').value));}
+function fillRoutes(selected=$('optimization-route').value){
+  const matches=filteredFlights(),routes=[...new Set(matches.map(routeKey))].sort();
+  $('optimization-route').replaceChildren(new Option(routes.length?'Choose a route':'No routes match this demand level',''),...routes.map(route=>new Option(route.replace('-', ' → '),route)));
+  $('optimization-route').disabled=!routes.length;
+  if(routes.includes(selected))$('optimization-route').value=selected;
+}
 function fillFlights(selected=''){
   const route=$('optimization-route').value;
-  const flights=state.flights.filter(f=>routeKey(f)===route).sort((a,b)=>(a.departure_at||a.departure_date).localeCompare(b.departure_at||b.departure_date));
-  $('optimization-flight').replaceChildren(new Option('Choose a departure / flight',''),...flights.map(f=>new Option(`${(f.departure_at||f.departure_date).slice(0,10)} · ${f.flight_id}${f.route_note?` · ${f.route_note}`:''}`,f.flight_id)));
+  const matching=filteredFlights(),flights=matching.filter(f=>routeKey(f)===route).sort((a,b)=>(a.departure_at||a.departure_date).localeCompare(b.departure_at||b.departure_date));
+  $('optimization-flight').replaceChildren(new Option(route&&!flights.length?'No departures match this demand level':'Choose a departure / flight',''),...flights.map(f=>new Option(`${(f.departure_at||f.departure_date).slice(0,10)} · ${f.flight_id} · ${demandDescription(f)}${f.route_note?` · ${f.route_note}`:''}`,f.flight_id)));
   $('optimization-flight').disabled=!flights.length;
-  if(selected)$('optimization-flight').value=selected;
+  if(flights.some(f=>f.flight_id===selected))$('optimization-flight').value=selected;
+  text('optimization-demand-status',matching.length?`${num(matching.length)} flights match${route?`; ${num(flights.length)} on ${route.replace('-',' → ')}`:''}.`:'No flights match. Choose another demand level or All demand.');
 }
 async function loadScope(){
-  const token=++state.scopeRequest;state.scope=null;$('optimization-fare').value='';controls();
+  const token=++state.scopeRequest;state.scope=null;$('optimization-fare').value='';$('optimization-load-demo').hidden=true;showError('');controls();
   const flightId=$('optimization-flight').value;
-  if(!flightId){text('optimization-scope','Choose a route and departure to load this flight.');text('optimization-initial-source','P₀ is generated from the selected flight.');return;}
+  if(!flightId){text('optimization-scope',filteredFlights().length?'Choose a route and departure to load this flight.':'No flight selected. Change the demand filter to continue.');text('optimization-initial-source','P₀ equals the selected flight’s normal base fare, before taxes and fees.');return;}
   text('optimization-scope','Loading the observed flight snapshot…');
   try{
     const result=await api('/api/optimization/initial-policy',{flight_id:flightId,forecast_day:val('optimization-day'),customers:val('optimization-customers'),program_cost:val('optimization-cost')});
     if(token!==state.scopeRequest)return;
     if(!result.scope)throw new Error('This backend does not support flight-scoped optimization. Refresh after updating the server.');
     state.scope=result.scope;$('optimization-fare').value=result.initial_member_fare;
+    // Starting at the original fare must not fail the old HK$500 search bound.
+    if(Number(result.initial_member_fare)>val('optimization-fare-max'))$('optimization-fare-max').value=result.initial_member_fare;
     const scope=result.scope;
     text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${num(scope.available_seats)} physical empty seats / ${num(scope.capacity)} capacity; ${num(scope.releasable_seats)} forecast member seats.`);
     $('optimization-load-demo').hidden=scopeEligible(scope);
-    text('optimization-initial-source',`P₀ ${money(result.initial_member_fare)} from this flight’s simulated normal base fare ${money(scope.normal_base_fare)}${scope.quote_age_days?` (last available quote ${scope.quote_age_days} days earlier)`:''} and seat snapshot. V₀ stays fixed during this run.`);
+    text('optimization-initial-source',`P₀ ${money(result.initial_member_fare)} equals this flight’s normal base fare, before taxes and fees${scope.quote_age_days?` (last available quote ${scope.quote_age_days} days earlier)`:''}. V₀ stays fixed during this run.`);
     showError('');
   }catch(error){if(token===state.scopeRequest)showError(error.message);}finally{if(token===state.scopeRequest)controls();}
 }
 async function initializeFlights(){
   try{
     const data=await api('/api/flights');state.flights=data.flights||[];
-    const routes=[...new Set(state.flights.map(routeKey))].sort();
-    $('optimization-route').replaceChildren(new Option('Choose a route',''),...routes.map(route=>new Option(route.replace('-', ' → '),route)));
-    fillFlights();controls();
+    populateDemandFilter($('optimization-demand'),state.flights);fillRoutes();fillFlights();controls();
   }catch(error){showError(error.message);}
 }
 $('optimization-route').addEventListener('change',()=>{fillFlights();loadScope();});
+$('optimization-demand').addEventListener('change',()=>{const selected=$('optimization-flight').value;fillRoutes();fillFlights(selected);loadScope();});
 $('optimization-flight').addEventListener('change',loadScope);
 $('optimization-day').addEventListener('change',loadScope);
 $('optimization-share').addEventListener('change',controls);
 $('optimization-suggest').addEventListener('click',loadScope);
-$('optimization-load-demo').addEventListener('click',async()=>{const route=$('optimization-route').value;const demo=state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0&&routeKey(f)===route)||state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);if(!demo){showError('Choose another flight or release round with positive member supply.');return;}$('optimization-route').value=routeKey(demo);fillFlights(demo.flight_id);$('optimization-day').value='28';await loadScope();});
+$('optimization-load-demo').addEventListener('click',async()=>{const route=$('optimization-route').value;const demo=state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0&&routeKey(f)===route)||state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);if(!demo){showError('Choose another flight or release round with positive member supply.');return;}if(!matchesDemand(demo,$('optimization-demand').value))$('optimization-demand').value='all';fillRoutes(routeKey(demo));fillFlights(demo.flight_id);$('optimization-day').value='28';await loadScope();});
 window.addEventListener('uoption:optimize-flight',async event=>{
   if(!state.flights.length)await initializeFlights();
   const flight=state.flights.find(f=>f.flight_id===event.detail.flight_id);if(!flight)return;
-  $('optimization-route').value=routeKey(flight);fillFlights(flight.flight_id);
+  if(!matchesDemand(flight,$('optimization-demand').value))$('optimization-demand').value='all';
+  fillRoutes(routeKey(flight));fillFlights(flight.flight_id);
   $('optimization-day').value=String([28,14,7].includes(event.detail.day)?event.detail.day:([28,14,7].find(day=>day<event.detail.day)||28));await loadScope();
 });
 initializeFlights();
