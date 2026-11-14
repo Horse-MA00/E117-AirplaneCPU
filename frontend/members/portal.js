@@ -1,3 +1,5 @@
+import { regions, inRegion, nextMonthRange, dateLabel, dateParts, reversedRange, matchesSearch } from './search.js';
+
 const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = 'uoption-member-demo-account';
 const airportNames = { HKG: 'Hong Kong', FUK: 'Fukuoka', KIX: 'Osaka Kansai', NRT: 'Tokyo Narita', HND: 'Tokyo Haneda', NGO: 'Nagoya', OKA: 'Okinawa', TPE: 'Taipei', KHH: 'Kaohsiung', ICN: 'Seoul Incheon', PUS: 'Busan', BKK: 'Bangkok', DMK: 'Bangkok Don Mueang', CNX: 'Chiang Mai', DAD: 'Da Nang', HAN: 'Hanoi', SGN: 'Ho Chi Minh City', MNL: 'Manila', CEB: 'Cebu', SIN: 'Singapore' };
@@ -5,8 +7,6 @@ const state = { config: null, flights: [], account: null, customerId: '', filter
 const money = (value) => `HKD ${new Intl.NumberFormat('en-HK', { maximumFractionDigits: 2 }).format(Number(value || 0))}`;
 const airport = (code) => airportNames[code] ? `${airportNames[code]} (${code})` : code;
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
-function calendarDate(value) { return new Date(`${value}T00:00:00Z`); }
-function dateLabel(value) { return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(calendarDate(value)); }
 function timestampLabel(value) { return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Hong_Kong' }).format(new Date(Number(value) * 1000)); }
 function activeMember() { return Boolean(state.account?.membership?.active); }
 function membershipExpired() { return Boolean(state.account?.membership && !state.account.membership.active); }
@@ -37,14 +37,50 @@ function setBusy(value) {
 }
 function populateSelect(id, values, firstLabel, format = String) {
   const select = $(id); const previous = select.value;
+  // Keep a selected filter when its last offer disappears during refresh.
+  // Removing it silently would make the form disagree with the applied search.
+  if (previous && !values.includes(previous)) values = [...values, previous].sort();
   const options = [new Option(firstLabel, ''), ...values.map((value) => new Option(format(value), value))];
   select.replaceChildren(...options);
   if (values.includes(previous)) select.value = previous;
 }
 function populateSearch() {
   populateSelect('origin', [...new Set(state.flights.map((f) => f.origin))].sort(), 'Any airport', airport);
-  populateSelect('destination', [...new Set(state.flights.map((f) => f.destination))].sort(), 'Any destination', airport);
-  populateSelect('departure-date', [...new Set(state.flights.map((f) => f.departure_date))].sort(), 'Any available date', dateLabel);
+  populateSelect('destination-region', Object.keys(regions).sort((a, b) => regions[a].name.localeCompare(regions[b].name)), 'Any country / region', (code) => regions[code].name);
+  populateDestinations();
+  populateSelect('departure-date', [...new Set(state.flights.map((f) => f.departure_date))].sort(), 'Use the date range above', dateLabel);
+}
+function populateDestinations() {
+  const region = $('destination-region').value;
+  if (!inRegion($('destination').value, region)) $('destination').value = '';
+  populateSelect('destination', [...new Set(state.flights.filter((f) => inRegion(f.destination, region)).map((f) => f.destination))].sort(), region ? `Any airport in ${regions[region].name}` : 'Any destination airport', airport);
+}
+function searchDescription() {
+  const { origin, region, destination, from, to } = state.filters;
+  const place = [region && regions[region]?.name, destination && airport(destination)].filter(Boolean).join(' / ') || 'Anywhere';
+  const dates = from && to ? from === to ? dateLabel(from) : `${dateLabel(from)} – ${dateLabel(to)}` : from ? `From ${dateLabel(from)}` : to ? `Until ${dateLabel(to)}` : 'Any dates';
+  return `${place} · ${dates}${origin ? ` · Flying from ${airport(origin)}` : ''}`;
+}
+function validateDates() {
+  const fields = [$('departure-from'), $('departure-to')];
+  for (const field of fields) { field.setCustomValidity(''); field.removeAttribute('aria-invalid'); }
+  // Check the native date domain first: browsers can accept unsigned five-digit
+  // years, but our API uses four-digit ISO dates. Never pass those to Temporal.
+  const malformed = fields.find((field) => field.validity.badInput || field.validity.rangeOverflow || field.validity.rangeUnderflow);
+  const invalid = malformed || (reversedRange(fields[0].value, fields[1].value) ? fields[1] : null);
+  const message = malformed ? 'Enter a complete date with a year from 0001 to 9999.' : invalid ? 'Latest departure must be on or after earliest departure.' : '';
+  if (invalid) { invalid.setCustomValidity(message); invalid.setAttribute('aria-invalid', 'true'); }
+  $('search-date-error').textContent = message;
+  $('search-date-error').hidden = !invalid;
+  return !invalid;
+}
+function setDates(from, to) {
+  $('departure-from').value = from; $('departure-to').value = to;
+  validateDates();
+}
+function clearSearch() {
+  state.filters = {}; $('flight-search').reset(); $('available-only').checked = false;
+  validateDates(); populateSearch(); renderFlights();
 }
 function emptyState(title, description, link) {
   const container = node('div', undefined, 'empty-state'); container.append(node('h3', title), node('p', description));
@@ -64,21 +100,22 @@ function routeHeading(flight) {
 function renderFlights() {
   const list = $('flight-results');
   const availableOnly = $('available-only').checked;
-  const flights = state.flights.filter((f) => (!state.filters.origin || f.origin === state.filters.origin) && (!state.filters.destination || f.destination === state.filters.destination) && (!state.filters.date || f.departure_date === state.filters.date) && (!availableOnly || Number(f.bookable_seats) > 0 && !alreadyBooked(f.flight_id))).sort((a, b) => $('flight-sort').value === 'price' ? a.total - b.total || a.departure_date.localeCompare(b.departure_date) : a.departure_date.localeCompare(b.departure_date) || a.total - b.total);
+  const flights = state.flights.filter((f) => matchesSearch(f, state.filters) && (!availableOnly || Number(f.bookable_seats) > 0 && !alreadyBooked(f.flight_id))).sort((a, b) => $('flight-sort').value === 'price' ? a.total - b.total || a.departure_date.localeCompare(b.departure_date) : a.departure_date.localeCompare(b.departure_date) || a.total - b.total);
+  $('search-summary').textContent = searchDescription();
   $('result-count').textContent = `${flights.length} ${flights.length === 1 ? 'flight' : 'flights'} · Prices include mandatory fees`;
   if (!state.flights.length) {
     list.replaceChildren(emptyState('No member flights released yet', 'There are no released member seats to browse right now. Check again later; joining a pass does not guarantee a flight.', { href: '#membership', text: 'How the pass works' }));
     return;
   }
   if (!flights.length) {
-    const empty = emptyState('No matching flights', 'Try another destination or date to see the released offers.');
-    const reset = node('button', 'Show all available flights', 'text-button'); reset.type = 'button'; reset.addEventListener('click', () => { state.filters = {}; $('flight-search').reset(); $('available-only').checked = false; renderFlights(); }); empty.append(reset); list.replaceChildren(empty); return;
+    const empty = emptyState('No matching flights', 'No released offers match this search. Try a wider date range or another destination; more member seats may be released later.');
+    const reset = node('button', 'Show all released flights', 'text-button'); reset.type = 'button'; reset.addEventListener('click', clearSearch); empty.append(reset); list.replaceChildren(empty); return;
   }
   list.replaceChildren(...flights.map((flight) => {
     const booked = alreadyBooked(flight.flight_id); const available = Number(flight.bookable_seats) > 0 && !booked;
     const card = node('article', undefined, `flight-card${available ? '' : ' is-unavailable'}`); card.dataset.flightId = flight.flight_id;
-    const date = node('div', undefined, 'flight-date'); const d = calendarDate(flight.departure_date);
-    date.append(node('span', d.getUTCDate(), 'day'), node('span', new Intl.DateTimeFormat('en-GB', { month: 'short', weekday: 'short', timeZone: 'UTC' }).format(d), 'month'), node('span', d.getUTCFullYear(), 'year'));
+    const date = node('div', undefined, 'flight-date'); const d = dateParts(flight.departure_date);
+    date.append(node('span', d.day, 'day'), node('span', dateLabel(flight.departure_date, { month: 'short', weekday: 'short' }), 'month'), node('span', d.year, 'year'));
     const route = node('div'); route.append(routeHeading(flight), node('p', `${airportNames[flight.origin] || flight.origin} to ${airportNames[flight.destination] || flight.destination}`, 'flight-name'));
     route.append(node('p', `One way · 1 traveller`, 'flight-detail'), node('p', flight.flight_id, 'flight-detail'));
     if (flight.normal_total != null) {
@@ -207,7 +244,27 @@ async function switchAccount(id) {
   renderMembership(); $('trip-count').textContent = '0'; $('trip-results').replaceChildren(emptyState('Loading this account', 'Checking membership and saved trips for the selected test ID.'));
   try { await loadData(); notice('Demo account changed. Membership and trips below belong to this test ID.'); } catch { /* loadData announces its error. */ }
 }
-$('flight-search').addEventListener('submit', (event) => { event.preventDefault(); state.filters = { origin: $('origin').value, destination: $('destination').value, date: $('departure-date').value }; renderFlights(); $('results-title').focus(); });
+$('flight-search').addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!validateDates()) { $('flight-search').reportValidity(); return; }
+  state.filters = { origin: $('origin').value, region: $('destination-region').value, destination: $('destination').value, from: $('departure-from').value, to: $('departure-to').value };
+  renderFlights(); $('results-title').focus();
+});
+$('destination-region').addEventListener('change', populateDestinations);
+for (const id of ['departure-from', 'departure-to']) {
+  $(id).addEventListener('input', () => {
+    $('departure-date').value = '';
+    // Clear existing errors during editing; announce new errors only on exit/submit.
+    for (const field of [$('departure-from'), $('departure-to')]) { field.setCustomValidity(''); field.removeAttribute('aria-invalid'); }
+    $('search-date-error').hidden = true;
+  });
+  $(id).addEventListener('change', validateDates);
+  $(id).addEventListener('blur', validateDates);
+}
+$('departure-date').addEventListener('change', () => setDates($('departure-date').value, $('departure-date').value));
+$('next-month').addEventListener('click', () => { const dates = nextMonthRange(); $('departure-date').value = ''; setDates(dates.from, dates.to); });
+$('any-dates').addEventListener('click', () => { $('departure-date').value = ''; setDates('', ''); });
+$('clear-search').addEventListener('click', clearSearch);
 $('available-only').addEventListener('change', renderFlights);
 $('flight-sort').addEventListener('change', renderFlights);
 $('refresh-flights').addEventListener('click', async () => { clearNotices(); try { await loadData(); notice('Flight availability refreshed.'); } catch { /* Error is visible. */ } });

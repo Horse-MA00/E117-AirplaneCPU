@@ -72,11 +72,26 @@ h3 { font-weight: 600; font-size: 1.1rem; letter-spacing: -.02em; margin: 0; }
 .search-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
 .search-heading h2 { font-size: 1.25rem; letter-spacing: -.02em; }
 .search-heading > span { font-size: .7rem; color: var(--muted); }
-#flight-search { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+#flight-search { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px 28px; align-items: start; }
+#flight-search fieldset { min-inline-size: 0; border: 0; margin: 0; padding: 0; }
+#flight-search legend { padding: 0; margin-block-end: 14px; font-size: .9rem; font-weight: 600; color: var(--purple); }
+.search-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.search-help { font-size: .73rem; line-height: 1.6; color: var(--muted); margin: 10px 0 4px; }
+.date-shortcuts { display: flex; gap: 8px; flex-wrap: wrap; }
+.date-shortcut { border: 1px solid var(--line); background: var(--wash); color: var(--purple); border-radius: 4px; min-height: 48px; padding: 8px 14px; font-size: .8rem; }
+.date-shortcut:hover { border-color: var(--purple); }
+.search-specific { min-width: 0; align-self: center; }
+.search-specific summary { padding-block: 14px; min-height: 48px; cursor: pointer; color: var(--purple); font-size: .8rem; }
+.search-specific[open] .search-fields { margin-block-start: 8px; }
+.search-actions { display: flex; justify-content: end; align-items: center; flex-wrap: wrap; gap: 20px; align-self: end; }
+.search-actions .text-button { min-height: 48px; }
+.search-error { color: #a32339; font-size: .8rem; line-height: 1.5; margin: 8px 0 0; }
+.search-summary { font-size: .85rem; line-height: 1.6; padding-inline-start: 12px; border-inline-start: 3px solid var(--cyan); color: var(--purple); margin: 16px 0; }
 .field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .field label { font-size: .73rem; font-weight: 500; color: var(--muted); }
 input, select { border: 1px solid #aaa2b1; border-radius: 4px; background: white; min-height: 48px; padding: 12px; color: var(--ink); width: 100%; }
-#flight-search select { font-size: .85rem; padding-inline: 10px; }
+#flight-search select, #flight-search input { font-size: 1rem; padding-inline: 10px; min-inline-size: 0; border-color: #817887; }
+#flight-search input:user-invalid, #flight-search input[aria-invalid="true"] { border: 2px solid #a32339; }
 #search-button { min-width: 150px; }
 .booking-steps { list-style: none; padding: 25px 26px 28px; margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .booking-steps li { display: flex; align-items: center; gap: 12px; }
@@ -208,8 +223,8 @@ dialog::backdrop { background: #21102e99; }
   .shopping-grid { grid-template-columns: minmax(0, 1fr) 270px; gap: 24px; }
   .membership-heading, .membership-body { padding: 22px; }
   .search-panel { margin-inline: 20px; padding-inline: 20px; }
-  #flight-search { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  #search-button { grid-column: 1 / -1; }
+  #flight-search { gap: 20px; }
+  .search-where .search-fields { grid-template-columns: 1fr; }
   .booking-steps { padding-inline: 20px; gap: 15px; }
   .booking-steps li { align-items: start; }
 }
@@ -242,9 +257,10 @@ dialog::backdrop { background: #21102e99; }
   .search-panel { margin-inline: 0; padding: 20px; }
   .search-heading { align-items: start; flex-direction: column; gap: 8px; }
   .search-heading h2 { font-size: 1.2rem; }
-  #flight-search { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px 10px; }
-  #flight-search .field:nth-child(3) { grid-column: 1 / -1; }
-  #flight-search select { font-size: 1rem; }
+  #flight-search { grid-template-columns: 1fr; gap: 22px; }
+  .search-fields { grid-template-columns: 1fr; gap: 14px; }
+  .search-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; }
+  #search-button { min-width: 0; }
   .booking-steps { padding: 22px 0; gap: 10px; }
   .booking-steps li { gap: 7px; flex-direction: column; }
   .booking-steps li > span { width: 25px; height: 25px; font-size: .7rem; }
