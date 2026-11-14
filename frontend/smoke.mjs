@@ -33,13 +33,8 @@ try {
   assert.ok((await page.locator('#seat-composition').getAttribute('aria-label')).includes('seats'));
   assert.ok((await page.locator('#price-caption').textContent()).includes('D14'));
   assert.ok(await page.locator('#price-chart .chart-line').count());
-  const d13Response = page.waitForResponse((r) => r.url().endsWith('/api/forecast') && r.request().postDataJSON()?.days_to_departure === 13);
-  await page.locator('#day-slider').fill('15');
-  await d13Response;
-  await page.waitForFunction(() => document.getElementById('day-number').textContent === '13');
-  await waitForecast();
-  assert.equal(await page.locator('#release-value').textContent(), '0 seats');
-  assert.equal(await page.locator('#publish-button').isDisabled(), true);
+  // The release-round buttons are the only day control; there is no free day slider.
+  assert.equal(await page.locator('#day-slider, input[type="range"]').count(), 0);
   assert.match(await page.locator('#nhpp-release-value').textContent(), /\d[\d,]* seats?/);
   await page.locator('[data-day="28"]').click();
   await waitForecast();

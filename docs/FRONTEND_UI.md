@@ -423,3 +423,7 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 Optimize显示具体分析错误、重试计数和无分析轮数；round table分别说明该轮分析是否可用。Member feedback在Analysis unavailable时继续展示真实保存的顾客决定，不把被拒绝的模型原文伪装成摘要。两页共用`analysis-diagnostics.js`及其样式：先读attempt摘要，用户展开某轮的原始回覆时才请求完整文本；使用原生details／summary，文本用textContent渲染，手机长文本可换行。读取失败可重试，切换实验时废弃旧请求结果。
 
 审计API能呈现旧failed实验中尚未写入rounds的失败轮次；仅查看，不恢复或改写旧实验。没有收到原始回覆的尝试明确说明，原始回覆显示与“可用分析”状态分开。前端预算估算包含每轮最多三次Analyst调用，和后端一致；NHPP、客户Portal及发布流程不变。
+
+### 7.8 2026-11-15 移除日期滑杆，只用放票轮次（用户要求）
+
+Forecast 页 Normal Bookings Through Departure 的任意日期滑杆（`day-slider`）已删除，从冻结清单移除；D28／D14／D7 按钮是唯一的日期控制，图表上方只显示当前轮次。轮次之间的日子（如 D13）不再能在 Admin 查看。若航班的预订数据只到今天，尚未到达的轮次置灰，点击时提示还差几天（`backend/data_horizon.py` 在后端同样拒绝）。`smoke.mjs` 与 `smoke-seat-supply.mjs` 改为断言没有滑杆，历史视图改由轮次按钮触发。

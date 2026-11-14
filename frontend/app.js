@@ -224,14 +224,11 @@ function notReachedMessage(day) {
   return `D${day} has not been reached yet for this flight. Booking data runs to D${state.asOf} (today); D${day} is ${gap} day${gap === 1 ? '' : 's'} away.`;
 }
 function setDayView(day) {
-  state.day = day; $('day-slider').value = 28 - day; $('day-slider').setAttribute('aria-valuetext', day ? `${day} days before departure` : 'Sales cutoff'); text('day-number', day);
+  state.day = day; text('day-number', day);
   text('day-description', !day ? 'Sales cutoff · no new offers' : state.asOf && day === state.asOf ? 'Today · days before departure' : 'Days before departure');
   document.querySelectorAll('[data-day]').forEach((button) => button.setAttribute('aria-pressed', String(Number(button.dataset.day) === day)));
 }
 function applyDataHorizon() {
-  const live = state.asOf > 0;
-  // Data that stops at today has no later days to scrub through.
-  document.querySelector('.day-controller').hidden = live;
   document.querySelectorAll('[data-day]').forEach((button) => {
     const future = !reachedDay(Number(button.dataset.day));
     button.classList.toggle('not-reached', future);
@@ -250,10 +247,9 @@ function chooseDay(day) {
   if (state.loadedFlightId) selectOffer(state.loadedFlightId, day, false);
   loadForecast();
 }
-let dayTimer;
-$('day-slider').addEventListener('input', () => { clearTimeout(dayTimer); const day = 28 - value('day-slider'); text('day-number', day); dayTimer = setTimeout(() => chooseDay(day), 150); });
+// The release-round buttons are the only day control: the view never scrubs to arbitrary days.
 document.querySelectorAll('[data-day]').forEach((button) => button.addEventListener('click', () => {
-  clearTimeout(dayTimer); const day = Number(button.dataset.day);
+  const day = Number(button.dataset.day);
   if (state.loadedFlightId && !reachedDay(day)) { notify(notReachedMessage(day)); return; }
   $('notice').hidden = true; chooseDay(day);
 }));
@@ -469,7 +465,7 @@ async function init() {
     const params = new URL(location.href).searchParams, wanted = state.flights.find(f => f.flight_id === params.get('flight_id'));
     if(wanted)setFlightPlaces($('context-from'),$('context-to'),wanted);
     const wantedDay = Number(params.get('forecast_day'));
-    if (RELEASE_DAYS.includes(wantedDay)) { state.day = wantedDay; $('day-slider').value = 28 - wantedDay; text('day-number', wantedDay); document.querySelectorAll('[data-day]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.day) === wantedDay))); }
+    if (RELEASE_DAYS.includes(wantedDay)) { state.day = wantedDay; text('day-number', wantedDay); document.querySelectorAll('[data-day]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.day) === wantedDay))); }
     if(fillForecastFlights(wanted?.flight_id) && location.hash !== '#customers')await loadFlight();
     loadMemberPlan();
 
