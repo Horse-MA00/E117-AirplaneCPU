@@ -4,8 +4,10 @@ import csv
 import gzip
 import hashlib
 import json
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 
 def verify(manifest_path):
@@ -64,6 +66,9 @@ def verify(manifest_path):
 
 
 if __name__ == "__main__":
+    # Required evidence must not disappear silently when a directory glob is empty.
+    from backend.evidence import verify_extended
+    extended = verify_extended(ROOT)
     manifests = [ROOT / "simulation/generated/manifest.json"]
     manifests += sorted((ROOT / "simulation/network_generated").glob("manifest.json"))
     manifests += sorted((ROOT / "simulation/member_demo_generated").glob("manifest.json"))
@@ -71,4 +76,4 @@ if __name__ == "__main__":
     manifests += sorted((ROOT / "llm_agent/experiments").glob("*/manifest.json"))
     manifests += sorted((ROOT / "simulation/continuous_price_validation").glob("manifest.json"))
     results = [verify(path) for path in manifests]
-    print(json.dumps({"status": "passed", "artifacts": results}, indent=2))
+    print(json.dumps({"status": "passed", "extended_evaluation": extended, "artifacts": results}, indent=2))

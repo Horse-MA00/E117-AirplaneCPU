@@ -5,6 +5,7 @@ import sys
 
 root = Path(__file__).resolve().parents[1]
 for args in (
+    ("scripts/check_publication.py",),
     ("-m", "unittest", "discover", "-s", "backend/tests", "-v"),
     ("-m", "unittest", "discover", "-s", "tests", "-v"),
     ("scripts/verify_artifacts.py",),

@@ -6,6 +6,7 @@ from pathlib import Path
 from functools import lru_cache
 from . import data,market_jobs,pricing_jobs,member_portal
 from .store import Store
+from .evidence import EvidenceUnavailable,read_evaluation
 from .oag import load_env
 from llm_agent import runner,audit
 from llm_agent.population import coverage,population
@@ -70,11 +71,9 @@ def get(path,query=None):
   raise KeyError('Panel endpoint not found')
  if path=='/api/summary':return {'dataset':{'rows':data.manifest()['rows'],'catalog_rows':data.manifest().get('catalog_rows',data.manifest()['rows']),'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':runner.status()}
  if path=='/api/evaluation':
-  p=ROOT/'simulation/generated/nhpp_v2_final.json'
-  return json.loads(p.read_text()) if p.exists() else {'status':'pending'}
+  return read_evaluation(ROOT)
  if path=='/api/evaluation/extended':
-  p=ROOT/'simulation/validation_extended/report.json'
-  return json.loads(p.read_text()) if p.exists() else {'status':'pending'}
+  return read_evaluation(ROOT,extended=True)
  if path=='/api/oag':
   result=[]
   for p in (ROOT/'data/private').glob('oag-*.json'):
@@ -216,6 +215,7 @@ class Handler(BaseHTTPRequestHandler):
    root=(ROOT/'frontend').resolve();file=(root/aliases.get(path,path.lstrip('/') or 'index.html')).resolve()
    if root not in file.parents or not file.is_file():return self.json(404,{'error':'Not found'})
    payload=file.read_bytes();self.send_response_headers(200,mimetypes.guess_type(file.name)[0] or 'application/octet-stream',len(payload));self.wfile.write(payload)
+  except EvidenceUnavailable as e:self.json(503,{'status':'unavailable','code':'evaluation_evidence_unavailable','artifact':e.artifact,'error':str(e)})
   except (KeyError,ValueError) as e:self.json(404,{'error':str(e)})
   except Exception:
    traceback.print_exc();self.json(500,{'error':'Server error; inspect local terminal'})

@@ -16,7 +16,8 @@ RUN python -m pip install --no-cache-dir --only-binary=:all: -r requirements.txt
 # .dockerignore is an allowlist: credentials, private data and host environments
 # never enter the build context. Frozen model/source bytes are copied unchanged.
 COPY . .
-RUN mkdir -p /app/data/private && chown app:app /app/data/private
+RUN python scripts/check_publication.py \
+    && mkdir -p /app/data/private && chown app:app /app/data/private
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
