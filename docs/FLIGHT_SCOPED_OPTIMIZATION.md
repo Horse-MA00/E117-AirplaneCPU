@@ -1,6 +1,6 @@
 # Flight-specific Admin workflow
 
-Implemented 2026-11-14, engine `flight-policy-feedback-v2`. This is the current primary Admin workflow; previous whole-term experiments retain their original settings and evidence.
+Implemented 2026-11-14, engine `flight-policy-feedback-v2`. **Superseded for new runs by the controlled v3 protocol:** see [member supply and evidence corrections](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md). The v2 behavior below remains historical documentation. The selected-flight scope remains the primary Admin workflow, but current inventory displays and search mechanics are specified in the v3 corrections above. Previous experiments retain their original settings and evidence.
 
 ## What each screen does
 

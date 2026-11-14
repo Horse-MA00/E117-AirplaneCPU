@@ -28,6 +28,7 @@ def flight_scope(flight_id, day=28):
     if fare is None:
         fare = round(.15 * quote['normal_base_fare'], 2)
     departure = datetime.fromisoformat(str(flight['departure_at']).replace('Z','+00:00'))
+    eligible = prediction['releasable_seats'] > 0
     return {'flight_id': flight_id, 'origin': flight['origin'], 'destination': flight['destination'],
             'departure_date': flight.get('departure_date', str(flight.get('departure_at',''))[:10]), 'as_of_day': day,
             'departure_at': flight['departure_at'], 'departure_time':departure.strftime('%H:%M'),
@@ -39,6 +40,10 @@ def flight_scope(flight_id, day=28):
             'initial_fare_source': 'snapshot.member_initial_base_fare' if quote.get('member_initial_base_fare') is not None else 'legacy_snapshot_15_percent_formula',
             'expected_remaining_demand': prediction['expected_remaining_demand'],
             'releasable_seats': prediction['releasable_seats'],
+            'member_supply_exposure': prediction['releasable_seats'],
+            'optimization_eligible': eligible,
+            'optimization_unavailable_reason': None if eligible else
+                'No releasable member seats at the selected round. Choose another flight or release day; later rounds are assessed separately.',
             'history_sha256': hashlib.sha256(json.dumps(history, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
             'history': history}
 

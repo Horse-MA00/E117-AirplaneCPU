@@ -5,6 +5,8 @@ const money = v => v == null ? '—' : `HK$${num(v,2)}`;
 const pct = v => v == null ? '—' : `${num(Number(v)*100,1)}%`;
 const name = mode => mode === 'live' ? 'Live LLM' : 'Mathematical';
 const running = status => ['queued','running'].includes(status);
+const scopeEligible = scope => Boolean(scope && scope.optimization_eligible!==false && Number(scope.member_supply_exposure??scope.releasable_seats)>0);
+const evidenceLabel = row => ({uninformative_no_supply:'No member supply',uninformative_no_member_exposure:'No traveller saw a member offer',no_member_sales:'Offers seen; no member sales',observed_member_sales:'Member purchases observed'})[row.price_evidence_status]||'Historical exposure not recorded';
 const canResume = status => ['paused','paused_at_budget','interrupted','failed'].includes(status);
 const node = (tag, text, className) => { const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el; };
 const text = (id, content) => { $(id).textContent=content; };
@@ -20,7 +22,7 @@ function controls() {
   const live=$('optimization-mode').value!=='math';
   $('optimization-budget-field').hidden=!live && !['both','live'].includes(state.data?.config?.mode);
   $('optimization-budget').disabled=$('optimization-budget-field').hidden; $('optimization-total-budget').disabled=$('optimization-budget-field').hidden;
-  $('optimization-start').disabled=state.loading || running(state.data?.status) || !state.scope;
+  $('optimization-start').disabled=state.loading || running(state.data?.status) || !scopeEligible(state.scope);
   text('optimization-start',state.loading?'Starting…':running(state.data?.status)?'Optimization is running…':'Start optimization');
   $('optimization-resume').disabled=state.loading || running(state.data?.status);
   document.querySelector('label[for=optimization-total-budget]').textContent=canResume(state.data?.status)?'Additional LLM decisions':'Total LLM decision budget';
@@ -60,16 +62,19 @@ function chart(id,tracks,key,{initialKey,caption}={}) {
 }
 function priceProfit(tracks){
   const svg=$('optimization-price-profit'),cards=$('optimization-tradeoffs');svg.replaceChildren();cards.replaceChildren();
-  const rows=tracks.flatMap(t=>t.rounds.filter(r=>Number.isFinite(r.total_contribution)).map(r=>({...r,mode:t.mode})));
+  const allRows=tracks.flatMap(t=>t.rounds.filter(r=>Number.isFinite(r.total_contribution)).map(r=>({...r,mode:t.mode})));
+  const rows=allRows.filter(row=>row.price_evidence_qualified===true);
+  text('optimization-price-evidence',!allRows.length?'Waiting for evaluated customer decisions.':!rows.length?'No member-price evidence: no usable member offer exposure was recorded. Financial audit rows below are not a price-response curve.':`${rows.length} tested prices had customer exposure to a member offer. ${allRows.length-rows.length} uninformative evaluations excluded. These are tested candidates; only independent validation can recommend an offer.`);
+  text('optimization-curve-protocol',state.data.config.price_comparison_protocol==='fixed-seat-profile-local-fare-v1'?'Pass fee, seat-protection profile and matched markets stay fixed across tested prices. Proposed forecast updates are recorded separately.':'Historical run: seat protection may differ by round; price effects are not isolated.');
   const width=Math.max(290,Math.round(svg.getBoundingClientRect().width)||700),height=320;
   svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
-  svg.append(svgNode('title',{},'Member base price versus simulated flight profit; point size represents buyers'));
-  if(!rows.length){svg.append(svgNode('text',{x:15,y:80,class:'chart-tick'},'Available after a scoped flight evaluation completes.'));text('optimization-price-detail','No evaluated price points yet.');return;}
+  svg.append(svgNode('title',{},'Member base price versus simulated flight contribution; point size represents member buyers'));
+  if(!rows.length){svg.append(svgNode('text',{x:15,y:80,class:'chart-tick'},allRows.length?'No informative member-price curve to display.':'Available after a scoped flight evaluation completes.'));text('optimization-price-detail',allRows.length?'Inspect supply, member buyers and normal buyers in the audit table.':'No evaluated price points yet.');return;}
   const highest=rows.reduce((a,b)=>b.total_contribution>a.total_contribution?b:a);
-  const buyers=rows.reduce((a,b)=>(b.mean_buyers??0)>(a.mean_buyers??0)?b:a);
+  const buyers=rows.reduce((a,b)=>(b.mean_member_buyers??0)>(a.mean_member_buyers??0)?b:a);
   const margins=rows.filter(r=>Number.isFinite(r.profit_margin));
   const margin=margins.length?margins.reduce((a,b)=>b.profit_margin>a.profit_margin?b:a):null;
-  for(const [label,row,metric] of [['Highest tested profit',highest,money(highest.total_contribution)],['Most buyers',buyers,`${num(buyers.mean_buyers,1)} buyers`],['Highest tested margin',margin,margin?pct(margin.profit_margin):'—']]){
+  for(const [label,row,metric] of [['Highest tested profit',highest,money(highest.total_contribution)],['Most member buyers',buyers,`${num(buyers.mean_member_buyers,1)} member buyers`],['Highest tested margin',margin,margin?pct(margin.profit_margin):'—']]){
     const card=node('div');card.append(node('span',label),node('strong',row?money(row.member_fare):'—'),node('small',row?`${name(row.mode)} · ${metric}${row.feasible?'':' · service unmet'}`:'No revenue to calculate a margin'));cards.append(card);
   }
   const left=66,right=20,top=28,bottom=52;
@@ -80,13 +85,13 @@ function priceProfit(tracks){
   for(let i=0;i<=4;i++){const v=ymin+(ymax-ymin)*i/4;svg.append(svgNode('line',{x1:left,x2:width-right,y1:y(v),y2:y(v),class:'chart-grid'}),svgNode('text',{x:left-8,y:y(v)+4,'text-anchor':'end',class:'chart-tick'},num(v)));}
   for(let i=0;i<=(width<500?2:4);i++){const value=xmin+xspan*i/(width<500?2:4);svg.append(svgNode('text',{x:x(value),y:height-25,'text-anchor':'middle',class:'chart-tick'},num(value,2)));}
   svg.append(svgNode('text',{x:left,y:14,class:'chart-tick'},'Flight contribution · HK$'),svgNode('text',{x:width/2,y:height-5,'text-anchor':'middle',class:'chart-tick'},'Member base fare · HK$'));
-  const describe=r=>text('optimization-price-detail',`${name(r.mode)} · fare ${money(r.member_fare)} · pass ${money(r.membership_fee)} · profit ${money(r.total_contribution)} · margin ${pct(r.profit_margin)} · ${num(r.mean_buyers,1)} buyers / ${num(r.mean_tickets,1)} tickets · ${r.feasible?'service target met':'service target unmet'}.`);
+  const describe=r=>text('optimization-price-detail',`${name(r.mode)} · fare ${money(r.member_fare)} · pass ${money(r.membership_fee)} · profit ${money(r.total_contribution)} · margin ${pct(r.profit_margin)} · ${num(r.mean_member_buyers,1)} member buyers / ${num(r.mean_regular_buyers,1)} regular buyers · ${num(r.mean_new_members,1)} joins · ${num(r.member_supply_exposure,1)} seats issued / ${num(r.mean_member_offer_customers,1)} travellers saw offers · ${num(r.mean_member_tickets,1)} member / ${num(r.mean_regular_tickets,1)} regular tickets · ${r.feasible?'service target met':'service target unmet'}.`);
   for(const track of tracks){
     const color=track.mode==='live'?'#087D96':'#6F2C91',points=rows.filter(r=>r.mode===track.mode).sort((a,b)=>a.member_fare-b.member_fare);
     // A true price curve only joins evaluations with the same membership fee.
     for(const fee of new Set(points.map(r=>r.membership_fee))){const fixed=points.filter(r=>r.membership_fee===fee);svg.append(svgNode('polyline',{points:fixed.map(r=>`${x(r.member_fare)},${y(r.total_contribution)}`).join(' '),fill:'none',stroke:color,'stroke-width':2,...(track.mode==='live'?{'stroke-dasharray':'5 4'}:{})}));}
-    for(const row of points){const point=svgNode('circle',{cx:x(row.member_fare),cy:y(row.total_contribution),r:4+Math.min(7,Math.sqrt(Math.max(0,row.mean_buyers||0))),fill:color,stroke:row===highest?'#24BCDC':'white','stroke-width':row===highest?4:1.5,tabindex:0,role:'button','data-price':row.member_fare,'data-profit':row.total_contribution,'aria-label':`${name(row.mode)} fare ${money(row.member_fare)}, profit ${money(row.total_contribution)}, ${num(row.mean_buyers,1)} buyers`});
-      point.append(svgNode('title',{},point.getAttribute('aria-label')));for(const event of ['focus','mouseenter','click'])point.addEventListener(event,()=>describe(row));point.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();describe(row);}});svg.append(point);
+    for(const row of points){const point=svgNode('circle',{cx:x(row.member_fare),cy:y(row.total_contribution),r:4+Math.min(7,Math.sqrt(Math.max(0,row.mean_member_buyers||0))),fill:color,stroke:row===highest?'#24BCDC':'white','stroke-width':row===highest?4:1.5,tabindex:0,role:'button','data-price':row.member_fare,'data-profit':row.total_contribution,'aria-label':`${name(row.mode)} fare ${money(row.member_fare)}, profit ${money(row.total_contribution)}, ${num(row.mean_member_buyers,1)} member buyers`});
+      point.append(svgNode('title',{},point.getAttribute('aria-label')));for(const event of ['focus','mouseenter','click'])point.addEventListener(event,()=>describe(row));point.addEventListener('keydown',event=>{if(event.key==='Enter')describe(row);if(event.key===' ')event.preventDefault();});point.addEventListener('keyup',event=>{if(event.key===' '){event.preventDefault();describe(row);}});svg.append(point);
     }
   }
   describe(highest);
@@ -104,7 +109,8 @@ function renderCards(tracks) {
     if(latest){profit.append(node('strong',`${money(latest.incremental_contribution)} incremental`),document.createTextNode(` · ${pct(latest.service_rate)} member use`));}
     else profit.textContent='Waiting for the first market replay to finish.';
     card.append(heading,prices,profit);
-    if(best){const retained=node('p',undefined,'small muted');retained.append(node('strong','Best retained: '),document.createTextNode(`${money(best.member_fare)} fare + ${money(best.membership_fee)} pass.${best.feasible?'':' Service target unmet.'}`));card.append(retained);}
+    if(latest)card.append(node('p',`${evidenceLabel(latest)} · ${num(latest.mean_member_buyers,1)} member buyers · ${num(latest.mean_regular_buyers,1)} regular buyers · ${num(latest.member_supply_exposure,1)} member seats issued.`,'small muted'));
+    if(best){const retained=node('p',undefined,'small muted');retained.append(node('strong','Retained test candidate: '),document.createTextNode(`${money(best.member_fare)} fare + ${money(best.membership_fee)} pass.${best.feasible?'':' Service target unmet.'}`));card.append(retained);}
     return card;
   }));
 }
@@ -112,10 +118,10 @@ function renderTable(tracks) {
   const rows=tracks.flatMap(track=>track.rounds.map(round=>({...round,mode:track.mode}))).sort((a,b)=>a.round-b.round||a.mode.localeCompare(b.mode));
   $('optimization-rounds-table').replaceChildren(...rows.map(row=>{
     const tr=node('tr'),th=node('th',`${name(row.mode)} / ${row.round}`);th.scope='row';tr.append(th);
-    for(const item of [money(row.member_fare),money(row.membership_fee),money(row.total_contribution),num(row.mean_buyers,1),pct(row.profit_margin),money(row.incremental_contribution)])tr.append(node('td',item));
-    const result=node('td');result.append(node('span',row.accepted?'Retained':row.feasible?'Tested':'Service unmet',row.accepted?'round-kept':'round-rejected'));tr.append(result);return tr;
+    for(const item of [money(row.member_fare),money(row.membership_fee),money(row.total_contribution),num(row.mean_member_buyers,1),num(row.mean_regular_buyers,1),num(row.mean_new_members,1),`${num(row.mean_member_tickets,1)} / ${num(row.mean_regular_tickets,1)}`,`${num(row.member_supply_exposure,1)} seats / ${num(row.mean_member_offer_customers,1)} viewers`,pct(row.profit_margin),money(row.incremental_contribution)])tr.append(node('td',item));
+    const result=node('td');result.append(node('span',row.price_evidence_qualified===false?evidenceLabel(row):row.accepted?'Retained test':row.feasible?'Tested':'Service unmet',row.accepted?'round-kept':'round-rejected'));tr.append(result);return tr;
   }));
-  if(!rows.length){const tr=node('tr'),td=node('td','No completed rounds yet.');td.colSpan=8;tr.append(td);$('optimization-rounds-table').append(tr);}
+  if(!rows.length){const tr=node('tr'),td=node('td','No completed rounds yet.');td.colSpan=12;tr.append(td);$('optimization-rounds-table').append(tr);}
 }
 function renderFinal(tracks) {
   const root=$('optimization-final-content');root.replaceChildren();
@@ -196,6 +202,8 @@ async function loadScope(){
     state.scope=result.scope;$('optimization-fare').value=result.initial_member_fare;
     const scope=result.scope;
     text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${num(scope.available_seats)} physical empty seats / ${num(scope.capacity)} capacity; ${num(scope.releasable_seats)} forecast member seats.`);
+    $('optimization-load-demo').hidden=scopeEligible(scope);
+    if(!scopeEligible(scope))text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${scope.optimization_unavailable_reason||'No usable member supply at this snapshot.'} Choose a low-demand demo or another release round.`);
     text('optimization-initial-source',`P₀ ${money(result.initial_member_fare)} from this flight’s simulated normal base fare ${money(scope.normal_base_fare)}${scope.quote_age_days?` (last available quote ${scope.quote_age_days} days earlier)`:''} and seat snapshot. V₀ stays fixed during this run.`);
     showError('');
   }catch(error){if(token===state.scopeRequest)showError(error.message);}finally{if(token===state.scopeRequest)controls();}
@@ -212,15 +220,16 @@ $('optimization-route').addEventListener('change',()=>{fillFlights();loadScope()
 $('optimization-flight').addEventListener('change',loadScope);
 $('optimization-day').addEventListener('change',loadScope);
 $('optimization-suggest').addEventListener('click',loadScope);
+$('optimization-load-demo').addEventListener('click',async()=>{const route=$('optimization-route').value;const demo=state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0&&routeKey(f)===route)||state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);if(!demo){showError('Choose another flight or release round with positive member supply.');return;}$('optimization-route').value=routeKey(demo);fillFlights(demo.flight_id);$('optimization-day').value='28';await loadScope();});
 window.addEventListener('uoption:optimize-flight',async event=>{
   if(!state.flights.length)await initializeFlights();
   const flight=state.flights.find(f=>f.flight_id===event.detail.flight_id);if(!flight)return;
   $('optimization-route').value=routeKey(flight);fillFlights(flight.flight_id);
-  $('optimization-day').value=String([28,14,7].includes(event.detail.day)?event.detail.day:28);await loadScope();
+  $('optimization-day').value=String([28,14,7].includes(event.detail.day)?event.detail.day:([28,14,7].find(day=>day<event.detail.day)||28));await loadScope();
 });
 initializeFlights();
 $('optimization-form').addEventListener('submit',async event=>{
-  event.preventDefault();if(state.loading)return;showError('');state.loading=true;controls();
+  event.preventDefault();if(state.loading)return;if(!scopeEligible(state.scope)){showError('Select a release round with positive member supply before testing prices.');return;}showError('');state.loading=true;controls();
   const body={flight_id:$('optimization-flight').value,forecast_day:val('optimization-day'),mode:$('optimization-mode').value,rounds:val('optimization-rounds'),customers:val('optimization-customers'),initial_membership_fee:val('optimization-fee'),fare_min:val('optimization-fare-min'),fare_max:val('optimization-fare-max'),fee_min:val('optimization-fee-min'),fee_max:val('optimization-fee-max'),seed:val('optimization-seed'),replicates:val('optimization-replicates'),release_fraction:val('optimization-share'),min_service_rate:val('optimization-service'),program_cost:val('optimization-cost'),max_calls:val('optimization-budget'),total_live_budget:$('optimization-mode').value==='math'?0:val('optimization-total-budget')};
   if(val('optimization-fare')<body.fare_min||val('optimization-fare')>body.fare_max||body.initial_membership_fee<body.fee_min||body.initial_membership_fee>body.fee_max||body.fare_min>=body.fare_max||body.fee_min>=body.fee_max){showError('Search limits must contain the starting prices and have a minimum lower than the maximum.');state.loading=false;controls();return;}
   try{const data=await api('/api/optimization/runs',body);clearTimeout(state.timer);state.runId=data.run_id;state.data=null;await listRuns();await poll(state.runId);}

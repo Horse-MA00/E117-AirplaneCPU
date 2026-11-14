@@ -19,7 +19,8 @@ import uuid
 from . import optimization_store as store
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'flight-policy-feedback-v2'
+VERSION = 'flight-policy-feedback-v3'
+CONTROLLED_PRICE_PROTOCOL = 'fixed-seat-profile-local-fare-v1'
 ROOT = Path(__file__).resolve().parents[1]
 _lock = threading.RLock()
 _active = set()
@@ -62,7 +63,8 @@ def validate(body):
         cfg[key] = round(cfg[key], 2)
     if scope:
         cfg.update(scope=scope, flight_id=scope['flight_id'], forecast_day=scope['as_of_day'], flights=1,
-                   membership_fee_fixed=True, annual_fee_allocation=1/3)
+                   membership_fee_fixed=True, annual_fee_allocation=1/3,
+                   price_comparison_protocol=CONTROLLED_PRICE_PROTOCOL)
     total = body.get('total_live_budget', 1500 if scope and cfg['mode'] != 'math' else None)
     if total is not None:
         cfg['total_live_budget'] = _number(total,'total_live_budget',0,10000,True)
@@ -82,19 +84,22 @@ def _id(run_id):
 
 
 def provenance():
-    files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py',
+    files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py', 'backend/data.py',
              'backend/probabilistic_customer.py', 'backend/nhpp.py', 'backend/release_policy.py', 'backend/seat_feedback.py',
              'simulation/generate.py', 'simulation/generated/calibration_v2.json',
              'llm_agent/market_adapter.py', 'llm_agent/population.py', 'llm_agent/output_contract.py',
              'llm_agent/prompts/shared_market_v3_en.txt']
     if (ROOT/'simulation/network_generated/manifest.json').exists():
         files.append('simulation/network_generated/manifest.json')
+    if (ROOT/'simulation/member_demo_generated/manifest.json').exists():
+        files.append('simulation/member_demo_generated/manifest.json')
     return {'version': VERSION, 'files': {name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in files},
             'provider_model': os.environ.get('LLM_MODEL'),
             'provider_endpoint_sha256': hashlib.sha256(os.environ.get('LLM_API_URL', '').encode()).hexdigest()}
 
 
 def best_candidate(rows):
+    rows = [r for r in rows if not r.get('price_evidence_status','').startswith('uninformative_')]
     if not rows:
         return None
     # Service feasibility outranks revenue; if none feasible, retain a diagnostic hypothesis.
@@ -105,7 +110,10 @@ def best_candidate(rows):
 def propose(config, rows):
     """Feedback-guided 2D pattern search, bounded and quantized to HKD cents."""
     if not rows:
-        return {'member_fare': config['initial_member_fare'], 'membership_fee': config['initial_membership_fee']}
+        return {'member_fare': config['initial_member_fare'], 'membership_fee': config['initial_membership_fee'],
+                **({'search_step':'initial_snapshot'} if config.get('price_comparison_protocol') else {})}
+    if config.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL:
+        return _propose_scoped(config, rows)
     best = best_candidate(rows)
     seen = {(round(row['member_fare'] * 100), round(row['membership_fee'] * 100)) for row in rows}
     directions = [(-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]
@@ -134,6 +142,34 @@ def propose(config, rows):
             if (left, right) not in seen:
                 return {'member_fare': left/100, 'membership_fee': right/100}
     # A tiny complete domain may have fewer unique points than the requested budget.
+    return None
+
+
+def _propose_scoped(config, rows):
+    """Local probes first, then explicit bounded exploration; never rewrite prior tests."""
+    low, high = (round(config[k]*100) for k in ('fare_min','fare_max'))
+    initial = round(config['initial_member_fare']*100)
+    fee = config['initial_membership_fee']
+    seen = {round(r['member_fare']*100) for r in rows}
+    # A zero P0 has no relative scale; use 5% of the permitted span as its step.
+    step = max(1,round(initial*.25) if initial else round((high-low)*.05))
+    probes = [(initial-step,'local_lower'),(initial+step,'local_upper'),
+              (low,'boundary_low'),(min(high,initial+max(step*2,round((high-low)*.25))),'wide_upper'),
+              (high,'boundary_high')]
+    for point,label in probes:
+        point = max(low,min(high,point))
+        if point not in seen:
+            return {'member_fare':point/100,'membership_fee':fee,'search_step':label}
+    best = best_candidate(rows)
+    center = round(best['member_fare']*100) if best else initial
+    for divisor in (2,4,8,16,32):
+        for sign in (-1,1):
+            point=max(low,min(high,center+sign*max(1,step//divisor)))
+            if point not in seen:
+                return {'member_fare':point/100,'membership_fee':fee,'search_step':'local_refinement'}
+    for point in range(low,min(high+1,low+13)):
+        if point not in seen:
+            return {'member_fare':point/100,'membership_fee':fee,'search_step':'bounded_exploration'}
     return None
 
 
@@ -204,6 +240,16 @@ def _world(run_id, mode, phase, round_number, seed, prices, enabled, budget):
         try:
             choice = choose(observation, 'probabilistic' if mode == 'math' else 'live', audit)
             transition = apply_decision(state, choice['decision'])
+            if cfg.get('scope'):
+                exposure = state.setdefault('member_offer_exposure',{'packet_ids':[],'customer_ids':[],'bookable_packet_ids':[]})
+                offered = any(o.get('action')=='BUY_MEMBER' for o in [*observation.get('options',[]),*observation.get('current_quote_reference',[])])
+                if offered:
+                    if observation['packet_id'] not in exposure['packet_ids']:
+                        exposure['packet_ids'].append(observation['packet_id'])
+                    if observation['customer_id'] not in exposure['customer_ids']:
+                        exposure['customer_ids'].append(observation['customer_id'])
+                    if 'BUY_MEMBER' in observation['allowed_actions'] and observation['packet_id'] not in exposure['bookable_packet_ids']:
+                        exposure['bookable_packet_ids'].append(observation['packet_id'])
         except Exception:
             store.checkpoint(world_id, state)
             raise
@@ -236,13 +282,14 @@ def aggregate(prices, reports, baselines, config):
     revenue = statistics.mean(r.get('attributed_revenue',r.get('ledger',{}).get('revenue_excluding_mandatory_fees',0)) for r in reports)
     cost = statistics.mean(r.get('attributed_cost',r.get('ledger',{}).get('total_cost',0)) for r in reports)
     contribution = round(statistics.mean(r['contribution'] for r in reports),2)
-    return {**prices, 'incremental_contribution': round(statistics.mean(deltas), 2),
+    result = {**prices, 'incremental_contribution': round(statistics.mean(deltas), 2),
             'total_contribution': contribution, 'profit':contribution,
             'attributed_revenue':round(revenue,2),'attributed_cost':round(cost,2),
             'profit_margin': contribution/revenue if revenue > 0 else None,
             'mean_buyers':statistics.mean(r.get('buyers',r.get('agent_completed_trips',0)) for r in reports),
             'mean_tickets':statistics.mean(r.get('tickets',r.get('passengers_flown',0)) for r in reports),
             'paired_differences': [round(x, 2) for x in deltas],
+            'paired_variance': statistics.variance(deltas) if len(deltas)>1 else None,
             'standard_error': statistics.stdev(deltas)/math.sqrt(len(deltas)) if len(deltas)>1 else None,
             'service_rate': statistics.mean(r['service_rate'] for r in reports),
             'mean_members': statistics.mean(r['new_members'] for r in reports),
@@ -253,6 +300,38 @@ def aggregate(prices, reports, baselines, config):
                             if config.get('scope') else (r['new_members'] > 0 and r['service_rate'] >= config['min_service_rate']) for r in reports),
             'checks_passed': all(all(r['checks'].values()) for r in reports),
             'seeds': [r['seed'] for r in reports]}
+    if config.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL:
+        metric_fields = ('member_buyers','regular_buyers','member_tickets','regular_tickets',
+                         'fulfilled_buyers','fulfilled_tickets','fulfilled_bookings','cancelled_bookings',
+                         'cancelled_tickets','member_seats_released','member_offer_observations',
+                         'member_offer_customers','member_bookable_observations')
+        result.update({f'mean_{key}':statistics.mean(r.get(key,0) for r in reports) for key in metric_fields})
+        result['mean_new_members'] = result['mean_members']
+        result['member_supply_exposure'] = statistics.mean(r.get('member_supply_exposure',0) for r in reports)
+        if not any(r.get('member_supply_exposure',0)>0 for r in reports):
+            status = 'uninformative_no_supply'
+        elif not any(r.get('member_offer_observations',0)>0 for r in reports):
+            status = 'uninformative_no_member_exposure'
+        elif not any(r.get('member_tickets',0)>0 for r in reports):
+            status = 'no_member_sales'
+        else:
+            status = 'observed_member_sales'
+        components = set().union(*(r.get('profit_components',{}) for r in [*reports,*baselines]))
+        result.update(price_evidence_status=status, price_evidence_qualified=not status.startswith('uninformative_'),
+            price_evidence_qualification=(
+                'No member supply was offered; ordinary purchases and cancellation variation are not member-price evidence.' if status=='uninformative_no_supply' else
+                'Quota was released but no matching agent saw a member offer; this is not a test of willingness to buy.' if status=='uninformative_no_member_exposure' else
+                'Agents saw member offers but bought no member tickets. Ordinary sales or cancellation differences do not identify a member-fare effect.' if status=='no_member_sales' else
+                'Synthetic paired policy outcomes, not observed price elasticity. LLM choices may vary across calls; paired component differences expose other behavioral changes.'),
+            seat_feedback_application='proposed_only_fixed_during_price_comparison',
+            profit_components={k:round(statistics.mean(r.get('profit_components',{}).get(k,0) for r in reports),2) for k in sorted(components)},
+            paired_component_deltas={k:round(statistics.mean(r.get('profit_components',{}).get(k,0)-b.get('profit_components',{}).get(k,0)
+                for r,b in zip(reports,baselines)),2) for k in sorted(components)})
+        result['profit_attribution'] = {group:{key:round(statistics.mean(r.get('profit_attribution',{}).get(group,{}).get(key,0)
+            for r in reports),2) for key in ('revenue','cost','contribution')} for group in ('agent','background','program')}
+        if status.startswith('uninformative_'):
+            result['feasible'] = False
+    return result
 
 
 def run_batch(run_id, max_calls=60):
@@ -275,7 +354,8 @@ def run_batch(run_id, max_calls=60):
             prices = propose(cfg, rows)
             if prices is None:
                 break
-            prices['seat_calibration'] = rows[-1]['next_seat_calibration'] if rows else initial_profile()
+            controlled = cfg.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL
+            prices['seat_calibration'] = initial_profile() if controlled or not rows else rows[-1]['next_seat_calibration']
             reports = [_world(run_id, mode, 'search', number, seed, prices, True, budget) for seed in _seeds(cfg)]
             result = aggregate(prices, reports, baseline, cfg)
             samples = [sample for report in reports for sample in report['seat_feedback_samples']]
@@ -283,12 +363,18 @@ def run_batch(run_id, max_calls=60):
                           next_seat_calibration=update_profile(prices['seat_calibration'], samples))
             best = best_candidate([*rows, result])
             result['accepted'] = best is result
-            result['incumbent'] = {key: best[key] for key in ('member_fare', 'membership_fee', 'incremental_contribution', 'feasible')}
+            result['incumbent'] = {key: best[key] for key in ('member_fare', 'membership_fee', 'incremental_contribution', 'feasible')} if best else None
             with store.connection() as db:
                 db.execute('INSERT INTO optimization_rounds VALUES (?,?,?,?)', (run_id, mode, number, store.encode(result)))
             store.record(run_id, None, {'event': 'optimization_round_completed', 'mode': mode, 'result': result})
             _progress(run_id)
+            if controlled and result.get('price_evidence_status')=='uninformative_no_supply':
+                store.record(run_id,None,{'event':'optimization_no_member_supply','mode':mode,
+                    'reason':'All completed replicas released zero member seats through their remaining release rounds; no price hypothesis retained.'})
+                break
         best = best_candidate(store.rounds(run_id, mode))
+        if best is None:
+            continue
         prices = {key: best[key] for key in ('member_fare', 'membership_fee', 'seat_calibration')}
         test_baseline = [_world(run_id, mode, 'holdout_baseline', 0, seed, initial, False, budget) for seed in _seeds(cfg, True)]
         tests = [_world(run_id, mode, 'holdout', 0, seed, prices, True, budget) for seed in _seeds(cfg, True)]
@@ -296,6 +382,13 @@ def run_batch(run_id, max_calls=60):
         # Holdout only accepts/rejects a frozen hypothesis; it cannot replace it.
         store.record(run_id, None, {'event': 'optimization_holdout_completed', 'mode': mode, 'result': result})
     _progress(run_id, phase='completed', active_mode=None, active_world=None)
+    if cfg.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL:
+        completed = store.run(run_id)['progress']
+        if completed['completed_rounds'] < completed['total_rounds'] or completed['completed_worlds'] < completed['total_worlds']:
+            _progress(run_id, planned_total_rounds=completed['total_rounds'],
+                      planned_total_worlds=completed['total_worlds'],
+                      total_rounds=completed['completed_rounds'], total_worlds=completed['completed_worlds'],
+                      early_stopped=True)
     store.update(run_id, status='completed', error=None)
 
 
@@ -351,6 +444,11 @@ def start(body):
     if not isinstance(body, dict) or not body.get('flight_id') and body.get('legacy_market') is not True:
         raise ValueError('Select a flight_id and forecast_day before starting optimization')
     cfg = validate(body)
+    if cfg.get('scope'):
+        if not cfg['scope']['optimization_eligible']:
+            raise ValueError(cfg['scope']['optimization_unavailable_reason'])
+        if math.floor(cfg['scope']['releasable_seats']*cfg['release_fraction']) < 1:
+            raise ValueError('No releasable member seats at the selected round under this release fraction. Increase the fraction or choose another flight or release day.')
     from llm_agent.experiment import load_local_env
     load_local_env()
     if cfg['mode'] != 'math' and not all(os.environ.get(key) for key in ('LLM_API_URL', 'LLM_API_KEY', 'LLM_MODEL')):
@@ -425,9 +523,17 @@ def read(run_id):
         decision = 'PENDING'
         if validation is not None:
             decision = 'OFFER' if best['feasible'] and best['incremental_contribution'] > 0 and validation['feasible'] and validation['incremental_contribution'] > 0 else 'NO_OFFER'
-        tracks.append({'mode': mode, 'rounds': rows, 'best': best, 'validation': validation, 'decision': decision})
+        elif rows and best is None and saved['status']=='completed':
+            decision = 'NO_OFFER'
+        track = {'mode': mode, 'rounds': rows, 'best': best, 'validation': validation, 'decision': decision}
+        if cfg.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL:
+            track.update(price_comparison_protocol=CONTROLLED_PRICE_PROTOCOL,
+                proposed_next_seat_calibration=rows[-1].get('next_seat_calibration') if rows else None,
+                seat_feedback_application='proposed_only_fixed_during_price_comparison',
+                decision_reason='No informative member offer exposure; no price recommendation retained.' if rows and best is None else None)
+        tracks.append(track)
     saved['tracks'] = tracks
-    saved['version'] = VERSION
+    saved['version'] = saved['provenance'].get('version',VERSION)
     saved['search_seeds'] = _seeds(cfg)
     saved['validation_seeds'] = _seeds(cfg, True)
     if cfg.get('total_live_budget') is not None:
@@ -447,6 +553,11 @@ def read(run_id):
             'Profit is flight-attributed contribution: one third of new annual pass revenue and service cost, full per-flight costs; fees/taxes and aircraft fixed costs excluded.',
             'Normal demand continuation is independently sampled from observed booking pace with random growth/jumps. The forecast does not generate its own evaluation labels.',
             'Highest profit, highest margin and most buyers may be different tested prices; these are separate objectives.']
+    if cfg.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL:
+        saved['assumptions'] = [a for a in saved['assumptions'] if not a.startswith('Base NHPP parameters remain frozen.')]
+        saved['assumptions'] += ['Base NHPP and the seat-feedback profile are fixed throughout this fare comparison and holdout. Completed outcomes produce a proposed next-run calibration, which is not applied within this experiment.',
+            'Member and regular buyers are separate household groups and may overlap. Purchased tickets include subsequent cancellations; fulfilment and cancellation are reported separately.',
+            'All-zero member supply or no member-offer exposure cannot support a member-price recommendation. Cancellation and normal-revenue differences remain visible as accounting outcomes only.']
     return saved
 
 

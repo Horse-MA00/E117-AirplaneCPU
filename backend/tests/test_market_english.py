@@ -82,6 +82,41 @@ class SharedMarketEnglishTests(unittest.TestCase):
             self.assertTrue(any(r.get("event") == "market_choice_failed" and r["cache_hit"]
                                 for r in audit.read_run(record.run_id)["records"]))
 
+    def test_contradictory_reason_is_audited_without_replacing_valid_action(self):
+        observation=self.observation()
+        observation.update(membership={'fee':399},visible_state={'remaining_budget':618.7},
+            current_quote_reference=[
+                {'id':'f:normal','flight_id':'f','action':'BUY_REGULAR','price':810},
+                {'id':'f:member','flight_id':'f','action':'BUY_MEMBER','price':334,
+                 'membership_valid_for_departure':False,
+                 'membership_eligibility':{'current_pass_valid_for_departure':False,
+                                          'valid_if_join_now':True,'joining_now_permitted':True}}])
+        reason='The HK$399 fee exceeds the HK$476 saving. Membership would not be valid at departure.'
+        with tempfile.TemporaryDirectory() as temporary,patch.object(audit,'BASE',Path(temporary)/'runs'), \
+                patch.dict('os.environ',self.ENV):
+            raw=self.raw(reason); record=audit.Audit('provider_live')
+            with patch.object(market_adapter,'_transport',return_value=io.BytesIO(json.dumps(raw).encode())):
+                result=market_adapter.choose(observation,'live',record)
+            self.assertEqual(result['decision']['action'],'DECLINE')
+            self.assertEqual(result['decision']['reason'],reason)
+            flags=result['rationale_diagnostics']['flags']
+            self.assertIn('explicit_hkd_comparison_inconsistent',flags)
+            self.assertIn('post_join_validity_contradiction',flags)
+            records=audit.read_run(record.run_id)['records']
+            chosen=next(r for r in records if r['event']=='market_choice')
+            self.assertEqual(chosen['rationale_diagnostics'],result['rationale_diagnostics'])
+            sent=json.loads(next(r for r in records if r['event']=='market_request')['request']['messages'][1]['content'])
+            self.assertEqual(sent['subscription_comparisons'][0]['net_savings_after_membership_fee'],77)
+            self.assertFalse(any(r['event']=='market_choice_failed' for r in records))
+
+    def test_rationale_diagnostic_does_not_treat_sum_or_current_status_as_false_comparison(self):
+        reasons=('The HKD 399 fee plus HKD 334 ticket exceeds HKD 600.',
+                 'My current membership is not active; joining would activate it immediately.',
+                 'The HKD 399 fee is less than the HKD 476 saving, but the total is unaffordable.')
+        for reason in reasons:
+            result=market_adapter.rationale_diagnostics({'reason':reason},{'stage':'subscription'})
+            self.assertEqual(result['flags'],[])
+
 
 if __name__ == "__main__":
     unittest.main()

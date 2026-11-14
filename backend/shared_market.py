@@ -372,6 +372,13 @@ def _quotes(state, customer, occasion, *, include_ineligible=False):
             if member and (not state["policy"]["enabled"] or _member_sellable(f) < 1):
                 continue
             membership_valid = _active(customer, state["day"]) and f["departure_at"] < customer["membership_expires"]
+            can_join = bool(state['policy']['enabled'] and not _active(customer,state['day']) and not customer['joined_this_run']
+                            and _cents(state['policy']['membership_fee']) <= customer['budget_cents'])
+            new_expiry = state['day']+state['config']['membership_days']
+            valid_after_join = can_join and f['departure_at'] < new_expiry
+            eligibility = ('not_required' if not member else 'already_valid' if membership_valid else
+                           'eligible_if_join_now' if valid_after_join else 'new_pass_expires_before_departure' if can_join else
+                           'existing_pass_expires_before_departure' if _active(customer,state['day']) else 'joining_not_currently_available')
             if member and not membership_valid and not include_ineligible:
                 continue
             normal = f["base_fare"] * (party - int(member))
@@ -389,9 +396,54 @@ def _quotes(state, customer, occasion, *, include_ineligible=False):
                            "member_seats_available": _member_sellable(f), "days_to_departure": round(f["departure_at"] - state["day"], 3),
                            "price_breakdown": {"normal_base_fares": normal, "member_base_fare": base, "mandatory_fees": mandatory, "baggage": ancillary},
                            "membership_valid_for_departure": membership_valid, "checked_bags": person["checked_bags"],
+                           'membership_required': bool(member),
+                           'membership_eligibility': {'status':eligibility,
+                               'current_pass_valid_for_departure':bool(membership_valid),
+                               'joining_now_permitted':can_join,
+                               'valid_if_join_now':bool(valid_after_join),
+                               'new_pass_expires_day_if_join_now':round(new_expiry,6),
+                               'current_validity_is_not_post_join_validity':True},
                            "cancellation_terms": {"base_fare_refundable": False, "baggage_refundable": False, "mandatory_fees_refundable": mandatory,
                                                   "cancellation_fee_per_booking": state["config"]["cancellation_fee"], "cutoff_hours": 2}})
     return offers
+
+
+def subscription_comparisons(observation):
+    """Current quote arithmetic only; no future inventory or behavior prediction."""
+    references=observation.get('current_quote_reference',[])
+    normal={o.get('flight_id'):o for o in references if o.get('action')=='BUY_REGULAR'}
+    wallet=observation.get('visible_state',observation.get('state',{})).get('remaining_budget')
+    if wallet is None:
+        wallet=observation.get('person',observation.get('customer',{})).get('total_budget')
+    fee=observation.get('membership',{}).get('fee',0)
+    comparisons=[]
+    for member in references:
+        if member.get('action')!='BUY_MEMBER':continue
+        regular=normal.get(member.get('flight_id'))
+        valid=member.get('membership_eligibility',{}).get('current_pass_valid_for_departure',member.get('membership_valid_for_departure',False))
+        due=0 if valid else _cents(fee)
+        ticket=_cents(member['price']); total=ticket+due
+        saving=None if regular is None else _cents(regular['price'])-ticket
+        balance=None if wallet is None else _cents(wallet)-total
+        comparisons.append({'member_option_id':member['id'],
+            'regular_option_id':regular.get('id') if regular else None,
+            'flight_id':member.get('flight_id'),'currency':'HKD',
+            'member_ticket_total':_money(ticket),
+            'regular_ticket_total':regular['price'] if regular else None,
+            'additional_membership_fee':_money(due),
+            'total_outlay_for_pass_and_ticket':_money(total),
+            'ticket_savings_before_pass_fee':None if saving is None else _money(saving),
+            'net_savings_after_membership_fee':None if saving is None else _money(saving-due),
+            'membership_fee_vs_ticket_savings':None if saving is None else ('less_than' if due<saving else 'greater_than' if due>saving else 'equal_to'),
+            'wallet_budget':wallet,'wallet_remaining_after_purchase':None if balance is None else _money(balance),
+            'wallet_shortfall':None if balance is None else _money(max(0,-balance)),
+            'affordable_with_current_wallet':None if balance is None else balance>=0,
+            'trip_ticket_budget_preference':observation.get('trip',{}).get('trip_budget'),
+            'budget_rule':'Wallet budget is the transaction limit; trip ticket budget is a spending preference, not a membership-expiry rule.',
+            'eligibility':copy.deepcopy(member.get('membership_eligibility',{})),
+            'current_seats_not_reserved':True,
+            'scope':'This exact current itinerary and whole party only; no assumed future trips or guaranteed inventory.'})
+    return comparisons
 
 
 def _observation(state, event):
@@ -420,6 +472,14 @@ def _observation(state, event):
                   "companions_pay_regular_fares": True, "fee_nonrefundable": True, "seat_availability_guaranteed": False,
                   "validity_rule": "Membership must be active at both booking and departure; expiry is exclusive.",
                   "future_offer_prices_and_quotas_unknown": True, "no_automatic_renewal": True}
+    membership['current_validity_field_meaning']='membership_valid_for_departure describes the current pass only; it does not describe eligibility after buying a new pass.'
+    membership['join_now']={'activation':'immediate_on_successful_payment',
+                            'available':bool(state['policy']['enabled'] and not active and not c['joined_this_run']
+                                             and _cents(state['policy']['membership_fee'])<=c['budget_cents']),
+                            'new_expiry_day':round(state['day']+state['config']['membership_days'],6),
+                            'fee_affordable':_cents(state['policy']['membership_fee'])<=c['budget_cents'],
+                            'wallet_after_fee':_money(c['budget_cents']-_cents(state['policy']['membership_fee'])),
+                            'reserves_a_seat':False}
     # Policy names/hashes are audit metadata, never a cue in the LLM prompt.
     out = {"packet_id": f"decision:{event['event_id']}", "stage": event["stage"], "customer_id": event["customer_id"],
            "customer": p, "person": p, "day": round(state["day"], 6), "date": _date(state, state["day"]),
@@ -477,6 +537,8 @@ def _observation(state, event):
         out["term_outcome"]["observed_until_membership_expiry"] = c["membership_expires"] is not None and state["day"] >= c["membership_expires"]
         out["term_outcome"]["catalogue_scope"] = "Every planned trip in this finite synthetic catalogue is explicitly listed; no unprocessed future trip is assumed. This is not an estimate of a full airline network."
     out["legal_options"] = out["options"]
+    if stage=='subscription':
+        out['subscription_comparisons']=subscription_comparisons(out)
     return out
 
 

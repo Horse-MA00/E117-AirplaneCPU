@@ -75,7 +75,8 @@ class Store:
                 'currently_bookable': 0 if historical or day == 0 or cutoff_passed else min(outstanding, remaining_ceiling),
                 'protection_shortfall': max(0, outstanding - remaining_ceiling),
                 'next_release_day': None if cutoff_passed else next((d for d in RELEASE_DAYS if d < day and d <= last_day and not any(r['day'] == d for r in rows)), None),
-                'simulation_day': last_day, 'blocked_reason': reason, 'round_history': history}
+                'simulation_day': last_day, 'blocked_reason': reason, 'round_history': history,
+                'historical_view': historical, 'sales_cutoff_passed': cutoff_passed}
 
     def release_status(self, flight, day, max_release):
         with self.connect() as c:

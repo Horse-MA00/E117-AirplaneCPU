@@ -1,0 +1,227 @@
+[
+  {
+    "code": "HND",
+    "name": "Tokyo Haneda",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "NRT",
+    "name": "Tokyo Narita",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "KIX",
+    "name": "Osaka Kansai",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "NGO",
+    "name": "Nagoya Chubu Centrair",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "FUK",
+    "name": "Fukuoka",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "OKA",
+    "name": "Okinawa Naha",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "HIJ",
+    "name": "Hiroshima",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "TAK",
+    "name": "Takamatsu",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "SDJ",
+    "name": "Sendai",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "KMQ",
+    "name": "Komatsu",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "ISG",
+    "name": "Ishigaki",
+    "region": "JP",
+    "status": "listed"
+  },
+  {
+    "code": "CTS",
+    "name": "Sapporo New Chitose",
+    "region": "JP",
+    "note": "Schedule unconfirmed",
+    "status": "requested"
+  },
+  {
+    "code": "ICN",
+    "name": "Seoul Incheon",
+    "region": "KR",
+    "status": "listed"
+  },
+  {
+    "code": "PUS",
+    "name": "Busan Gimhae",
+    "region": "KR",
+    "status": "listed"
+  },
+  {
+    "code": "TAE",
+    "name": "Daegu",
+    "region": "KR",
+    "status": "listed"
+  },
+  {
+    "code": "CJU",
+    "name": "Jeju",
+    "region": "KR",
+    "status": "listed"
+  },
+  {
+    "code": "TPE",
+    "name": "Taipei Taoyuan",
+    "region": "TW",
+    "status": "listed"
+  },
+  {
+    "code": "KHH",
+    "name": "Kaohsiung",
+    "region": "TW",
+    "status": "listed"
+  },
+  {
+    "code": "RMQ",
+    "name": "Taichung",
+    "region": "TW",
+    "status": "listed"
+  },
+  {
+    "code": "PKX",
+    "name": "Beijing Daxing",
+    "region": "CN",
+    "status": "listed"
+  },
+  {
+    "code": "CZX",
+    "name": "Changzhou Benniu",
+    "region": "CN",
+    "status": "listed"
+  },
+  {
+    "code": "WUX",
+    "name": "Wuxi Sunan Shuofang",
+    "region": "CN",
+    "status": "listed"
+  },
+  {
+    "code": "NGB",
+    "name": "Ningbo Lishe",
+    "region": "CN",
+    "status": "listed"
+  },
+  {
+    "code": "SYX",
+    "name": "Sanya Phoenix",
+    "region": "CN",
+    "status": "listed"
+  },
+  {
+    "code": "YIW",
+    "name": "Yiwu",
+    "region": "CN",
+    "status": "listed"
+  },
+  {
+    "code": "HFE",
+    "name": "Hefei Xinqiao",
+    "region": "CN",
+    "note": "Announced: 3 Dec 2026",
+    "serviceStartsOn": "2026-12-03",
+    "status": "announced"
+  },
+  {
+    "code": "BKK",
+    "name": "Bangkok Suvarnabhumi",
+    "region": "TH",
+    "status": "listed"
+  },
+  {
+    "code": "CNX",
+    "name": "Chiang Mai",
+    "region": "TH",
+    "status": "listed"
+  },
+  {
+    "code": "HKT",
+    "name": "Phuket",
+    "region": "TH",
+    "status": "listed"
+  },
+  {
+    "code": "HAN",
+    "name": "Hanoi Noi Bai",
+    "region": "VN",
+    "status": "listed"
+  },
+  {
+    "code": "DAD",
+    "name": "Da Nang",
+    "region": "VN",
+    "status": "listed"
+  },
+  {
+    "code": "PQC",
+    "name": "Phu Quoc",
+    "region": "VN",
+    "status": "listed"
+  },
+  {
+    "code": "SZB",
+    "name": "Kuala Lumpur Subang",
+    "region": "MY",
+    "status": "listed"
+  },
+  {
+    "code": "BKI",
+    "name": "Kota Kinabalu",
+    "region": "MY",
+    "status": "listed"
+  },
+  {
+    "code": "PEN",
+    "name": "Penang",
+    "region": "MY",
+    "status": "listed"
+  },
+  {
+    "code": "MNL",
+    "name": "Manila Ninoy Aquino",
+    "region": "PH",
+    "status": "listed"
+  },
+  {
+    "code": "CRK",
+    "name": "Clark",
+    "region": "PH",
+    "status": "listed"
+  }
+]

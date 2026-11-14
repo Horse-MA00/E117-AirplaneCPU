@@ -103,7 +103,8 @@ class ThreeRoundStoreTests(unittest.TestCase):
         self.assertEqual(sum(x is not None for x in offers), 1)
 
     def test_daily_forecast_separates_risk_ceiling_and_release_opportunity(self):
-        f = {'releasable_seats': 58, 'assumptions': []}
+        f = {'capacity':180,'booked_seats':65,'available_seats':115,'protection_p90':57,
+             'releasable_seats': 58, 'assumptions': []}
         with patch.object(server, 'store', return_value=self.s), patch.object(server, 'forecast_for', return_value=f):
             response = server.post('/api/forecast', {'flight_id': 'f', 'days_to_departure': 13})['forecast']
             self.assertEqual(response['risk_release_ceiling'], 58)

@@ -39,6 +39,7 @@ def create_scoped_market(scope, config, seed, policy):
          'forecast': None, 'quota_history': [], 'quota_cohorts': [], 'background_requested': 0,
          'background_denied': 0, 'scenario_scoring_only': 'selected_flight_independent_continuation'}
     state['flights'] = {fid: f}
+    state['member_offer_exposure'] = {'packet_ids': [], 'customer_ids': [], 'bookable_packet_ids': []}
     events = []
     future_prices = {r['days_to_departure']: r.get('normal_base_fare') for r in data.history(fid)}
     recent = [r for r in history if day <= r['days_to_departure'] < day+14]
@@ -98,6 +99,10 @@ def attribute_result(result, state, term_trips=3):
     costs = ledger['total_cost']-excluded_service
     purchased = [b for b in state['bookings'].values() if b['customer_id'] is not None]
     flown = [b for b in purchased if b['status']=='flown']
+    member = [b for b in purchased if b.get('member_seats',0)>0]
+    regular = [b for b in purchased if b.get('normal_seats',b['party_size']-b.get('member_seats',0))>0]
+    released = sum(c['issued'] for f in state.get('flights',{}).values() for c in f.get('quota_cohorts',[]))
+    exposure = state.get('member_offer_exposure',{})
     result.update(full_cash_contribution=result['contribution'], contribution=round(revenue-costs,2),
                   profit=round(revenue-costs,2), attributed_revenue=round(revenue,2), attributed_cost=round(costs,2),
                   profit_margin=(revenue-costs)/revenue if revenue>0 else None,
@@ -105,8 +110,45 @@ def attribute_result(result, state, term_trips=3):
                   tickets=sum(b['party_size'] for b in purchased),
                   fulfilled_buyers=len({b['customer_id'] for b in flown}),
                   fulfilled_tickets=sum(b['party_size'] for b in flown),
+                  member_buyers=len({b['customer_id'] for b in member}),
+                  regular_buyers=len({b['customer_id'] for b in regular}),
+                  member_tickets=sum(b.get('member_seats',0) for b in purchased),
+                  regular_tickets=sum(b.get('normal_seats',b['party_size']-b.get('member_seats',0)) for b in purchased),
+                  cancelled_bookings=sum(b['status']=='cancelled' for b in purchased),
+                  fulfilled_bookings=len(flown),
+                  cancelled_tickets=sum(b['party_size'] for b in purchased if b['status']=='cancelled'),
+                  member_seats_released=released, member_supply_exposure=released,
+                  member_offer_observations=len(exposure.get('packet_ids',[])),
+                  member_offer_customers=len(exposure.get('customer_ids',[])),
+                  member_bookable_observations=len(exposure.get('bookable_packet_ids',[])),
+                  profit_components=_profit_components(ledger,term_trips),
                   scope_flight_id=state['config']['flight_scope']['flight_id'],
                   annual_fee_allocation=1/term_trips)
+    if 'ledger_entries' in state:
+        groups = {group:{} for group in ('agent','background','program')}
+        for entry in state['ledger_entries']:
+            booking = state['bookings'].get(entry['id'])
+            group = ('agent' if booking['customer_id'] is not None else 'background') if booking else ('agent' if entry['kind']=='membership' else 'program')
+            for key in _COMPONENTS:
+                groups[group][key] = groups[group].get(key,0)+entry.get(key,0)
+        result['profit_attribution'] = {}
+        for group, cents in groups.items():
+            components = _profit_components({k:_money(v) for k,v in cents.items()},term_trips)
+            income = sum(v for k,v in components.items() if k.endswith('_revenue'))
+            expense = sum(v for k,v in components.items() if k.endswith('_cost'))
+            result['profit_attribution'][group] = {**components,'revenue':round(income,2),
+                'cost':round(expense,2),'contribution':round(income-expense,2)}
+        result['profit_attribution_reconciled'] = abs(sum(g['contribution'] for g in result['profit_attribution'].values())-result['contribution']) <= .011
     result['assumptions'].append('Single selected-flight replay: one third of new annual pass income/service cost is attributed to this flight. Full fee is charged once; other trips are not simulated, so this is not annual profit or an optimal annual membership fee.')
     result['assumptions'].append('Buyers are distinct simulated customer households with an accepted booking, including later cancellations; tickets count their accepted party seats. Background requests are excluded. Fulfilled buyers/tickets count only flown bookings.')
+    result['assumptions'].append('Member and regular buyer groups may overlap: companions pay regular fares and a household can rebook. Released member seats count issued quota once; offer exposure counts the actual observations that contained a member offer.')
     return result
+
+
+_COMPONENTS = ('membership_revenue','normal_base_revenue','member_base_revenue','ancillary_revenue',
+               'cancellation_revenue','passenger_cost','ancillary_cost','membership_service_cost','program_cost')
+
+
+def _profit_components(ledger,term_trips):
+    return {key:round(ledger.get(key,0)/(term_trips if key in ('membership_revenue','membership_service_cost') else 1),2)
+            for key in _COMPONENTS}
