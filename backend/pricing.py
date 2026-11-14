@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 from itertools import product
+from backend.release_policy import RELEASE_DAYS, VERSION as RELEASE_VERSION, release_budget
 import numpy as np
 
 
@@ -131,39 +132,62 @@ def _remaining_protection(prediction, opening):
 def _run(world, candidate, cfg, include_events=False):
     p, v, opening, fraction = candidate
     pred = world["forecast"]
+    release_days = [d for d in RELEASE_DAYS if d <= int(pred.get("days_to_departure", 28))]
+    opening = release_days[0] if release_days else 0
     n = cfg["customers"]
     releasable = max(0, int(pred.get("releasable_seats", 0)))
+    initial_available = int(pred.get("available_seats", world["events"][0]["available"] if world["events"] else 0))
+    # Zero caused by today's reserve can recover at a later fixed round. Zero
+    # despite positive protected capacity is an external issuance/quality gate;
+    # the quick screen must not silently bypass that gate with a tail curve.
+    issuance_blocked = releasable == 0 and initial_available > math.ceil(pred.get("protection_p90", 0))
+    potential_supply = 0 if issuance_blocked else max(
+        [max(0, initial_available - _remaining_protection(pred, d)) for d in release_days] or [0])
     # Expected service is a public conservative scenario, not the user's future
     # realized seat assignment. It penalizes selling too many passes for supply.
     expected_requests = max(1., n*float(world["expected_trips"].mean())*.5)
-    supply_probability = min(.7, cfg["flights"]*releasable*fraction/expected_requests)
+    supply_probability = min(.7, cfg["flights"]*potential_supply*fraction/expected_requests)
     notice_match = np.minimum(1, opening/np.maximum(1, world["min_notice"]))
     value = world["expected_trips"]*world["flexibility"]*notice_match*supply_probability*max(0, cfg["normal_base_fare"]-p)*cfg["interest_multiplier"]
     probability = 1/(1+np.exp(np.clip(-(value-v-world["friction"])/100, -50, 50)))
     members = world["join_uniform"] < probability
     # Do not charge memberships if the model permits no member supply at all.
-    if not releasable:
+    if not potential_supply:
         members[:] = False
     used = np.zeros(n, bool)
     member_bookings = normal_bookings = member_requests = switched = 0
     flights, logs = [], []
     for flight_index, e in enumerate(world["events"]):
-        seats, quota, opened = e["available"], 0, False
+        seats, quota = e["available"], 0
         sold_member = sold_normal = 0
+        cohorts, round_history = [], []
+        remaining_rounds = list(release_days)
+        protection = _remaining_protection(pred, int(pred.get("days_to_departure", 28)))
+
+        def issue_due_rounds(day):
+            nonlocal quota, protection
+            while remaining_rounds and remaining_rounds[0] >= day:
+                round_day = remaining_rounds.pop(0)
+                protection = _remaining_protection(pred, round_day)
+                if issuance_blocked:
+                    protection = max(protection, seats)
+                budget = release_budget(seats, protection, quota, fraction)
+                quota = budget["remaining_quota"]
+                cohorts.append({"round_day": round_day, "issued": budget["new_allocation"],
+                                "remaining": budget["new_allocation"], "sold": 0, "expired": 0})
+                round_history.append({"days_to_departure": round_day, **budget})
+
         for customer, was_normal, d, willingness in zip(e["ids"], e["normal"], e["days"], e["willingness"]):
-            if d <= opening and not opened:
-                # One total allotment per flight. Current seats are observable;
-                # remaining protection comes from the frozen baseline forecast.
-                protection = _remaining_protection(pred, opening)
-                quota = max(0, min(releasable, seats-protection))
-                quota = int(math.floor(quota*fraction))
-                opened = True
+            issue_due_rounds(d)
             eligible = bool(members[customer] and d <= opening and d >= world["min_notice"][customer])
             wants_member = eligible and (bool(was_normal) or willingness >= p+cfg["mandatory_fees"])
             action = "DECLINE"
             if wants_member:
                 member_requests += 1
-            if wants_member and quota > 0 and seats > 0:
+            if wants_member and quota > 0 and seats > protection:
+                cohort = next(c for c in cohorts if c["remaining"] > 0)
+                cohort["remaining"] -= 1
+                cohort["sold"] += 1
                 quota -= 1
                 seats -= 1
                 sold_member += 1
@@ -172,17 +196,22 @@ def _run(world, candidate, cfg, include_events=False):
                 action = "BUY_MEMBER"
             elif was_normal and seats > 0:
                 seats -= 1
+                protection = max(0, protection - 1)
                 sold_normal += 1
                 action = "BUY_REGULAR"
             if include_events and len(logs) < 100:
                 logs.append({"customer_id": f"SYN-{customer:04d}", "trip_id": f"F{flight_index:03d}-C{customer:04d}",
                              "day": int(d), "action": action, "is_member": bool(members[customer]),
                              "baseline_normal_intent": bool(was_normal), "source": "synthetic_choice_model"})
+        issue_due_rounds(0)
+        for cohort in cohorts:
+            cohort["expired"] = cohort["remaining"]
+            cohort["remaining"] = 0
         member_bookings += sold_member
         normal_bookings += sold_normal
         flights.append({"flight": flight_index, "departure_period_day": e["departure_period_day"],
                         "initial_available": e["available"], "member_bookings": sold_member,
-                        "normal_bookings": sold_normal, "remaining": seats})
+                        "normal_bookings": sold_normal, "remaining": seats, "quota_history": round_history, "quota_cohorts": cohorts})
     joined = int(members.sum())
     service = member_bookings/member_requests if member_requests else 0.
     unused = 1-float(used.sum())/joined if joined else 0.
@@ -195,7 +224,7 @@ def _run(world, candidate, cfg, include_events=False):
               "pass_through_fees_excluded": (member_bookings+normal_bookings)*cfg["mandatory_fees"]}
     profit = ledger["membership_revenue"]+ledger["member_ticket_revenue"]+ledger["normal_ticket_revenue"]+ledger["ancillary_margin"]-ledger["incremental_passenger_cost"]-ledger["membership_service_cost"]-ledger["program_cost"]
     feasible = bool(joined > 0 and service >= cfg["min_service_rate"] and unused <= cfg["max_unused_member_rate"])
-    return {"member_fare": p, "membership_fee": v, "open_day": opening, "release_fraction": fraction,
+    return {"member_fare": p, "membership_fee": v, "open_day": opening, "release_days": release_days, "release_policy_version": RELEASE_VERSION, "release_fraction": fraction,
             "members": joined, "member_bookings": member_bookings, "normal_bookings": normal_bookings,
             "member_requests": member_requests, "service_rate": round(service, 4),
             "unused_member_rate": round(unused, 4), "normal_to_member_switches": switched,
@@ -231,17 +260,19 @@ def optimize(forecast_result: dict, config: dict | None = None) -> dict:
                 "profit": round(float(np.mean([w["baseline_profit"] for w in worlds])), 2),
                 "normal_bookings": round(float(np.mean([w["baseline_normal"] for w in worlds])), 2),
                 "member_bookings": 0, "members": 0, "membership_fee": 0, "member_fare": 0,
-                "open_day": None, "release_fraction": 0, "service_rate": None,
+                "open_day": None, "release_days": [], "release_policy_version": RELEASE_VERSION, "release_fraction": 0, "service_rate": None,
                 "reason": "Keep ordinary sales; no membership fees collected."}
     candidates, trace = [], []
     best = dict(baseline)
-    if int(forecast_result.get("days_to_departure", 28)) == 0:
+    if int(forecast_result.get("days_to_departure", 28)) < min(RELEASE_DAYS):
         return {"config": cfg, "baseline": baseline, "best": best, "fixed_offer": None,
                 "candidates": [], "trace": [], "holdout": dict(baseline), "stress": [],
                 "example_events": [], "example_flights": [],
-                "assumptions": ["Sales cutoff reached. No future member offer may be issued."]}
+                "release_policy_version": RELEASE_VERSION, "release_days": [],
+                "assumptions": ["No future D28/D14/D7 release round remains. This screen never creates new quota between rounds."]}
     decision_day = max(1, int(forecast_result.get("days_to_departure", 28)))
-    openings = sorted({min(d, decision_day) for d in [28, 14, 7]}, reverse=True)
+    release_days = [d for d in RELEASE_DAYS if d <= decision_day]
+    openings = [release_days[0]]
     for index, candidate in enumerate(product([0, 30, 70, 100], [199, 399, 599, 799], openings, [.25, .5, .75, 1.])):
         result = _aggregate([_run(w, candidate, cfg) for w in worlds])
         result["candidate_id"] = index
@@ -265,8 +296,8 @@ def optimize(forecast_result: dict, config: dict | None = None) -> dict:
             stress.append(result)
     else:
         holdout = {**baseline, "purpose": "No offer is retained; no pass fees or incremental costs incurred."}
-    fixed = _aggregate([_run(w, (70, 399, min(14, decision_day), .5), cfg) for w in worlds])
-    return {"config": cfg, "baseline": baseline, "fixed_offer": fixed, "best": best,
+    fixed = _aggregate([_run(w, (70, 399, release_days[0], .5), cfg) for w in worlds])
+    return {"config": cfg, "release_policy_version": RELEASE_VERSION, "release_days": release_days, "baseline": baseline, "fixed_offer": fixed, "best": best,
             "candidates": candidates, "trace": trace, "holdout": holdout, "stress": stress,
             "example_events": detail["events"] if detail else [],
             "example_flights": detail["flights"] if detail else [],
@@ -275,7 +306,9 @@ def optimize(forecast_result: dict, config: dict | None = None) -> dict:
                             "Same customer identities, normal purchase intent and event randomness are replayed for every candidate.",
                             "At most one exogenous itinerary per customer per departure calendar day is assigned before either policy runs.",
                             "Normal base fares stay fixed; mandatory fees are assumed pass-through and excluded from contribution.",
-                            "Each flight receives one finite member allotment, after frozen NHPP protection; accepted bookings cannot exceed capacity.",
+                            "Each flight adds quota only at remaining D28/D14/D7 rounds. Each round subtracts all earlier valid unsold quota from its fractional protected-capacity target; FIFO usage, no between-round replenishment, cutoff expiry.",
+                            "This quick screen reuses frozen NHPP protection curves; the shared market re-estimates NHPP from new observations at each round.",
+                            "Membership interest uses potential later-round supply in the frozen curve, not guaranteed availability; a zero initial release despite positive protected capacity remains an issuance gate.",
                             "Pre-existing flight bookings are held constant in both arms; the ledger covers remaining sales and the full-term programme.",
                             "This finite flight catalogue is a supply scenario, not HK Express annual route coverage.",
                             "Search-set P10/P90 across few repeats are simulation spread, not confidence intervals or real market guarantees.",

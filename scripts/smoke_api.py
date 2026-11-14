@@ -7,13 +7,13 @@ def call(path,body=None):
 summary=call('/api/summary');assert summary['dataset']['rows']==200000
 flights=call('/api/flights')['flights'];assert len(flights)==1105
 found=None
-for f in flights[:20]:
+for f in flights:
  r=call('/api/forecast',{'flight_id':f['flight_id'],'days_to_departure':28})['forecast']
  if r['releasable_seats']>=2:found=f;break
 assert found
 id=found['flight_id']
 result=call('/api/optimize',{'flight_id':id,'days_to_departure':28,'config':{'customers':100}})
-assert len(result['candidates'])==192
+assert len(result['candidates'])==64
 cutoff=call('/api/optimize',{'flight_id':id,'days_to_departure':0,'config':{}})
 assert cutoff['best']['decision']=='NO_OFFER'
 assert call('/api/agents/run',{'count':14})['summary']['customers']==14

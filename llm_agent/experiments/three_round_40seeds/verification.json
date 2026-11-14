@@ -1,0 +1,38 @@
+{
+  "version": "three-round-release-v1",
+  "engine": "shared-market-v3",
+  "cases": 120,
+  "seeds": 40,
+  "round_decisions": {
+    "28": 1080,
+    "14": 1080,
+    "7": 1080
+  },
+  "rounds_with_prior_unsold": {
+    "28": 0,
+    "14": 121,
+    "7": 178
+  },
+  "new_quota_totals": {
+    "28": 3176,
+    "14": 2684,
+    "7": 4408
+  },
+  "all_accounting_and_quota_checks_pass": true,
+  "runtime": {
+    "provider_calls": 0,
+    "cache_hits": 0,
+    "environment_forced": 18477,
+    "deterministic_choices": 18510,
+    "validated_live_choices": 0,
+    "failures": 0,
+    "provider_successes": 0,
+    "transport_failures": 0,
+    "response_validation_failures": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "provider_attempts": 0
+  },
+  "scope": "fresh synthetic deterministic regression; no new live-provider calls; old experiments preserved"
+}

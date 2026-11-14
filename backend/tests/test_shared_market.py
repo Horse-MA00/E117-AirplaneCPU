@@ -27,6 +27,7 @@ def quoted_market(party=1):
     for flight in state["flights"].values():
         if flight["active"]:
             flight["member_remaining"] = 20
+            flight["quota_cohorts"] = [{"round_day": 28, "issued": 20, "remaining": 20, "sold": 0, "expired": 0}]
             flight["protection_remaining"] = 0
     observation = next_observation(state)
     apply_decision(state, {"action": "KEEP_MEMBERSHIP", "option_id": None})
@@ -184,16 +185,10 @@ class SharedMarketTests(unittest.TestCase):
         baseline = run_market(create_market({"flight_count": 6, "customer_count": 1}, 117, {"name": "NO_OFFER"}))
         self.assertEqual(baseline["ledger"]["program_cost"], 0)
 
-    def test_late_opening_has_subscription_opportunity(self):
-        state = create_market({"flight_count": 6, "customer_count": 1}, 117, {"membership_fee": 0, "open_day": 14})
-        joined_day = None
-        while (o := next_observation(state)) is not None:
-            decision = deterministic_decision(o)
-            if decision["action"] == "JOIN_PASS":
-                joined_day = o["day"]
-            apply_decision(state, decision)
-        self.assertIsNotNone(joined_day)
-        self.assertGreater(joined_day, min(f["departure_at"] for f in state["flights"].values()) - 15)
+    def test_new_policy_rejects_old_single_opening_configuration(self):
+        for opening in (7, 14):
+            with self.assertRaisesRegex(ValueError, "fixed"):
+                create_market({"flight_count": 6, "customer_count": 1}, 117, {"open_day": opening})
 
     def test_cancellation_legal_options_use_actual_flight_cutoff_boundary(self):
         for offset, legal in ((-1e-6, True), (0., False), (.01, False)):
@@ -221,7 +216,7 @@ class SharedMarketTests(unittest.TestCase):
     def test_regression_20261234_earlier_alternative_after_cancellation_cutoff(self):
         policies = [
             {"name": "NO_OFFER"},
-            {"name": "FIXED", "member_fare": 70, "membership_fee": 399, "open_day": 14, "release_fraction": .5},
+            {"name": "FIXED", "member_fare": 70, "membership_fee": 399, "open_day": 28, "release_fraction": .5},
             {"name": "CANDIDATE", "member_fare": 30, "membership_fee": 199, "open_day": 28, "release_fraction": .75},
         ]
         for policy in policies:

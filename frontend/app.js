@@ -1,4 +1,6 @@
 const $ = (id) => document.getElementById(id);
+const RELEASE_DAYS = [28, 14, 7];
+const roundLabel = (days) => days?.length ? days.map((day) => `D${day}`).join(' / ') : 'No future rounds';
 const state = { flights: [], flight: null, history: [], forecast: null, day: 28, candidates: [], best: null, loadedFlightId: null, request: 0, forecastRequest: 0, summary: null, offers: [], marketRun: null, marketReport: null, marketCases: [], marketRequest: 0, marketTimer: null, marketLoading: false };
 const number = (value, digits = 0) => value === null || value === undefined || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-HK', { maximumFractionDigits: digits });
 const money = (value) => value === null || value === undefined ? '—' : `HK$${number(value)}`;
@@ -18,7 +20,7 @@ async function api(path, body, options = {}) {
 }
 async function busy(button, callback) {
   clearError(); button.disabled = true; const previous = button.textContent; button.textContent = 'Working…';
-  try { await callback(); } catch (e) { error(e.message); } finally { button.disabled = false; button.textContent = previous; }
+  try { await callback(); } catch (e) { error(e.message); } finally { button.disabled = button.id === 'publish-button' ? !canPublish() : false; button.textContent = previous; }
 }
 function setView() {
   const name = ['flights', 'pricing', 'customers', 'market', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
@@ -92,12 +94,13 @@ function renderForecast() {
   text('empty-detail', `${percent(f.expected_empty_rate)} expected unsold`);
   text('protection-value', `${number(f.protection_p90)} seats`);
   text('chart-caption', `Predictive model bands; not a validated airline interval. Protection uses ${number(f.raw_protection_p90 ?? f.protection_p90)} model-percentile seats plus ${number(f.protection_allowance ?? 0)} allowance seats.`); text('release-value', `${number(f.releasable_seats)} seats`);
+  renderReleaseStatus(f);
   text('beta-label', `β ${number(f.beta, 4)} / day · ${number(f.rate_now, 2)} requests / day`);
   const context = `${state.flight.origin || '—'} → ${state.flight.destination || '—'} · ${(state.flight.departure_at || '').slice(0, 10)} · D${state.day}`;
-  text('pricing-context', `${context} · ${number(f.releasable_seats)} seats available for a new member allocation under this forecast.`);
+  text('pricing-context', `${context} · ${number(f.risk_release_ceiling ?? f.releasable_seats)} forecast risk ceiling · future release rounds: ${roundLabel(RELEASE_DAYS.filter((d) => d <= state.day))}.`);
   text('offer-flight-context', context);
   const qty = Math.max(0, Math.floor(Number(f.releasable_seats) || 0)); $('offer-quantity').max = qty; $('offer-quantity').value = Math.min(Math.max(1, value('offer-quantity')), qty) || 1;
-  $('publish-button').disabled = qty < 1 || state.day === 0;
+  $('publish-button').disabled = !canPublish();
   list('forecast-notes', f.assumptions || ['Synthetic booking histories; normal demand forecasts depend on the selected intensity model.']);
   const past = history.filter((r) => r.days_to_departure <= 28).map((r) => ({ day: Number(r.days_to_departure), value: Number(r.booked_seats ?? r.net_booked_seats) }));
   const future = (f.forecast_curve || []).map((r) => ({ day: Number(r.day ?? r.days_to_departure), value: Number(r.expected_booked), low: Number(r.p10), high: Number(r.p90) })).filter((r) => Number.isFinite(r.value) && r.day <= state.day).sort((a, b) => b.day - a.day);
@@ -105,6 +108,34 @@ function renderForecast() {
   const prices = history.filter((r) => r.days_to_departure <= 180 && (r.normal_total_fare ?? r.total_payable) !== null && (r.normal_total_fare ?? r.total_payable) !== undefined).map((r) => ({ day: Number(r.days_to_departure), value: Number(r.normal_total_fare ?? r.total_payable) }));
   drawChart('price-chart', prices, [], { yLabel: 'HKD', width: 620, height: 210, minDay: 180 });
   $('history-table').replaceChildren(...history.filter((r) => r.days_to_departure <= 28).reverse().map((r) => { const tr = element('tr'); [`D${r.days_to_departure}`, number(r.booked_seats ?? r.net_booked_seats), percent(r.empty_rate ?? r.empty_seat_rate), money(r.normal_total_fare ?? r.total_payable)].forEach((v) => tr.append(element('td', v))); return tr; }));
+  if (state.offers.length) renderOffers();
+}
+function canPublish() {
+  const f = state.forecast;
+  return Boolean(f && state.loadedFlightId && RELEASE_DAYS.includes(state.day) && f.releasable_seats > 0 && !f.release_status?.round_already_issued && !f.release_status?.blocked_reason);
+}
+function releaseExplanation(f) {
+  const r = f.release_status || {};
+  if (r.blocked_reason) return String(r.blocked_reason).replaceAll('_', ' ');
+  if (r.round_already_issued) return `D${state.day} has already been published. Each release round can be issued once.`;
+  if (!RELEASE_DAYS.includes(state.day)) return r.next_release_day ? `Observation only at D${state.day}. Next release round: D${r.next_release_day}. Existing valid offers remain available.` : 'No future release rounds. Existing valid offers can sell until cutoff; no new seats are issued.';
+  return `D${state.day} release round: subtract all earlier valid unsold quota before issuing additional seats. Publication closes this round.`;
+}
+function renderReleaseStatus(f) {
+  const r = f.release_status || {};
+  text('risk-release-value', `${number(r.safe_capacity ?? Math.max(0, Number(f.risk_release_ceiling ?? f.releasable_seats) - Number(r.member_sold || 0)))} seats`);
+  text('member-sold-value', `${number(r.member_sold ?? 0)} seats`);
+  text('prior-quota-value', `${number(r.previous_valid_unsold ?? r.prior_valid_unsold ?? 0)} seats`);
+  text('active-quota-value', `${number(r.total_active_unsold ?? 0)} seats`);
+  const explanation = releaseExplanation(f) + (r.currently_bookable == null ? '' : ` Currently bookable member seats: ${number(r.currently_bookable)}. Valid quota above the current safety capacity: ${number(r.protection_shortfall ?? 0)}.`);
+  text('release-status', explanation); text('offer-release-status', explanation);
+  const rows = r.round_history || [];
+  $('demo-round-table').replaceChildren(...rows.map((row) => {
+    const tr = element('tr'), th = element('th', `D${row.day}`); th.scope = 'row'; tr.append(th);
+    for (const item of [number(row.quantity), number(row.sold), number(row.remaining), `${row.valid ? 'Valid' : 'Not active at this date'}${row.release_version && row.release_version !== 'three-round-release-v1' ? ' · historical rule' : ''}`]) tr.append(element('td', item));
+    return tr;
+  }));
+  if (!rows.length) { const tr = element('tr'), td = element('td', 'No member quota has been published for this flight.'); td.colSpan = 5; tr.append(td); $('demo-round-table').append(tr); }
 }
 function chooseDay(day) {
   invalidatePricing();
@@ -124,10 +155,10 @@ function renderPolicy(candidate) {
   const noOffer = candidate.decision === 'NO_OFFER';
   $('send-market-candidate').disabled = noOffer || candidate.feasible === false || value('term-days') !== 365;
   text('best-fare', noOffer ? 'No offer' : money(fare(candidate))); text('best-fee', noOffer ? '—' : money(fee(candidate))); text('best-profit', money(candidateProfit(candidate)));
-  const details = [ ['Decision', noOffer ? 'Do not launch this offer' : 'Offer subject to inventory'], ['Earliest opening', candidate.open_day == null ? '—' : `D${candidate.open_day}`], ['Release share', percent(candidate.release_fraction)], ['Simulated members', number(candidate.members)], ['Member bookings', number(candidate.member_bookings)], ['Request fulfilment', percent(candidate.service_rate)], ['Feasible', candidate.feasible === false ? 'No' : 'Yes'] ];
+  const details = [ ['Decision', noOffer ? 'Do not launch this offer' : 'Offer subject to inventory'], ['Future release rounds', roundLabel(candidate.release_days || (candidate.open_day == null ? [] : [candidate.open_day]))], ['Release share', percent(candidate.release_fraction)], ['Simulated members', number(candidate.members)], ['Member bookings', number(candidate.member_bookings)], ['Request fulfilment', percent(candidate.service_rate)], ['Feasible', candidate.feasible === false ? 'No' : 'Yes'] ];
   $('policy-detail').replaceChildren(...details.flatMap(([label, val]) => [element('dt', label), element('dd', val)]));
-  $('apply-policy').textContent = candidate.open_day != null && candidate.open_day < state.day ? `Offer opens at D${candidate.open_day} — select that day first` : 'Prepare this member offer';
-  $('apply-policy').disabled = (candidate.open_day != null && candidate.open_day < state.day) || value('term-days') !== 365 || noOffer || candidate.feasible === false || !state.forecast || state.day === 0 || state.forecast.releasable_seats < 1;
+  $('apply-policy').textContent = !RELEASE_DAYS.includes(state.day) ? 'Select a release day to prepare an offer' : 'Prepare this member offer';
+  $('apply-policy').disabled = !RELEASE_DAYS.includes(state.day) || state.forecast?.release_status?.round_already_issued || Boolean(state.forecast?.release_status?.blocked_reason) || value('term-days') !== 365 || noOffer || candidate.feasible === false || !state.forecast || state.day === 0 || state.forecast.releasable_seats < 1;
 }
 function renderPricing(data) {
   state.candidates = data.candidates || []; state.best = data.best || null;
@@ -143,7 +174,7 @@ function renderPricing(data) {
   const comparisons = [['No membership',data.baseline],['Fixed offer',data.fixed_offer],['Selected policy',data.best],...(data.stress || []).map((r) => [r.scenario,r])].filter(([,r]) => r);
   $('stress-table').replaceChildren(...comparisons.map(([name,r]) => {const tr=element('tr');[name,money(r.incremental_profit),percent(r.service_rate),r.feasible ? 'Yes' : 'No'].forEach((v)=>tr.append(element('td',v)));return tr;}));
   const ranked = [...state.candidates].sort((a, b) => Number(candidateProfit(b)) - Number(candidateProfit(a)));
-  $('candidate-table').replaceChildren(...ranked.slice(0, 40).map((c) => { const tr = element('tr'); [money(fare(c)), money(fee(c)), c.open_day == null ? '—' : `D${c.open_day}`, percent(c.release_fraction), money(candidateProfit(c)), c.feasible === false ? 'No' : 'Yes'].forEach((v) => tr.append(element('td', v))); return tr; }));
+  $('candidate-table').replaceChildren(...ranked.slice(0, 40).map((c) => { const tr = element('tr'); [money(fare(c)), money(fee(c)), roundLabel(c.release_days || (c.open_day == null ? [] : [c.open_day])), percent(c.release_fraction), money(candidateProfit(c)), c.feasible === false ? 'No' : 'Yes'].forEach((v) => tr.append(element('td', v))); return tr; }));
   const fares = [...new Set(state.candidates.map(fare).filter((v) => v != null))].sort((a, b) => a - b);
   const fees = [...new Set(state.candidates.map(fee).filter((v) => v != null))].sort((a, b) => a - b);
   const map = $('heatmap'); map.replaceChildren(); map.style.gridTemplateColumns = `70px repeat(${Math.max(1, fees.length)}, minmax(0, 1fr))`;
@@ -152,7 +183,7 @@ function renderPricing(data) {
   fares.forEach((p) => { map.append(element('span', `$${p}`, 'label')); fees.forEach((v) => {
     const matching = ranked.filter((c) => fare(c) === p && fee(c) === v && c.feasible !== false); const c = matching[0];
     const button = element('button', c ? number(candidateProfit(c)) : 'Infeasible', 'cell'); button.type = 'button'; button.disabled = !c; button.setAttribute('aria-pressed', 'false');
-    if (c) { const contribution = Number(candidateProfit(c)); const intensity = .06 + Math.min(1, Math.abs(contribution) / maxAbs) * .15; button.style.background = contribution >= 0 ? `rgba(0,47,167,${intensity})` : `rgba(23,25,30,${intensity})`; button.setAttribute('aria-label', `Base fare HK$${p}, membership HK$${v}, incremental contribution HK$${number(contribution)}`); button.addEventListener('click', () => { map.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false')); button.setAttribute('aria-pressed', 'true'); text('heatmap-detail', `Fare ${money(p)} · membership ${money(v)} · opens D${c.open_day} · releases ${percent(c.release_fraction)} · contribution ${money(contribution)}.`); }); }
+    if (c) { const contribution = Number(candidateProfit(c)); const intensity = .06 + Math.min(1, Math.abs(contribution) / maxAbs) * .15; button.style.background = contribution >= 0 ? `rgba(0,47,167,${intensity})` : `rgba(23,25,30,${intensity})`; button.setAttribute('aria-label', `Base fare HK$${p}, membership HK$${v}, incremental contribution HK$${number(contribution)}`); button.addEventListener('click', () => { map.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false')); button.setAttribute('aria-pressed', 'true'); text('heatmap-detail', `Fare ${money(p)} · membership ${money(v)} · rounds ${roundLabel(c.release_days)} · target share ${percent(c.release_fraction)} · contribution ${money(contribution)}.`); }); }
     map.append(button);
   }); });
 }
@@ -166,9 +197,18 @@ $('optimize-form').addEventListener('submit', (event) => { event.preventDefault(
   if (flightId !== state.loadedFlightId || day !== state.day) throw new Error('The selected flight or date changed. Run a new comparison for the current selection.');
   renderPricing(data); notify(`Compared ${number(state.candidates.length)} candidate policies. Results are conditional on the simulation assumptions.`);
 }); });
-$('apply-policy').addEventListener('click', () => { if (!state.best || !state.forecast) return; $('offer-fare').value = fare(state.best); $('member-fee').value = fee(state.best); const max = Number(state.forecast.releasable_seats); $('offer-quantity').value = Math.max(1, Math.floor(max * Number(state.best.release_fraction || 1))); location.hash = 'members'; notify('The policy has been copied into the offer form. Review its quantity and price before publishing.'); });
+$('apply-policy').addEventListener('click', () => {
+  if (!state.best || !state.forecast) return;
+  const f = state.forecast, r = f.release_status || {};
+  const safe = r.safe_capacity ?? Math.max(0, Number(f.risk_release_ceiling ?? f.releasable_seats) - Number(r.member_sold || 0));
+  const target = Math.floor(safe * Number(state.best.release_fraction ?? 1));
+  const quantity = Math.min(Number(f.releasable_seats), Math.max(0, target - Number(r.total_active_unsold || 0)));
+  if (quantity < 1) { notify('Earlier valid quota already meets this policy target. No additional seats can be prepared.'); return; }
+  $('offer-fare').value = fare(state.best); $('member-fee').value = fee(state.best); $('offer-quantity').value = quantity;
+  location.hash = 'members'; notify('New allocation after prior valid quota has been copied into the offer form. Review its quantity and price before publishing.');
+});
 $('export-candidates').addEventListener('click', () => {
-  const keys = ['member_fare','membership_fee','open_day','release_fraction','incremental_profit','members','member_bookings','service_rate','feasible'];
+  const keys = ['member_fare','membership_fee','release_days','release_fraction','incremental_profit','members','member_bookings','service_rate','feasible'];
   const escape = (v) => `"${String(v ?? '').replace(/^[=+@-]/, "'$&").replaceAll('"', '""')}"`;
   const csv = [keys.join(','), ...state.candidates.map((c) => keys.map((key) => escape(c[key])).join(','))].join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); const a = element('a'); a.href = url; a.download = 'uoption-candidate-policies.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -292,6 +332,8 @@ function renderMarketReport(report, runId) {
   text('market-call-detail', `${number(runtime.cache_hits)} cache hits · ${number(runtime.failures)} failures`);
   text('market-source-counts', `Run-wide provenance: ${number(runtime.deterministic_choices)} deterministic choices · ${number(runtime.validated_live_choices)} validated live choices (including ${number(runtime.cache_hits)} cached responses) · ${number(runtime.environment_forced)} environment-forced actions. Forced actions are not model choices.`);
   const cases = report.case_results || [];
+  const currentRule = cases.length && cases.every((row) => row.policy?.release_days?.join(',') === RELEASE_DAYS.join(','));
+  text('market-rule-note', currentRule ? 'Current rule: D28 / D14 / D7. Each round adds only the shortfall after all prior valid unsold quota.' : 'Historical or unversioned experiment: its original release rules are preserved. These results are not evidence for the current three-round rule.');
   state.marketCases = cases;
   const pairs = new Map((report.paired_differences || []).map((pair) => [pair.case_id, pair]));
   const groupKey = (row) => JSON.stringify([row.mode, row.split || 'development', typeof row.policy === 'string' ? row.policy : row.policy?.name]);
@@ -315,7 +357,7 @@ function renderMarketReport(report, runId) {
     const { first: row, metrics: m, delta } = group;
     const tr = element('tr'), digits = group.rows.length > 1 ? 1 : 0;
     const nameCell = element('td'); nameCell.append(element('strong', marketLabel(row.policy)));
-    nameCell.append(element('div', row.policy?.enabled === false ? 'Normal sales only' : `${money(row.policy?.member_fare)} + ${money(row.policy?.membership_fee)} membership · D${row.policy?.open_day} · ${percent(row.policy?.release_fraction)} release`, 'market-policy-status'));
+    nameCell.append(element('div', row.policy?.enabled === false ? 'Normal sales only' : `${money(row.policy?.member_fare)} + ${money(row.policy?.membership_fee)} membership · ${row.policy?.release_days ? roundLabel(row.policy.release_days) : `historical opening D${row.policy?.open_day}`} · ${percent(row.policy?.release_fraction)} target share`, 'market-policy-status'));
     nameCell.append(element('div', `${number(group.rows.length)} seed${group.rows.length > 1 ? 's' : ''} · ${row.mode} · ${row.split || 'development'}`, 'market-policy-status')); tr.append(nameCell);
     for (const item of [`${number(group.completed)}/${number(group.rows.length)} complete`, number(m.members, digits), number(m.member_flown, digits), number(m.normal_seats_flown, digits), money(m.contribution), money(delta)]) tr.append(element('td', item));
     return tr;
@@ -353,11 +395,23 @@ async function loadMarketCase() {
       for (const item of [`${flight.flight_id} · ${flight.destination}`, number(flight.legacy_seats), number(normal), number(member), number(flight.capacity - flight.occupied)]) tr.append(element('td', item));
       return tr;
     }));
+    renderMarketRounds(flights, metrics?.version);
     const selectedPerson = $('market-person-select').value;
     marketOptions('market-person-select', Object.entries(world.customers || {}).map(([id, customer]) => [id, `${id} · ${customer.person?.segment_label || customer.person?.segment || 'Synthetic traveller'}`]), selectedPerson);
     renderMarketJourney();
-  } catch (e) { if (request === state.marketCaseRequest) { state.marketCase = null; text('market-ledger', `Unable to load this policy: ${e.message}`); $('market-flight-table').replaceChildren(); $('market-journey-events').replaceChildren(); } }
+  } catch (e) { if (request === state.marketCaseRequest) { state.marketCase = null; text('market-ledger', `Unable to load this policy: ${e.message}`); $('market-flight-table').replaceChildren(); $('market-round-table').replaceChildren(); $('market-journey-events').replaceChildren(); } }
   finally { if (request === state.marketCaseRequest) $('market-detail-grid')?.setAttribute('aria-busy', 'false'); }
+}
+function renderMarketRounds(flights, version) {
+  const rows = flights.flatMap((flight) => (flight.quota_history || []).map((round) => ({ ...round, flight_id: flight.flight_id })));
+  const currentRule = version === 'shared-market-v3' || (rows.length && rows.every((row) => row.policy_rule_version === 'three-round-release-v1'));
+  text('market-round-note', currentRule ? 'Target = floor(unprotected physical seats × share). New seats = max(0, target − earlier valid unsold quota). Prior quota remains recorded; actual sales still respect protection and capacity.' : 'Historical experiment: earlier versions did not record additive round cohorts. Missing carry and new-allocation values are shown as unavailable, not reconstructed.');
+  $('market-round-table').replaceChildren(...rows.map((row) => {
+    const tr = element('tr'), th = element('th', `${row.flight_id} · D${row.days_to_departure}`); th.scope = 'row'; tr.append(th);
+    for (const val of [row.target_quota, row.prior_valid_unsold, row.new_allocation, row.remaining_quota, row.protection_shortfall]) tr.append(element('td', number(val)));
+    return tr;
+  }));
+  if (!rows.length) { const tr = element('tr'), td = element('td', 'No release-round records are available at this checkpoint.'); td.colSpan = 6; tr.append(td); $('market-round-table').append(tr); }
 }
 function renderMarketJourney() {
   const world = state.marketCase, personId = $('market-person-select').value, customer = world?.customers?.[personId];
@@ -381,7 +435,7 @@ function renderMarketJourney() {
 $('market-form').addEventListener('submit', async (event) => {
   event.preventDefault(); clearError(); state.marketLoading = true; marketControlState();
   try {
-    const data = await api('/api/market/runs', { mode: $('market-mode').value, seed: value('market-seed'), member_fare: value('market-fare'), membership_fee: value('market-fee'), open_day: value('market-open'), release_fraction: value('market-release'), max_calls: $('market-mode').value === 'live' ? value('market-call-budget') : 0 });
+    const data = await api('/api/market/runs', { mode: $('market-mode').value, seed: value('market-seed'), member_fare: value('market-fare'), membership_fee: value('market-fee'), release_fraction: value('market-release'), max_calls: $('market-mode').value === 'live' ? value('market-call-budget') : 0 });
     selectMarketRun(data.run_id); state.marketStatus = data.status; await loadMarketRuns();
   } catch (e) { error(e.message); }
   finally { state.marketLoading = false; marketControlState(); }
@@ -402,8 +456,8 @@ $('market-mode').addEventListener('change', marketControlState);
 $('send-market-candidate').addEventListener('click', () => {
   const best = state.best; if (!best || best.decision === 'NO_OFFER') return;
   $('market-fare').value = fare(best); $('market-fee').value = fee(best);
-  $('market-open').value = best.open_day; $('market-release').value = best.release_fraction;
-  text('market-candidate-origin', `Candidate copied from fast screening: ${money(fare(best))} base fare, ${money(fee(best))} membership, opens D${best.open_day}, releases ${percent(best.release_fraction)}. This transfers a hypothesis; the shared market will evaluate its own full-term outcomes.`);
+  $('market-release').value = best.release_fraction;
+  text('market-candidate-origin', `Candidate copied from fast screening: ${money(fare(best))} base fare, ${money(fee(best))} membership, target share ${percent(best.release_fraction)}. This transfers a price/share hypothesis into a new full-term world with all D28 / D14 / D7 rounds; it does not copy this flight's previous allocations.`);
   location.hash = 'market';
 });
 marketControlState();
@@ -413,20 +467,24 @@ async function loadOffers() {
 }
 function renderOffers() {
   $('offers-list').replaceChildren(...state.offers.map((offer) => {
-    const card = element('article', undefined, 'offer-card'); const knownFlight = state.flights.find((f) => f.flight_id === offer.flight_id) || {};
+    const card = element('article', undefined, 'offer-card'); card.dataset.offerId = offer.offer_id || offer.id; const knownFlight = state.flights.find((f) => f.flight_id === offer.flight_id) || {};
     const intro = element('div'); intro.append(element('h3', `${offer.origin || knownFlight.origin || '—'} → ${offer.destination || knownFlight.destination || '—'}`)); intro.append(element('p', (offer.departure_at || knownFlight.departure_at || '').slice(0, 10))); intro.append(element('p', offer.flight_id));
     const price = element('div'); price.append(element('div', money(offer.total_payable ?? (Number(offer.base_fare) + Number(offer.mandatory_fees ?? offer.fees ?? 0))), 'offer-price'));
     price.append(element('p', `${money(offer.base_fare)} base fare + ${money(offer.mandatory_fees ?? offer.fees ?? 0)} mandatory fees`));
     const inventory = element('div'); const remaining = offer.remaining ?? offer.remaining_seats ?? offer.available ?? offer.quantity;
-    inventory.append(element('h3', `${number(remaining)} seats`)); inventory.append(element('p', 'Limited member inventory'));
-    const button = element('button', Number(remaining) > 0 ? 'Reserve a seat' : 'Sold out', 'button primary'); button.type = 'button'; button.disabled = !(Number(remaining) > 0);
-    button.addEventListener('click', () => busy(button, async () => { const result = await api('/api/bookings', { offer_id: offer.offer_id || offer.id, customer_id: $('customer-id').value }); const booking = result.booking || result; text('booking-result', `Simulated booking confirmed: ${booking.booking_id || booking.id || 'record saved'}. ${money(booking.total_payable ?? booking.total ?? offer.total_payable)} due for this flight. No payment was taken and no real ticket was issued.`); $('booking-result').hidden = false; await loadOffers(); }));
+    inventory.append(element('h3', `${number(remaining)} unspent quota`)); inventory.append(element('p', `D${offer.day} allocation · ${offer.release_version === 'three-round-release-v1' ? 'valid until cutoff' : 'historical expiry rule'}`));
+    inventory.append(element('p', 'Subject to current protection and physical seats; checked on booking.'));
+    const protectionBlocked = offer.flight_id === state.loadedFlightId && state.forecast?.release_status?.currently_bookable === 0;
+    const button = element('button', Number(remaining) <= 0 ? 'Sold out' : protectionBlocked ? 'Unavailable now' : 'Reserve a seat', 'button primary'); button.type = 'button'; button.disabled = !(Number(remaining) > 0) || protectionBlocked;
+    button.setAttribute('aria-label', `${button.textContent} · ${offer.flight_id} · D${offer.day} allocation`);
+    button.addEventListener('click', () => busy(button, async () => { const result = await api('/api/bookings', { offer_id: offer.offer_id || offer.id, customer_id: $('customer-id').value, days_to_departure: offer.flight_id === state.loadedFlightId ? state.day : (offer.sim_day ?? offer.day) }); const booking = result.booking || result; text('booking-result', `Simulated booking confirmed: ${booking.booking_id || booking.id || 'record saved'}. ${money(booking.total_payable ?? booking.total ?? offer.total_payable)} due for this flight. No payment was taken and no real ticket was issued.`); $('booking-result').hidden = false; await loadOffers(); if (offer.flight_id === state.loadedFlightId) { await loadForecast(); renderOffers(); } }));
     card.append(intro, price, inventory, button); return card;
   }));
   if (!state.offers.length) $('offers-list').append(element('p', 'No member offers yet. Publish an offer from the selected flight above.', 'empty-state'));
 }
 $('offer-form').addEventListener('submit', (event) => { event.preventDefault(); busy($('publish-button'), async () => {
   if (!state.loadedFlightId || !state.forecast) throw new Error('Load a valid flight forecast first.');
+  if (!RELEASE_DAYS.includes(state.day) || state.forecast.release_status?.round_already_issued || state.forecast.release_status?.blocked_reason) throw new Error(releaseExplanation(state.forecast));
   if (value('offer-quantity') > Number(state.forecast.releasable_seats)) throw new Error('Requested seats exceed the current forecast release limit.');
   const data = await api('/api/offers', { flight_id: state.loadedFlightId, days_to_departure: state.day, quantity: value('offer-quantity'), base_fare: value('offer-fare') }); notify(`Member offer published: ${(data.offer || data).offer_id || (data.offer || data).id || 'saved'}.`); await loadOffers(); await loadForecast();
 }); });

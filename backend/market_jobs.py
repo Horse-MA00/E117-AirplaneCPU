@@ -71,8 +71,8 @@ def start(body, run_id=None):
                        membership_fee=_number(body.get('membership_fee', 199), 'membership_fee', 0, 5000),
                        open_day=_number(body.get('open_day', 28), 'open_day', 1, 28, True),
                        release_fraction=_number(body.get('release_fraction', .75), 'release_fraction', 0, 1))
-        if options['open_day'] not in (7, 14, 28):
-            raise ValueError('open_day must be 7, 14 or 28')
+        if options['open_day'] != 28:
+            raise ValueError('Release schedule is fixed at D28, D14 and D7; open_day must be 28')
         run_id = 'web-' + uuid.uuid4().hex[:16]
     folder = _folder(run_id)
     if resume and not (folder / 'experiment.json').is_file():

@@ -136,7 +136,7 @@ class PricingTests(unittest.TestCase):
 
     def test_search_holds_best_and_term(self):
         result = optimize(self.pred, self.cfg)
-        self.assertEqual(len(result["candidates"]), 192)
+        self.assertEqual(len(result["candidates"]), 64)
         best = [x["best_profit"] for x in result["trace"]]
         self.assertEqual(best, sorted(best))
         self.assertEqual(result["config"]["membership_days"], 365)

@@ -20,7 +20,7 @@ class StoreTests(unittest.TestCase):
  def test_membership_once_and_protected_supply(self):
   s=self.store;self.assertEqual(s.member('c',399),s.member('c',799))
   with self.assertRaises(ValueError):s.offer('f',28,3,0,250,2)
-  o=s.offer('f',28,1,0,250,2);s.book(o['id'],'c');o2=s.offer('f',28,1,0,250,2)
+  o=s.offer('f',28,1,0,250,2);s.book(o['id'],'c');o2=s.offer('f',14,1,0,250,2)
   with self.assertRaises(ValueError):s.book(o2['id'],'c')
   with self.assertRaises(ValueError):s.offer('f',7,1,0,250,2)
  def test_agent_coverage_and_constraints(self):
@@ -33,13 +33,13 @@ class StoreTests(unittest.TestCase):
   from unittest.mock import patch
   s=self.store
   with patch('backend.store.time.time',return_value=1000):
-   o=s.offer('f',1,2,30,250,3);s.member('c',399)
-   self.assertEqual(o['expires'],1000+22*3600)
-   self.assertEqual(s.committed('f',1),2)
-   self.assertIsNone(s.committed('f',7))
-   s.book(o['id'],'c');self.assertEqual(s.committed('f',1),2)
-  with patch('backend.store.time.time',return_value=1000+23*3600):
-   self.assertEqual(s.committed('f',1),1)
+   o=s.offer('f',7,2,30,250,3);s.member('c',399)
+   self.assertEqual(o['expires'],1000+7*86400-7200)
+   self.assertEqual(s.committed('f',7),2)
+   self.assertIsNone(s.committed('f',14))
+   s.book(o['id'],'c');self.assertEqual(s.committed('f',7),2)
+  with patch('backend.store.time.time',return_value=1000+7*86400):
+   self.assertEqual(s.committed('f',7),1)
   with patch('backend.store.time.time',return_value=1000+366*86400):
    with self.assertRaisesRegex(ValueError,'expired'):s.member('c',399)
  def test_numeric_validation(self):

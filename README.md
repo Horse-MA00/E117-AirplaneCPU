@@ -1,6 +1,6 @@
 # UOption Fly Pass
 
-**Forecast normal demand. Decide when to open member offers, how many seats to release, and what base fare to charge.**
+**Forecast normal demand. Release additional member seats at D28, D14 and D7, and compare fares and membership fees.**
 
 A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for Cathay Hackathon 2026, **Low-cost Travel — Smart Offer & Borderless Booking**. The proposed HK Express membership offers zero or low base fares plus mandatory charges.
 
@@ -21,7 +21,8 @@ Open **http://127.0.0.1:8000**. The committed compressed dataset loads automatic
 
 - **600,000 daily snapshots** across **3,315 synthetic flight histories** (200,000 demo rows plus 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
-- Up to **192 fee × fare × opening-day × allocation policies**; full-term hypothetical membership economics, paired ordinary-sales baseline, independent seeds and stress cases. Later as-of dates exclude past actions; cutoff returns no offer.
+- **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
+- Up to **64 fee × fare × allocation policies**; full-term hypothetical membership economics, paired ordinary-sales baseline, independent seeds and stress cases. The release schedule is fixed, and later as-of dates use only remaining rounds; after D7, a fresh screening experiment cannot issue a new offer.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
 - Airline dashboard, fast price screening, shared policy/flight/traveller inspections, customer journeys and transactional demo bookings.
 - Fourteen assumed customer archetypes; audited **actual DeepSeek calls**, Codex subagent pilot outputs, bounded/resumable batches and repeated-choice/price/order/language probes. Forced actions, cache replay and fresh calls are separate.
@@ -37,7 +38,9 @@ An additional frozen-model evaluation on **1,200 fresh flights** yields **91.5% 
 
 The shared market independently generates future ordinary demand, pairs the same world across policies, and follows every purchased membership to expiry within an explicitly finite opportunity catalogue. It does not simulate the entire real airline network or real competitive responses; renewal is uncharged intention. Customer segment weights and costs are assumptions. “Best” means best among evaluated candidates in that world, not a proven real-world optimal price.
 
-Completed shared-market evidence includes **120 mathematical stress-test cases**, **12 additional matched rule cases**, and **12 live-policy cases**. The three independent live validation seeds produced **1,383 fresh valid DeepSeek choices**, zero cache hits and zero failures. Under the stated costs, no membership offer had the highest contribution in all three seeds; the cheaper candidate attracted more members but often replaced normal-fare trips. The same-world rule baseline ranked differently. These are useful model-risk findings, not proof of real airline demand or business viability. See the [paired results and cost sensitivity](docs/SHARED_MARKET_VALIDATION.md).
+Historical **shared-market-v2** evidence includes **120 mathematical stress-test cases**, **12 additional matched rule cases**, and **12 live-policy cases**. The three independent live validation seeds produced **1,383 fresh valid DeepSeek choices**, zero cache hits and zero failures. Under those rules and costs, no membership offer had the highest contribution in all three seeds; the cheaper candidate attracted more members but often replaced normal-fare trips. These immutable reports predate the explicit three-round carry-over rule and do not validate the new policy. See the [historical paired results](docs/SHARED_MARKET_VALIDATION.md) and [current three-round rule and verification](docs/THREE_ROUND_RELEASE.md).
+
+The current **shared-market-v3** three-round policy has a separate **40-seed / 120-case deterministic evaluation** with all seven accounting and inventory checks passing. Across its 30 held-out seeds, NO_OFFER wins 18 and FIXED wins 12; FIXED averages HK$195.57 more contribution than NO_OFFER, while the cheaper CANDIDATE averages HK$1,706.10 less. These synthetic rule-based choices are not new LLM calls or evidence of real-world price optimality. See the [new report](llm_agent/experiments/three_round_40seeds/report.json) and [interpretation](docs/THREE_ROUND_RELEASE.md#本次三輪規則的獨立市場重播).
 
 ## Repository structure
 
@@ -78,6 +81,8 @@ The local server binds to loopback, validates Origin and serves only `frontend/`
 
 Open **http://127.0.0.1:8000/#market**. Compare a no-offer baseline, a fixed offer and a candidate policy in the same world. A candidate from Fast screening can populate the controls; it is re-evaluated rather than assumed optimal. Inspect the policy ledger, each flight's inventory and each traveller's actual sequence of choices. Live batches pause at their call limit and require an explicit resume.
 
+Enabled policies share the D28/D14/D7 schedule. For each flight and round, the audit separates the target outstanding quota, earlier unsold quota carried forward, newly issued quota and remaining bookable supply. Forecasts may still update between rounds; an updated forecast alone never publishes new inventory.
+
 ```sh
 # No provider calls: one seeded shared market, three policies.
 python -m llm_agent.market_experiment create --output data/private/shared_market/example --seeds 117
@@ -90,6 +95,7 @@ For live experiments, create with `--modes live`, then use a bounded `--max-call
 ## Documentation
 
 - [Current technical architecture](docs/CURRENT_IMPLEMENTATION.md)
+- [Three-round release rule and verification](docs/THREE_ROUND_RELEASE.md)
 - [Latest progress](docs/ITERATION_2_PROGRESS.md)
 - [Shared-market engine and financial rules](docs/SHARED_MARKET.md)
 - [Shared-market agent, auditing and probes](docs/SHARED_MARKET_AGENT.md)

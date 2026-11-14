@@ -35,7 +35,7 @@ Observation 包含旅客明示需要、同行人數、當前預算、會籍期�
 
 ## 可重現的政策實驗
 
-預設三政策是 `NO_OFFER`、固定 P70/V399/D14/50% quota，和候選 P30/V199/D28/75% quota。這個候選是事前設定的假設，名稱不代表最優。每個 seed 下的人物、出行機會和外部背景需求相同。背景需求由獨立生成路徑決定，不使用 NHPP 預測均值當作未來真相。
+目前三政策是 `NO_OFFER`、固定 P70/V399/50% quota，和候選 P30/V199/75% quota；啟用會員的政策均採固定D28/D14/D7三輪，扣除前輪有效未售配額，詳見[三輪放票規則](THREE_ROUND_RELEASE.md)。原固定方案D14首次開放屬歷史v2實驗設定。這個候選是事前設定的假設，名稱不代表最優。每個 seed 下的人物、出行機會和外部背景需求相同。背景需求由獨立生成路徑決定，不使用 NHPP 預測均值當作未來真相。
 
 ```bash
 python -m llm_agent.market_experiment create --output data/private/market_demo --seeds 117 --modes deterministic

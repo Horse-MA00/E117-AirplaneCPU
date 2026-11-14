@@ -16,10 +16,11 @@ from datetime import date, timedelta
 import numpy as np
 
 from backend.nhpp import forecast
+from backend.release_policy import RELEASE_DAYS, VERSION as RELEASE_VERSION, release_budget
 from llm_agent.population import population
 from simulation.generate import simulate_flight
 
-VERSION = "shared-market-v2"
+VERSION = "shared-market-v3"
 DEFAULTS = {
     "horizon_days": 365, "membership_days": 365, "flight_count": 9,
     "customer_count": 24, "occasions_per_customer": 3,
@@ -30,7 +31,7 @@ DEFAULTS = {
     "background_cancellation_probability": .025,
 }
 POLICY_DEFAULTS = {"name": "candidate", "enabled": True, "member_fare": 70,
-                   "membership_fee": 399, "open_day": 28, "release_fraction": .75}
+                   "membership_fee": 399, "open_day": 28, "release_days": list(RELEASE_DAYS), "release_fraction": .75}
 MONEY = ("cash_collected", "refunds_paid", "membership_revenue", "normal_base_revenue",
          "member_base_revenue", "ancillary_revenue", "cancellation_revenue",
          "mandatory_liability", "mandatory_remitted", "passenger_cost", "ancillary_cost",
@@ -69,8 +70,8 @@ def _validate(config, policy):
         raise ValueError("Invalid cancellation probability")
     if not isinstance(policy["enabled"], bool):
         raise ValueError("enabled must be boolean")
-    if policy["open_day"] not in (7, 14, 28):
-        raise ValueError("open_day must be 7, 14 or 28")
+    if policy["open_day"] != 28 or policy.get("release_days") != list(RELEASE_DAYS):
+        raise ValueError("Release schedule is fixed at D28, D14 and D7; open_day must be 28")
     if isinstance(policy["release_fraction"], bool) or not 0 <= policy["release_fraction"] <= 1:
         raise ValueError("release_fraction must be in 0..1")
     for key in ("member_fare", "membership_fee"):
@@ -87,7 +88,7 @@ def create_market(config: dict | None = None, seed: int = 117, policy: dict | No
     and the agent cohort are separate synthetic populations, paired across policy.
     """
     cfg = {**DEFAULTS, **(config or {})}
-    pol = {**POLICY_DEFAULTS, **(policy or {})}
+    pol = copy.deepcopy({**POLICY_DEFAULTS, **(policy or {})})
     if str(pol["name"]).upper() in ("NO_OFFER", "BASELINE") and "enabled" not in (policy or {}):
         pol["enabled"] = False
     _validate(cfg, pol)
@@ -130,7 +131,7 @@ def create_market(config: dict | None = None, seed: int = 117, policy: dict | No
                   "departed": False, "member_remaining": 0, "member_active": 0, "protection_remaining": at28["capacity"],
                   "normal_since_snapshot": 0, "cancel_since_snapshot": 0,
                   "base_fare": truth[0]["internal_base_fare"], "forecast": None,
-                  "quota_history": [], "background_requested": 0, "background_denied": 0,
+                  "quota_history": [], "quota_cohorts": [], "background_requested": 0, "background_denied": 0,
                   "scenario_scoring_only": generated["summary"]["scenario"]}
         state["flights"][fid] = flight
         clusters[cluster].append(fid)
@@ -166,7 +167,7 @@ def create_market(config: dict | None = None, seed: int = 117, policy: dict | No
                         "change_scoring_only": "cannot_travel" if rng.random() < .12 else "date_uncertain" if rng.random() < .15 else "unchanged"}
             occasions.append(occasion)
             jitter = float(rng.uniform(.03, .87))
-            for d in (28, 14, 7):
+            for d in RELEASE_DAYS:
                 events.append({"time": desired["departure_at"] - d + jitter, "kind": "decision", "stage": "subscription", "customer_id": person["customer_id"], "occasion_id": occasion["occasion_id"]})
                 events.append({"time": desired["departure_at"] - d + jitter + .00001, "kind": "decision", "stage": "quote", "customer_id": person["customer_id"], "occasion_id": occasion["occasion_id"]})
             events.append({"time": desired["departure_at"] - 3 + jitter, "kind": "decision", "stage": "plan_change", "customer_id": person["customer_id"], "occasion_id": occasion["occasion_id"]})
@@ -205,9 +206,16 @@ def _post(state, kind, identifier, **amounts):
     state["ledger_entries"].append({"day": state["day"], "kind": kind, "id": identifier, **amounts})
 
 
+def _member_sellable(f):
+    if not f["active"] or f["departed"]:
+        return 0
+    reserve = f["protection_remaining"] if "quota_cohorts" in f else 0
+    return min(f["member_remaining"], max(0, f["capacity"] - f["occupied"] - reserve))
+
+
 def _buy(state, fid, bid, customer_id, occasion_id, party, bags, member, base_fare):
     f, cfg = state["flights"][fid], state["config"]
-    if f["capacity"] - f["occupied"] < party or (member and f["member_remaining"] < 1):
+    if f["capacity"] - f["occupied"] < party or (member and _member_sellable(f) < 1):
         raise ValueError("Insufficient shared inventory")
     normal = _cents(base_fare) * (party - int(member))
     member_base = _cents(state["policy"]["member_fare"]) if member else 0
@@ -232,9 +240,13 @@ def _buy(state, fid, bid, customer_id, occasion_id, party, bags, member, base_fa
     f["protection_remaining"] = max(0, f["protection_remaining"] - booking["normal_seats"])
     f["member_active"] += int(member)
     if member:
+        cohort = next(c for c in f["quota_cohorts"] if c["remaining"] > 0)
+        cohort["remaining"] -= 1
+        cohort["sold"] += 1
+        booking["quota_round_day"] = cohort["round_day"]
         f["member_remaining"] -= 1
-    # Normal sales can consume uncommitted member quota; no physical double pool.
-    f["member_remaining"] = min(f["member_remaining"], max(0, f["capacity"] - f["occupied"]))
+    # Normal sales change physical capacity, not the identity of valid unsold
+    # quota. Such entitlements are executable only while protection leaves room.
     _post(state, "booking", bid, cash_collected=total, normal_base_revenue=normal, member_base_revenue=member_base,
           ancillary_revenue=ancillary, mandatory_liability=mandatory)
     return booking
@@ -253,11 +265,9 @@ def _cancel(state, bid):
     f["occupied"] -= b["party_size"]
     f["member_active"] -= b["member_seats"]
     f["cancel_since_snapshot"] += b["normal_seats"]
-    # Released physical seats return; a cancelled member allocation can be used
-    # again only if the latest NHPP protection leaves room right now.
-    protection = f["protection_remaining"]
-    spare = max(0, f["capacity"] - f["occupied"] - protection)
-    f["member_remaining"] = min(f["member_remaining"] + b["member_seats"], spare)
+    # Cancellation returns a physical seat, not a new member allocation.
+    # A sold entitlement stays consumed; only a later scheduled round can add
+    # quota. Existing unused entitlements can become executable again.
     if b["customer_id"] is not None:
         c = state["customers"][b["customer_id"]]
         c["budget_cents"] += refund
@@ -282,6 +292,8 @@ def _automatic(state, event):
     elif kind == "snapshot":
         f = state["flights"][event["flight_id"]]
         d = event["day_to_departure"]
+        if d in RELEASE_DAYS and any(c["round_day"] == d for c in f["quota_cohorts"]):
+            return  # Replayed round events cannot issue or reset another batch.
         f["active"] = d > 0
         f["base_fare"] = event["base_fare"]
         if d < 28:
@@ -293,15 +305,26 @@ def _automatic(state, event):
                                   "gross_bookings": f["normal_since_snapshot"], "cancellations": f["cancel_since_snapshot"],
                                   "interval_days": 22 / 24 if d == 0 else 1.})
         f["normal_since_snapshot"] = f["cancel_since_snapshot"] = 0
-        if d in (28, 14, 7):
+        if d in RELEASE_DAYS and not any(c["round_day"] == d for c in f["quota_cohorts"]):
             prediction = forecast(f["history"], d, state["seed"] + int(f["flight_id"][-3:]))
             f["forecast"] = {k: prediction[k] for k in ("model", "days_to_departure", "expected_remaining_demand", "raw_protection_p90", "protection_p90", "releasable_seats", "expected_empty_seats")}
             state["forecast_calls"] += 1
-            f["protection_remaining"] = prediction["protection_p90"]
-            offer_open = state["policy"]["enabled"] and d <= state["policy"]["open_day"]
-            f["member_remaining"] = int(math.floor(prediction["releasable_seats"] * state["policy"]["release_fraction"])) if offer_open else 0
-            f["quota_history"].append({"day": state["day"], "days_to_departure": d, "remaining_quota": f["member_remaining"], **f["forecast"]})
+            available = f["capacity"] - f["occupied"]
+            # Preserve NHPP's fail-closed quality gates as well as its risk reserve.
+            f["protection_remaining"] = max(prediction["protection_p90"], available - prediction["releasable_seats"])
+            fraction = state["policy"]["release_fraction"] if state["policy"]["enabled"] else 0.
+            budget = release_budget(available, f["protection_remaining"], f["member_remaining"], fraction)
+            cohort = {"round_day": d, "issued": budget["new_allocation"],
+                      "remaining": budget["new_allocation"], "sold": 0, "expired": 0}
+            f["quota_cohorts"].append(cohort)
+            f["member_remaining"] = budget["remaining_quota"]
+            f["quota_history"].append({"day": state["day"], "days_to_departure": d, **f["forecast"], **budget,
+                                       "effective_normal_protection": f["protection_remaining"],
+                                       "member_sellable": _member_sellable(f)})
         if not d:
+            for cohort in f["quota_cohorts"]:
+                cohort["expired"] += cohort["remaining"]
+                cohort["remaining"] = 0
             f["member_remaining"] = 0
     elif kind == "departure":
         f = state["flights"][event["flight_id"]]
@@ -338,7 +361,7 @@ def _quotes(state, customer, occasion, *, include_ineligible=False):
         if any(state["bookings"][bid]["status"] in ("confirmed", "flown") and state["flights"][state["bookings"][bid]["flight_id"]]["departure_day"] == f["departure_day"] for bid in customer["bookings"]):
             continue
         for member in (False, True):
-            if member and (not state["policy"]["enabled"] or f["member_remaining"] < 1):
+            if member and (not state["policy"]["enabled"] or _member_sellable(f) < 1):
                 continue
             membership_valid = _active(customer, state["day"]) and f["departure_at"] < customer["membership_expires"]
             if member and not membership_valid and not include_ineligible:
@@ -355,7 +378,7 @@ def _quotes(state, customer, occasion, *, include_ineligible=False):
                            "departure_day": f["departure_day"], "departure_date": _date(state, f["departure_day"]), "departure_time": f["departure_time"],
                            "party_size": party, "member_seats": int(member), "normal_seats": party - int(member),
                            "price": price, "currency": "HKD", "total_seats_available": f["capacity"] - f["occupied"],
-                           "member_seats_available": f["member_remaining"], "days_to_departure": round(f["departure_at"] - state["day"], 3),
+                           "member_seats_available": _member_sellable(f), "days_to_departure": round(f["departure_at"] - state["day"], 3),
                            "price_breakdown": {"normal_base_fares": normal, "member_base_fare": base, "mandatory_fees": mandatory, "baggage": ancillary},
                            "membership_valid_for_departure": membership_valid, "checked_bags": person["checked_bags"],
                            "cancellation_terms": {"base_fare_refundable": False, "baggage_refundable": False, "mandatory_fees_refundable": mandatory,
@@ -451,6 +474,8 @@ def _observation(state, event):
 
 def next_observation(state: dict) -> dict | None:
     """Advance automatic market events, then pause before one traveller action."""
+    if state.get("version") != VERSION:
+        raise ValueError("Saved market uses an older engine; inspect it or create a new experiment")
     if state["pending"] is not None:
         return _observation(state, state["events"][state["pending"]])
     while state["cursor"] < len(state["events"]):
@@ -466,6 +491,8 @@ def next_observation(state: dict) -> dict | None:
 
 def apply_decision(state: dict, decision: dict) -> dict:
     """Validate then atomically transact one currently pending decision."""
+    if state.get("version") != VERSION:
+        raise ValueError("Saved market uses an older engine; inspect it or create a new experiment")
     if state["pending"] is None:
         raise ValueError("No pending observation")
     event = state["events"][state["pending"]]
@@ -587,14 +614,21 @@ def summarize(state: dict) -> dict:
                             "capacity": f["capacity"], "legacy_seats": f["legacy_seats"], "occupied": f["occupied"], "available": f["capacity"] - f["occupied"],
                             "member_remaining": f["member_remaining"], "member_seats": sum(b["member_seats"] for b in matching),
                             "background_denied": f["background_denied"], "quota_history": copy.deepcopy(f["quota_history"]),
+                            "quota_cohorts": copy.deepcopy(f.get("quota_cohorts", [])), "member_sellable": _member_sellable(f),
                             "inventory_conserved": f["occupied"] == f["legacy_seats"] + sum(b["party_size"] for b in matching)})
     checks = {"cash_identity": cash_identity, "inventory_conserved": all(f["inventory_conserved"] for f in inventories),
-              "capacity_respected": all(0 <= f["occupied"] <= f["capacity"] and 0 <= f["member_remaining"] <= f["available"] for f in inventories),
+              "capacity_respected": all(0 <= f["occupied"] <= f["capacity"] and 0 <= f["member_sellable"] <= f["available"] for f in inventories),
+              "quota_conserved": all(
+                  f["member_remaining"] == sum(c["remaining"] for c in f.get("quota_cohorts", []))
+                  and all(c["issued"] == c["remaining"] + c["sold"] + c["expired"] and min(c.values()) >= 0 for c in f.get("quota_cohorts", []))
+                  for f in state["flights"].values()) if state.get("version") == VERSION else True,
               "budgets_nonnegative": all(c["budget_cents"] >= 0 for c in state["customers"].values()),
               "customer_cash_identity": all(c["initial_budget_cents"] - c["membership_fee_cents"] - c["ticket_spend_cents"] + c["refund_cents"] == c["budget_cents"] for c in state["customers"].values()),
               "membership_charged_once": all(sum(e["kind"] == "membership" and e["id"] == cid for e in state["ledger_entries"]) <= 1 for cid in state["customers"])}
+    if state.get("version") != VERSION:
+        checks.pop("quota_conserved", None)
     complete = state["cursor"] == len(state["events"]) and state["pending"] is None
-    return {"version": VERSION, "market_id": state["market_id"], "exogenous_sha256": state["exogenous_sha256"], "seed": state["seed"],
+    return {"version": state.get("version", VERSION), "release_policy_version": RELEASE_VERSION if state.get("version") == VERSION else "legacy", "market_id": state["market_id"], "exogenous_sha256": state["exogenous_sha256"], "seed": state["seed"],
             "policy": copy.deepcopy(state["policy"]), "config": copy.deepcopy(state["config"]), "complete": complete,
             "ledger": {**ledger, "revenue_excluding_mandatory_fees": _money(revenue), "total_variable_cost": _money(variable_cost),
                        "total_cost": _money(cost), "contribution": _money(revenue - cost)},
@@ -612,7 +646,10 @@ def summarize(state: dict) -> dict:
             "flights": inventories, "checks": checks,
             "assumptions": ["Flights, personas, schedules, preferences, prices, arrival and cancellation paths are synthetic assumptions, not actual HK Express market shares.",
                             "The same seed creates identical latent background demand and customer occasions across policies. Demand never reads forecast means or quotas.",
-                            "The NHPP receives completed as-of normal-booking intervals, excluding member seats. It controls member quotas at D28/D14/D7 only.",
+                            ("The NHPP receives completed as-of normal-booking intervals, excluding member seats. Fixed D28/D14/D7 rounds add max(0,total target minus all earlier valid unsold quota); FIFO consumption and cutoff expiry are explicit."
+                             if state.get("version") == VERSION else "Legacy saved market: quotas were reset at each enabled checkpoint, without the new cross-round cohort rules."),
+                            ("Unspent quotas persist until cutoff, but sales remain subject to physical capacity and normal-demand protection. Cancellation returns physical seats without minting quota. No new quota between rounds."
+                             if state.get("version") == VERSION else "Historical saved result; not reinterpreted as validation of the three-round additive policy."),
                             "A pass discounts only its holder; companions pay normal fares. Every party purchase succeeds completely or not at all.",
                             "Pre-D28 bookings are existing occupancy; their sunk payments and operating costs are outside the comparative ledger.",
                             "Contribution includes per-trip costs, per-new-member service cost and one enabled-programme setup cost. It excludes mandatory pass-through fees and fixed aircraft costs; it is not total airline net profit.",

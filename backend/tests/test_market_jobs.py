@@ -9,7 +9,7 @@ class MarketJobBoundsTests(unittest.TestCase):
     def test_spend_and_policy_bounds_before_start(self):
         for body in ({'max_calls': 101}, {'max_calls': True}, {'seed': -1},
                      {'member_fare': float('nan')}, {'release_fraction': 2},
-                     {'open_day': 29}, {'mode': 'unknown'}):
+                     {'open_day': 29}, {'open_day': 14}, {'open_day': 7}, {'mode': 'unknown'}):
             with self.subTest(body=body), self.assertRaises(ValueError):
                 market_jobs.start(body)
 

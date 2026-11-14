@@ -1,5 +1,7 @@
 # Published synthetic experiment evidence
 
+The current three-round v3 policy is tested in `three_round_40seeds/` (40 seeds, 120 complete rule markets, no provider calls). The earlier `shared_*` exports retain historical v2 rules; their live choices are not evidence for the new release policy.
+
 These files contain synthetic personas, model-generated choices and simulator outcomes. They are not observed HK Express customers. Authentication headers and keys are excluded. Each experiment manifest records SHA256 checksums; run `python scripts/verify_artifacts.py` from the repository root to verify exports without provider calls.
 
 | Folder | Purpose | Actual decision provenance |
@@ -7,6 +9,7 @@ These files contain synthetic personas, model-generated choices and simulator ou
 | `codex_pilot_20261114` | 28 isolated six-stage worlds | 168 actual Codex subagent decisions; not DeepSeek API requests |
 | `deepseek_factorial_20261114` | 14 personas × 4 base fares × 2 fees × 6 stages | 672 fresh successful DeepSeek choices, no cache; one transport failure retained |
 | `behavior_probes_20261114` | Repeats, price, order and language checks | 60 fresh successful choices; earlier 60 transport failures retained separately |
+| `three_round_40seeds` | Current fixed D28/D14/D7 additive quota policy | 120 complete rule markets, 3,240 checked round decisions; no provider requests |
 | `shared_deterministic_40seeds` | 40 seeds × 3 policies, shared inventory | 120 complete rule markets; no provider requests |
 | `shared_math_matched` | Same four worlds as live runs | 12 complete rule markets; exact exogenous hashes match live worlds |
 | `shared_development` | One development seed × 3 policies | 265 fresh choices, 160 exact-context cache replays, 500 forced transitions |

@@ -28,6 +28,14 @@ try {
   await page.locator('[data-day="14"]').click();
   await waitForecast();
   assert.equal(await page.locator('#history-table tr').count(), 15);
+  const d13Response = page.waitForResponse((r) => r.url().endsWith('/api/forecast') && r.request().postDataJSON()?.days_to_departure === 13);
+  await page.locator('#day-slider').fill('15');
+  await d13Response;
+  await page.waitForFunction(() => document.getElementById('day-number').textContent === '13');
+  await waitForecast();
+  assert.equal(await page.locator('#release-value').textContent(), '0 seats');
+  assert.equal(await page.locator('#publish-button').isDisabled(), true);
+  assert.ok((await page.locator('#risk-release-value').textContent()).includes('seats'));
   await page.locator('[data-day="28"]').click();
   await waitForecast();
   await page.screenshot({ path: `${output}desktop.png`, fullPage: true });
@@ -38,7 +46,8 @@ try {
   await page.locator('#optimize-button').click();
   const result = await (await responsePromise).json();
   assert.equal(result.config.incremental_cost, 80, 'The cost input must reach the financial model.');
-  assert.equal(result.candidates.length, 192);
+  assert.equal(result.candidates.length, 64);
+  assert.deepEqual(result.candidates[0].release_days, [28, 14, 7]);
   await page.waitForFunction(() => !document.getElementById('pricing-results').hidden);
   if (result.best.decision === 'OFFER' && result.best.open_day < 28) {
     assert.equal(await page.locator('#apply-policy').isDisabled(), true, 'Future policy must not publish early.');
@@ -76,6 +85,8 @@ try {
   const caseIds = await page.locator('#market-policy-select option').evaluateAll((options) => options.map((option) => option.value));
   await page.locator('#market-policy-select').selectOption(caseIds.at(-1));
   await page.waitForFunction(() => document.getElementById('market-detail-grid').getAttribute('aria-busy') === 'false');
+  assert.equal(await page.locator('#market-round-table tr').count(), 27);
+  assert.ok((await page.locator('#market-rule-note').textContent()).includes('Current rule'));
   assert.ok(await page.locator('#market-journey-events li').count() >= 16, 'Full-term view must include multiple trips and renewal intention.');
   assert.ok((await page.locator('#market-source-counts').textContent()).includes('0 validated live'));
   assert.ok((await page.locator('#market-call-count').textContent()) === '0');
@@ -83,27 +94,59 @@ try {
   await page.screenshot({ path: `${output}market-desktop.png`, fullPage: true });
 
   if (process.argv.includes('--transactions')) {
+    await navigate('flights');
+    const availableFlight = await page.evaluate(async () => {
+      const {flights} = await (await fetch('/api/flights')).json();
+      for (const flight of flights.slice(0, 80)) {
+        const {forecast} = await (await fetch('/api/forecast', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({flight_id:flight.flight_id,days_to_departure:28})})).json();
+        if (forecast.releasable_seats >= 2 && !forecast.release_status?.blocked_reason) return flight.flight_id;
+      }
+    });
+    assert.ok(availableFlight, 'Need an unused release round for transactional QA.');
+    await page.locator('#flight-select').selectOption(availableFlight); await waitForecast();
     await navigate('members');
     assert.equal(await page.locator('#publish-button').isDisabled(), false, 'Selected flight needs available member inventory for this optional test.');
-    const beforeRelease = Number((await page.locator('#release-value').textContent()).replace(/[^0-9]/g, ''));
-    await page.locator('#offer-quantity').fill('1');
+    await page.locator('#offer-quantity').fill('2');
     await page.locator('#offer-fare').fill('70');
     const publishedPromise = page.waitForResponse((response) => response.url().endsWith('/api/offers') && response.request().method() === 'POST');
     await page.locator('#publish-button').click();
     const published = await (await publishedPromise).json();
     assert.ok(published.offer, JSON.stringify(published));
-    await page.waitForFunction((expected) => Number(document.getElementById('release-value').textContent.replace(/[^0-9]/g, '')) === expected, beforeRelease - 1);
+    await page.waitForFunction(() => document.getElementById('release-value').textContent === '0 seats');
+    assert.equal(await page.locator('#publish-button').isDisabled(), true, 'A published round cannot be issued twice.');
     await page.waitForFunction(() => document.querySelectorAll('.offer-card').length > 0);
     await page.locator('#customer-id').fill(`frontend-qa-${Date.now()}`);
     await page.locator('#join-button').click();
     await page.waitForFunction(() => document.getElementById('membership-status').textContent.startsWith('Membership active'));
     const bookingPromise = page.waitForResponse((response) => response.url().endsWith('/api/bookings'));
-    await page.locator('.offer-card button:not(:disabled)').first().click();
+    await page.locator(`[data-offer-id="${published.offer.id}"] button:not(:disabled)`).click();
     const booking = await (await bookingPromise).json();
     assert.ok(booking.booking, JSON.stringify(booking));
     assert.equal(booking.booking.total, 70 + published.offer.fees);
     await page.waitForFunction(() => !document.getElementById('booking-result').hidden);
     await page.screenshot({ path: `${output}members-desktop.png`, fullPage: true });
+    await navigate('flights'); await page.locator('[data-day="14"]').click(); await waitForecast();
+    assert.equal(await page.locator('#prior-quota-value').textContent(), '1 seats');
+    assert.equal(await page.locator('#demo-round-table tr').count(), 1);
+    // Keep an unspent entitlement visible while a current protection check
+    // makes it temporarily unsellable. No reservation request is submitted.
+    await page.route('**/api/forecast', async (route) => {
+      const response = await route.fetch(), json = await response.json();
+      json.forecast.release_status.currently_bookable = 0;
+      json.forecast.release_status.protection_shortfall = 1;
+      await route.fulfill({ json });
+    });
+    await page.locator('[data-day="7"]').click();
+    await page.waitForFunction(() => document.getElementById('release-status').textContent.includes('Currently bookable member seats: 0'));
+    await navigate('members');
+    const protectedCard = page.locator(`[data-offer-id="${published.offer.id}"]`);
+    await protectedCard.waitFor();
+    assert.ok((await protectedCard.textContent()).includes('unspent quota'));
+    assert.equal(await protectedCard.locator('button').textContent(), 'Unavailable now');
+    assert.equal(await protectedCard.locator('button').isDisabled(), true);
+    await page.unroute('**/api/forecast');
+    await navigate('flights'); await page.locator('[data-day="14"]').click(); await waitForecast();
+
   }
 
   for (const view of ['flights', 'pricing', 'customers', 'market', 'members']) {
@@ -127,7 +170,7 @@ try {
     aggregate: fixturePolicies.map((policy, index) => ({ policy: policy.name, mode: 'deterministic', split: 'validation', replicates: 2, mean_metrics: { contribution: 1000 + fixtureDeltas[index].reduce((a, b) => a + b) / 2 } })),
     paired_differences: fixtureCases.filter((row) => row.policy.enabled).map((row) => ({ case_id: row.case_id, metric_differences: { contribution: row.metrics.contribution - 1000 } })), runtime: {},
   };
-  await page.route('**/api/market/runs/qa-paused/cases/**', async (route) => route.fulfill({ json: { inspection: { day: 365, metrics: { ledger: {} }, customers: [], flights: [], events: [] } } }));
+  await page.route('**/api/market/runs/qa-paused/cases/**', async (route) => route.fulfill({ json: { inspection: { day: 365, metrics: { ledger: {}, version: 'shared-market-v2' }, customers: [], flights: [{flight_id:'QA-LEGACY',destination:'FUK',capacity:180,occupied:80,legacy_seats:60,member_seats:5,quota_history:[{days_to_departure:28,remaining_quota:12}]}], events: [] } } }));
   await page.route('**/api/market/runs/qa-paused/resume', async (route) => {
     resumes++; assert.equal(route.request().postDataJSON().max_calls, 60);
     await route.fulfill({ json: { run_id: 'qa-paused', status: 'queued' } });
@@ -148,8 +191,11 @@ try {
   assert.equal(await page.locator('#market-best-profit').textContent(), 'HK$100');
   assert.ok((await page.locator('#market-best-label').textContent()).startsWith('Fixed offer'));
   assert.equal(await page.locator('#market-policy-table tr').count(), 3);
+  await page.waitForFunction(() => document.getElementById('market-round-note').textContent.includes('Historical experiment'));
+  assert.ok((await page.locator('#market-rule-note').textContent()).includes('Historical or unversioned'));
+  assert.equal(await page.locator('#market-round-table tr td').nth(1).textContent(), '—', 'Historical missing carry must not be invented.');
   assert.deepEqual(errors, []);
-  console.log('PASS: as-of forecast, cost propagation, 192 candidates, 14 synthetic customers, future-offer guard, three shared-market policies, manual bounded resume and five mobile layouts.');
+  console.log('PASS: as-of forecast, cost propagation, 64 three-round candidates, 14 synthetic customers, between-round issuance guard and round audit, three shared-market policies, manual bounded resume and five mobile layouts.');
   if (process.argv.includes('--transactions')) console.log('PASS: simulated offer, membership, itemised booking and inventory-backed reservation.');
 } finally {
   await browser.close();

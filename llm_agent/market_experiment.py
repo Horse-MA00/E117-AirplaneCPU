@@ -15,17 +15,18 @@ from .audit import Audit, BASE, sanitize
 from .experiment import load_local_env
 from .journey import _save, canonical
 from .market_adapter import VERSION, PROMPTS, choose, legal_choices, public_observation
+from backend.release_policy import RELEASE_DAYS, VERSION as RELEASE_VERSION
 
 DEFAULT_POLICIES = [
     {"name": "NO_OFFER", "enabled": False, "member_fare": 0, "membership_fee": 0, "open_day": 28, "release_fraction": 0},
-    {"name": "FIXED", "enabled": True, "member_fare": 70, "membership_fee": 399, "open_day": 14, "release_fraction": .5},
+    {"name": "FIXED", "enabled": True, "member_fare": 70, "membership_fee": 399, "open_day": 28, "release_fraction": .5},
     {"name": "CANDIDATE", "enabled": True, "member_fare": 30, "membership_fee": 199, "open_day": 28, "release_fraction": .75},
 ]
 
 
 def implementation_hashes():
     root = Path(__file__).resolve().parents[1]
-    files = ("backend/shared_market.py", "backend/nhpp.py", "simulation/generate.py", "simulation/generated/calibration_v2.json",
+    files = ("backend/shared_market.py", "backend/release_policy.py", "backend/nhpp.py", "simulation/generate.py", "simulation/generated/calibration_v2.json",
              "llm_agent/market_adapter.py", "llm_agent/population.py")
     return {name: hashlib.sha256((root/name).read_bytes()).hexdigest() for name in files}
 
@@ -53,11 +54,12 @@ def create_experiment(output, config=None, seeds=None, policies=None, modes=None
                 case_id = f"seed{seed}-policy{pindex}-{mode}"
                 state = create_market(config, seed, policy)
                 _save(output / f"{case_id}.json", state)
-                cases.append({"case_id": case_id, "seed": seed, "policy": policy, "mode": mode,
+                cases.append({"case_id": case_id, "seed": seed, "policy": state["policy"], "mode": mode,
                               "split": "validation" if seed in (validation_seeds or []) else "development", "completed": False})
     experiment = {"experiment_id": "market-" + uuid.uuid4().hex[:16], "prompt_version": VERSION,
                   "implementation_hashes": implementation_hashes(),
                   "config": config, "seeds": seeds, "policies": policies, "modes": modes, "cases": cases,
+                  "release_policy_version": RELEASE_VERSION, "release_days": list(RELEASE_DAYS),
                   "prompt_hashes": {lang: hashlib.sha256(path.read_bytes()).hexdigest() for lang, path in PROMPTS.items()},
                   "candidate_selection": "Predeclared policy configurations. CANDIDATE is a hypothesis, not a proven optimum.",
                   "validation_seeds": list(validation_seeds or [])}
@@ -312,6 +314,7 @@ def report(output):
                  for (mode, split), rows in sorted(ranking_groups.items())]
     return {"run_id": spec["experiment_id"], "prompt_version": VERSION, "cases": len(spec["cases"]),
             "completed_cases": len(complete), "seeds": spec["seeds"], "validation_seeds": spec["validation_seeds"],
+            "release_policy_version": spec.get("release_policy_version", "legacy"), "release_days": spec.get("release_days"),
             "aggregate": aggregate, "paired_differences": pairs, "case_results": spec["cases"],
             "seed_rankings": rankings, "ranking_stability": stability,
             "runtime": runtime_counts(spec["experiment_id"]), "status": run_status(output).get("status", "created"),
