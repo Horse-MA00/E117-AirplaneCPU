@@ -124,10 +124,10 @@ try {
   // Exact airport/date refinements remain usable inside their disclosure.
   await revealControl('destination');
   const japanAirports = await page.locator('#destination option').evaluateAll(options => options.map(option => option.value).filter(Boolean).sort());
-  assert.deepEqual(japanAirports, ['FUK', 'KIX', 'NRT']);
+  assert.deepEqual(japanAirports, ['CTS', 'FUK', 'HIJ', 'HND', 'ISG', 'KIX', 'KMQ', 'NGO', 'NRT', 'OKA', 'SDJ', 'TAK']);
   await page.locator('#destination').selectOption('FUK');
   await revealControl('departure-date');
-  await page.locator('#departure-date').selectOption('2027-05-01');
+  await page.locator('#departure-date').fill('2027-05-01');
   await submit();
   await expectFlights(['FUK-FIRST']);
   // An offer disappearing cannot silently replace the applied airport/date.

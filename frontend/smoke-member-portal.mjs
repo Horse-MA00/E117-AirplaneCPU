@@ -56,9 +56,9 @@ try {
   await page.locator('#search-button').click();
   assert.equal(await page.locator('.flight-card').count(), 1);
   assert.match(await page.locator('.flight-card').innerText(), /HKD 320\.75/);
-  await page.locator('#departure-date').selectOption('2027-05-31'); await page.locator('#search-button').click();
+  await page.locator('#departure-date').fill('2027-05-31'); await page.locator('#search-button').click();
   assert.match(await page.locator('#flight-results').innerText(), /No matching flights/);
-  await page.locator('#departure-date').selectOption(''); await page.locator('#search-button').click();
+  await page.locator('#departure-date').fill(''); await page.locator('#search-button').click();
   await page.screenshot({ path: `${output}member-portal-desktop.png`, fullPage: false });
   const select = page.locator('.choose-flight').first(); await select.click();
   assert.equal(await page.locator('#checkout').evaluate(el => el.matches(':modal')), true);

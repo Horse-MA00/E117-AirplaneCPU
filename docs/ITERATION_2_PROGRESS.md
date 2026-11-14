@@ -116,3 +116,12 @@ Docker continues to package all modules in one non-root Linux service; both SQLi
 - 技術與使用說明在 CLIENT_FLEXIBLE_SEARCH.md，frontend README 已同步。搜尋只使用已發布 SQLite 優惠；NHPP、三輪放票、優化器及購票校驗沒有修改。
 
 Docker integration follow-up: also incorporated main 1b4e98f flexible country/date search. Rebuilt and verified durable membership, booking, panel, fare-search and joint-optimization records. Flexible search passed both native Temporal and forced locally bundled polyfill paths, and member portal checkout regression passed. Only feature/docker-containerization is published; main is not changed by this integration.
+### Client 航點選單及確切日期修復（2026-11-14）
+
+- 新回歸測試先重現：Flying from／Destination 由已發布優惠產生，導致大部分航點消失；Exact departure date 也只能選優惠已有日期。根因是搜尋選項錯誤依賴可售庫存。
+- 新 `members/airports.js` 獨立提供兩端同一份 38 機場搜尋目錄，按國家／地區分組：37 個官方已列出／公布機場（含 HKG 及 HFE），加使用者指定的 CTS。吉隆坡核對為 SZB；HFE 標示已公布啟航日，CTS 標示班表未確認，並在選單下方完整顯示狀態，避免手機截字隱藏資訊。來源及清單見 CLIENT_FLEXIBLE_SEARCH.md。
+- 確切日改成原生日期輸入，可選優惠以外的日子；保留原有範圍搜尋，15–21 May 2027 包括兩端。沒有優惠的航點／日期只顯示無結果，不生成假票價或機位。
+- 修正新增確切日輸入的驗證與焦點：五位年份、未填完整日期拒絕；填寫新範圍或合法確切日可恢復；若進階欄已收起，驗證會先展開再聚焦錯誤欄。
+- 新 route-catalog 回歸於 Chrome 157 及 Chromium 141 通過，包含空／稀疏優惠下目錄完整、海外返回 HKG、未知代碼、自由選日、日期範圍、錯誤修復、刷新、重設及 390px 排版。既有 flexible-search／member-portal smoke 通過，獨立審查未留阻塞問題；全部 fixture 測試，零新增 LLM 呼叫或真實付款。
+
+Docker refresh: integrated main 6ee01e5 (airport/date choices independent of released inventory) on feature/docker-containerization. Rebuilt the full application image, passed 170 Python tests and frozen artifact verification, route-catalog browser regression, native/fallback Temporal search, and real simulated member checkout. Existing membership, booking, panel, fare-search and joint-optimization records survived recreation. Main remains untouched by this integration.
