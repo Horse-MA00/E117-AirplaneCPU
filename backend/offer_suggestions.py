@@ -14,30 +14,45 @@ def suggestions(flight_id, day, inventory, forecast_for):
     status = inventory.release_status(flight_id, day, ceiling)
     result = {'flight_id': flight_id, 'forecast_day': day,
               'current_release_limit': status['new_release_limit'], 'release_status': status,
-              'suggestions': [], 'reason': status['blocked_reason'] or ''}
-    if status['blocked_reason']:
-        return result
+              'suggestions': [], 'results': [], 'latest_run': None,
+              'reason': status['blocked_reason'] or ''}
     current = optimization.provenance()
     with optimization_store.connection() as db:
-        ids = [row[0] for row in db.execute("SELECT run_id FROM optimization_runs WHERE status='completed' ORDER BY updated_at DESC")]
-    seen_modes = set()
+        ids = [row[0] for row in db.execute('SELECT run_id FROM optimization_runs ORDER BY updated_at DESC, rowid DESC')]
+    seen_modes, displayed_modes = set(), set()
     for run_id in ids:
         saved = optimization_store.run(run_id)
         scope = saved['config'].get('scope') or {}
         if scope.get('flight_id') != flight_id or scope.get('as_of_day', scope.get('forecast_day')) != day:
             continue
-        if saved['provenance'] != current:
+        if result['latest_run'] is not None and saved['status'] != 'completed':
             continue
         report = optimization.read(run_id)
+        run = {'run_id': run_id, 'status': report.get('status', saved['status']),
+               'updated_at': saved['updated_at'], 'provenance_current': saved['provenance'] == current,
+               'model_version': saved['provenance'].get('version')}
+        if result['latest_run'] is None:
+            result['latest_run'] = run
+        if run['status'] != 'completed':
+            continue
         for track in report['tracks']:
             mode = track['mode']
+            best, validation = track.get('best') or {}, track.get('validation') or {}
+            if mode not in displayed_modes:
+                displayed_modes.add(mode)
+                result['results'].append({**run, 'mode': mode, 'decision': track.get('decision', 'PENDING'),
+                    'validated': bool(validation), 'member_fare': best.get('member_fare'),
+                    'membership_fee': best.get('membership_fee'),
+                    'incremental_contribution': validation.get('incremental_contribution'),
+                    'decision_reason': track.get('decision_reason')})
+            if not run['provenance_current']:
+                continue
             if mode in seen_modes:
                 continue
             seen_modes.add(mode)
             # A newer NO_OFFER supersedes an older recommendation in this track.
-            if track.get('decision') != 'OFFER' or not track.get('validation') or not track.get('best'):
+            if status['blocked_reason'] or track.get('decision') != 'OFFER' or not validation or not best:
                 continue
-            best = track['best']
             fraction = float(saved['config']['release_fraction'])
             candidate_prediction = prediction
             if best.get('seat_calibration') is not None:
@@ -57,8 +72,18 @@ def suggestions(flight_id, day, inventory, forecast_for):
                 'mean_buyers': track['validation'].get('mean_buyers'),
                 'profit_margin': track['validation'].get('profit_margin'),
             })
-    if not result['suggestions']:
-        result['reason'] = 'No completed, validated optimization recommends an offer for this flight and release round.'
+    if not result['suggestions'] and not result['reason']:
+        latest = result['latest_run']
+        if latest is None:
+            result['reason'] = 'No optimization has been run for this flight and release round.'
+        elif not latest['provenance_current']:
+            result['reason'] = 'Previous optimization uses an earlier model or configuration. Rerun Optimize for a current suggestion.'
+        elif latest['status'] != 'completed':
+            result['reason'] = 'The latest optimization is not complete. Review its progress in Optimize.'
+        elif result['results'] and all(row['decision'] == 'NO_OFFER' for row in result['results']):
+            result['reason'] = 'Completed optimization recommends no offer for this flight and release round.'
+        else:
+            result['reason'] = 'No completed, validated optimization recommends an offer for this flight and release round.'
     return result
 
 

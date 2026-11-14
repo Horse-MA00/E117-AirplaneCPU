@@ -4,7 +4,14 @@
 
 2026-11-14。這次更新擴大 Customer panel、重新安排 Admin 資訊，並加入獨立會員購票網站。全部介面使用英文，金額使用 HKD；航班及購買仍為 Hackathon 合成示例，沒有實際付款或航空出票。
 
-後續全面重設已完成：主配色改為紫 `#6F2C91`、青 `#24BCDC`、白。Admin 使用 Forecast / Optimize / Experiments / Manage offers；Optimize 已加入可設定輪數的數學／LLM 雙軌價格搜尋與 SQLite 保存，原 Customer panel 和 Shared market 移至 Experiments。Client 加入票價排序、只看可售座位、清楚的完整票價／會員費及三步購票流程。最新畫面及演算法以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準；下文保留原交易 API 與 panel 規則。
+後續全面重設已完成：主配色改為紫 `#6F2C91`、青 `#24BCDC`、白。Admin 使用 Forecast / Optimize / Experiments / Manage offers；Optimize 已加入數學／LLM 雙軌價格搜尋與 SQLite 保存，原 Customer panel 和 Shared market 移至 Experiments。Client 加入票價排序、只看可售座位、清楚的完整票價／會員費及三步購票流程。最新畫面及演算法以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準；下文保留原交易 API 與 panel 規則。
+
+## 最新簡化操作（2026-11-14）
+
+- Forecast 保留四個座位指標、座位分配及預測／票價圖；移除底部三輪明細、已發布批次表、β 說明及 Admin footer。D28／D14／D7 的後端扣減規則不變。
+- Optimize 不再要求輸入 P₀／V₀、輪數、旅客數或進階搜尋參數。P₀ 由該航班資料導出，新指定航班實驗的會費由後端固定 HK$399。預設為 14 位旅客、2 個搜尋市場、6 輪 Live LLM、50% 放票比例；數學模型仍使用公式與細網格。LLM 總呼叫額度和每批額度保留。
+- Manage offers 選定航班後自動載入該航班／輪次的結果。已通過驗證者顯示票價與建議座位；尚未執行者提供帶入航班及輪次的 Optimize 連結。NO_OFFER、執行中及舊版本結果各有狀態，不當作可發布建議。返回頁面會重新讀取結果。
+- 固定 HK$399 只適用於新指定航班 Optimize；歷史結果及會員網站已保存的 plan 不會被瀏覽或試算偷偷改價。套用建議後，發布時仍核對實際會員 plan 的會費。
 
 ## 兩個入口
 

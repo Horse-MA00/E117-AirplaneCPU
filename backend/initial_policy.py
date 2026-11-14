@@ -10,6 +10,11 @@ from backend.shared_market import DEFAULTS
 from backend.fare_policy import MEMBER_FARE_CAP_RATIO, member_fare_cap
 
 
+# Product policy for new flight-scoped Optimize requests only. Legacy unscoped
+# experiments and previously saved runs keep their own membership fee.
+SCOPED_MEMBERSHIP_FEE = 399
+
+
 def flight_scope(flight_id, day=28):
     if day not in (28, 14, 7) or isinstance(day, bool):
         raise ValueError('forecast_day must be 28, 14 or 7')
@@ -65,10 +70,10 @@ def suggest(body=None):
     if body.get('flight_id'):
         scope = flight_scope(body['flight_id'], body.get('forecast_day', 28))
         return {'initial_member_fare': scope['initial_member_fare'],
-                'initial_membership_fee': _number(body, 'initial_membership_fee', 399, 0, 5000),
+                'initial_membership_fee': SCOPED_MEMBERSHIP_FEE,
                 'scope': scope, 'source': {**{k:v for k,v in scope.items() if k != 'history'}, 'kind':'selected_synthetic_flight_snapshot'},
                 'assumptions': ['P0 is the member fare cap: 50% of the latest observable normal base fare at the selected snapshot. Member fares are never searched above it. Historical member-price columns are not used.',
-                    'P0 is fixed by the dataset, not a user price entry. V0 is user-selected and held fixed for this flight search.',
+                    f'P0 is fixed by the dataset, not a user price entry. V0 is fixed at HK${SCOPED_MEMBERSHIP_FEE} for this flight search.',
                     'One selected flight is evaluated; this is not an annual membership-fee optimum.']}
     customers = _number(body, 'customers', 14, 1, 100)
     setup = _number(body, 'program_cost', DEFAULTS['program_cost'], 0, 10000)

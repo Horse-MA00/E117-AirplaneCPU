@@ -12,7 +12,7 @@ Admin 已改為紫／青／白配色，四個主入口是 Forecast seats、Optim
 
 Forecast seats 及 Optimize prices 均可按 Low／Medium／High demand 篩選航班。分類使用固定 D28 的 NHPP 預測起飛時正常訂位率，低於 60% 為 Low，60% 至低於 85% 為 Medium，85% 或以上為 High；不是直接讀取模擬情境名稱或事後真值。索引缺失、過期或無有效預測的航班列為 Unclassified。切換 D14／D7 後仍使用明示的 D28 分類參考；當下預測、供應及放票規則照常重新計算。
 
-`backend/optimization.py` 的主流程版本為 `flight-policy-feedback-v6-formula-grid`，必須選擇航線、日期／航班及 D28／D14／D7。會員基本票價上限為所選時點最近可見正常基本票價的 50%（`backend/fare_policy.py`）；新實驗的 P₀ 等於此上限，不能手動覆寫，搜尋上限亦收窄至此值，發布優惠時再次檢查；V₀ 可填寫並在該次搜尋固定。數學及 Live LLM 都在同一指定航班的獨立反事實世界內運行，使用該班已訂位、空位、正常基本票價及歷史；不再以一般多航班市場代替所選航班。啟動前檢查所選輪次有正會員配額。數學軌先用 `backend/fare_estimate.py`（`formula-scan-v1`）以相同旅客、數學模型的選擇機率計算 0 至上限每隔 HK$1 的期望增量貢獻，取最高者為 P*（約 20 毫秒），再以完整模擬測試 P* 及附近 8 個價格；Live LLM 軌仍在 P₀ 附近先測試 ±25%，再做明示邊界探索。價格圖同時顯示貢獻、利潤率及會員買家，三項最大值分開標示，並以虛線顯示同一航班無會員優惠時的貢獻及逐點差額；結果不再重複顯示固定會費；普通票買家、入會、票數及報價曝光另列，無供應／無曝光不作價格排名。
+`backend/optimization.py` 的主流程版本為 `flight-policy-feedback-v6-formula-grid`，必須選擇航線、日期／航班及 D28／D14／D7。會員基本票價上限為所選時點最近可見正常基本票價的 50%（`backend/fare_policy.py`）；新實驗的 P₀ 等於此上限，不能手動覆寫，搜尋上限亦收窄至此值，發布優惠時再次檢查；新指定航班實驗由後端固定 V₀ = HK$399，前端移除 P₀／V₀、輪數、旅客數及進階設定輸入；預設 14 位旅客、2 個搜尋市場、6 輪 Live LLM，數學軌按細網格決定測試點。數學及 Live LLM 都在同一指定航班的獨立反事實世界內運行，使用該班已訂位、空位、正常基本票價及歷史；不再以一般多航班市場代替所選航班。啟動前檢查所選輪次有正會員配額。數學軌先用 `backend/fare_estimate.py`（`formula-scan-v1`）以相同旅客、數學模型的選擇機率計算 0 至上限每隔 HK$1 的期望增量貢獻，取最高者為 P*（約 20 毫秒），再以完整模擬測試 P* 及附近 8 個價格；Live LLM 軌仍在 P₀ 附近先測試 ±25%，再做明示邊界探索。價格圖同時顯示貢獻、利潤率及會員買家，三項最大值分開標示，並以虛線顯示同一航班無會員優惠時的貢獻及逐點差額；結果不再重複顯示固定會費；普通票買家、入會、票數及報價曝光另列，無供應／無曝光不作價格排名。
 
 当前预测统一经 `backend/forecast.py`：D28 使用冻结 v2 需求分布及新校准的 v2 安全余量；D14/D7 使用完整窗口与近期窗口混合的 v3 及新余量。D28 的平滑候选未通过独立测试的突增组收入门槛，因此未启用。历史 v2 模型及报告保留，详见 [NHPP 平滑与校准](NHPP_V3_REVIEW.md) 和 [路演说明](PITCHING_BRIEF.md)。 同一次價格搜尋和獨立驗證固定初始座位 profile，以免供應規則變化混入價格比較。完成市場仍根據正常需求誤差計算 proposed next calibration，僅記錄為下次實驗提案，不在本次套用。最後用兩個獨立種子驗證保留的價格候選。單航班收入分攤三分之一新年費／會員服務成本，實際現金仍收全額一次，因此不宣稱是最佳全年會費。詳見 [現行航班優化規格](FLIGHT_SCOPED_OPTIMIZATION.md)；修正經過見 [v3 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md) 及 [v4 原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)（v4 的原價 P₀ 已由 v5 的 50% 上限取代）。
 
@@ -117,7 +117,7 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 | --- | --- |
 | GET /api/health | 健康檢查（Docker healthcheck 使用） |
 | POST / GET /api/optimization/runs、GET /api/optimization/runs/{id}、POST …/{id}/resume、GET …/{id}/events、GET …/{id}/export | 指定航班優化實驗，完整契約見 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md#persistence-and-api) |
-| POST /api/optimization/initial-policy | 由所選航班快照計算 P₀ 與預設 V₀，不呼叫 LLM |
+| POST /api/optimization/initial-policy | 由所選航班快照計算 P₀，V₀ 固定 HK$399，不呼叫 LLM |
 | GET /api/optimization/suggestions | 指定 flight_id／forecast_day 的已驗證價格及即時可發布配額建議 |
 | POST / GET /api/pricing/runs、GET /api/pricing/runs/{id} | 參考用全期連續定價，見 [CONTINUOUS_PRICING](CONTINUOUS_PRICING.md) |
 | GET /api/summary | 列數、航班數、模型與LLM配置狀態 |

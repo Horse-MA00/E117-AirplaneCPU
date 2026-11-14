@@ -1,6 +1,8 @@
 import { renderContributionExplanation } from './contribution-explanation.js';
 import { demandDescription, matchesDemand, populateDemandFilter } from './demand-filter.js';
 const $ = id => document.getElementById(id);
+// Fixed experiment settings keep the simplified form reproducible. Fee is enforced by the server.
+const DEFAULTS = Object.freeze({rounds:6,customers:14,replicates:2,seed:117,release_fraction:0.5,min_service_rate:0.6,program_cost:0,fare_min:0});
 const state = { runId:null, data:null, timer:null, request:0, loading:false, configured:false, listed:false, flights:[], scope:null, scopeRequest:0 };
 const num = (v, digits=0) => v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toLocaleString('en-HK',{maximumFractionDigits:digits});
 const money = v => v == null ? '—' : `HK$${num(v,2)}`;
@@ -19,7 +21,7 @@ function releaseDecision(scope, share) {
     detail:`The forecast expects ${num(scope.expected_remaining_demand,1)} more normal bookings for ${num(scope.available_seats)} empty seats. After protecting normal demand, 0 member seats can be released, so there is no member fare to test. Choose another flight or release round.`};
   const seats=Number(scope.releasable_seats)||0;
   if(Math.floor(seats*share)<1)return {title:`Do not release member seats at ${day} with a ${num(share*100)}% release share`,
-    detail:`NHPP allows ${num(seats)} member seat${seats===1?'':'s'}, but ${num(share*100)}% of that rounds down to 0. Raise the release share to test prices.`};
+    detail:`NHPP allows ${num(seats)} member seat${seats===1?'':'s'}, but ${num(share*100)}% of that rounds down to 0. Choose another flight or release round with more member seats.`};
   return null;
 }
 const evidenceLabel = row => ({uninformative_no_supply:'No member supply',uninformative_no_member_exposure:'No traveller saw a member offer',no_member_sales:'Offers seen; no member sales',observed_member_sales:'Member purchases observed'})[row.price_evidence_status]||'Historical exposure not recorded';
@@ -35,7 +37,7 @@ async function api(path, body) {
 }
 function showError(message) {text('optimization-error',message);$('optimization-error').hidden=!message;}
 function showDecision(){
-  const decision=releaseDecision(state.scope,val('optimization-share')),box=$('optimization-no-release');
+  const decision=releaseDecision(state.scope,DEFAULTS.release_fraction),box=$('optimization-no-release');
   box.hidden=!decision;box.replaceChildren(...(decision?[node('strong',decision.title),document.createTextNode(decision.detail)]:[]));
   return decision;
 }
@@ -241,23 +243,18 @@ function fillFlights(selected=''){
   text('optimization-demand-status',matching.length?`${num(matching.length)} flights match${route?`; ${num(flights.length)} on ${route.replace('-',' → ')}`:''}.`:'No flights match. Choose another demand level or All demand.');
 }
 async function loadScope(){
-  const token=++state.scopeRequest;state.scope=null;$('optimization-fare').value='';$('optimization-load-demo').hidden=true;showError('');controls();
+  const token=++state.scopeRequest;state.scope=null;$('optimization-load-demo').hidden=true;showError('');controls();
   const flightId=$('optimization-flight').value;
-  if(!flightId){text('optimization-scope',filteredFlights().length?'Choose a route and departure to load this flight.':'No flight selected. Change the demand filter to continue.');text('optimization-initial-source','P₀ is the member fare cap: 50% of the selected flight’s normal base fare, before taxes and fees.');return;}
+  if(!flightId){text('optimization-scope',filteredFlights().length?'Choose a route and departure to load this flight.':'No flight selected. Change the demand filter to continue.');return;}
   text('optimization-scope','Loading the observed flight snapshot…');
   try{
-    const result=await api('/api/optimization/initial-policy',{flight_id:flightId,forecast_day:val('optimization-day'),customers:val('optimization-customers'),program_cost:val('optimization-cost')});
+    const result=await api('/api/optimization/initial-policy',{flight_id:flightId,forecast_day:val('optimization-day'),customers:DEFAULTS.customers,program_cost:DEFAULTS.program_cost});
     if(token!==state.scopeRequest)return;
     if(!result.scope)throw new Error('This backend does not support flight-scoped optimization. Refresh after updating the server.');
-    state.scope=result.scope;$('optimization-fare').value=result.initial_member_fare;
-    // Member fares never exceed 50% of the normal base fare; the server enforces the same cap.
-    const cap=Number(result.scope.member_fare_cap??result.initial_member_fare);
-    $('optimization-fare-max').max=String(cap);$('optimization-fare-max').value=String(cap);
-    if(val('optimization-fare-min')>=cap)$('optimization-fare-min').value='0';
+    state.scope=result.scope;
     const scope=result.scope;
     text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${num(scope.available_seats)} physical empty seats / ${num(scope.capacity)} capacity; ${num(scope.releasable_seats)} forecast member seats.`);
     $('optimization-load-demo').hidden=scopeEligible(scope);
-    text('optimization-initial-source',`P₀ ${money(result.initial_member_fare)} is the member fare cap: 50% of this flight’s ${money(scope.normal_base_fare)} normal base fare, before taxes and fees${scope.quote_age_days?` (last available quote ${scope.quote_age_days} days earlier)`:''}. Tested member fares never go above it.`);
     showError('');
   }catch(error){if(token===state.scopeRequest)showError(error.message);}finally{if(token===state.scopeRequest)controls();}
 }
@@ -271,21 +268,20 @@ $('optimization-route').addEventListener('change',()=>{fillFlights();loadScope()
 $('optimization-demand').addEventListener('change',()=>{const selected=$('optimization-flight').value;fillRoutes();fillFlights(selected);loadScope();});
 $('optimization-flight').addEventListener('change',loadScope);
 $('optimization-day').addEventListener('change',loadScope);
-$('optimization-share').addEventListener('change',controls);
-$('optimization-suggest').addEventListener('click',loadScope);
 $('optimization-load-demo').addEventListener('click',async()=>{const route=$('optimization-route').value;const demo=state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0&&routeKey(f)===route)||state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);if(!demo){showError('Choose another flight or release round with positive member supply.');return;}if(!matchesDemand(demo,$('optimization-demand').value))$('optimization-demand').value='all';fillRoutes(routeKey(demo));fillFlights(demo.flight_id);$('optimization-day').value='28';await loadScope();});
 window.addEventListener('uoption:optimize-flight',async event=>{
   if(!state.flights.length)await initializeFlights();
   const flight=state.flights.find(f=>f.flight_id===event.detail.flight_id);if(!flight)return;
   if(!matchesDemand(flight,$('optimization-demand').value))$('optimization-demand').value='all';
   fillRoutes(routeKey(flight));fillFlights(flight.flight_id);
-  $('optimization-day').value=String([28,14,7].includes(event.detail.day)?event.detail.day:([28,14,7].find(day=>day<event.detail.day)||28));await loadScope();
+  const day=Number(event.detail.forecast_day??event.detail.day);
+  $('optimization-day').value=String([28,14,7].includes(day)?day:([28,14,7].find(round=>round<day)||28));await loadScope();
+  if(location.hash==='#optimization')requestAnimationFrame(()=>$('view-optimization').querySelector('h1').focus());
 });
 initializeFlights();
 $('optimization-form').addEventListener('submit',async event=>{
-  event.preventDefault();if(state.loading)return;const blocked=state.scope?releaseDecision(state.scope,val('optimization-share')):{title:'Select a flight and release round first.'};if(blocked){showError(blocked.title);return;}showError('');state.loading=true;controls();
-  const body={flight_id:$('optimization-flight').value,forecast_day:val('optimization-day'),mode:$('optimization-mode').value,rounds:val('optimization-rounds'),customers:val('optimization-customers'),initial_membership_fee:val('optimization-fee'),fare_min:val('optimization-fare-min'),fare_max:val('optimization-fare-max'),fee_min:val('optimization-fee-min'),fee_max:val('optimization-fee-max'),seed:val('optimization-seed'),replicates:val('optimization-replicates'),release_fraction:val('optimization-share'),min_service_rate:val('optimization-service'),program_cost:val('optimization-cost'),max_calls:val('optimization-budget'),total_live_budget:$('optimization-mode').value==='math'?0:val('optimization-total-budget')};
-  if(val('optimization-fare')<body.fare_min||val('optimization-fare')>body.fare_max||body.initial_membership_fee<body.fee_min||body.initial_membership_fee>body.fee_max||body.fare_min>=body.fare_max||body.fee_min>=body.fee_max){showError('Search limits must contain the starting prices and have a minimum lower than the maximum.');state.loading=false;controls();return;}
+  event.preventDefault();if(state.loading)return;const blocked=state.scope?releaseDecision(state.scope,DEFAULTS.release_fraction):{title:'Select a flight and release round first.'};if(blocked){showError(blocked.title);return;}showError('');state.loading=true;controls();
+  const body={...DEFAULTS,flight_id:$('optimization-flight').value,forecast_day:val('optimization-day'),mode:$('optimization-mode').value,max_calls:val('optimization-budget'),total_live_budget:$('optimization-mode').value==='math'?0:val('optimization-total-budget')};
   try{const data=await api('/api/optimization/runs',body);clearTimeout(state.timer);state.runId=data.run_id;state.data=null;await listRuns();await poll(state.runId);}
   catch(error){showError(error.message);}finally{state.loading=false;controls();}
 });

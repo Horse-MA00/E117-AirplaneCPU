@@ -38,9 +38,10 @@ def validate(body):
         raise ValueError('JSON object required')
     scope = None
     if body.get('flight_id'):
-        from backend.initial_policy import flight_scope
+        from backend.initial_policy import SCOPED_MEMBERSHIP_FEE, flight_scope
         scope = flight_scope(body['flight_id'], body.get('forecast_day', 28))
-        body = {**body, 'initial_member_fare': scope['initial_member_fare'], 'fee_min':0, 'fee_max':5000}
+        body = {**body, 'initial_member_fare': scope['initial_member_fare'],
+                'initial_membership_fee': SCOPED_MEMBERSHIP_FEE, 'fee_min':0, 'fee_max':5000}
         # Member fares never exceed 50% of the normal base fare; a wider requested
         # upper bound is narrowed to the cap so no candidate can be proposed above it.
         cap = scope['member_fare_cap']

@@ -222,3 +222,13 @@ Merged main at `a178b08` (documentation cleanup) into `feature/formula-grid-pric
 新增 PITCHING_BRIEF.md，涵盖当前方案、最终保护覆盖率、正常收入压力损失、中文与英文讲稿、七页 presentation 结构及评委问答。同步最新 main 文档整理，保留双方日志并使用 AGENTS.md 单一指引。修复 Git LF/CRLF 规范化导致的校准字节哈希兼容问题，仅接受换行等价，拒绝内容篡改，不改历史评分。
 
 最终合并前验证：Linux Docker 249 项后端测试通过；根目录 30 项通过、1 项 Git 检查跳过；本机全部 31 项根目录测试通过。发布与冻结制品校验通过，航班索引已重建。用户授权将当前方案和路演文档合并并推送 main。
+
+
+### Admin 簡化與固定會費（2026-11-14）
+
+- 在獨立 main 工作目錄拉入 `c4aae8b`，保留原工作目錄 Thompson pricing 實驗分支的未提交修改。最新主線包含已校準 NHPP 平滑與路演證據；本次未修改預測演算法。
+- Forecast 移除底部三輪配額明細、發布批次表、模型參數／下載列和 Admin footer；保留座位卡、分配圖、訂位預測及票價走勢。後端三輪放票及庫存檢查不變。
+- Optimize 移除 P₀／V₀、輪數、旅客數及進階設定；新指定航班初始政策與執行 API 均強制 HK$399，舊結果保留。簡化頁面預設 14 旅客、2 個搜尋市場、6 輪 Live LLM、50% 放票比例；數學軌仍使用公式與 9 點細網格。
+- Manage offers 自動顯示同航班／輪次的建議；未計算時提供帶入航班及輪次的 Optimize 連結。NO_OFFER、進行中及舊版本結果分開標示；只有當前版本通過驗證的 OFFER 可套用。跨頁刷新保留仍有效的綁定草稿、清除過期綁定，快速切換航班不會被較慢的舊回應覆蓋。
+- Docker 完整檢查：260 個後端測試通過；31 個根測試中 30 通過、1 個需 Git 的測試在容器略過；凍結資料與實驗雜湊驗證通過。最初本機 sandbox 的 HTTP 測試因禁止 bind 失敗，改由隔離 Docker 測試容器完成。
+- 瀏覽器通過 Optimize、Manage offers、座位供應、需求篩選及 Client Portal 測試。實際數學 run `opt-b731d943cc604d36` 完成 9 個票價、24 個市場，會費全為 HK$399，provider calls = 0；結論 NO_OFFER 原樣保留，未因介面簡化改動服務門檻或結果。此 run 保存在本機私有 SQLite，未發布新會員優惠。

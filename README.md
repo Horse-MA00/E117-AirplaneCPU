@@ -25,13 +25,16 @@ flight search, base fares with a separate fees/total line, membership and saved 
 
 The primary optimizer now requires a **specific route, flight date and D28/D14/D7 snapshot**.
 Member base fares are capped at **50% of the flight's latest observed normal base fare**;
-P₀ starts at that cap and is read-only, and the user-selected V₀ stays fixed during
-the fare search. The mathematical track scores every fare up to the cap with a
+P₀ starts at that cap automatically; new flight-scoped runs fix the membership fee
+at **HK$399** on the server. The simplified setup uses 14 travellers, 2 search markets
+and 6 Live LLM rounds; the mathematical track determines its own fine-grid count. The mathematical track scores every fare up to the cap with a
 closed-form expectation of its customer model, then simulates the best estimate P*
 and eight nearby fares. Mathematical and live-LLM tracks replay this flight's
 inventory, compare contributions and purchases, and validate the candidate on independent
 worlds. Price/profit plots distinguish maximum contribution, margin and buyer count.
-Matching validated results become Manage offers suggestions with current quota checks.
+Manage offers automatically shows matching validated suggestions with current quota checks.
+Uncomputed flights link directly to Optimize with the same flight and round selected;
+NO_OFFER, unfinished and historical results are labelled separately.
 The latest correction separates forecast headroom, new quota and published bookable seats.
 New member-opportunity examples supply inventory; zero-supply runs are blocked. Member and
 regular purchasers are counted separately, and each new fare comparison freezes its seat

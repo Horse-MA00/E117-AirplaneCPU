@@ -33,6 +33,7 @@ try {
   await waitForecast();
   assert.equal(await page.locator('#history-table').count(), 0);
   assert.equal(await page.locator('#forecast-notes').count(), 0);
+  assert.equal(await page.locator('#risk-release-value, #member-sold-value, #prior-quota-value, #active-quota-value, #release-status, #demo-round-table, #beta-label, footer').count(), 0, 'Detailed release audit and model footer are removed from the simplified page.');
   assert.ok((await page.locator('#seat-composition').getAttribute('aria-label')).includes('seats'));
   assert.ok((await page.locator('#price-caption').textContent()).includes('D14'));
   assert.ok(await page.locator('#price-chart .chart-line').count());
@@ -43,7 +44,7 @@ try {
   await waitForecast();
   assert.equal(await page.locator('#release-value').textContent(), '0 seats');
   assert.equal(await page.locator('#publish-button').isDisabled(), true);
-  assert.ok((await page.locator('#risk-release-value').textContent()).includes('seats'));
+  assert.match(await page.locator('#nhpp-release-value').textContent(), /\d[\d,]* seats?/);
   await page.locator('[data-day="28"]').click();
   await waitForecast();
   await page.screenshot({ path: `${output}desktop.png`, fullPage: true });
@@ -131,9 +132,14 @@ try {
     assert.equal(await publishedCard.locator('a').getAttribute('href'), '/members');
     assert.equal(await publishedCard.locator('button').count(), 0, 'Admin must not contain a reserve-seat action.');
     await page.screenshot({ path: `${output}offers-desktop.png`, fullPage: true });
-    await navigate('flights'); await page.locator('[data-day="14"]').click(); await waitForecast();
-    assert.equal(await page.locator('#prior-quota-value').textContent(), '2 seats');
-    assert.equal(await page.locator('#demo-round-table tr').count(), 1);
+    await navigate('flights');
+    const carryResponse = page.waitForResponse((response) => response.url().endsWith('/api/forecast') && response.request().postDataJSON()?.days_to_departure === 14);
+    await page.locator('[data-day="14"]').click();
+    const carried = (await (await carryResponse).json()).forecast;
+    await waitForecast();
+    assert.equal(carried.release_status.previous_valid_unsold, 2, 'Detailed carry accounting remains in the API.');
+    assert.equal(carried.release_status.round_history.length, 1);
+    assert.equal(await page.locator('#bookable-value').textContent(), `${carried.seat_inventory.published_bookable} seats`);
 
   }
 

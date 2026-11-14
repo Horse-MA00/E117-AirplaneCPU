@@ -53,7 +53,8 @@ class ScopedOptimizationTests(unittest.TestCase):
         for world in engine.export_run(run)['worlds']:
             stored = store.world(world['world_id'])
             self.assertEqual(stored['state']['flights'][scope['flight_id']]['departure_time'],'09:00')
-        self.assertEqual({r['membership_fee'] for r in report['tracks'][0]['rounds']},{49})
+        self.assertEqual(report['config']['initial_membership_fee'],399)
+        self.assertEqual({r['membership_fee'] for r in report['tracks'][0]['rounds']},{399})
         self.assertTrue(all(r['member_fare']<=scope['normal_base_fare']*.5 for r in report['tracks'][0]['rounds']))
         self.assertTrue(all(r['seat_calibration']['generation']==0 for r in report['tracks'][0]['rounds']))
         self.assertTrue(all(r['next_seat_calibration']['generation']==1 for r in report['tracks'][0]['rounds']))
@@ -71,6 +72,58 @@ class ScopedOptimizationTests(unittest.TestCase):
         for row in report['tracks'][0]['rounds']:
             self.assertEqual(row['contribution'],row['total_contribution'])
             self.assertGreaterEqual(row['mean_buyers'],0)
+
+    def test_new_scoped_configs_ignore_fee_overrides_but_legacy_configs_do_not(self):
+        body = {'flight_id':'NET-HKG-ICN-20270521'}
+        scope = engine.validate(body)['scope']
+        for extra in ({}, {'initial_membership_fee':49}, {'initial_membership_fee':5001},
+                      {'initial_membership_fee':None}, {'initial_membership_fee':'49'},
+                      {'initial_membership_fee':49,'fee_min':0,'fee_max':100}):
+            request = {**body, **extra}
+            original = dict(request)
+            with self.subTest(extra=extra), patch('backend.initial_policy.flight_scope', return_value=scope):
+                config = engine.validate(request)
+            self.assertEqual(config['initial_membership_fee'],399)
+            self.assertTrue(config['membership_fee_fixed'])
+            self.assertEqual(request,original)
+        legacy = engine.validate({'legacy_market':True,'initial_membership_fee':49})
+        self.assertEqual(legacy['initial_membership_fee'],49)
+        self.assertFalse(legacy.get('membership_fee_fixed',False))
+
+    def test_both_tracks_use_fixed_fee_in_every_world_without_real_provider_calls(self):
+        from backend.probabilistic_customer import choose as probability
+        def fake(observation,mode,audit,**kwargs):
+            result = probability(observation)
+            return {**result,'source':'test_simulation','provider_call':False,'cache_hit':False}
+        with patch('llm_agent.experiment.load_local_env'), \
+             patch.dict(os.environ,{'LLM_API_URL':'https://example.invalid','LLM_API_KEY':'fake','LLM_MODEL':'test'}), \
+             patch('llm_agent.market_adapter.choose',side_effect=fake):
+            run = engine.start({'flight_id':'NET-HKG-ICN-20270521','mode':'both','rounds':2,
+                                'customers':1,'initial_membership_fee':49,'max_calls':120})['run_id']
+            report = self.finish(run)
+        self.assertEqual(report['status'],'completed',report['error'])
+        self.assertEqual(report['counts']['provider_calls'],0)
+        self.assertEqual({track['mode'] for track in report['tracks']},{'math','live'})
+        for track in report['tracks']:
+            self.assertTrue(track['rounds'])
+            self.assertEqual({row['membership_fee'] for row in track['rounds']},{399})
+            if track['validation']:
+                self.assertEqual(track['validation']['membership_fee'],399)
+        worlds = engine.export_run(run)['worlds']
+        self.assertTrue(worlds)
+        self.assertEqual({world['policy']['membership_fee'] for world in worlds},{399})
+        self.assertEqual({world['result']['policy']['membership_fee'] for world in worlds},{399})
+
+    def test_saved_scoped_fee_is_not_rewritten_when_read_or_proposed(self):
+        with patch('backend.initial_policy.SCOPED_MEMBERSHIP_FEE',49), \
+             patch('llm_agent.experiment.load_local_env'):
+            run = engine.start({'flight_id':'NET-HKG-ICN-20270521','customers':1})['run_id']
+            original = self.finish(run)
+        saved = engine.read(run)
+        self.assertEqual(saved['config']['initial_membership_fee'],49)
+        self.assertEqual(saved['tracks'],original['tracks'])
+        self.assertEqual(engine.propose(saved['config'],[],mode='math')['membership_fee'],49)
+        self.assertEqual({world['policy']['membership_fee'] for world in engine.export_run(run)['worlds']},{49})
 
     def test_original_fare_ignores_legacy_discount_and_uses_only_past_quote(self):
         flight_id = 'DEMO-HKG-TPE-20270515'
