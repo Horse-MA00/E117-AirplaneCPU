@@ -25,7 +25,7 @@ class IntegerPriceTests(unittest.TestCase):
         flight={'flight_id':'INTEGER-TEST','origin':'HKG','destination':'KMQ','departure_at':'2027-05-18T11:00:00+00:00'}
         history=[{'days_to_departure':28,'normal_base_fare':410.99,'capacity':180,'booked_seats':50,'available_seats':130,'empty_rate':130/180}]
         prediction={'expected_remaining_demand':10,'releasable_seats':100}
-        with patch('backend.initial_policy.data.flights',return_value=[flight]), patch('backend.initial_policy.data.history',return_value=history), patch('backend.nhpp.forecast',return_value=prediction) as forecast:
+        with patch('backend.initial_policy.data.flights',return_value=[flight]), patch('backend.initial_policy.data.history',return_value=history), patch('backend.forecast.forecast',return_value=prediction) as forecast:
             result=flight_scope('INTEGER-TEST')
         self.assertEqual(result['normal_base_fare'],410)
         self.assertEqual(result['observed_normal_base_fare'],410.99)

@@ -92,7 +92,11 @@ def validate(body):
 
 def _provenance():
     paths = ['backend/adaptive_pricing.py','backend/adaptive_store.py','backend/member_response.py',
-             'backend/nhpp.py','backend/fare_policy.py','backend/initial_policy.py','backend/release_policy.py',
+             'backend/nhpp.py','backend/nhpp_v3.py','backend/forecast.py',
+             'simulation/generated/calibration_v2.json','simulation/generated/calibration_v3.json',
+             'simulation/generated/calibration_v3_robust.json','simulation/generated/nhpp_v3_robust_final.json',
+             'simulation/generate.py','simulation/evaluate_nhpp_v3.py','simulation/calibrate_nhpp_v3_robust.py',
+             'backend/fare_policy.py','backend/initial_policy.py','backend/release_policy.py',
              'backend/data.py','llm_agent/weighted_population.py','llm_agent/adaptive_customers.py',
              'llm_agent/population.py']
     paths += [item['path'] for item in prompt_metadata()['prompts'].values()]

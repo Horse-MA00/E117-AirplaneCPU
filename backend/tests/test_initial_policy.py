@@ -4,6 +4,16 @@ from backend.initial_policy import suggest
 
 
 class InitialPolicyTests(unittest.TestCase):
+    def test_scoped_suggestion_fixes_fee_even_when_request_overrides_it(self):
+        scope = {'initial_member_fare': 245, 'history': []}
+        for extra in ({}, {'initial_membership_fee': 49}, {'initial_membership_fee': 5001},
+                      {'initial_membership_fee': None}, {'initial_membership_fee': '49'}):
+            body = {'flight_id': 'selected-flight', **extra}
+            with self.subTest(extra=extra), patch('backend.initial_policy.flight_scope', return_value=scope):
+                result = suggest(body)
+            self.assertEqual(result['initial_membership_fee'], 399)
+            self.assertTrue(any('HK$399' in assumption for assumption in result['assumptions']))
+
     def test_only_as_of_quotes_used_and_costs_explicit(self):
         rows = {'a': [{'days_to_departure': 28, 'normal_base_fare': 400},
                       {'days_to_departure': 0, 'normal_base_fare': 99999}],

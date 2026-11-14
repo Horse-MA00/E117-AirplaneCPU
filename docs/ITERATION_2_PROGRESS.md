@@ -204,6 +204,35 @@ Merged main at `a178b08` (documentation cleanup) into `feature/formula-grid-pric
 - Observed with zero programme cost on DEMO-ISG-HKG: the best tested fare (the HK$220 cap) still lost HK$480 against no offer because both member buyers would otherwise have bought normal fares (+HK$440 member revenue, −HK$920 normal revenue). The engine's decision was NO_OFFER.
 
 
+## 2026-11-14 — NHPP 平滑与收入风险校准
+
+用户要求实现近期趋势平滑及 P90/正常票收入风险校准。新增 `backend/nhpp_v3.py` 和活动入口 `backend/forecast.py`；冻结 v2 代码及报告保留。完整窗口/近期窗口按证据与样本量混合，完整窗口权重至少 20%。
+
+保留第一轮失败报告；第二轮使用 1200 班新校准与 600 班新测试。D14/D7 启用 v3；D28 的 v3 未通过突增组收入门槛，保留 v2 分布但启用独立通过的新 v2 guard。不得把保护覆盖当成原始 P90 覆盖，或声称所有时点都启用了 v3。
+
+当前保护覆盖 D28/D14/D7 为 99.17%/99.50%/99.83%；平均容量压力正常基础票价收入损失 HK$20.32/0/0，平均释放 2.76/9.01/14.74 座。更安全同时更保守。收入指标假设会员位立即售完，忽略取消和转买会员票，不是净利润或真实航空表现。
+
+详见 `docs/NHPP_V3_REVIEW.md`。修改已接入 API、共享市场、定价初始化、实验 provenance 和展示索引。当前分支保持不变，未合并、未推送。
+
+验证完成：Linux Docker 后端 248 项测试全部通过；模拟器测试共 26 项，25 通过、1 跳过；历史制品校验通过。新增 NHPP 专项 12 项测试通过，最终目录与活动模型匹配检查通过。原生 Windows 的 fcntl 限制未修改。
+
+
+## 2026-11-14 — 路演文档及 main 集成验证
+
+新增 PITCHING_BRIEF.md，涵盖当前方案、最终保护覆盖率、正常收入压力损失、中文与英文讲稿、七页 presentation 结构及评委问答。同步最新 main 文档整理，保留双方日志并使用 AGENTS.md 单一指引。修复 Git LF/CRLF 规范化导致的校准字节哈希兼容问题，仅接受换行等价，拒绝内容篡改，不改历史评分。
+
+最终合并前验证：Linux Docker 249 项后端测试通过；根目录 30 项通过、1 项 Git 检查跳过；本机全部 31 项根目录测试通过。发布与冻结制品校验通过，航班索引已重建。用户授权将当前方案和路演文档合并并推送 main。
+
+
+### Admin 簡化與固定會費（2026-11-14）
+
+- 在獨立 main 工作目錄拉入 `c4aae8b`，保留原工作目錄 Thompson pricing 實驗分支的未提交修改。最新主線包含已校準 NHPP 平滑與路演證據；本次未修改預測演算法。
+- Forecast 移除底部三輪配額明細、發布批次表、模型參數／下載列和 Admin footer；保留座位卡、分配圖、訂位預測及票價走勢。後端三輪放票及庫存檢查不變。
+- Optimize 移除 P₀／V₀、輪數、旅客數及進階設定；新指定航班初始政策與執行 API 均強制 HK$399，舊結果保留。簡化頁面預設 14 旅客、2 個搜尋市場、6 輪 Live LLM、50% 放票比例；數學軌仍使用公式與 9 點細網格。
+- Manage offers 自動顯示同航班／輪次的建議；未計算時提供帶入航班及輪次的 Optimize 連結。NO_OFFER、進行中及舊版本結果分開標示；只有當前版本通過驗證的 OFFER 可套用。跨頁刷新保留仍有效的綁定草稿、清除過期綁定，快速切換航班不會被較慢的舊回應覆蓋。
+- Docker 完整檢查：260 個後端測試通過；31 個根測試中 30 通過、1 個需 Git 的測試在容器略過；凍結資料與實驗雜湊驗證通過。最初本機 sandbox 的 HTTP 測試因禁止 bind 失敗，改由隔離 Docker 測試容器完成。
+- 瀏覽器通過 Optimize、Manage offers、座位供應、需求篩選及 Client Portal 測試。實際數學 run `opt-b731d943cc604d36` 完成 9 個票價、24 個市場，會費全為 HK$399，provider calls = 0；結論 NO_OFFER 原樣保留，未因介面簡化改動服務門檻或結果。此 run 保存在本機私有 SQLite，未發布新會員優惠。
+
 
 ## 2026-11-14 — Weighted member-only Thompson pricing
 
@@ -242,3 +271,11 @@ Final native checks: 290 backend and 31 publication/data/documentation tests, wi
 - 將自適應定價的 What members said 移到 `/admin#customers`，頁面只保留已保存實驗、輪次、摘要及會員理由；查閱只發 GET，不新增 LLM 呼叫。
 - 自適應定價頁移除 How the price changes 折線圖，保留輪次表、收入曲線及驗證結果，並提供帶 run ID 的回饋連結。舊六階段工具保留在 `#panel`、共享市場在 `#market`。
 - 原始模型輸出以純文字呈現；歷史資料、prompt 和凍結模型不改寫。原分支完整回歸通過：349 個後端及 31 個根目錄測試、文檔／凍結證據檢查。合併 main 後的驗證另記如下。
+
+
+### 整合 main 及最後驗證
+
+- 整合 `cdb84a4` 的兩筆更新：保留活動 NHPP 入口（D28 的 v2 分布／新 guard、D14/D7 的平滑 v3）、簡化 Optimize 與 HK$399 固定會費、Manage offers 的結果刷新。保留實驗分支的 80% 上限、整數報價及 Thompson 配對測試。
+- 新 adaptive run provenance 增加活動預測器及校準／獨立驗證來源雜湊；舊實驗維持原始 v2 配額和證據，歷史收益不當作合併後流程的驗證。
+- 合併後原生完整檢查通過 374 個後端及 31 個根測試，文檔／凍結制品驗證通過。瀏覽器驗證覆蓋 Experiments 回饋讀取、切換輪次、錯誤恢復、空狀態、純文字安全顯示、手機及整數價格。
+- 實際已保存的 `adaptive-1afc5c96d92f465d` 可讀到第六輪 16 個決策；查看頁面零 POST、零新 LLM 呼叫、零瀏覽器錯誤，切回 Forecast 正常載入。移除背景預測初始化，避免只看回饋時執行其他頁面的計算。

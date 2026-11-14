@@ -15,7 +15,7 @@ from datetime import date, timedelta
 
 import numpy as np
 
-from backend.nhpp import forecast
+from backend.forecast import forecast
 from backend.release_policy import RELEASE_DAYS, VERSION as RELEASE_VERSION, release_budget
 from llm_agent.population import population
 from simulation.generate import simulate_flight

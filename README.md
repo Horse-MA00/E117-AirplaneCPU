@@ -1,5 +1,7 @@
 # UOption Fly Pass
 
+路演与当前方案：[Pitching brief](docs/PITCHING_BRIEF.md)，含最新校准保护覆盖率、讲稿和评委问答。
+
 **Forecast normal demand. Release additional member seats at D28, D14 and D7, and compare fares and membership fees.**
 
 A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for Cathay Hackathon 2026, **Low-cost Travel — Smart Offer & Borderless Booking**. The proposed HK Express membership offers zero or low base fares plus mandatory charges.
@@ -29,13 +31,16 @@ flight search, base fares with a separate fees/total line, membership and saved 
 
 The primary optimizer now requires a **specific route, flight date and D28/D14/D7 snapshot**.
 Member base fares are capped at **80% of the flight's latest observed normal base fare**;
-P₀ starts at that cap and is read-only, and the user-selected V₀ stays fixed during
-the fare search. The mathematical track scores every fare up to the cap with a
+P₀ starts at that cap automatically; new flight-scoped runs fix the membership fee
+at **HK$399** on the server. The simplified setup uses 14 travellers, 2 search markets
+and 6 Live LLM rounds; the mathematical track determines its own fine-grid count. The mathematical track scores every fare up to the cap with a
 closed-form expectation of its customer model, then simulates the best estimate P*
 and eight nearby fares. Mathematical and live-LLM tracks replay this flight's
 inventory, compare contributions and purchases, and validate the candidate on independent
 worlds. Price/profit plots distinguish maximum contribution, margin and buyer count.
-Matching validated results become Manage offers suggestions with current quota checks.
+Manage offers automatically shows matching validated suggestions with current quota checks.
+Uncomputed flights link directly to Optimize with the same flight and round selected;
+NO_OFFER, unfinished and historical results are labelled separately.
 The latest correction separates forecast headroom, new quota and published bookable seats.
 New member-opportunity examples supply inventory; zero-supply runs are blocked. Member and
 regular purchasers are counted separately, and each new fare comparison freezes its seat
@@ -99,7 +104,7 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 - **680,364 daily snapshots** across **3,759 synthetic flight histories** (200,000 original demo rows, two 40,182-row route/date supplements and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
-- **Flight-specific optimisation:** formula P* plus a 9-fare simulated grid on the mathematical track, 1–12 rounds on the live-LLM track, member fares capped at 80% of the normal base fare, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
+- **Flight-specific optimisation:** formula P* plus a 9-fare simulated grid on the mathematical track, 1–12 rounds on the live-LLM track, member fares capped at 80% of the normal base fare, server-fixed HK$399 V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
 - **Separate Admin and member interfaces:** actionable analysis navigation, panel outcome summaries, segment comparisons, searchable/paginated traveller lists, and a member-facing flight search, price review, membership and My trips flow.
 - **Larger background panels:** up to **100 live LLM travellers** or **1,000 rule-based travellers**, with a default of 100. Live batches default to 60 decision attempts (maximum120), checkpoint each traveller, show progress and resume only on explicit request. Sole legal actions need no model call.

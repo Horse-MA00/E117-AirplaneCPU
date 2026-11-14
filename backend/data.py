@@ -37,7 +37,7 @@ def flights():
         if current:
             checked={r['flight_id']:r['releasable_seats'] for r in report['records'] if r['days_to_departure']==28}
             for flight in extra:
-                if flight['flight_id'] in checked:flight['demo_d28_releasable']=checked[flight['flight_id']]
+                if flight['flight_id'] in checked:flight['demo_v2_d28_releasable']=checked[flight['flight_id']]
     from .demand_catalog import enrich
     return enrich(original+extra, ROOT)
 def histories():

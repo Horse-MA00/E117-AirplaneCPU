@@ -18,33 +18,26 @@ try{
   await page.waitForFunction(()=>document.querySelectorAll('#optimization-route option').length>1);
   assert.equal(await page.locator('#optimization-start').isDisabled(),true);
   await page.locator('#optimization-route').selectOption('HKG-ICN');
-  await page.locator('#optimization-flight').selectOption('NET-HKG-ICN-20270521');
-  await page.waitForFunction(()=>Boolean(document.getElementById('optimization-fare').value));
-  assert.equal(await page.locator('#optimization-fare').getAttribute('readonly'),'');
-  await page.locator('#optimization-fee').fill('399');
-  await page.locator('#optimization-mode').selectOption('math');
-  await page.locator('#optimization-rounds').fill('6');
-  await page.locator('#optimization-customers').fill('14');
-  await page.locator('.optimization-settings summary').click();
-  await page.locator('#optimization-replicates').fill('2');
-  await page.locator('#optimization-seed').fill('20261190');
   const suggested=page.waitForResponse(r=>r.url().endsWith('/api/optimization/initial-policy')&&r.request().method()==='POST');
-  await page.locator('#optimization-suggest').click();
+  await page.locator('#optimization-flight').selectOption('NET-HKG-ICN-20270521');
   const suggestion=await (await suggested).json();
   assert.equal(suggestion.scope.flight_id,'NET-HKG-ICN-20270521');
   assert.equal(suggestion.scope.as_of_day,28);
-  assert.equal(Number(await page.locator('#optimization-fare').inputValue()),suggestion.initial_member_fare);
-  assert.equal(Number(await page.locator('#optimization-fee').inputValue()),399);
+  assert.equal(suggestion.initial_membership_fee,399);
+  await page.waitForFunction(()=>!document.getElementById('optimization-start').disabled);
+  assert.equal(await page.locator('#optimization-fare, #optimization-fee, #optimization-rounds, #optimization-customers, .optimization-settings').count(),0);
+  await page.locator('#optimization-mode').selectOption('math');
   const started=page.waitForResponse(r=>r.url().endsWith('/api/optimization/runs')&&r.request().method()==='POST');
   await page.locator('#optimization-start').click();
-  const startResponse=await started; const sent=startResponse.request().postDataJSON();assert.equal(sent.flight_id,'NET-HKG-ICN-20270521');assert.equal(sent.forecast_day,28);assert.equal('initial_member_fare' in sent,false);
+  const startResponse=await started; const sent=startResponse.request().postDataJSON();assert.equal(sent.flight_id,'NET-HKG-ICN-20270521');assert.equal(sent.forecast_day,28);assert.equal('initial_member_fare' in sent,false);assert.equal('initial_membership_fee' in sent,false);assert.equal(sent.customers,14);assert.equal(sent.rounds,6);assert.equal(sent.replicates,2);assert.equal(sent.release_fraction,0.5);
   creation=await startResponse.json();assert.ok(creation.run_id,JSON.stringify(creation));
   }
   await page.waitForFunction(id=>document.getElementById('optimization-export').getAttribute('href')===`/api/optimization/runs/${id}/export` && ['Completed','Run needs attention'].includes(document.getElementById('optimization-status').textContent),creation.run_id,{timeout:600000});
   const response=await page.request.get(origin+`/api/optimization/runs/${creation.run_id}/export`);
   assert.equal(response.status(),200);
   const report=await response.json();assert.equal(report.status,'completed',report.error || 'Experiment not completed');
-  // Mathematical track: formula P* first, then the fixed fine grid (the rounds input applies to Live LLM only).
+  assert.equal(report.config.initial_membership_fee,399);
+  // Mathematical track: formula P* first, then the fixed fine grid; live defaults to six rounds.
   const grid=report.config.formula_estimate.grid;
   assert.equal(report.tracks[0].rounds.length,grid.length);
   assert.deepEqual(report.tracks[0].rounds.map(r=>r.member_fare),grid);

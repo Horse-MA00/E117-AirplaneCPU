@@ -1,5 +1,7 @@
 """Member-only experiment integration without network calls or private DB writes."""
 from pathlib import Path
+import hashlib
+import json
 import tempfile
 import time
 import unittest
@@ -192,6 +194,17 @@ class ExperimentTests(unittest.TestCase):
                           for r in w['result']['decisions']})
         self.assertIn('llm_agent/prompts/adaptive_customer_v4_en.txt', report['provenance']['files'])
         self.assertNotIn('llm_agent/prompts/adaptive_customer_v1_en.txt', report['provenance']['files'])
+
+    def test_provenance_covers_active_forecast_and_its_accepted_evidence(self):
+        from backend import forecast
+        files = pricing._provenance()['files']
+        calibration = json.loads((pricing.ROOT / forecast.CALIBRATION).read_text())
+        dependencies = {'backend/forecast.py', forecast.CALIBRATION,
+                        forecast.VALIDATION, *calibration['source_hashes']}
+        for name in dependencies:
+            with self.subTest(path=name):
+                self.assertIn(name, files)
+                self.assertEqual(files[name], hashlib.sha256((pricing.ROOT / name).read_bytes()).hexdigest())
 
     def test_scope_returns_the_selected_profiles_weight_schema(self):
         self.assertEqual(len(pricing.scope({'profile':'broad_coverage'})['population']['segments']), 14)

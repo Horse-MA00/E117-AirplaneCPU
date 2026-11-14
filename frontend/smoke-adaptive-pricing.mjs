@@ -159,9 +159,11 @@ try{
 async function verifyFeedbackPage(browser, origin, currentRun, historicalRun, errors) {
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
  page.on('pageerror',e=>errors.push(e.message));
- let reads=0, writes=0, savedRuns=[currentRun,historicalRun], failReads=false;
+ let reads=0, writes=0, forecastReads=0, savedRuns=[currentRun,historicalRun], failReads=false;
+ const feedbackFlight={...scope,capacity:180,departure_at:'2027-05-18T10:30:00+08:00'};
  await page.route('**/api/**',async route=>{
    const request=route.request(), path=new URL(request.url()).pathname;
+   if(path==='/api/forecast'){forecastReads++;return route.fulfill({json:{forecast:{expected_remaining_demand:20,expected_empty_seats:90,expected_empty_rate:.5,protection_p90:70,releasable_seats:40,risk_release_ceiling:40,beta:.012,rate_now:.7,forecast_curve:[],release_status:{safe_capacity:40,member_sold:0,total_active_unsold:0,currently_bookable:0,new_release_limit:40,round_history:[]}}}});}
    if(request.method()!=='GET'){writes++;return route.fulfill({status:405,json:{error:'Feedback is read-only'}});}
    if(path==='/api/adaptive-pricing/runs')return route.fulfill({json:{runs:savedRuns}});
    if(path.startsWith('/api/adaptive-pricing/runs/')){
@@ -170,7 +172,8 @@ async function verifyFeedbackPage(browser, origin, currentRun, historicalRun, er
      const id=path.split('/').at(-1), saved=savedRuns.find(r=>r.run_id===id);
      return route.fulfill(saved?{json:saved}:{status:404,json:{error:'Saved experiment not found'}});
    }
-   if(path==='/api/flights')return route.fulfill({json:{flights:[]}});
+   if(path==='/api/flights')return route.fulfill({json:{flights:[feedbackFlight]}});
+   if(path===`/api/flights/${feedbackFlight.flight_id}`)return route.fulfill({json:{flight:feedbackFlight,history:[28,14,7,0].map(days_to_departure=>({days_to_departure,capacity:180,booked_seats:70,available_seats:110,normal_base_fare:410,normal_total_fare:660,mandatory_fees:250}))}});
    if(path==='/api/summary')return route.fulfill({json:{dataset:{rows:0},llm:{configured:false}}});
    if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_days:365}}});
    if(path==='/api/personas')return route.fulfill({json:{segments:[]}});
@@ -218,5 +221,10 @@ async function verifyFeedbackPage(browser, origin, currentRun, historicalRun, er
    assert.equal(await page.locator('#feedback-content').isHidden(),true);
    assert.ok(reads>=3,'Feedback loads selected saved runs');
    assert.equal(writes,0,'Feedback navigation, refresh, error recovery and empty state send only GET requests');
+   assert.equal(forecastReads,0,'Feedback navigation never runs unrelated forecasts even with catalog flights');
+   await page.locator('.primary-nav a[href="#flights"]').click();
+   await page.waitForFunction(()=>document.getElementById('headroom-value').textContent==='40 seats');
+   assert.ok(forecastReads>0,'Forecast loads lazily when the user opens Forecast seats');
+   assert.equal(writes,0,'Lazy forecast does not start experiments');
  }finally{await page.close();}
 }

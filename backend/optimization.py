@@ -39,12 +39,17 @@ def validate(body):
     scope = None
     from .fare_policy import integer_price
     for key in ('initial_member_fare', 'initial_membership_fee', 'fare_min', 'fare_max', 'fee_min', 'fee_max'):
+        # Scoped fees/bounds are server policy, not user input. Ignore overrides
+        # before validating executable prices; legacy requests keep validation.
+        if body.get('flight_id') and key in ('initial_membership_fee', 'fee_min', 'fee_max'):
+            continue
         if key in body:
             integer_price(body[key], key)
     if body.get('flight_id'):
-        from backend.initial_policy import flight_scope
+        from backend.initial_policy import SCOPED_MEMBERSHIP_FEE, flight_scope
         scope = flight_scope(body['flight_id'], body.get('forecast_day', 28))
-        body = {**body, 'initial_member_fare': scope['initial_member_fare'], 'fee_min':0, 'fee_max':5000}
+        body = {**body, 'initial_member_fare': scope['initial_member_fare'],
+                'initial_membership_fee': SCOPED_MEMBERSHIP_FEE, 'fee_min':0, 'fee_max':5000}
         # Member fares never exceed 80% of the normal base fare; a wider requested
         # upper bound is narrowed to the cap so no candidate can be proposed above it.
         cap = scope['member_fare_cap']
@@ -102,7 +107,7 @@ def _id(run_id):
 
 def provenance():
     files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py', 'backend/data.py', 'backend/contribution_explanation.py',
-             'backend/probabilistic_customer.py', 'backend/fare_estimate.py', 'backend/nhpp.py', 'backend/release_policy.py', 'backend/seat_feedback.py',
+             'backend/probabilistic_customer.py', 'backend/fare_estimate.py', 'backend/nhpp.py', 'backend/nhpp_v3.py', 'backend/forecast.py', 'simulation/generated/calibration_v3_robust.json', 'simulation/generated/nhpp_v3_robust_final.json', 'simulation/evaluate_nhpp_v3.py', 'simulation/calibrate_nhpp_v3_robust.py', 'simulation/generated/calibration_v3.json', 'backend/release_policy.py', 'backend/seat_feedback.py',
              'simulation/generate.py', 'simulation/generated/calibration_v2.json',
              'llm_agent/market_adapter.py', 'llm_agent/population.py', 'llm_agent/output_contract.py',
              'llm_agent/prompts/shared_market_v3_en.txt']
