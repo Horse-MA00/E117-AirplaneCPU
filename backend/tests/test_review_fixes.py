@@ -9,7 +9,6 @@ import urllib.request
 from unittest.mock import patch
 
 from backend import server
-from backend.errors import NotFound
 from backend.store import Store
 
 

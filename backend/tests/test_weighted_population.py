@@ -3,7 +3,7 @@ import unittest
 
 from llm_agent.weighted_population import (
     DEFAULT_PROFILE, DEFAULT_WEIGHTS,
-    allocate, metadata, population, validate_weights,
+    allocate, metadata, population,
 )
 
 

@@ -2,9 +2,7 @@ FROM python:3.11-slim-bookworm@sha256:a83ba18aef0f865b1a4a611c2cf460fe446f279567
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONUTF8=1 \
-    MPLBACKEND=Agg \
-    MPLCONFIGDIR=/tmp/matplotlib
+    PYTHONUTF8=1
 WORKDIR /app
 
 COPY requirements.txt requirements-docker.lock ./

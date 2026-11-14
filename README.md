@@ -61,13 +61,41 @@ Only the current Thompson v5 pricing evidence is published in [the experiment in
 
 Old pricing engines, panels, shared-market tools, their APIs and old experiment datasets have been removed from the working tree. Earlier code remains in Git history. NHPP calibration and validation evidence remains because it supports the active seat forecast.
 
+## Technology and reliability
+
+| Technology | Where | Why it is trustworthy here |
+|---|---|---|
+| **LLM customer agents** (OpenAI-compatible chat API, e.g. DeepSeek) | `llm_agent/adaptive_customers.py` | Optional and bounded: every live run needs an explicit `max_calls` budget. Requests use JSON mode at temperature 0 and a 40-second timeout, and redirects are refused for authenticated calls. The endpoint must be HTTPS with no embedded credentials. Each reply is schema-validated (allowed action, English text, HKD-only amounts) before it can affect a price. |
+| **LLM analyst** with bounded retries | `analyst-retry-v1` | At most three attempts per round, all counted against the budget. If every attempt fails, the round is stored with `analysis = null` and diagnostics, and Thompson Sampling continues on valid purchase decisions; it is never shown as a successful summary. |
+| **Bayesian Thompson Sampling** | `backend/member_response.py`, `backend/adaptive_pricing.py` | A logistic purchase-response model on public features with a Laplace-approximated posterior. Repeated answers from one persona count as one cluster. A candidate fare is confirmed on fresh, independent customer panels; `NO_OFFER` and `INCONCLUSIVE` are legitimate outcomes. |
+| **NHPP demand forecast** | `backend/forecast.py`, `backend/nhpp_v3.py` | Calibrated on synthetic data and validated on a separate 600-flight holdout. Model bytes are SHA-checked against the published evidence before use, so stale or edited models fail closed. |
+| **Temporal API** (with a local polyfill) | `frontend/members/search.js` | Hong Kong calendar date search without timezone drift. The polyfill is committed, so no CDN is needed at runtime. |
+| **Playwright browser checks** | `frontend/*.mjs` | 13 offline end-to-end checks of the Admin, Optimize and member journeys; none calls a paid provider. |
+
+Further safeguards:
+
+- An offline deterministic mode (seeded synthetic decisions) needs no API key and reproduces runs exactly.
+- Every provider call, cache hit, forced action and failure is audited with secrets redacted, and counted separately.
+- A run left unfinished by a server stop is detected from its stale heartbeat and marked `interrupted`.
+- The server is stdlib-only. It accepts only local hosts and same-origin POSTs, caps request bodies, and sends strict security headers (CSP, `nosniff`, `no-store`).
+- The only runtime dependency is `numpy`. The Docker image pins its base image digest and dependency versions.
+
+**Code quality.** CI (`.github/workflows/ci.yml`) runs on every push:
+
+- the Python checks below;
+- ruff lint (pyflakes and bugbear rules);
+- Prettier formatting of the hand-written JS and CSS;
+- all browser checks against a fresh offline server.
+
+`backend/nhpp.py`, `backend/nhpp_v3.py` and the NHPP calibration and evaluation scripts are frozen evidence. Their exact bytes are hashed in the published validation, so they are deliberately excluded from reformatting (see `pyproject.toml`).
+
 ## Verify
 
 ```sh
 python scripts/check_container.py
 ```
 
-This runs the project tests, documentation/publication checks and artifact verification. With the native server running, optional Playwright checks are available in [frontend](frontend/README.md). Routine checks do not call paid providers.
+This runs the project tests, documentation/publication checks and artifact verification. With the native server running, optional Playwright checks are available in [frontend](frontend/README.md). Routine checks do not call paid providers. CI runs the same checks, the linters and the browser checks on every push.
 
 ## Project layout
 

@@ -1,4 +1,4 @@
-import json,time,urllib.request,uuid
+import json,urllib.request,uuid
 BASE='http://127.0.0.1:8000'
 def req(path,body=None):
  request=urllib.request.Request(BASE+path,data=json.dumps(body).encode() if body is not None else None,headers={'Content-Type':'application/json','Origin':BASE})

@@ -1,0 +1,10 @@
+# Formatting is checked for hand-written JS and CSS only.
+node_modules/
+test-results/
+members/vendor/
+fonts/
+*.html
+*.json
+*.md
+# Hash-locked source of the frozen network and member-demo datasets.
+members/airports.js

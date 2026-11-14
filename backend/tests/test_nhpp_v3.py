@@ -5,7 +5,7 @@ from unittest.mock import patch
 import numpy as np
 from backend import nhpp_v3 as model
 from backend.tests.test_models import history
-from simulation.evaluate_nhpp_v3 import revenue, score_guard, select_guard, PROTOCOL
+from simulation.evaluate_nhpp_v3 import revenue, score_guard, select_guard
 
 
 class SmoothForecastTests(unittest.TestCase):

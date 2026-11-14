@@ -12,7 +12,9 @@ export function inRegion(airport, region) {
 // A place is '' (anywhere), an airport code, or 'region:XX' for every airport
 // in a country / region. Origin and destination use the same picker.
 export const REGION_PREFIX = 'region:';
-export function placeRegion(place) { return String(place || '').startsWith(REGION_PREFIX) ? place.slice(REGION_PREFIX.length) : ''; }
+export function placeRegion(place) {
+  return String(place || '').startsWith(REGION_PREFIX) ? place.slice(REGION_PREFIX.length) : '';
+}
 export function matchesPlace(airport, place) {
   if (!place) return true;
   const region = placeRegion(place);
@@ -40,9 +42,11 @@ export function reversedRange(from, to) {
 
 export function matchesSearch(flight, filters) {
   const date = temporal.PlainDate.from(flight.departure_date);
-  return matchesPlace(flight.origin, filters.origin)
-    && inRegion(flight.destination, filters.region)
-    && matchesPlace(flight.destination, filters.destination)
-    && (!filters.from || temporal.PlainDate.compare(date, filters.from) >= 0)
-    && (!filters.to || temporal.PlainDate.compare(date, filters.to) <= 0);
+  return (
+    matchesPlace(flight.origin, filters.origin) &&
+    inRegion(flight.destination, filters.region) &&
+    matchesPlace(flight.destination, filters.destination) &&
+    (!filters.from || temporal.PlainDate.compare(date, filters.from) >= 0) &&
+    (!filters.to || temporal.PlainDate.compare(date, filters.to) <= 0)
+  );
 }

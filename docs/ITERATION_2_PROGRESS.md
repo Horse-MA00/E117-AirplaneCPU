@@ -99,3 +99,15 @@ Analyst仍不可用时存`analysis=null`、error、attempt metadata和unavailabl
 浏览器`test:analyst-diagnostics`、`test:adaptive-pricing`、真实服务`test:smoke`通过；额外在实际旧失败实验验证第10轮具体错误／原文及已保存顾客选择在两页均可读，未启动新实验。桌面／390px截图检查通过，包含恶意HTML作为纯文字、迟到响应隔离、加载失败重试。整个修复没有真实LLM／OAG调用或库存交易；确认无活动实验后重启原生8000服务。
 
 推送前发现main更新至`167d1d2`，合并保留新的地点搜索、屏宽缩放及品牌字标；唯一文档冲突保留双方章节。合并后240项完整检查再次通过；Analyst诊断、Optimize、Demand／地点搜索及真实Admin浏览器检查再次通过，没有覆盖远端UI改动。
+
+## 2026-11-15 · 可读性与可靠性整理（行为不变）
+
+按使用者批准的评审项（新兴技术的可靠性、代码易读易维护）整理，不改模型、会计、定价、接口或文案：
+
+- `backend/server.py` 由压缩写法改为PEP 8：GET／POST改为路由表，抽出 `_forecast`、`_create_offer`、错误到HTTP状态的映射；两处裸 `next()` 原会以500结束，现分别回400（该日无快照）与404（航班不在目录），新增 `backend/tests/test_server_routes.py`。
+- Admin前端新增共用 `dom.js`、`format.js`，去掉3–4份重复的 `$`、`element`、`api`、`money`；多层三元表达式改为具名函数；JS/CSS以Prettier统一格式（120字宽）。会员端保持独立；`frontend/members/airports.js` 被网络／会员示范数据manifest的SHA锁定，保持原字节并排除于格式化。
+- 移除未被任何代码使用的matplotlib（`requirements.txt`、Docker lock、Dockerfile环境变量）。
+- 新增 `pyproject.toml`（ruff：pyflakes、bugbear；排除SHA锁定源码）并修正其发现的未用import与两个闭包绑定；新增GitHub Actions CI。README新增“Technology and reliability”。
+
+验证：完整 `check_container.py`、ruff、Prettier检查，以及13项浏览器测试在原工作区和全新数据库副本上均通过。`scripts/smoke_three_round_api.py` 仍调用已移除的 `/api/members`、`/api/bookings` 而返回404，此问题早于本次整理，未修改。
+

@@ -35,7 +35,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 - 当前customer v4与analyst v2 prompt被实验哈希引用；修改提示须新增版本文件。报告中的旧来源哈希描述实际执行时源码，不能冒称由重构后的代码生成。
 - `simulation/demand_catalog.json`不手改；数据或预测器改变后用 `python scripts/build_demand_catalog.py`重建并重启服务。
 - `.env.local`不得读取输出、打印或提交；`data/private/`私有SQLite／缓存与OAG原始响应不得提交。只发布已脱敏的合成实验导出。
-- 不改 `.gitattributes` 换行规则；避免破坏冻结字节哈希。
+- 不改 `.gitattributes` 换行规则；避免破坏冻结字节哈希。`pyproject.toml` 的ruff排除清单列出被SHA锁定的源码，不得重排格式或做lint修改。
 - 真实LLM/OAG调用须当前会话用户授权；LLM必须设置明确 `--max-calls` 上限。
 
 ## 协作与发布
@@ -64,12 +64,14 @@ python scripts/verify_artifacts.py
 `check_container.py`覆盖完整后端、根目录、发布与证据检查；模型、会计、HTTP、UI修改提交前至少运行一次。
 HTTP检查需先 `python -m backend.server`；`scripts/smoke_api.py`是无付费调用的当前路由检查。浏览器测试在frontend安装依赖后运行 `npm run test:*`。
 未经授权不要运行任何 `--live` 命令。Windows缺少fcntl时使用文档中的容器测试命令。
+Lint：`python -m ruff check .`（配置见 `pyproject.toml`）；前端格式：在frontend运行 `npm run format:check`（Prettier，不重排HTML）。Playwright找不到浏览器时设 `CHROMIUM_EXECUTABLE_PATH`。
+CI（`.github/workflows/ci.yml`）每次推送运行 `check_container.py`、lint、格式检查和全部离线浏览器测试，不调用付费服务。
 
 ## 模块与维护
 
 - `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal、demo_auth会话和唯一adaptive价格引擎；测试在backend/tests。
 - `llm_agent/`：八类客群、最新提示、并行决策、provider transport及脱敏；experiments为现行公开实验。
-- `frontend/`：Admin／Thompson／会员端原生HTML/JS，无需构建；Experiments只读回馈，*.mjs为浏览器检查。
+- `frontend/`：Admin／Thompson／会员端原生HTML/JS，无需构建；Admin页面共用 `dom.js`、`format.js`，会员端不引用；Experiments只读回馈，*.mjs为浏览器检查。
 - `simulation/`：合成航班数据生成、NHPP校准与验证；`scripts/`为当前运行、导出和发布工具；`apply_member_fee_reference.py`为演示票备份并写入有来源的费用明细。
 - docs新增／删除／改名、模块职责、冻结清单或测试命令变动时，同一提交更新此索引；版本常量变动同步更新现行规格状态行。
 - 本文件最多100行；`CLAUDE.md`只保留 `@AGENTS.md`。发现文档与代码不符时修正文档并告知用户。

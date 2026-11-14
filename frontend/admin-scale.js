@@ -3,7 +3,11 @@
    and the member site (same origin, same browser zoom) stays right too. Below 1360px the normal
    responsive layout takes over. Runs before first paint; see docs/FRONTEND_UI.md §4.4. */
 (function () {
-  var BASE = 1920, MIN = 0.7, MAX = 1.33, FLOOR = 1360, root = document.documentElement;
+  var BASE = 1920,
+    MIN = 0.7,
+    MAX = 1.33,
+    FLOOR = 1360,
+    root = document.documentElement;
   function apply() {
     var w = window.innerWidth;
     var z = w < FLOOR ? 1 : Math.min(MAX, Math.max(MIN, w / BASE));

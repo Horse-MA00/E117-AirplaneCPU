@@ -1,0 +1,39 @@
+# Tool configuration only; the project is run from source (see README.md).
+# Runtime dependencies live in requirements.txt.
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = [
+    "frontend/node_modules",
+    "llm_agent/experiments",
+    # Frozen, SHA-checked sources: their bytes are part of the published
+    # NHPP evidence (backend/evidence.py, backend/forecast.py,
+    # backend/demand_catalog.py, dataset manifests), so they are never
+    # reformatted or "fixed".
+    "backend/nhpp.py",
+    "backend/nhpp_v3.py",
+    "backend/forecast.py",
+    "backend/data.py",
+    "backend/demand_catalog.py",
+    "simulation/generate.py",
+    "simulation/evaluate_nhpp_v3.py",
+    "simulation/calibrate_nhpp_v3_robust.py",
+    # Sources hashed by the frozen network / member-demo dataset manifests.
+    "simulation/network_generate.py",
+    "simulation/member_demo_generate.py",
+]
+
+[tool.ruff.lint]
+# Pyflakes (unused/undefined names), syntax errors and bugbear checks.
+select = ["F", "E9", "B"]
+# zip(strict=True) would turn silent truncation into a runtime error; adopt
+# it deliberately per call site rather than through a lint sweep.
+ignore = ["B905"]
+
+[tool.ruff.lint.per-file-ignores]
+# The loop counter is read after the loop to report iterations used.
+"backend/member_response.py" = ["B007"]
+
+[tool.ruff.format]
+quote-style = "single"

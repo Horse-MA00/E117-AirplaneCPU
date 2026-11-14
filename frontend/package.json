@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "build:calendar": "esbuild temporal-polyfill --bundle --format=esm --minify --legal-comments=linked --outfile=members/vendor/temporal.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test:flexible-search": "node smoke-flexible-search.mjs",
     "test:route-catalog": "node smoke-route-catalog.mjs",
     "test:smoke": "node smoke.mjs",
@@ -20,7 +22,8 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2",
-    "playwright": "1.62.1"
+    "playwright": "1.62.1",
+    "prettier": "3.6.2"
   },
   "dependencies": {
     "temporal-polyfill": "1.0.8"

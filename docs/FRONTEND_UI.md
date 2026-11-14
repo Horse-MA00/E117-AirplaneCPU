@@ -1,6 +1,6 @@
 # 前端 UI 规格
 
-> 状态：现行 · 对应代码：`frontend/ui-contract.json`、`frontend/flight-picker.js`、`frontend/place-search.js`、`frontend/analysis-diagnostics.js`、`frontend/admin-shell.css`、`frontend/styles.css`、`frontend/adaptive-pricing.css`、`frontend/members/portal.css`、`tests/test_frontend_contract.py`
+> 状态：现行 · 对应代码：`frontend/ui-contract.json`、`frontend/dom.js`、`frontend/format.js`、`frontend/flight-picker.js`、`frontend/place-search.js`、`frontend/analysis-diagnostics.js`、`frontend/admin-shell.css`、`frontend/styles.css`、`frontend/adaptive-pricing.css`、`frontend/members/portal.css`、`tests/test_frontend_contract.py`
 
 这份文档管前端**长什么样、怎么搭**：重构规则、冻结的功能与接口、设计系统、信息架构和设计决定。
 前端**做什么**（交互流程、产品取舍、面板上限）以 [ADMIN_AND_MEMBER_UX](ADMIN_AND_MEMBER_UX.md) 和 [CLIENT_FLEXIBLE_SEARCH](CLIENT_FLEXIBLE_SEARCH.md) 为准；接口返回的字段以 [CURRENT_IMPLEMENTATION](CURRENT_IMPLEMENTATION.md) 的路由表为准。
@@ -361,6 +361,7 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-15 | 合并前自查修：1280 / 768 宽度下靠右的 To 搜索弹层超出窗口并把整页横向推走 → 靠近右边时向左展开；键盘上下选择时只滚动结果列表，不带动页面 | §1.4 第 5 条 |
 | 2026-11-15 | `smoke-demand-filter`：Tab 顺序加入两个可见的搜索按钮（From → 搜索 → To → 搜索 → Flight），并新增地点搜索的断言（名称、代码匹配、无结果、Esc 不改选择） | 新增按钮的直接结果，原断言含义不变 |
 | 2026-11-15 | 测试同步修改：`smoke-flight-offers` 改用共用选择栏；`smoke-demand-filter` 的 Tab 顺序加入 Route，并放行字体文件；`smoke-adaptive-pricing` 导航数改为 5，折叠区里的说明改读 `textContent` | 都是本次界面改动的直接结果，断言的业务含义不变 |
+| 2026-11-15 | Admin 三个页面共用 `dom.js`（`$`、`element`、`safeId`、`requestJson`）与 `format.js`（HKD 格式）；JS/CSS 统一用 Prettier（printWidth 120）格式化，HTML 不重排 | 评审项“代码易读、易维护”：去掉 3–4 份重复工具函数和数百字符的长行；会员端按规定保持独立，不引用 Admin 模块 |
 
 ---
 
@@ -419,3 +420,7 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 Optimize显示具体分析错误、重试计数和无分析轮数；round table分别说明该轮分析是否可用。Member feedback在Analysis unavailable时继续展示真实保存的顾客决定，不把被拒绝的模型原文伪装成摘要。两页共用`analysis-diagnostics.js`及其样式：先读attempt摘要，用户展开某轮的原始回覆时才请求完整文本；使用原生details／summary，文本用textContent渲染，手机长文本可换行。读取失败可重试，切换实验时废弃旧请求结果。
 
 审计API能呈现旧failed实验中尚未写入rounds的失败轮次；仅查看，不恢复或改写旧实验。没有收到原始回覆的尝试明确说明，原始回覆显示与“可用分析”状态分开。前端预算估算包含每轮最多三次Analyst调用，和后端一致；NHPP、客户Portal及发布流程不变。
+
+### 7.8 2026-11-15 代码整理（行为不变）
+
+Admin 的 `app.js`、`adaptive-pricing.js`、`experiments.js`、`analysis-diagnostics.js` 改为从 `dom.js`、`format.js` 导入共用工具；Optimize 仍显示两位小数（`money(value, { cents: true })`）。最深的多层三元表达式改成有名字的函数（`pricingButtonLabel`、`breakEvenNote`、`roundFeedbackLabel`、`attemptsLabel`），文案逐字不变。`npm run format:check` 检查格式。DOM、接口、事件和文案不变，`ui-contract.json` 未改；13 个浏览器检查与契约测试通过。

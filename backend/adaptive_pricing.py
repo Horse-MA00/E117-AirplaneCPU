@@ -7,7 +7,6 @@ counterfactual market, not another charge against the previous round's wallet.
 from __future__ import annotations
 
 import hashlib
-import json
 import math
 import os
 from pathlib import Path
@@ -222,7 +221,7 @@ def compare_validation(worlds, initial_price, selected_price, seed):
     comparisons = []
     for name, price in [('initial',initial_price),('selected',selected_price),('no_offer',None)]:
         rows = [w['result'] for w in worlds if w['policy']==name]
-        mean = lambda key: float(np.mean([r[key] for r in rows]))
+        mean = lambda key, rows=rows: float(np.mean([r[key] for r in rows]))
         comparisons.append({'policy':name,'price':price,'mean_buyers':mean('buyers'),
             'mean_weighted_buyers':mean('weighted_buyers'),
             'mean_member_buyers':mean('member_buyers'),'mean_revenue':mean('revenue'),

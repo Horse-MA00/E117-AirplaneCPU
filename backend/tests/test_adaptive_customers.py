@@ -502,7 +502,7 @@ class AnalystRecoveryTests(unittest.TestCase):
             with self.subTest(failure=failure):
                 client = adapter.DecisionClient(max_calls=10, concurrency=1,
                     audit_callback=audit_failure if failure == 'audit_failure' else None)
-                def transport(req):
+                def transport(req, failure=failure):
                     if failure == 'transport_bug':
                         raise RuntimeError('unexpected provider adapter bug')
                     return io.BytesIO(json.dumps(response()).encode())
