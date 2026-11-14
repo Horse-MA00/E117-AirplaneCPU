@@ -14,7 +14,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 
 ### 现行规格
 
-- [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（v4，P₀ = 当时正常基本票价）、需求筛选、座位口径、会计公式、SQLite 和 API。
+- [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（v6：会员价上限为正常基本票价的 50%，P₀ = 上限；数学轨先用公式算 P*，再模拟附近 9 个价格）、需求筛选、座位口径、会计公式、SQLite 和 API。
 - [THREE_ROUND_RELEASE](docs/THREE_ROUND_RELEASE.md)：D28/D14/D7 放票规则；新一轮扣除前几轮仍有效的未售配额。
 - [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：整体架构、HTTP 路由表、与原计划的差异及限制。
 - [NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：冻结的 NHPP v2 参数、输出和验证。
@@ -25,7 +25,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 
 ### 证据与记录
 
-- [MEMBER_SUPPLY_CORRECTIONS](docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)（v3 修正）、[DEMAND_FILTER_AND_ORIGINAL_FARE](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md)（v4 修正）、[CONTRIBUTION_AUDIT](docs/CONTRIBUTION_AUDIT_2026-11-14.md)（−HK$2,364 逐笔审计）。
+- [MEMBER_SUPPLY_CORRECTIONS](docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)（v3 修正）、[DEMAND_FILTER_AND_ORIGINAL_FARE](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md)（v4 修正，其原价 P₀ 已被 v5 的 50% 上限取代）、[CONTRIBUTION_AUDIT](docs/CONTRIBUTION_AUDIT_2026-11-14.md)（−HK$2,364 逐笔审计）。
 - [EXTENDED_VALIDATION](docs/EXTENDED_VALIDATION.md)（1,200 班 NHPP 验证、发布完整性检查）、[SHARED_MARKET_VALIDATION](docs/SHARED_MARKET_VALIDATION.md)（v2 实盘验证，不能用来验证 v3 三轮规则）、[JOINT_OPTIMIZATION_VALIDATION](docs/JOINT_OPTIMIZATION_VALIDATION.md)（旧联合引擎）。
 - 日志：[ITERATION_2_PROGRESS](docs/ITERATION_2_PROGRESS.md)，里程碑记录在这里。
 - 其他：`src/README.md` 是旧独立模拟器（仍被 `tests/test_simulator.py` 使用）。

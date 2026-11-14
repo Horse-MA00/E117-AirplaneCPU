@@ -1,20 +1,20 @@
 # NHPP 會員優惠平台技術實作
 
-> 状态：现行 · 对应代码：`flight-policy-feedback-v4-original-fare`、`nhpp-regime-mixture-v2`、`shared-market-v3`、`three-round-release-v1`
+> 状态：现行 · 对应代码：`flight-policy-feedback-v6-formula-grid`、`formula-scan-v1`、`nhpp-regime-mixture-v2`、`shared-market-v3`、`three-round-release-v1`
 
 更新：2026-11-14。這份文件記錄現有程式；早期提案文件已刪除（Git 歷史可查），與原計劃的差異見下文「與原計劃的差異及限制」。使用者最新決定是先使用 NHPP，不使用 LightGBM。
 
 ## 最新主流程：雙軌逐輪優化
 
-**最新修正：** 現行規格以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準（`flight-policy-feedback-v4-original-fare`）。需求篩選、原價 P₀ 與收益範圍的修改經過見 [需求篩選與原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)；會員供應、配額三種口徑、零供應阻擋、購買者分組及固定座位 profile 的修正經過與驗證證據見 [2026-11-14 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)。新增 member demo 後主目錄 1,549 班／280,364 筆，含獨立驗證合共 680,364 筆。
+**最新修正：** 現行規格以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準（`flight-policy-feedback-v6-formula-grid`）。v5 起會員基本票價不得高於正常基本票價的 50%；v6 起數學軌先以公式找出 P*，再以完整模擬測試 P* 附近 9 個價格。需求篩選、原價 P₀ 與收益範圍的修改經過見 [需求篩選與原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)；會員供應、配額三種口徑、零供應阻擋、購買者分組及固定座位 profile 的修正經過與驗證證據見 [2026-11-14 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)。新增 member demo 後主目錄 1,549 班／280,364 筆，含獨立驗證合共 680,364 筆。
 
-Admin 已改為紫／青／白配色，四個主入口是 Forecast seats、Optimize prices、Experiments、Manage offers。Forecast 分開顯示預測會員空間、今天可新增配額、已發布可訂座位；座位圖使用同一 API 分解。正常需求基線的預計空位／訂位曲線及截至所選日的正常基本票價另外顯示。使用者指定移除的長篇假設、驗證及每日快照表已從該頁移除；資料及評估 API 保留。
+Admin 已改為紫／青／白配色，四個主入口是 Forecast seats、Optimize prices、Experiments、Manage offers。Forecast 分開顯示 NHPP 建議會員座位（空位減正常需求 P90 保護及安全餘量）、預測會員空間、今天可新增配額、已發布可訂座位；NHPP 不建議放票的輪次直接顯示「不應放票」並停用定價；座位圖使用同一 API 分解。正常需求基線的預計空位／訂位曲線及截至所選日的正常基本票價另外顯示。使用者指定移除的長篇假設、驗證及每日快照表已從該頁移除；資料及評估 API 保留。
 
 Forecast seats 及 Optimize prices 均可按 Low／Medium／High demand 篩選航班。分類使用固定 D28 的 NHPP 預測起飛時正常訂位率，低於 60% 為 Low，60% 至低於 85% 為 Medium，85% 或以上為 High；不是直接讀取模擬情境名稱或事後真值。索引缺失、過期或無有效預測的航班列為 Unclassified。切換 D14／D7 後仍使用明示的 D28 分類參考；當下預測、供應及放票規則照常重新計算。
 
-`backend/optimization.py` 的主流程版本為 `flight-policy-feedback-v4-original-fare`，必須選擇航線、日期／航班及 D28／D14／D7。新實驗的 P₀ 等於所選時點最近可見的正常基本票價，不能手動覆寫，也不再乘以 15% 或採用舊快照的折扣起點欄位；V₀ 可填寫並在該次搜尋固定。數學及 Live LLM 都在同一指定航班的獨立反事實世界內運行，使用該班已訂位、空位、正常基本票價及歷史；不再以一般多航班市場代替所選航班。啟動前檢查所選輪次有正會員配額；P₀ 附近先測試 ±25%，再做明示邊界探索。價格圖同時顯示貢獻、利潤率及會員買家，三項最大值分開標示；普通票買家、入會、票數及報價曝光另列，無供應／無曝光不作價格排名。
+`backend/optimization.py` 的主流程版本為 `flight-policy-feedback-v6-formula-grid`，必須選擇航線、日期／航班及 D28／D14／D7。會員基本票價上限為所選時點最近可見正常基本票價的 50%（`backend/fare_policy.py`）；新實驗的 P₀ 等於此上限，不能手動覆寫，搜尋上限亦收窄至此值，發布優惠時再次檢查；V₀ 可填寫並在該次搜尋固定。數學及 Live LLM 都在同一指定航班的獨立反事實世界內運行，使用該班已訂位、空位、正常基本票價及歷史；不再以一般多航班市場代替所選航班。啟動前檢查所選輪次有正會員配額。數學軌先用 `backend/fare_estimate.py`（`formula-scan-v1`）以相同旅客、數學模型的選擇機率計算 0 至上限每隔 HK$1 的期望增量貢獻，取最高者為 P*（約 20 毫秒），再以完整模擬測試 P* 及附近 8 個價格；Live LLM 軌仍在 P₀ 附近先測試 ±25%，再做明示邊界探索。價格圖同時顯示貢獻、利潤率及會員買家，三項最大值分開標示，並以虛線顯示同一航班無會員優惠時的貢獻及逐點差額；結果不再重複顯示固定會費；普通票買家、入會、票數及報價曝光另列，無供應／無曝光不作價格排名。
 
-NHPP 本體及凍結校準保持不變；同一次價格搜尋和獨立驗證固定初始座位 profile，以免供應規則變化混入價格比較。完成市場仍根據正常需求誤差計算 proposed next calibration，僅記錄為下次實驗提案，不在本次套用。最後用兩個獨立種子驗證保留的價格候選。單航班收入分攤三分之一新年費／會員服務成本，實際現金仍收全額一次，因此不宣稱是最佳全年會費。詳見 [現行航班優化規格](FLIGHT_SCOPED_OPTIMIZATION.md)；修正經過見 [v3 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md) 及 [v4 原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)。
+NHPP 本體及凍結校準保持不變；同一次價格搜尋和獨立驗證固定初始座位 profile，以免供應規則變化混入價格比較。完成市場仍根據正常需求誤差計算 proposed next calibration，僅記錄為下次實驗提案，不在本次套用。最後用兩個獨立種子驗證保留的價格候選。單航班收入分攤三分之一新年費／會員服務成本，實際現金仍收全額一次，因此不宣稱是最佳全年會費。詳見 [現行航班優化規格](FLIGHT_SCOPED_OPTIMIZATION.md)；修正經過見 [v3 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md) 及 [v4 原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)（v4 的原價 P₀ 已由 v5 的 50% 上限取代）。
 
 SQLite 保存 run、world、round、event。Scoped Live 現在可在指定總額度內自動跨越內部小批次；總額度耗盡或 provider 失敗仍停止，UI 可追加額度。Manage offers 自行選航班／輪次，只建議同航班同輪次、版本符合且獨立驗證接受的結果，發布時再扣除已售會員位及前輪有效未售配額。Client 主要金額顯示 base fare，下方小字顯示費用及總付款；結帳核價不變。
 
@@ -37,7 +37,7 @@ flowchart TD
     S[合成主目錄 280364 列] --> D[當時可見歷史與正常票價]
     D --> N[NHPP 正常需求與風險保護]
     N --> R[D28 / D14 / D7 可新增配額]
-    R --> P[P0 使用當時正常基本票價 V0 固定]
+    R --> P[P0 為正常基本票價 50% 上限 數學軌公式 P* 加細網格 V0 固定]
     P --> W[固定座位 profile 的獨立配對市場]
     M[數學選擇或 LLM 選擇] --> W
     T[獨立模擬未來需求與事件] --> W
@@ -175,7 +175,7 @@ POST需要JSON、同源Origin、有效數值與ID。服務只綁定127.0.0.1，�
 
 ## 執行及驗證
 
-參見README安裝與啟動指令。兩組unittest分別覆蓋既有模擬器／新資料、NHPP／市場／交易；目前 `backend/tests` 226 項、`tests/` 28 項，以 `python scripts/check_container.py` 一次執行。`scripts/smoke_api.py`對實際HTTP服務驗證資料、預測、64組搜尋、停售、人物、訂閱／購買及私有路徑保護。`scripts/smoke_three_round_api.py`驗證同班三輪發布、結轉、購票及不合法輪次拒絕。三輪回歸另檢查第二輪扣第一輪、第三輪扣前兩輪、售出不重扣、過期不結轉及輪次冪等。兩個API smoke及前端完整交易smoke皆重新通過。前端另有桌面及390px手機瀏覽器檢查，記錄於前端進度文件。
+參見README安裝與啟動指令。兩組unittest分別覆蓋既有模擬器／新資料、NHPP／市場／交易；目前 `backend/tests` 236 項、`tests/` 31 項，以 `python scripts/check_container.py` 一次執行。`scripts/smoke_api.py`對實際HTTP服務驗證資料、預測、64組搜尋、停售、人物、訂閱／購買及私有路徑保護。`scripts/smoke_three_round_api.py`驗證同班三輪發布、結轉、購票及不合法輪次拒絕。三輪回歸另檢查第二輪扣第一輪、第三輪扣前兩輪、售出不重扣、過期不結轉及輪次冪等。兩個API smoke及前端完整交易smoke皆重新通過。前端另有桌面及390px手機瀏覽器檢查，記錄於前端進度文件。
 
 新三輪環境另外完成40種子×3政策＝120個規則市場，3240筆逐輪公式和所有帳本／庫存檢查通過，沒有新增LLM呼叫。結果與限制見[本次三輪驗證](THREE_ROUND_RELEASE.md#本次三輪規則的獨立市場重播)；v2報告保留為歷史證據。
 
