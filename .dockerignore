@@ -1,6 +1,7 @@
 # Explicit build allowlist. Keep secrets and host-specific state out of layers.
 **
 !Dockerfile
+!compose.yaml
 !requirements.txt
 !requirements-docker.lock
 !README.md

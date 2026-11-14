@@ -47,7 +47,7 @@
       "decision": "NO_OFFER"
     }
   ],
-  "backend_tests": 193,
+  "backend_tests": 200,
   "simulation_tests": 19,
   "browser_checks": [
     "seat-supply",
@@ -101,5 +101,10 @@
       "incremental_contribution": -2364.0
     },
     "validation_incremental_contribution": -2364.0
-  }
+  },
+  "publication_tests": 7,
+  "merged_total_tests": 226,
+  "merged_evidence_commit": "ab613aa",
+  "committed_archive_publication_check": "passed",
+  "merged_runtime_check": "health/admin/members/evaluation and saved live run preserved"
 }
