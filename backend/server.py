@@ -1,7 +1,7 @@
 """Local same-origin application server. Run: python -m backend.server."""
 import gzip,json,math,mimetypes,os,re,threading,traceback
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
-from urllib.parse import urlparse,unquote
+from urllib.parse import urlparse,unquote,parse_qs
 from pathlib import Path
 from functools import lru_cache
 from . import data,market_jobs,pricing_jobs,member_portal
@@ -30,7 +30,19 @@ def forecast_for(flight,day):
  from .nhpp import forecast
  return forecast(data.history(flight),days_to_departure=day,seed=117)
 
-def get(path):
+def get(path,query=None):
+ if path=='/api/optimization/runs':
+  from . import optimization
+  return {'runs':optimization.list_runs()}
+ if path.startswith('/api/optimization/runs/'):
+  from . import optimization
+  parts=path.strip('/').split('/')
+  if len(parts)==4:return optimization.read(ident(parts[3]))
+  if len(parts)==5 and parts[4]=='events':
+   query=query or {}
+   return optimization.events(ident(parts[3]),int(query.get('limit',['100'])[0]),int(query.get('offset',['0'])[0]))
+  if len(parts)==5 and parts[4]=='export':return optimization.export_run(ident(parts[3]))
+  raise KeyError('Optimization endpoint not found')
  if path.startswith('/api/pricing/runs/'):
   return pricing_jobs.read(ident(path.split('/')[-1]))
  if path in ('/api/member-portal/config','/api/member-portal/plan'):return member_portal.config(store())
@@ -83,6 +95,17 @@ def get(path):
 
 _optimizer_lock=threading.Lock()
 def post(path,body):
+ if path=='/api/optimization/initial-policy':
+  from .initial_policy import suggest
+  return suggest(body)
+ if path=='/api/optimization/runs':
+  from . import optimization
+  return optimization.start(body)
+ if path.startswith('/api/optimization/runs/') and path.endswith('/resume'):
+  from . import optimization
+  parts=path.strip('/').split('/')
+  if len(parts)==5:return optimization.resume(ident(parts[3]),body)
+  raise KeyError('Optimization endpoint not found')
  if path=='/api/pricing/runs':return pricing_jobs.start(body)
  if path=='/api/member-portal/plan':
   store().plan(number(body.get('membership_fee'),'membership_fee',0,5000))
@@ -175,7 +198,7 @@ class Handler(BaseHTTPRequestHandler):
       if not line.endswith(b'\n'):break
       compressed.write(line)
     return
-   if path.startswith('/api/'):return self.json(200,get(path))
+   if path.startswith('/api/'):return self.json(200,get(path,parse_qs(urlparse(self.path).query)))
    aliases={'/admin':'index.html','/admin/':'index.html','/members':'members/index.html','/members/':'members/index.html'}
    root=(ROOT/'frontend').resolve();file=(root/aliases.get(path,path.lstrip('/') or 'index.html')).resolve()
    if root not in file.parents or not file.is_file():return self.json(404,{'error':'Not found'})

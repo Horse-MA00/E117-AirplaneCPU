@@ -78,3 +78,13 @@ The new continuous-price and probabilistic-user path is documented in [CONTINUOU
 - 118項backend測試全部通過。實際HTTP規模測試`panel-a859e0612fd24f0a`完成1,000人／6,000階段，耗時16.1秒，規則決策3,857、環境強制2,143、provider／cache／失敗均0，所有預算守恒；完整摘要與provenance在PANEL_SCALE_VALIDATION.json。另有100人／600階段實際瀏覽器測試。
 - Admin完整瀏覽器smoke及發布交易通過；100人摘要、14組圖、分頁／篩選、單人英文詳情、部分結果／續跑、候選會費草稿及599.75小數明確保存已驗證。桌面、390／768px無頁面溢出。會員端已實際完成HKD399入會和HKD280訂票，重載可查；另外涵蓋費用變更、售罄、空資料、帳戶切換、成功後刷新失敗，零新增LLM呼叫。
 - 新技術說明ADMIN_AND_MEMBER_UX.md及README／CURRENT_IMPLEMENTATION／LLM_SCENARIO_DESIGN／frontend README同步更新；NHPP、三輪放票規則、既有原始LLM實驗與模型校準未修改。這是本機Hackathon購票原型，沒有真實登入權限／付款／出票。
+
+### 全面介面重設及雙軌逐輪優化（2026-11-14）
+
+- 已由9996fcf快進至GitHub最新ffc997e，保留新機率旅客、連續單維票價搜尋、Windows鎖及原有證據；新增主流程同時搜尋會員費及會員基本票價。
+- Admin改用紫／青／白四主入口，Forecast以座位分配、空座預測與票價曲線呈現；移除使用者指定的長篇說明／驗證／每日表。Client全面重設搜尋、價錢排序、入會、訂票及My trips，保留伺服器權威價格與庫存。
+- 新SQLite保存run/world/round/event，數學／Live LLM各自逐輪搜尋、配對NO_OFFER與獨立holdout，會費和票價均可調；可設定輪數與每批呼叫上限，完成行動及狀態以同一交易保存。
+- NHPP base保持凍結；獨立seat_feedback層用完成的訓練市場正常請求校正均值及額外保護，原空座Monte Carlo保留。修正覆蓋率口徑、價格建議下限、容量截斷與價格草稿語義。
+- 149項backend測試、19項原模擬器測試、既有artifact checksum與新匯出source hash全部通過。Admin／Client及新優化器桌面手機瀏覽器測試通過，包含真實SQLite購買、存檔重載及分頁audit。
+- 數學6輪14人：18個完整市場，3,131數學選擇＋2,415強制動作；雙軌各3輪2人：16市場，169新DeepSeek回覆、0快取／失敗，200數學選擇＋335強制動作。兩次實驗均保留NO_OFFER，沒有以較差方案冒充最佳會員價。
+- 完整報告及原始輸出在joint_math_20261114／joint_live_20261114；資料庫／keys／OAG raw保持private。詳見JOINT_OPTIMIZATION_VALIDATION.md、OPTIMIZATION_ENGINE.md、PORTAL_REDESIGN_AND_OPTIMIZATION.md。

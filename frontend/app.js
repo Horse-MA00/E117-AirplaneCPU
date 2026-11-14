@@ -23,21 +23,23 @@ async function busy(button, callback) {
   try { await callback(); } catch (e) { error(e.message); } finally { button.disabled = button.id === 'publish-button' ? !canPublish() : false; button.textContent = previous; }
 }
 function setView() {
-  const name = ['flights', 'pricing', 'customers', 'market', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
+  const name = ['flights', 'optimization', 'pricing', 'customers', 'market', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
   for (const section of document.querySelectorAll('.view')) section.hidden = section.id !== `view-${name}`;
-  for (const anchor of document.querySelectorAll('.primary-nav a')) { if (anchor.hash === `#${name}`) anchor.setAttribute('aria-current', 'page'); else anchor.removeAttribute('aria-current'); }
+  for (const anchor of document.querySelectorAll('.primary-nav a')) { if (anchor.hash === `#${name}` || (['customers', 'market'].includes(name) && anchor.dataset.nav === 'experiments') || (name === 'pricing' && anchor.hash === '#optimization')) anchor.setAttribute('aria-current', 'page'); else anchor.removeAttribute('aria-current'); }
   if (state.noticeView !== name) $('notice').hidden = true;
-  document.title = `${({ flights: 'Flight decisions', pricing: 'Fast screening', customers: 'Customer panel', market: 'Test the market', members: 'Manage offers' })[name]} — UOption Fly Pass`;
+  document.title = `${({ flights: 'Forecast seats', optimization: 'Optimize prices', pricing: 'Reference pricing', customers: 'Customer panel', market: 'Test the market', members: 'Manage offers' })[name]} — UOption Fly Pass`;
   const selected = document.querySelector('.primary-nav [aria-current=page]');
   if (selected) { const nav = selected.parentElement; if (selected.offsetLeft < nav.scrollLeft || selected.offsetLeft + selected.offsetWidth > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = Math.max(0, selected.offsetLeft - nav.offsetLeft - 20); }
   if (name === 'members') { loadOffers(); loadMemberPlan(); }
   if (name === 'customers') { loadPanelRuns(); if (state.panelRun) pollPanel(); }
   if (name === 'market') loadMarketRuns();
+  if (name === 'flights' && state.forecast) requestAnimationFrame(renderForecast);
+  document.dispatchEvent(new CustomEvent('uoption:view', { detail: { name } }));
 }
 window.addEventListener('hashchange', setView);
 document.querySelector('.skip').addEventListener('click', (event) => { event.preventDefault(); document.querySelector('.view:not([hidden]) h1')?.focus(); });
 let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (state.forecast) renderForecast(); }, 120); });
-$('go-pricing').addEventListener('click', () => { location.hash = 'pricing'; });
+$('go-pricing').addEventListener('click', () => { location.hash = 'optimization'; });
 
 function svgNode(tag, attrs, content) { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs || {}).forEach(([key, val]) => el.setAttribute(key, val)); if (content !== undefined) el.textContent = content; return el; }
 function linePath(points, x, y) { return points.map((p, i) => `${i ? 'L' : 'M'}${x(p.day).toFixed(2)},${y(p.value).toFixed(2)}`).join(' '); }
@@ -53,7 +55,7 @@ function drawChart(id, observed, future, { maxY, yLabel, width = 720, height = 2
   for (const day of [maxDay, maxDay / 2, 0]) svg.append(svgNode('text', { x: x(day), y: height - 8, 'text-anchor': day === 0 ? 'end' : day === maxDay ? 'start' : 'middle', class: 'chart-tick' }, day === 0 ? 'Sales cutoff' : `D${number(day)}`));
   if (future.length) { const band = [...future.map((p) => ({ day: p.day, value: p.high ?? p.value })), ...[...future].reverse().map((p) => ({ day: p.day, value: p.low ?? p.value }))]; svg.append(svgNode('path', { d: linePath(band, x, y) + ' Z', class: 'chart-band' })); svg.append(svgNode('path', { d: linePath(future, x, y), class: 'chart-forecast' })); }
   if (observed.length) svg.append(svgNode('path', { d: linePath(observed, x, y), class: 'chart-line' }));
-  const last = observed.at(-1); if (last) svg.append(svgNode('circle', { cx: x(last.day), cy: y(last.value), r: 3.5, fill: '#002FA7' }));
+  const last = observed.at(-1); if (last) svg.append(svgNode('circle', { cx: x(last.day), cy: y(last.value), r: 3.5, fill: '#6F2C91' }));
   svg.append(svgNode('text', { x: left, y: 12, class: 'chart-tick' }, yLabel));
 }
 
@@ -95,7 +97,7 @@ function renderForecast() {
   text('demand-value', number(f.expected_remaining_demand, 1)); text('empty-value', number(f.expected_empty_seats, 1));
   text('empty-detail', `${percent(f.expected_empty_rate)} expected unsold`);
   text('protection-value', `${number(f.protection_p90)} seats`);
-  text('chart-caption', `Predictive model bands; not a validated airline interval. Protection uses ${number(f.raw_protection_p90 ?? f.protection_p90)} model-percentile seats plus ${number(f.protection_allowance ?? 0)} allowance seats.`); text('release-value', `${number(f.releasable_seats)} seats`);
+  text('chart-caption', `Solid: booked seats so far. Dashed: expected bookings to departure. Shading: model forecast range.`); text('release-value', `${number(f.releasable_seats)} seats`);
   renderReleaseStatus(f);
   text('beta-label', `β ${number(f.beta, 4)} / day · ${number(f.rate_now, 2)} requests / day`);
   const context = `${state.flight.origin || '—'} → ${state.flight.destination || '—'} · ${(state.flight.departure_at || '').slice(0, 10)} · D${state.day}`;
@@ -103,14 +105,47 @@ function renderForecast() {
   text('offer-flight-context', context);
   const qty = Math.max(0, Math.floor(Number(f.releasable_seats) || 0)); $('offer-quantity').max = qty; $('offer-quantity').value = Math.min(Math.max(1, value('offer-quantity')), qty) || 1;
   $('publish-button').disabled = !canPublish();
-  list('forecast-notes', f.assumptions || ['Synthetic booking histories; normal demand forecasts depend on the selected intensity model.']);
   const past = history.filter((r) => r.days_to_departure <= 28).map((r) => ({ day: Number(r.days_to_departure), value: Number(r.booked_seats ?? r.net_booked_seats) }));
   const future = (f.forecast_curve || []).map((r) => ({ day: Number(r.day ?? r.days_to_departure), value: Number(r.expected_booked), low: Number(r.p10), high: Number(r.p90) })).filter((r) => Number.isFinite(r.value) && r.day <= state.day).sort((a, b) => b.day - a.day);
   drawChart('booking-chart', past, future, { maxY: capacity, yLabel: 'Booked seats' });
   const prices = history.filter((r) => r.days_to_departure <= 180 && (r.normal_total_fare ?? r.total_payable) !== null && (r.normal_total_fare ?? r.total_payable) !== undefined).map((r) => ({ day: Number(r.days_to_departure), value: Number(r.normal_total_fare ?? r.total_payable) }));
-  drawChart('price-chart', prices, [], { yLabel: 'HKD', width: 620, height: 210, minDay: 180 });
-  $('history-table').replaceChildren(...history.filter((r) => r.days_to_departure <= 28).reverse().map((r) => { const tr = element('tr'); [`D${r.days_to_departure}`, number(r.booked_seats ?? r.net_booked_seats), percent(r.empty_rate ?? r.empty_seat_rate), money(r.normal_total_fare ?? r.total_payable)].forEach((v) => tr.append(element('td', v))); return tr; }));
+  drawChart('price-chart', prices, [], { yLabel: 'HKD', width: 620, height: 260, minDay: 180 });
+  text('price-caption', `Quoted totals through D${state.day}; includes mandatory fees. Future quotes are not shown.`);
+  renderSeatComposition(f, capacity, booked);
+
   if (state.offers.length) renderOffers();
+}
+function renderSeatComposition(f, capacity, booked) {
+  const r = f.release_status || {};
+  const sold = Math.max(0, Math.min(capacity - booked, Number(r.member_sold || 0)));
+  const occupied = Math.max(0, Math.min(capacity, booked + sold));
+  const protection = Math.min(capacity - occupied, Math.max(0, Math.ceil(Number(f.protection_p90 || 0))));
+  const physicalSurplus = Math.max(0, capacity - occupied - protection);
+  const releaseLimit = Number(r.safe_capacity ?? Math.max(0, Number(f.risk_release_ceiling ?? 0) - sold));
+  const available = Math.max(0, Math.min(physicalSurplus, Number.isFinite(releaseLimit) ? releaseLimit : 0));
+  const held = physicalSurplus - available;
+  text('protection-value', `${number(protection)} seats`);
+  const parts = [
+    {label:'Booked', value:occupied, className:'occupied'},
+    {label:'Protected for normal demand', value:protection, className:'protected'},
+    {label:'Capacity for member offers', value:available, className:'available'},
+    ...(held > 0 ? [{label:'Held / not releasable', value:held, className:'held'}] : [])
+  ];
+  const bar = $('seat-composition');
+  bar.setAttribute('aria-label', parts.map(p => `${p.label}: ${number(p.value)} seats`).join('. '));
+  bar.replaceChildren(...parts.map(p => {
+    const segment = element('span', p.value ? number(p.value) : '', `seat-part ${p.className}`);
+    segment.style.setProperty('--seat-share', String(p.value / Math.max(1, capacity) * 100));
+    if (!p.value) segment.hidden = true;
+    return segment;
+  }));
+  $('seat-composition-legend').replaceChildren(...parts.map(p => {
+    const label = element('div', undefined, `seat-legend-item ${p.className}`);
+    const dot = element('i'); dot.setAttribute('aria-hidden','true');
+    label.append(dot, element('span', p.label), element('strong', `${number(p.value)} seats`));
+    return label;
+  }));
+  text('member-allocation-detail', RELEASE_DAYS.includes(state.day) ? `Additional seats at D${state.day}; earlier unsold quota deducted` : `No new release today · ${number(r.currently_bookable || 0)} published seats bookable`);
 }
 function canPublish() {
   const f = state.forecast;
@@ -185,7 +220,7 @@ function renderPricing(data) {
   fares.forEach((p) => { map.append(element('span', `$${p}`, 'label')); fees.forEach((v) => {
     const matching = ranked.filter((c) => fare(c) === p && fee(c) === v && c.feasible !== false); const c = matching[0];
     const button = element('button', c ? number(candidateProfit(c)) : 'Infeasible', 'cell'); button.type = 'button'; button.disabled = !c; button.setAttribute('aria-pressed', 'false');
-    if (c) { const contribution = Number(candidateProfit(c)); const intensity = .06 + Math.min(1, Math.abs(contribution) / maxAbs) * .15; button.style.background = contribution >= 0 ? `rgba(0,47,167,${intensity})` : `rgba(23,25,30,${intensity})`; button.setAttribute('aria-label', `Base fare HK$${p}, membership HK$${v}, incremental contribution HK$${number(contribution)}`); button.addEventListener('click', () => { map.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false')); button.setAttribute('aria-pressed', 'true'); text('heatmap-detail', `Fare ${money(p)} · membership ${money(v)} · rounds ${roundLabel(c.release_days)} · target share ${percent(c.release_fraction)} · contribution ${money(contribution)}.`); }); }
+    if (c) { const contribution = Number(candidateProfit(c)); const intensity = .06 + Math.min(1, Math.abs(contribution) / maxAbs) * .15; button.style.background = contribution >= 0 ? `rgba(111,44,145,${intensity})` : `rgba(23,25,30,${intensity})`; button.setAttribute('aria-label', `Base fare HK$${p}, membership HK$${v}, incremental contribution HK$${number(contribution)}`); button.addEventListener('click', () => { map.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false')); button.setAttribute('aria-pressed', 'true'); text('heatmap-detail', `Fare ${money(p)} · membership ${money(v)} · rounds ${roundLabel(c.release_days)} · target share ${percent(c.release_fraction)} · contribution ${money(contribution)}.`); }); }
     map.append(button);
   }); });
 }
@@ -208,6 +243,20 @@ $('apply-policy').addEventListener('click', () => {
   if (quantity < 1) { notify('Earlier valid quota already meets this policy target. No additional seats can be prepared.'); return; }
   $('offer-fare').value = fare(state.best); $('member-fee').value = fee(state.best); state.planDraft = true; $('offer-quantity').value = quantity;
   location.hash = 'members'; notify('New allocation and candidate prices copied. Publish seats and save the membership price separately when ready.');
+});
+window.addEventListener('uoption:prepare-policy', (event) => {
+  const policy = event.detail;
+  if (!policy || !Number.isFinite(policy.member_fare) || !Number.isFinite(policy.membership_fee)) return;
+  $('offer-fare').value = policy.member_fare; $('member-fee').value = policy.membership_fee; state.planDraft = true;
+  if (state.forecast) {
+    const r = state.forecast.release_status || {};
+    const safe = r.safe_capacity ?? Math.max(0, Number(state.forecast.risk_release_ceiling ?? state.forecast.releasable_seats) - Number(r.member_sold || 0));
+    const target = Math.floor(safe * Number(policy.release_fraction ?? 0.5));
+    const quantity = Math.min(Number(state.forecast.releasable_seats), Math.max(0, target - Number(r.total_active_unsold || 0)));
+    $('offer-quantity').value = Math.max(1, quantity);
+  }
+  location.hash = 'members';
+  notify('Validated prices copied as a draft. Save the membership price and publish available seats to update the Client Portal.');
 });
 $('export-candidates').addEventListener('click', () => {
   const keys = ['member_fare','membership_fee','release_days','release_fraction','incremental_profit','members','member_bookings','service_rate','feasible'];
@@ -646,34 +695,13 @@ async function init() {
     const [summary, flightData] = await Promise.all([api('/api/summary'), api('/api/flights')]); state.summary = summary; state.flights = flightData.flights || flightData;
     text('dataset-label', `${number(summary.dataset?.rows ?? summary.rows)} daily snapshots · synthetic`);
     const configured = summary.llm?.live_configured || summary.llm?.configured || summary.llm?.live_available;
+    document.dispatchEvent(new CustomEvent('uoption:provider', { detail: { configured: Boolean(configured) } }));
     if (configured) { $('live-mode-option').disabled = false; $('live-mode-option').textContent = 'Live LLM'; $('market-live-option').disabled = false; $('market-live-option').textContent = 'Live LLM · bounded calls'; }
     $('flight-select').replaceChildren(...state.flights.map((flight) => { const option = element('option', `${flight.origin} → ${flight.destination} · ${(flight.departure_at || flight.departure_date || '').slice(0, 10)} · ${flight.flight_id}`); option.value = flight.flight_id; return option; }));
     $('flight-select').disabled = !state.flights.length;
     if (state.flights.length) await loadFlight(); else throw new Error('No flights available. Generate the simulation dataset and restart the backend.');
     loadPersonas(); loadAgentRuns(); loadPanelRuns(); loadMemberPlan();
-    api('/api/evaluation').then((report) => {
-      if (!report.summary) throw new Error('Evaluation pending');
-      text('validation-summary', `${number(report.flights)} fresh synthetic flights, evaluated at D28, D14 and D7 after model freeze. Protection includes a separate calibrated safety margin; it is not a posterior P90 or a real-airline guarantee. The comparison below uses the same flights for both models.`);
-      const table = element('table');
-      table.append(element('caption', 'Held-out surge coverage and all-flight trade-offs'));
-      const header = element('thead'); const heading = element('tr');
-      for (const label of ['Day', 'Surge v1', 'Surge v2', 'Demand MAE v2', 'Released v2']) { const th = element('th', label); th.scope = 'col'; heading.append(th); }
-      header.append(heading); table.append(header);
-      const body = element('tbody');
-      for (const day of [28, 14, 7]) {
-        const all = report.summary[`v2/D${day}/all`], old = report.summary[`v1/D${day}/surge`], surge = report.summary[`v2/D${day}/surge`];
-        if (!all || !old || !surge) continue;
-        const row = element('tr');
-        for (const item of [`D${day}`, percent(old.coverage), percent(surge.coverage), number(all.demand_mae, 1), `${number(all.mean_release, 1)} seats`]) row.append(element('td', item));
-        body.append(row);
-      }
-      table.append(body); $('validation-table').replaceChildren(table);
-    }).catch(() => text('validation-summary', 'Evaluation report is unavailable. No empirical coverage claim is shown.'));
-    api('/api/evaluation/extended').then((report) => {
-      const v2 = report.summary?.['v2/D28/surge'], v1 = report.summary?.['v1/D28/surge'], unseen = report.summary?.['v2/D7/surge_future'];
-      if (!v2 || !v1) throw new Error('Extended evaluation pending');
-      text('extended-validation-summary', `Additional frozen-model check: ${number(report.evaluated_flights)} synthetic flights, including ${number(v2.n)} surge flights. D28 surge protection coverage: ${percent(v2.coverage)} for v2 versus ${percent(v1.coverage)} for recalibrated v1. ${unseen ? `For ${number(unseen.n)} flights with a surge still unobserved at D7, v2 coverage is ${number(unseen.coverage * 100, 2)}%. ` : ''}This larger, separate cohort complements the first holdout; it does not establish real-airline coverage.`);
-    }).catch(() => text('extended-validation-summary', 'Extended evaluation is unavailable. The first holdout remains visible above.'));
+
   } catch (e) { error(`Unable to load the workspace. ${e.message}`); text('dataset-label', 'Dataset unavailable'); }
 }
 init();

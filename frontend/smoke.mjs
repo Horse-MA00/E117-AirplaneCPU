@@ -18,7 +18,11 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const errors = [];
 page.on('pageerror', (error) => errors.push(error.message));
 const waitForecast = () => page.waitForFunction(() => document.querySelector('#flight-main').getAttribute('aria-busy') === 'false');
-const navigate = (view) => page.locator(`.primary-nav a[href="#${view}"]`).click();
+const navigate = async view => {
+  if (view === 'pricing') { await page.locator('.primary-nav a[href="#optimization"]').click(); await page.locator('.advanced-link').click(); }
+  else if (view === 'market') { await page.locator('.primary-nav a[href="#customers"]').click(); await page.locator('#view-customers .section-tabs a[href="#market"]').click(); }
+  else await page.locator(`.primary-nav a[href="#${view}"]`).click();
+};
 
 try {
   await page.goto(origin + '/admin', { waitUntil: 'networkidle' });
@@ -27,7 +31,11 @@ try {
   assert.ok((await page.locator('#dataset-label').textContent()).includes('synthetic'));
   await page.locator('[data-day="14"]').click();
   await waitForecast();
-  assert.equal(await page.locator('#history-table tr').count(), 15);
+  assert.equal(await page.locator('#history-table').count(), 0);
+  assert.equal(await page.locator('#forecast-notes').count(), 0);
+  assert.ok((await page.locator('#seat-composition').getAttribute('aria-label')).includes('seats'));
+  assert.ok((await page.locator('#price-caption').textContent()).includes('D14'));
+  assert.ok(await page.locator('#price-chart .chart-line').count());
   const d13Response = page.waitForResponse((r) => r.url().endsWith('/api/forecast') && r.request().postDataJSON()?.days_to_departure === 13);
   await page.locator('#day-slider').fill('15');
   await d13Response;

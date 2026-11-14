@@ -1,76 +1,81 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Member flights — UOption Fly Pass</title>
+  <title>Book member flights — UOption Fly Pass</title>
   <link rel="stylesheet" href="/members/portal.css">
   <script type="module" src="/members/portal.js"></script>
 </head>
 <body>
   <a class="skip" href="#main-content">Skip to flights</a>
-  <div class="prototype-note"><span>Team E117 · Airline membership prototype</span><span>Simulated bookings · No real payment or ticket</span></div>
+  <div class="prototype-note"><span>Team E117 · Cathay Hackathon</span><span>Booking prototype · No real payment or ticket</span></div>
   <header class="header">
     <a class="brand" href="/members" aria-label="UOption Fly Pass home">UOption<span>Fly Pass</span></a>
-    <nav aria-label="Member navigation"><a href="#flights" aria-current="page">Book flights</a><a href="#membership">Membership</a><a href="#trips">My trips <span id="trip-count">0</span></a></nav>
+    <nav aria-label="Member navigation"><a href="#flights" aria-current="page">Book flights</a><a href="#membership">The pass</a><a href="#trips">My trips <span id="trip-count">0</span></a></nav>
     <a class="account-link" href="#account" id="header-account">Your demo account</a>
   </header>
   <main id="main-content">
     <div id="portal-error" class="notice error" role="alert" hidden></div>
     <div id="portal-notice" class="notice" role="status" hidden></div>
     <section class="hero" aria-labelledby="hero-title">
-      <div><p class="overline">UOption membership</p><h1 id="hero-title">Your next trip.<br>A member's fare.</h1><p class="hero-copy">Find released member seats, see the full price and keep every trip in one place.</p><a href="#membership" class="text-link">See how the pass works</a></div>
-      <div class="pass-visual" aria-label="Annual membership"><div class="pass-top"><span>UOption / Fly Pass</span><span>Personal membership</span></div><div class="pass-days">365<span>days to discover</span></div><div class="pass-bottom"><span id="hero-fee">Membership loading</span><span>Seats subject to availability</span></div></div>
+      <div class="hero-copy-block"><p class="eyebrow">Your personal flight membership</p><h1 id="hero-title">More trips.<br><span>Member fares.</span></h1><p class="hero-copy">Find a flight you love. See the full price.<br>Make the most of your Fly Pass.</p><a href="#flights" class="button light">Explore member flights <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>
+      <div class="pass-visual" aria-label="UOption personal membership">
+        <div class="pass-top"><span class="pass-brand">UOption <small>Fly Pass</small></span><span class="pass-tag">Personal</span></div>
+        <div class="pass-days"><strong id="hero-term">365</strong><span>days of member access</span></div>
+        <div class="pass-bottom"><div><span class="pass-price-label">Membership</span><strong id="hero-fee">Loading…</strong></div><span class="pass-rule">Flights paid separately.<br>Seats subject to availability.</span></div>
+      </div>
     </section>
 
     <section id="flights" aria-labelledby="search-title">
-      <div class="section-heading"><div><p class="overline">01 / Find your flight</p><h2 id="search-title">Where would you like to go?</h2></div><span class="subtle">One way · 1 member traveller · HKD</span></div>
-      <search>
-        <form id="flight-search" action="/members" method="get" aria-labelledby="search-title">
-          <div class="field"><label for="origin">From</label><select id="origin" name="origin"><option value="">Any airport</option></select></div>
-          <div class="field"><label for="destination">To</label><select id="destination" name="destination"><option value="">Any destination</option></select></div>
-          <div class="field"><label for="departure-date">Departure date</label><select id="departure-date" name="date"><option value="">Any available date</option></select></div>
-          <button type="submit" class="button primary" id="search-button">Find flights</button>
-        </form>
-      </search>
+      <div class="search-panel">
+        <div class="search-heading"><h2 id="search-title">Find your next flight</h2><span>One way <span aria-hidden="true">·</span> 1 member traveller <span aria-hidden="true">·</span> HKD</span></div>
+        <search>
+          <form id="flight-search" action="/members" method="get" aria-labelledby="search-title">
+            <div class="field"><label for="origin">From</label><select id="origin" name="origin"><option value="">Any airport</option></select></div>
+            <div class="field"><label for="destination">To</label><select id="destination" name="destination"><option value="">Any destination</option></select></div>
+            <div class="field"><label for="departure-date">Departure date</label><select id="departure-date" name="date"><option value="">Any available date</option></select></div>
+            <button type="submit" class="button primary" id="search-button">Search flights</button>
+          </form>
+        </search>
+      </div>
+      <ol class="booking-steps" aria-label="How to book"><li><span>1</span><div><strong>Find a flight</strong><small>Browse before joining</small></div></li><li><span>2</span><div><strong>Join the pass</strong><small>Already a member? Skip this step</small></div></li><li><span>3</span><div><strong>Confirm your ticket</strong><small>Review the full price first</small></div></li></ol>
       <div class="shopping-grid">
         <section aria-labelledby="results-title" class="results-column">
-          <div class="results-heading"><div><h3 id="results-title">Released member flights</h3><p id="result-count" class="subtle" role="status">Loading published offers…</p></div><button type="button" id="refresh-flights" class="text-button">Refresh availability</button></div>
-          <div id="flight-results" class="flight-results" aria-busy="true"><p class="empty-state">Finding released seats…</p></div>
+          <div class="results-heading"><div><h2 id="results-title" tabindex="-1">Member flights</h2><p id="result-count" class="subtle" role="status">Loading published offers…</p></div><button type="button" id="refresh-flights" class="text-button">Refresh availability</button></div>
+          <div class="result-controls"><label class="check-label"><input type="checkbox" id="available-only"> Available seats only</label><label class="sort-label" for="flight-sort">Sort by <select id="flight-sort"><option value="date">Departure date</option><option value="price">Lowest ticket price</option></select></label></div>
+          <div id="flight-results" class="flight-results" aria-busy="true"><div class="empty-state"><h3>Finding member flights</h3><p>Checking the latest released seats and full ticket prices.</p></div></div>
         </section>
         <aside id="membership" class="membership-panel" aria-labelledby="pass-title">
-          <p class="overline">02 / Your membership</p><h2 id="pass-title">One pass. <br>Member fares.</h2>
-          <p class="pass-price" id="pass-price">—</p><p class="subtle" id="pass-term">For one traveller, for one year</p>
-          <ul class="benefits"><li>Access to published member fares</li><li>Full ticket prices shown before booking</li><li>Personal membership; companions need their own eligible tickets</li></ul>
-          <p class="membership-state" id="membership-state">Checking membership…</p>
-          <button class="button primary" type="button" id="join-pass" data-purchase disabled>Review membership</button>
-          <p class="fine-print">Membership does not guarantee seats or dates. The fee is separate from each ticket. No automatic renewal.</p>
+          <div class="membership-heading"><p class="eyebrow">UOption Fly Pass</p><h2 id="pass-title">Your year.<br> Your next trip.</h2><p class="pass-price" id="pass-price">—</p><p id="pass-term">For one traveller, for one year</p></div>
+          <div class="membership-body"><ul class="benefits"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg><span>Access to released member fares</span></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg><span>One fee for the membership term</span></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg><span>No automatic renewal</span></li></ul><p class="membership-state" id="membership-state">Checking membership…</p><button class="button primary" type="button" id="join-pass" data-purchase disabled>Review membership</button><p class="fine-print">The pass covers one person. Tickets and mandatory fees are paid separately. Seats and dates are subject to availability.</p></div>
         </aside>
       </div>
     </section>
 
     <section id="trips" class="trips-section" aria-labelledby="trips-title">
-      <div class="section-heading"><div><p class="overline">03 / Your bookings</p><h2 id="trips-title">My trips</h2></div><button type="button" id="refresh-account" class="text-button">Refresh my trips</button></div>
+      <div class="section-heading"><div><p class="eyebrow">Ready when you are</p><h2 id="trips-title">My trips</h2></div><button type="button" id="refresh-account" class="text-button">Refresh my trips</button></div>
       <div id="trip-results" class="trip-results"><p class="empty-state">Loading your trips…</p></div>
     </section>
 
     <section id="account" class="account-section" aria-labelledby="account-title">
-      <div><p class="overline">Demo traveller</p><h2 id="account-title">Your activity stays with this account.</h2><p class="subtle">This browser remembers a generated test ID. This is a local demo, not a secure customer login. Do not enter personal information.</p><p id="current-account" class="account-id">—</p></div>
-      <form id="account-form" action="/members" method="get" aria-labelledby="account-title"><div class="field"><label for="customer-id">Test account ID (required)</label><input id="customer-id" name="customer_id" type="text" required minlength="1" maxlength="60" pattern="[a-zA-Z0-9_-]+" autocorrect="off" autocapitalize="none" spellcheck="false" autocomplete="off" aria-describedby="account-help"><small id="account-help">Letters, numbers, hyphens and underscores only.</small></div><div class="account-actions"><button type="submit" class="button" id="switch-account">Use this account</button><button type="button" id="new-account" class="text-button">Create another test account</button></div></form>
+      <div class="account-overview"><div><h2 id="account-title">Your demo account</h2><p class="subtle">Membership and trips are saved under this ID.</p><p id="current-account" class="account-id">—</p></div><button type="button" id="new-account" class="text-button">Create another test account</button></div>
+      <details class="account-tools"><summary>Use a different test account</summary><form id="account-form" action="/members" method="get" aria-labelledby="account-title"><div class="field"><label for="customer-id">Test account ID</label><input id="customer-id" name="customer_id" type="text" required minlength="1" maxlength="60" pattern="[a-zA-Z0-9_-]+" autocorrect="off" autocapitalize="none" spellcheck="false" autocomplete="username" aria-describedby="account-help"><small id="account-help">Letters, numbers, hyphens and underscores only. Do not enter personal information.</small></div><button type="submit" class="button" id="switch-account">Use this account</button></form><p class="fine-print">This browser remembers a test ID. This prototype does not provide secure customer sign-in.</p></details>
     </section>
   </main>
-  <footer><div><strong>UOption Fly Pass</strong><span>Team Airplane CPU · Cathay Hackathon 2026</span></div><p>Independent membership concept. Flight offers and bookings here are simulated.</p><a href="/admin">Admin workspace</a></footer>
+  <footer><div><strong>UOption Fly Pass</strong><span>Team Airplane CPU · Cathay Hackathon 2026</span></div><p>Independent membership concept.<br>All offers and bookings here are simulated.</p><a href="/admin">Admin portal</a></footer>
 
   <dialog id="checkout" aria-labelledby="checkout-title">
-    <div class="dialog-heading"><div><p class="overline" id="checkout-step">Review your choice</p><h2 id="checkout-title">Review booking</h2></div><form method="dialog"><button class="text-button" type="submit" autofocus>Close</button></form></div>
+    <div class="dialog-heading"><div><p class="eyebrow" id="checkout-step">Review your choice</p><h2 id="checkout-title">Review booking</h2></div><form method="dialog"><button class="text-button" type="submit" autofocus>Close</button></form></div>
     <div id="checkout-content"></div>
     <p id="checkout-error" class="notice error" role="alert" hidden></p>
     <p id="checkout-status" class="notice" role="status" hidden></p>
     <form id="checkout-form" method="post" action="/api/member-portal/book" aria-labelledby="checkout-title"><button type="submit" id="checkout-submit" class="button primary" data-purchase>Confirm</button></form>
     <button type="button" id="checkout-refresh" class="button" hidden>Refresh account and availability</button>
     <button type="button" id="view-trips" class="button primary" hidden>View my trips</button>
-    <p class="fine-print">This creates a simulated record. No payment is collected and no airline ticket is issued.</p>
+    <p class="fine-print">Simulated booking. No payment is collected and no airline ticket is issued.</p>
   </dialog>
-  <noscript><p class="notice">JavaScript is required for this local booking prototype. No purchase can be submitted without it.</p></noscript>
+  <noscript><p class="notice">JavaScript is required for this booking prototype. No purchase can be submitted without it.</p></noscript>
 </body>
 </html>

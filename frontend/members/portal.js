@@ -51,26 +51,41 @@ function emptyState(title, description, link) {
   if (link) { const anchor = node('a', link.text, 'text-link'); anchor.href = link.href; container.append(anchor); }
   return container;
 }
+function routeHeading(flight) {
+  const heading = node('h3', undefined, 'flight-route');
+  const route = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  route.setAttribute('viewBox', '0 0 40 16'); route.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M1 8h36m-6-5 6 5-6 5'); route.append(path);
+  heading.setAttribute('aria-label', `${flight.origin} to ${flight.destination}`);
+  heading.append(node('span', flight.origin), route, node('span', flight.destination));
+  return heading;
+}
 function renderFlights() {
   const list = $('flight-results');
-  const flights = state.flights.filter((f) => (!state.filters.origin || f.origin === state.filters.origin) && (!state.filters.destination || f.destination === state.filters.destination) && (!state.filters.date || f.departure_date === state.filters.date)).sort((a, b) => a.departure_date.localeCompare(b.departure_date) || a.total - b.total);
+  const availableOnly = $('available-only').checked;
+  const flights = state.flights.filter((f) => (!state.filters.origin || f.origin === state.filters.origin) && (!state.filters.destination || f.destination === state.filters.destination) && (!state.filters.date || f.departure_date === state.filters.date) && (!availableOnly || Number(f.bookable_seats) > 0 && !alreadyBooked(f.flight_id))).sort((a, b) => $('flight-sort').value === 'price' ? a.total - b.total || a.departure_date.localeCompare(b.departure_date) : a.departure_date.localeCompare(b.departure_date) || a.total - b.total);
   $('result-count').textContent = `${flights.length} ${flights.length === 1 ? 'flight' : 'flights'} · Prices include mandatory fees`;
   if (!state.flights.length) {
-    list.replaceChildren(emptyState('No member flights released yet', 'New seats appear here when an offer is published. Membership does not guarantee availability.', { href: '/admin#members', text: 'Open offer management' }));
+    list.replaceChildren(emptyState('No member flights released yet', 'There are no released member seats to browse right now. Check again later; joining a pass does not guarantee a flight.', { href: '#membership', text: 'How the pass works' }));
     return;
   }
   if (!flights.length) {
     const empty = emptyState('No matching flights', 'Try another destination or date to see the released offers.');
-    const reset = node('button', 'Show all available flights', 'text-button'); reset.type = 'button'; reset.addEventListener('click', () => { state.filters = {}; $('flight-search').reset(); renderFlights(); }); empty.append(reset); list.replaceChildren(empty); return;
+    const reset = node('button', 'Show all available flights', 'text-button'); reset.type = 'button'; reset.addEventListener('click', () => { state.filters = {}; $('flight-search').reset(); $('available-only').checked = false; renderFlights(); }); empty.append(reset); list.replaceChildren(empty); return;
   }
   list.replaceChildren(...flights.map((flight) => {
     const booked = alreadyBooked(flight.flight_id); const available = Number(flight.bookable_seats) > 0 && !booked;
     const card = node('article', undefined, `flight-card${available ? '' : ' is-unavailable'}`); card.dataset.flightId = flight.flight_id;
     const date = node('div', undefined, 'flight-date'); const d = calendarDate(flight.departure_date);
     date.append(node('span', d.getUTCDate(), 'day'), node('span', new Intl.DateTimeFormat('en-GB', { month: 'short', weekday: 'short', timeZone: 'UTC' }).format(d), 'month'), node('span', d.getUTCFullYear(), 'year'));
-    const route = node('div'); route.append(node('h3', `${flight.origin} → ${flight.destination}`, 'flight-route'), node('p', `${airportNames[flight.origin] || flight.origin} to ${airportNames[flight.destination] || flight.destination}`, 'flight-name'));
-    route.append(node('p', `One way · 1 member traveller · ${flight.flight_id}`, 'flight-detail'));
-    if (flight.normal_total != null) route.append(node('p', `Current normal fare ${money(flight.normal_total)}`, 'flight-detail'));
+    const route = node('div'); route.append(routeHeading(flight), node('p', `${airportNames[flight.origin] || flight.origin} to ${airportNames[flight.destination] || flight.destination}`, 'flight-name'));
+    route.append(node('p', `One way · 1 traveller`, 'flight-detail'), node('p', flight.flight_id, 'flight-detail'));
+    if (flight.normal_total != null) {
+      route.append(node('p', `Current normal fare ${money(flight.normal_total)}`, 'flight-detail'));
+      const saving = Math.round((Number(flight.normal_total) - Number(flight.total)) * 100) / 100;
+      if (saving > 0) route.append(node('p', `Ticket saving ${money(saving)} before membership fee`, 'flight-savings'));
+    }
     route.append(node('p', booked ? 'Already in your trips' : available ? `${flight.bookable_seats} member ${Number(flight.bookable_seats) === 1 ? 'seat' : 'seats'} available` : 'Currently unavailable', 'availability'));
     const price = node('div', undefined, 'flight-price'); price.append(node('span', 'Member ticket · total', 'price-label'), node('strong', money(flight.total), 'total'), node('span', `Base ${money(flight.base_fare)} + fees ${money(flight.mandatory_fees)}`, 'breakdown'));
     const choose = node('button', booked ? 'Booked' : available ? 'Select flight' : 'Unavailable', 'button primary choose-flight'); choose.type = 'button'; choose.dataset.purchase = ''; choose.dataset.available = String(available); choose.disabled = !available || state.busy;
@@ -81,19 +96,20 @@ function renderFlights() {
 function renderMembership() {
   if (!state.config) return;
   const membership = state.config.membership;
-  $('hero-fee').textContent = `${money(membership.fee)} / ${membership.term_days} days`;
+  $('hero-fee').textContent = money(membership.fee);
+  $('hero-term').textContent = membership.term_days;
   $('pass-price').textContent = money(membership.fee);
   $('pass-term').textContent = `${membership.term_days} days · One personal membership`;
   $('header-account').textContent = activeMember() ? 'Your membership is active' : 'Your demo account';
   $('join-pass').disabled = state.busy || !state.account || activeMember() || membershipExpired();
   $('join-pass').textContent = activeMember() ? 'Membership active' : membershipExpired() ? 'Membership expired' : 'Review membership';
-  $('membership-state').textContent = activeMember() ? `Active until ${timestampLabel(state.account.membership.expires)}. You will not be charged another membership fee when booking.` : membershipExpired() ? 'This membership has expired. Renewal is not available in this prototype.' : 'Not a member yet. You can browse flights before joining.';
+  $('membership-state').textContent = activeMember() ? `Active until ${timestampLabel(state.account.membership.expires)}. You will not be charged another membership fee when booking.` : membershipExpired() ? 'This membership has expired. Renewal is not available in this prototype.' : 'Find a suitable flight first. Join when you are ready to book.';
 }
 function renderAccount() {
   $('current-account').textContent = state.customerId; $('customer-id').value = state.customerId;
   renderMembership(); const bookings = state.account?.bookings || [];
   $('trip-count').textContent = bookings.length;
-  if (!bookings.length) { $('trip-results').replaceChildren(emptyState('Your next trip starts here', 'Your confirmed simulated bookings will stay here when you reload this browser.', { href: '#flights', text: 'Find a member flight' })); return; }
+  if (!bookings.length) { $('trip-results').replaceChildren(emptyState('Your next trip starts here', 'Choose a member flight to start planning. Your confirmed bookings will appear here.', { href: '#flights', text: 'Find a member flight' })); return; }
   $('trip-results').replaceChildren(...bookings.map((booking) => {
     const card = node('article', undefined, 'trip-card'); card.dataset.bookingId = booking.id;
     card.append(node('p', 'Simulated booking confirmed', 'confirmed'), node('h3', `${booking.origin} → ${booking.destination}`), node('p', `${dateLabel(booking.departure_date)} · One way · 1 traveller`), node('p', money(booking.total), 'trip-total'), node('p', `Base ${money(booking.base_fare)} + mandatory fees ${money(booking.mandatory_fees)}`), node('p', `Reference ${booking.id}`, 'booking-id'));
@@ -191,7 +207,9 @@ async function switchAccount(id) {
   renderMembership(); $('trip-count').textContent = '0'; $('trip-results').replaceChildren(emptyState('Loading this account', 'Checking membership and saved trips for the selected test ID.'));
   try { await loadData(); notice('Demo account changed. Membership and trips below belong to this test ID.'); } catch { /* loadData announces its error. */ }
 }
-$('flight-search').addEventListener('submit', (event) => { event.preventDefault(); state.filters = { origin: $('origin').value, destination: $('destination').value, date: $('departure-date').value }; renderFlights(); });
+$('flight-search').addEventListener('submit', (event) => { event.preventDefault(); state.filters = { origin: $('origin').value, destination: $('destination').value, date: $('departure-date').value }; renderFlights(); $('results-title').focus(); });
+$('available-only').addEventListener('change', renderFlights);
+$('flight-sort').addEventListener('change', renderFlights);
 $('refresh-flights').addEventListener('click', async () => { clearNotices(); try { await loadData(); notice('Flight availability refreshed.'); } catch { /* Error is visible. */ } });
 $('refresh-account').addEventListener('click', async () => { clearNotices(); try { await loadData(); notice('Membership and trips refreshed.'); } catch { /* Error is visible. */ } });
 $('join-pass').addEventListener('click', () => openCheckout('membership'));

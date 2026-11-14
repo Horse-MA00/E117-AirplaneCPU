@@ -57,6 +57,9 @@ def _date(state, day):
 
 
 def _validate(config, policy):
+    if policy.get("seat_calibration") is not None:
+        from backend.seat_feedback import validate_profile
+        validate_profile(policy["seat_calibration"])
     for key, low, high in (("horizon_days", 90, 730), ("membership_days", 1, 730),
                            ("flight_count", 6, 12), ("customer_count", 1, 500),
                            ("occasions_per_customer", 2, 3)):
@@ -307,7 +310,11 @@ def _automatic(state, event):
         f["normal_since_snapshot"] = f["cancel_since_snapshot"] = 0
         if d in RELEASE_DAYS and not any(c["round_day"] == d for c in f["quota_cohorts"]):
             prediction = forecast(f["history"], d, state["seed"] + int(f["flight_id"][-3:]))
+            if state["policy"].get("seat_calibration") is not None:
+                from backend.seat_feedback import apply_profile
+                prediction = apply_profile(prediction, state["policy"]["seat_calibration"], d)
             f["forecast"] = {k: prediction[k] for k in ("model", "days_to_departure", "expected_remaining_demand", "raw_protection_p90", "protection_p90", "releasable_seats", "expected_empty_seats")}
+            f["forecast"].update({k: prediction[k] for k in ("base_expected_remaining_demand", "base_protection_p90", "seat_feedback_version", "seat_feedback_generation") if k in prediction})
             state["forecast_calls"] += 1
             available = f["capacity"] - f["occupied"]
             # Preserve NHPP's fail-closed quality gates as well as its risk reserve.

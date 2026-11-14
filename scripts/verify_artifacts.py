@@ -41,6 +41,17 @@ def verify(manifest_path):
             checks = case["metrics"]["checks"]
             assert checks and all(checks.values()), case["case_id"]
         result["completed_market_cases"] = contents["cases"]
+    if manifest.get("source") == "joint_optimization":
+        contents = json.loads(report.read_text())
+        assert contents['status'] == 'completed', report
+        assert len(contents['worlds']) == manifest['completed_worlds'], report
+        assert set(contents['search_seeds']).isdisjoint(contents['validation_seeds']), report
+        for world in contents['worlds']:
+            assert world['status'] == 'completed' and all(world['result']['checks'].values()), world['world_id']
+        for track in contents['tracks']:
+            assert track['validation']['seat_calibration'] == track['best']['seat_calibration'], track['mode']
+        assert result['audit_records'] == manifest['audit_records'], audit
+        result['completed_market_cases'] = len(contents['worlds'])
     return result
 
 
