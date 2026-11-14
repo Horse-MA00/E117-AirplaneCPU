@@ -1,6 +1,6 @@
 # E117 — Agent handoff
 
-Updated 2026-11-14, Asia/Hong_Kong. The app is implemented; the earlier November 7 proposal is history. This file is a handoff, not an automatically loaded AGENTS.md.
+Updated 2026-11-14, Asia/Hong_Kong. The app is implemented; the earlier November 7 proposal is history. This file is a handoff for background only. The automatically loaded, team-maintained rules are in [AGENTS.md](AGENTS.md) (imported by CLAUDE.md); follow AGENTS.md where they differ.
 
 ## Continue from evidence
 

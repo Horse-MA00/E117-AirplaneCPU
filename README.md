@@ -35,7 +35,7 @@ market state. Live runs automatically cross internal batches within a selected t
 budget. NO_OFFER remains a valid decision for the selected flight, not a rejection
 of the complete membership programme. The base NHPP remains frozen.
 
-Read [the current workflow and scope](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
+Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md); the latest change record is [demand filter and original fare](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
 The [earlier joint engine](docs/OPTIMIZATION_ENGINE.md), whole-term continuous search
 and historical experiments remain available as explicitly labelled reference tools.
 Use Docker below on Windows; the customer panel retains POSIX `fcntl`.
@@ -172,6 +172,7 @@ For live experiments, create with `--modes live`, then use a bounded `--max-call
 
 ## Documentation
 
+- [Shared AI-assistant rules for Codex and Claude Code](AGENTS.md) (`CLAUDE.md` imports it; keep it updated)
 - [Joint optimisation, seat feedback, database and APIs](docs/OPTIMIZATION_ENGINE.md)
 - [Six-round math and actual DeepSeek integration evidence](docs/JOINT_OPTIMIZATION_VALIDATION.md)
 - [Portal redesign and differences from the incoming plan](docs/PORTAL_REDESIGN_AND_OPTIMIZATION.md)

@@ -4,7 +4,7 @@
 
 ## 最新主流程：雙軌逐輪優化
 
-**最新修正：** [需求篩選、原價 P₀ 與收益範圍](DEMAND_FILTER_AND_ORIGINAL_FARE.md) 記錄本次行為；會員供應、配額三種口徑、零供應阻擋、購買者分組及固定座位 profile 的價格比較，另見 [2026-11-14 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)。新增 member demo 後主目錄 1,549 班／280,364 筆，含獨立驗證合共 680,364 筆。
+**最新修正：** 現行規格以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準（`flight-policy-feedback-v4-original-fare`）。需求篩選、原價 P₀ 與收益範圍的修改經過見 [需求篩選與原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)；會員供應、配額三種口徑、零供應阻擋、購買者分組及固定座位 profile 的修正經過與驗證證據見 [2026-11-14 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)。新增 member demo 後主目錄 1,549 班／280,364 筆，含獨立驗證合共 680,364 筆。
 
 Admin 已改為紫／青／白配色，四個主入口是 Forecast seats、Optimize prices、Experiments、Manage offers。Forecast 分開顯示預測會員空間、今天可新增配額、已發布可訂座位；座位圖使用同一 API 分解。正常需求基線的預計空位／訂位曲線及截至所選日的正常基本票價另外顯示。使用者指定移除的長篇假設、驗證及每日快照表已從該頁移除；資料及評估 API 保留。
 
@@ -12,7 +12,7 @@ Forecast seats 及 Optimize prices 均可按 Low／Medium／High demand 篩選�
 
 `backend/optimization.py` 的主流程版本為 `flight-policy-feedback-v4-original-fare`，必須選擇航線、日期／航班及 D28／D14／D7。新實驗的 P₀ 等於所選時點最近可見的正常基本票價，不能手動覆寫，也不再乘以 15% 或採用舊快照的折扣起點欄位；V₀ 可填寫並在該次搜尋固定。數學及 Live LLM 都在同一指定航班的獨立反事實世界內運行，使用該班已訂位、空位、正常基本票價及歷史；不再以一般多航班市場代替所選航班。啟動前檢查所選輪次有正會員配額；P₀ 附近先測試 ±25%，再做明示邊界探索。價格圖同時顯示貢獻、利潤率及會員買家，三項最大值分開標示；普通票買家、入會、票數及報價曝光另列，無供應／無曝光不作價格排名。
 
-NHPP 本體及凍結校準保持不變；同一次價格搜尋和獨立驗證固定初始座位 profile，以免供應規則變化混入價格比較。完成市場仍根據正常需求誤差計算 proposed next calibration，僅記錄為下次實驗提案，不在本次套用。最後用兩個獨立種子驗證保留的價格候選。單航班收入分攤三分之一新年費／會員服務成本，實際現金仍收全額一次，因此不宣稱是最佳全年會費。詳見 [目前 v3 修正規格](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)；[v2 航班專屬規格](FLIGHT_SCOPED_OPTIMIZATION.md) 保留歷史行為。
+NHPP 本體及凍結校準保持不變；同一次價格搜尋和獨立驗證固定初始座位 profile，以免供應規則變化混入價格比較。完成市場仍根據正常需求誤差計算 proposed next calibration，僅記錄為下次實驗提案，不在本次套用。最後用兩個獨立種子驗證保留的價格候選。單航班收入分攤三分之一新年費／會員服務成本，實際現金仍收全額一次，因此不宣稱是最佳全年會費。詳見 [現行航班優化規格](FLIGHT_SCOPED_OPTIMIZATION.md)；修正經過見 [v3 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md) 及 [v4 原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)。
 
 SQLite 保存 run、world、round、event。Scoped Live 現在可在指定總額度內自動跨越內部小批次；總額度耗盡或 provider 失敗仍停止，UI 可追加額度。Manage offers 自行選航班／輪次，只建議同航班同輪次、版本符合且獨立驗證接受的結果，發布時再扣除已售會員位及前輪有效未售配額。Client 主要金額顯示 base fare，下方小字顯示費用及總付款；結帳核價不變。
 
