@@ -225,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
   path=unquote(urlparse(self.path).path)
   try:
    if path=='/api/export/snapshots':
-    payload=(data.DATA/'snapshots.csv.gz').read_bytes();self.send_response_headers(200,'application/gzip',len(payload));self.wfile.write(payload);return
+    payload=(data.directories()[0]/'snapshots.csv.gz').read_bytes();self.send_response_headers(200,'application/gzip',len(payload));self.wfile.write(payload);return
    parts=path.strip('/').split('/')
    if len(parts)==5 and parts[:3]==['api','agents','runs'] and parts[-1]=='export':
     run_id=ident(parts[3]);source=audit.BASE/run_id/'events.jsonl'

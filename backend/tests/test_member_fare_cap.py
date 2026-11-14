@@ -10,6 +10,21 @@ from backend.pricing import optimize
 from backend.store import Store
 
 
+# These tests pin flights, fares and expectations from the frozen legacy catalogue.
+_legacy_dataset = None
+
+
+def setUpModule():
+    global _legacy_dataset
+    from backend import data as _data
+    _legacy_dataset = _data.use_dataset('legacy')
+    _legacy_dataset.__enter__()
+
+
+def tearDownModule():
+    _legacy_dataset.__exit__(None, None, None)
+
+
 class FarePolicy(unittest.TestCase):
     def test_cap_is_half_rounded_down_to_the_cent(self):
         self.assertEqual(member_fare_cap(830), 415)

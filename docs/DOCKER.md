@@ -108,7 +108,7 @@ docker compose exec app python scripts/smoke_container.py --verify-only
 ## 容器内执行其他模块
 
 ```sh
-docker compose exec app python -m backend.evaluate --flight SYN-00001 --day 28
+docker compose exec app python -m backend.evaluate --flight UO630-20270615 --day 28
 docker compose exec app python -m backend.oag --date 2026-11-15
 ```
 

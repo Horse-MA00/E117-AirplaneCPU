@@ -15,6 +15,21 @@ from simulation.member_demo_generate import OUTPUT, SCENARIOS, generate
 from simulation.network_generate import airport_catalog, DATES
 
 
+# These tests pin flights, fares and expectations from the frozen legacy catalogue.
+_legacy_dataset = None
+
+
+def setUpModule():
+    global _legacy_dataset
+    from backend import data as _data
+    _legacy_dataset = _data.use_dataset('legacy')
+    _legacy_dataset.__enter__()
+
+
+def tearDownModule():
+    _legacy_dataset.__exit__(None, None, None)
+
+
 class MemberDemoDataTests(unittest.TestCase):
     def test_catalog_and_full_trajectories(self):
         extra = [f for f in data.flights() if f.get('dataset') == 'member_demo_generated']

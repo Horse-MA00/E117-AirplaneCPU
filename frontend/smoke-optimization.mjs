@@ -19,9 +19,9 @@ try{
   assert.equal(await page.locator('#optimization-start').isDisabled(),true);
   await page.locator('#optimization-route').selectOption('HKG-ICN');
   const suggested=page.waitForResponse(r=>r.url().endsWith('/api/optimization/initial-policy')&&r.request().method()==='POST');
-  await page.locator('#optimization-flight').selectOption('NET-HKG-ICN-20270521');
+  await page.locator('#optimization-flight').selectOption('UO630-20270615');
   const suggestion=await (await suggested).json();
-  assert.equal(suggestion.scope.flight_id,'NET-HKG-ICN-20270521');
+  assert.equal(suggestion.scope.flight_id,'UO630-20270615');
   assert.equal(suggestion.scope.as_of_day,28);
   assert.equal(suggestion.initial_membership_fee,399);
   await page.waitForFunction(()=>!document.getElementById('optimization-start').disabled);
@@ -29,7 +29,7 @@ try{
   await page.locator('#optimization-mode').selectOption('math');
   const started=page.waitForResponse(r=>r.url().endsWith('/api/optimization/runs')&&r.request().method()==='POST');
   await page.locator('#optimization-start').click();
-  const startResponse=await started; const sent=startResponse.request().postDataJSON();assert.equal(sent.flight_id,'NET-HKG-ICN-20270521');assert.equal(sent.forecast_day,28);assert.equal('initial_member_fare' in sent,false);assert.equal('initial_membership_fee' in sent,false);assert.equal(sent.customers,14);assert.equal(sent.rounds,6);assert.equal(sent.replicates,2);assert.equal(sent.release_fraction,0.5);
+  const startResponse=await started; const sent=startResponse.request().postDataJSON();assert.equal(sent.flight_id,'UO630-20270615');assert.equal(sent.forecast_day,28);assert.equal('initial_member_fare' in sent,false);assert.equal('initial_membership_fee' in sent,false);assert.equal(sent.customers,14);assert.equal(sent.rounds,6);assert.equal(sent.replicates,2);assert.equal(sent.release_fraction,0.5);
   creation=await startResponse.json();assert.ok(creation.run_id,JSON.stringify(creation));
   }
   await page.waitForFunction(id=>document.getElementById('optimization-export').getAttribute('href')===`/api/optimization/runs/${id}/export` && ['Completed','Run needs attention'].includes(document.getElementById('optimization-status').textContent),creation.run_id,{timeout:600000});
@@ -47,7 +47,7 @@ try{
   assert.equal(await page.locator('#optimization-rounds-table tr').count(),grid.length);
   assert.ok(report.tracks[0].rounds.some(r=>r.member_fare!==report.config.initial_member_fare));
   assert.ok(report.tracks[0].rounds.every(r=>r.membership_fee===report.config.initial_membership_fee));
-  assert.equal(report.config.scope.flight_id,'NET-HKG-ICN-20270521');
+  assert.equal(report.config.scope.flight_id,'UO630-20270615');
   const qualified=report.tracks[0].rounds.filter(r=>r.price_evidence_qualified===true);
   assert.equal(await page.locator('#optimization-price-profit circle').count(),qualified.length);
   assert.ok(qualified.length>0,'Positive supply must produce observed member-offer exposure for this test flight');

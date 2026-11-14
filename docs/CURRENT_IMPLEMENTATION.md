@@ -1,6 +1,6 @@
 # NHPP 會員優惠平台技術實作
 
-> 状态：现行 · 对应代码：`flight-policy-feedback-v6-formula-grid`、`formula-scan-v1`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`shared-market-v3`、`three-round-release-v1`
+> 状态：现行 · 对应代码：`hkx-network-2`、`flight-policy-feedback-v6-formula-grid`、`formula-scan-v1`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`shared-market-v3`、`three-round-release-v1`
 
 更新：2026-11-14。這份文件記錄現有程式；早期提案文件已刪除（Git 歷史可查），與原計劃的差異見下文「與原計劃的差異及限制」。使用者最新決定是先使用 NHPP，不使用 LightGBM。
 
@@ -54,6 +54,12 @@ flowchart TD
 OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使用 Python 標準庫，前端不需要 Node build；模型使用 NumPy。SQLite交易確保一次扣位、同人同航班去重。這是本機展示應用，不是已部署的航空生產系統。
 
 ## 資料與時間
+
+**預設目錄為 HK Express 航線網絡（`hkx-network-2`，`simulation/hkx_generated/`）：** 1,558 班、281,998 筆每日快照，涵蓋 HK Express 全部 40 個航點（雙向共 80 條航線）及四種機型（A320 180 座、A320neo 188 座、A321 230 座、A321neo 236 座，其中一架 239 座）。13 個出發日期跨越淡季、平季及暑假、國慶黃金周、聖誕、農曆新年等旺季，並混合平日與週末。每個日期沿用 OAG 樣本周（2026-11-16 至 22，HKG 出發 410 班）同一星期幾的真實航班號、出發時間、機型及飛行時間（`simulation/hkx_schedule_profile.json`，只保留這幾個欄位，OAG 原始回應存於被忽略的 `data/private/`，不發布）；樣本周沒有運營的 6 個季節航點只在 IATA 夏季時刻表日期以假設班次運行。回程使用去程航班號 +1。票價隨飛行時間及市場變化，並按季節、星期、方向調整；稅費按出發國家假設；需求、季節及星期效應全為假設。需求過程與原生成器相同（外生票價 NHPP），票價仍不隨訂座變化。生成後自動檢查現實特徵：平均載客率 82.9%、起飛時售罄 26.5%、提前 30 天以上售罄 2.7%、航線票價與飛行時間相關 0.86；同一種子重跑逐位元相同。
+
+凍結預測模型在新目錄上的樣本外檢查（`simulation/hkx_validation/report.json`，未調參）：D28／D14／D7 保護座位覆蓋率 99.8%／99.7%／99.9%，需求 MAE 29.6／13.6／6.7 座，放票航班比例 5.8%／14.3%／25.7%，放票導致的正常收入損失 0.04%／0.08%／0%。D28 預測剩餘需求比實際高約 21%，放票偏保守。
+
+**舊目錄保留不變：** 設定 `UOPTION_DATASET=legacy` 可切回原 8 條航線資料加兩個補充集（以下各段描述的都是舊目錄）；凍結 NHPP 證據、舊測試固定航班及兩份需求索引（`demand_catalog.json`、`demand_catalog_hkx.json`）各自有效。
 
 `simulation/network_generated/` 與 `simulation/member_demo_generated/` 各有 222 班、40,182 筆，37 個外站雙向共 74 條航線，每條三個日期。後者新增低／中正常需求的會員供應示範及高需求對照，沒有修改原始資料或校準。主目錄共 1,549 班／280,364 筆；原 CSV 下載仍為 200,000 筆，另 400,000 驗證資料不加入售票目錄，總數 680,364 筆。CTS／HFE 狀態仍保留，模擬日期不代表真實班表。
 
@@ -181,7 +187,7 @@ POST需要JSON、同源Origin、有效數值與ID。服務只綁定127.0.0.1，�
 
 ## 執行及驗證
 
-參見README安裝與啟動指令。兩組unittest分別覆蓋既有模擬器／新資料、NHPP／市場／交易；目前 `backend/tests` 236 項、`tests/` 31 項，以 `python scripts/check_container.py` 一次執行。`scripts/smoke_api.py`對實際HTTP服務驗證資料、預測、64組搜尋、停售、人物、訂閱／購買及私有路徑保護。`scripts/smoke_three_round_api.py`驗證同班三輪發布、結轉、購票及不合法輪次拒絕。三輪回歸另檢查第二輪扣第一輪、第三輪扣前兩輪、售出不重扣、過期不結轉及輪次冪等。兩個API smoke及前端完整交易smoke皆重新通過。前端另有桌面及390px手機瀏覽器檢查，記錄於前端進度文件。
+參見README安裝與啟動指令。兩組unittest分別覆蓋既有模擬器／新資料、NHPP／市場／交易；目前 `backend/tests` 270 項、`tests/` 31 項，以 `python scripts/check_container.py` 一次執行。`scripts/smoke_api.py`對實際HTTP服務驗證資料、預測、64組搜尋、停售、人物、訂閱／購買及私有路徑保護。`scripts/smoke_three_round_api.py`驗證同班三輪發布、結轉、購票及不合法輪次拒絕。三輪回歸另檢查第二輪扣第一輪、第三輪扣前兩輪、售出不重扣、過期不結轉及輪次冪等。兩個API smoke及前端完整交易smoke皆重新通過。前端另有桌面及390px手機瀏覽器檢查，記錄於前端進度文件。
 
 新三輪環境另外完成40種子×3政策＝120個規則市場，3240筆逐輪公式和所有帳本／庫存檢查通過，沒有新增LLM呼叫。結果與限制見[本次三輪驗證](THREE_ROUND_RELEASE.md#本次三輪規則的獨立市場重播)；v2報告保留為歷史證據。
 

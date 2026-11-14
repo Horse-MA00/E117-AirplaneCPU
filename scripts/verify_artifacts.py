@@ -72,6 +72,7 @@ if __name__ == "__main__":
     manifests = [ROOT / "simulation/generated/manifest.json"]
     manifests += sorted((ROOT / "simulation/network_generated").glob("manifest.json"))
     manifests += sorted((ROOT / "simulation/member_demo_generated").glob("manifest.json"))
+    manifests += [ROOT / "simulation/hkx_generated/manifest.json"]
     manifests += sorted((ROOT / "simulation/validation_extended").glob("seed-*/manifest.json"))
     manifests += sorted((ROOT / "llm_agent/experiments").glob("*/manifest.json"))
     manifests += sorted((ROOT / "simulation/continuous_price_validation").glob("manifest.json"))

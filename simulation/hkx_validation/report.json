@@ -1,0 +1,652 @@
+{
+  "evaluation": "hkx-frozen-forecaster-check-v1",
+  "phase": "out_of_sample_check_no_tuning",
+  "flights": 1558,
+  "days": [
+    28,
+    14,
+    7
+  ],
+  "source_hashes": {
+    "backend/forecast.py": "b31f2ea8bc76def2883a4337f41e553bf080a03e62729eb710c65ed148c485c2",
+    "backend/nhpp.py": "2c5739a40c7ca6143f820e9a7ca6daad1c93b3ad1355a337a7517c0e7de7732b",
+    "backend/nhpp_v3.py": "a16cf26f06fd5133e8e982bc580f1964e784a7bf48937b1795d378abfba09fa8",
+    "simulation/generated/calibration_v2.json": "44b0b5e264508a893292f84319f053afeec7fed4f1c76c79842b56bceda63f40",
+    "simulation/generated/calibration_v3_robust.json": "95d98c652078b817f3a9099c0192d93be575ab6e64d384fe8bb71aa8b68b4c48",
+    "simulation/hkx_generated/snapshots.csv.gz": "59af46fe25ea3ffe752047a9dc3d8a811f8aa81b6591aa7c76a5541b022a51ec",
+    "simulation/hkx_generated/truth.csv.gz": "24e4001dc8f42dd3e2a7fd3c17de70f52642fa60f5660b2e3494a48e0fc1489b",
+    "simulation/hkx_generated/flights.json": "e084cdddcd9aba2bd7224371758aef105856a39daec6cb5b04bd38a821ead64c"
+  },
+  "notes": [
+    "No forecaster parameter, guard or threshold was fitted or changed for this report.",
+    "protection_coverage: share where remaining normal demand requests <= protected seats (decision coverage).",
+    "normal_base_revenue_loss_ratio: normal base revenue lost by releasing the forecaster's seats, replaying hidden requests at hidden fares.",
+    "Demand bands come from the display-only D28 index and are not forecaster inputs."
+  ],
+  "results": {
+    "D14/all": {
+      "n": 1558,
+      "protection_coverage": 0.9968,
+      "protection_coverage_wilson95": [
+        0.9925,
+        0.9986
+      ],
+      "raw_p90_coverage": 0.9326,
+      "demand_mae": 13.59,
+      "mean_predicted_remaining_demand": 44.22,
+      "mean_actual_remaining_demand": 40.59,
+      "release_rate": 0.1431,
+      "mean_release_seats": 4.85,
+      "mean_released_seats_unused_by_normal_demand": 4.82,
+      "normal_base_revenue_loss_ratio": 0.0008
+    },
+    "D14/band=high": {
+      "n": 832,
+      "protection_coverage": 0.9988,
+      "protection_coverage_wilson95": [
+        0.9932,
+        0.9998
+      ],
+      "raw_p90_coverage": 0.9519,
+      "demand_mae": 14.56,
+      "mean_predicted_remaining_demand": 51.44,
+      "mean_actual_remaining_demand": 46.08,
+      "release_rate": 0.0156,
+      "mean_release_seats": 0.26,
+      "mean_released_seats_unused_by_normal_demand": 0.25,
+      "normal_base_revenue_loss_ratio": 0.00025
+    },
+    "D14/band=low": {
+      "n": 165,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9772,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9273,
+      "demand_mae": 10.03,
+      "mean_predicted_remaining_demand": 27.94,
+      "mean_actual_remaining_demand": 24.91,
+      "release_rate": 0.6,
+      "mean_release_seats": 27.08,
+      "mean_released_seats_unused_by_normal_demand": 27.08,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D14/band=medium": {
+      "n": 561,
+      "protection_coverage": 0.9929,
+      "protection_coverage_wilson95": [
+        0.9818,
+        0.9972
+      ],
+      "raw_p90_coverage": 0.9055,
+      "demand_mae": 13.18,
+      "mean_predicted_remaining_demand": 38.3,
+      "mean_actual_remaining_demand": 37.07,
+      "release_rate": 0.1979,
+      "mean_release_seats": 5.11,
+      "mean_released_seats_unused_by_normal_demand": 5.05,
+      "normal_base_revenue_loss_ratio": 0.00153
+    },
+    "D14/direction=inbound": {
+      "n": 779,
+      "protection_coverage": 0.9974,
+      "protection_coverage_wilson95": [
+        0.9907,
+        0.9993
+      ],
+      "raw_p90_coverage": 0.9435,
+      "demand_mae": 13.11,
+      "mean_predicted_remaining_demand": 44.17,
+      "mean_actual_remaining_demand": 39.79,
+      "release_rate": 0.1528,
+      "mean_release_seats": 4.77,
+      "mean_released_seats_unused_by_normal_demand": 4.74,
+      "normal_base_revenue_loss_ratio": 0.00102
+    },
+    "D14/direction=outbound": {
+      "n": 779,
+      "protection_coverage": 0.9961,
+      "protection_coverage_wilson95": [
+        0.9887,
+        0.9987
+      ],
+      "raw_p90_coverage": 0.9217,
+      "demand_mae": 14.06,
+      "mean_predicted_remaining_demand": 44.27,
+      "mean_actual_remaining_demand": 41.4,
+      "release_rate": 0.1335,
+      "mean_release_seats": 4.92,
+      "mean_released_seats_unused_by_normal_demand": 4.9,
+      "normal_base_revenue_loss_ratio": 0.00058
+    },
+    "D14/season=autumn": {
+      "n": 132,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9717,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9545,
+      "demand_mae": 14.38,
+      "mean_predicted_remaining_demand": 44.35,
+      "mean_actual_remaining_demand": 39.18,
+      "release_rate": 0.0985,
+      "mean_release_seats": 3.47,
+      "mean_released_seats_unused_by_normal_demand": 3.47,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D14/season=christmas": {
+      "n": 108,
+      "protection_coverage": 0.9907,
+      "protection_coverage_wilson95": [
+        0.9494,
+        0.9984
+      ],
+      "raw_p90_coverage": 0.9259,
+      "demand_mae": 14.78,
+      "mean_predicted_remaining_demand": 46.66,
+      "mean_actual_remaining_demand": 43.19,
+      "release_rate": 0.0648,
+      "mean_release_seats": 2.06,
+      "mean_released_seats_unused_by_normal_demand": 1.93,
+      "normal_base_revenue_loss_ratio": 0.00463
+    },
+    "D14/season=cn_golden_week": {
+      "n": 242,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9844,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9215,
+      "demand_mae": 14.01,
+      "mean_predicted_remaining_demand": 47.02,
+      "mean_actual_remaining_demand": 44.23,
+      "release_rate": 0.0868,
+      "mean_release_seats": 3.35,
+      "mean_released_seats_unused_by_normal_demand": 3.35,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D14/season=low": {
+      "n": 328,
+      "protection_coverage": 0.997,
+      "protection_coverage_wilson95": [
+        0.9829,
+        0.9995
+      ],
+      "raw_p90_coverage": 0.9299,
+      "demand_mae": 11.57,
+      "mean_predicted_remaining_demand": 35.81,
+      "mean_actual_remaining_demand": 32.48,
+      "release_rate": 0.311,
+      "mean_release_seats": 11.36,
+      "mean_released_seats_unused_by_normal_demand": 11.34,
+      "normal_base_revenue_loss_ratio": 0.00047
+    },
+    "D14/season=lunar_new_year": {
+      "n": 236,
+      "protection_coverage": 0.9958,
+      "protection_coverage_wilson95": [
+        0.9764,
+        0.9993
+      ],
+      "raw_p90_coverage": 0.9449,
+      "demand_mae": 14.17,
+      "mean_predicted_remaining_demand": 46.99,
+      "mean_actual_remaining_demand": 42.01,
+      "release_rate": 0.0763,
+      "mean_release_seats": 1.79,
+      "mean_released_seats_unused_by_normal_demand": 1.79,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D14/season=shoulder": {
+      "n": 250,
+      "protection_coverage": 0.992,
+      "protection_coverage_wilson95": [
+        0.9713,
+        0.9978
+      ],
+      "raw_p90_coverage": 0.924,
+      "demand_mae": 13.21,
+      "mean_predicted_remaining_demand": 43.11,
+      "mean_actual_remaining_demand": 40.13,
+      "release_rate": 0.184,
+      "mean_release_seats": 5.96,
+      "mean_released_seats_unused_by_normal_demand": 5.89,
+      "normal_base_revenue_loss_ratio": 0.00216
+    },
+    "D14/season=summer_peak": {
+      "n": 262,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9855,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9351,
+      "demand_mae": 14.66,
+      "mean_predicted_remaining_demand": 49.68,
+      "mean_actual_remaining_demand": 46.21,
+      "release_rate": 0.0611,
+      "mean_release_seats": 1.59,
+      "mean_released_seats_unused_by_normal_demand": 1.59,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D28/all": {
+      "n": 1558,
+      "protection_coverage": 0.9981,
+      "protection_coverage_wilson95": [
+        0.9944,
+        0.9993
+      ],
+      "raw_p90_coverage": 0.9544,
+      "demand_mae": 29.56,
+      "mean_predicted_remaining_demand": 89.76,
+      "mean_actual_remaining_demand": 73.96,
+      "release_rate": 0.0578,
+      "mean_release_seats": 1.89,
+      "mean_released_seats_unused_by_normal_demand": 1.88,
+      "normal_base_revenue_loss_ratio": 0.00039
+    },
+    "D28/band=high": {
+      "n": 832,
+      "protection_coverage": 0.9988,
+      "protection_coverage_wilson95": [
+        0.9932,
+        0.9998
+      ],
+      "raw_p90_coverage": 0.982,
+      "demand_mae": 37.53,
+      "mean_predicted_remaining_demand": 113.57,
+      "mean_actual_remaining_demand": 85.31,
+      "release_rate": 0.0012,
+      "mean_release_seats": 0.0,
+      "mean_released_seats_unused_by_normal_demand": 0.0,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D28/band=low": {
+      "n": 165,
+      "protection_coverage": 0.9939,
+      "protection_coverage_wilson95": [
+        0.9665,
+        0.9989
+      ],
+      "raw_p90_coverage": 0.897,
+      "demand_mae": 15.03,
+      "mean_predicted_remaining_demand": 41.15,
+      "mean_actual_remaining_demand": 44.64,
+      "release_rate": 0.4364,
+      "mean_release_seats": 15.63,
+      "mean_released_seats_unused_by_normal_demand": 15.49,
+      "normal_base_revenue_loss_ratio": 0.0055
+    },
+    "D28/band=medium": {
+      "n": 561,
+      "protection_coverage": 0.9982,
+      "protection_coverage_wilson95": [
+        0.99,
+        0.9997
+      ],
+      "raw_p90_coverage": 0.9305,
+      "demand_mae": 22.02,
+      "mean_predicted_remaining_demand": 68.75,
+      "mean_actual_remaining_demand": 65.74,
+      "release_rate": 0.0303,
+      "mean_release_seats": 0.66,
+      "mean_released_seats_unused_by_normal_demand": 0.66,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D28/direction=inbound": {
+      "n": 779,
+      "protection_coverage": 0.9974,
+      "protection_coverage_wilson95": [
+        0.9907,
+        0.9993
+      ],
+      "raw_p90_coverage": 0.9589,
+      "demand_mae": 30.05,
+      "mean_predicted_remaining_demand": 90.35,
+      "mean_actual_remaining_demand": 73.06,
+      "release_rate": 0.0552,
+      "mean_release_seats": 1.8,
+      "mean_released_seats_unused_by_normal_demand": 1.8,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D28/direction=outbound": {
+      "n": 779,
+      "protection_coverage": 0.9987,
+      "protection_coverage_wilson95": [
+        0.9928,
+        0.9998
+      ],
+      "raw_p90_coverage": 0.9499,
+      "demand_mae": 29.08,
+      "mean_predicted_remaining_demand": 89.17,
+      "mean_actual_remaining_demand": 74.86,
+      "release_rate": 0.0603,
+      "mean_release_seats": 1.99,
+      "mean_released_seats_unused_by_normal_demand": 1.96,
+      "normal_base_revenue_loss_ratio": 0.00078
+    },
+    "D28/season=autumn": {
+      "n": 132,
+      "protection_coverage": 0.9924,
+      "protection_coverage_wilson95": [
+        0.9583,
+        0.9987
+      ],
+      "raw_p90_coverage": 0.9091,
+      "demand_mae": 34.6,
+      "mean_predicted_remaining_demand": 91.84,
+      "mean_actual_remaining_demand": 73.05,
+      "release_rate": 0.053,
+      "mean_release_seats": 1.73,
+      "mean_released_seats_unused_by_normal_demand": 1.55,
+      "normal_base_revenue_loss_ratio": 0.0049
+    },
+    "D28/season=christmas": {
+      "n": 108,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9657,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9537,
+      "demand_mae": 32.75,
+      "mean_predicted_remaining_demand": 97.03,
+      "mean_actual_remaining_demand": 78.33,
+      "release_rate": 0.0278,
+      "mean_release_seats": 0.52,
+      "mean_released_seats_unused_by_normal_demand": 0.52,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D28/season=cn_golden_week": {
+      "n": 242,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9844,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9504,
+      "demand_mae": 30.37,
+      "mean_predicted_remaining_demand": 95.28,
+      "mean_actual_remaining_demand": 80.19,
+      "release_rate": 0.0455,
+      "mean_release_seats": 1.45,
+      "mean_released_seats_unused_by_normal_demand": 1.45,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D28/season=low": {
+      "n": 328,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9884,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9512,
+      "demand_mae": 22.96,
+      "mean_predicted_remaining_demand": 70.64,
+      "mean_actual_remaining_demand": 58.49,
+      "release_rate": 0.1341,
+      "mean_release_seats": 5.05,
+      "mean_released_seats_unused_by_normal_demand": 5.05,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D28/season=lunar_new_year": {
+      "n": 236,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.984,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9703,
+      "demand_mae": 31.39,
+      "mean_predicted_remaining_demand": 97.73,
+      "mean_actual_remaining_demand": 77.28,
+      "release_rate": 0.0297,
+      "mean_release_seats": 0.63,
+      "mean_released_seats_unused_by_normal_demand": 0.63,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D28/season=shoulder": {
+      "n": 250,
+      "protection_coverage": 0.996,
+      "protection_coverage_wilson95": [
+        0.9777,
+        0.9993
+      ],
+      "raw_p90_coverage": 0.976,
+      "demand_mae": 28.44,
+      "mean_predicted_remaining_demand": 88.45,
+      "mean_actual_remaining_demand": 72.7,
+      "release_rate": 0.06,
+      "mean_release_seats": 1.82,
+      "mean_released_seats_unused_by_normal_demand": 1.82,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D28/season=summer_peak": {
+      "n": 262,
+      "protection_coverage": 0.9962,
+      "protection_coverage_wilson95": [
+        0.9787,
+        0.9993
+      ],
+      "raw_p90_coverage": 0.9504,
+      "demand_mae": 32.65,
+      "mean_predicted_remaining_demand": 98.64,
+      "mean_actual_remaining_demand": 84.42,
+      "release_rate": 0.0115,
+      "mean_release_seats": 0.21,
+      "mean_released_seats_unused_by_normal_demand": 0.21,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/all": {
+      "n": 1558,
+      "protection_coverage": 0.9994,
+      "protection_coverage_wilson95": [
+        0.9964,
+        0.9999
+      ],
+      "raw_p90_coverage": 0.9268,
+      "demand_mae": 6.66,
+      "mean_predicted_remaining_demand": 21.33,
+      "mean_actual_remaining_demand": 20.65,
+      "release_rate": 0.2567,
+      "mean_release_seats": 9.87,
+      "mean_released_seats_unused_by_normal_demand": 9.87,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/band=high": {
+      "n": 832,
+      "protection_coverage": 0.9988,
+      "protection_coverage_wilson95": [
+        0.9932,
+        0.9998
+      ],
+      "raw_p90_coverage": 0.9339,
+      "demand_mae": 7.16,
+      "mean_predicted_remaining_demand": 24.12,
+      "mean_actual_remaining_demand": 23.27,
+      "release_rate": 0.0457,
+      "mean_release_seats": 0.78,
+      "mean_released_seats_unused_by_normal_demand": 0.78,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/band=low": {
+      "n": 165,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9772,
+        1.0
+      ],
+      "raw_p90_coverage": 0.8909,
+      "demand_mae": 5.6,
+      "mean_predicted_remaining_demand": 13.68,
+      "mean_actual_remaining_demand": 13.17,
+      "release_rate": 0.8424,
+      "mean_release_seats": 46.98,
+      "mean_released_seats_unused_by_normal_demand": 46.98,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/band=medium": {
+      "n": 561,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9932,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9269,
+      "demand_mae": 6.23,
+      "mean_predicted_remaining_demand": 19.45,
+      "mean_actual_remaining_demand": 18.97,
+      "release_rate": 0.3975,
+      "mean_release_seats": 12.44,
+      "mean_released_seats_unused_by_normal_demand": 12.44,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/direction=inbound": {
+      "n": 779,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9951,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9384,
+      "demand_mae": 6.24,
+      "mean_predicted_remaining_demand": 20.94,
+      "mean_actual_remaining_demand": 20.15,
+      "release_rate": 0.2734,
+      "mean_release_seats": 10.18,
+      "mean_released_seats_unused_by_normal_demand": 10.18,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/direction=outbound": {
+      "n": 779,
+      "protection_coverage": 0.9987,
+      "protection_coverage_wilson95": [
+        0.9928,
+        0.9998
+      ],
+      "raw_p90_coverage": 0.9153,
+      "demand_mae": 7.08,
+      "mean_predicted_remaining_demand": 21.73,
+      "mean_actual_remaining_demand": 21.15,
+      "release_rate": 0.2401,
+      "mean_release_seats": 9.56,
+      "mean_released_seats_unused_by_normal_demand": 9.56,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/season=autumn": {
+      "n": 132,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9717,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9318,
+      "demand_mae": 5.97,
+      "mean_predicted_remaining_demand": 21.14,
+      "mean_actual_remaining_demand": 19.47,
+      "release_rate": 0.2424,
+      "mean_release_seats": 6.91,
+      "mean_released_seats_unused_by_normal_demand": 6.91,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/season=christmas": {
+      "n": 108,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9657,
+        1.0
+      ],
+      "raw_p90_coverage": 0.8889,
+      "demand_mae": 7.65,
+      "mean_predicted_remaining_demand": 22.94,
+      "mean_actual_remaining_demand": 21.67,
+      "release_rate": 0.1481,
+      "mean_release_seats": 4.84,
+      "mean_released_seats_unused_by_normal_demand": 4.84,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/season=cn_golden_week": {
+      "n": 242,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9844,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9215,
+      "demand_mae": 7.08,
+      "mean_predicted_remaining_demand": 22.71,
+      "mean_actual_remaining_demand": 22.64,
+      "release_rate": 0.186,
+      "mean_release_seats": 6.56,
+      "mean_released_seats_unused_by_normal_demand": 6.56,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/season=low": {
+      "n": 328,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9884,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9268,
+      "demand_mae": 5.64,
+      "mean_predicted_remaining_demand": 17.41,
+      "mean_actual_remaining_demand": 16.68,
+      "release_rate": 0.4909,
+      "mean_release_seats": 22.33,
+      "mean_released_seats_unused_by_normal_demand": 22.33,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/season=lunar_new_year": {
+      "n": 236,
+      "protection_coverage": 0.9958,
+      "protection_coverage_wilson95": [
+        0.9764,
+        0.9993
+      ],
+      "raw_p90_coverage": 0.9492,
+      "demand_mae": 6.93,
+      "mean_predicted_remaining_demand": 22.38,
+      "mean_actual_remaining_demand": 21.39,
+      "release_rate": 0.1864,
+      "mean_release_seats": 4.87,
+      "mean_released_seats_unused_by_normal_demand": 4.87,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/season=shoulder": {
+      "n": 250,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9849,
+        1.0
+      ],
+      "raw_p90_coverage": 0.928,
+      "demand_mae": 6.46,
+      "mean_predicted_remaining_demand": 21.02,
+      "mean_actual_remaining_demand": 20.34,
+      "release_rate": 0.272,
+      "mean_release_seats": 11.2,
+      "mean_released_seats_unused_by_normal_demand": 11.2,
+      "normal_base_revenue_loss_ratio": 0.0
+    },
+    "D7/season=summer_peak": {
+      "n": 262,
+      "protection_coverage": 1.0,
+      "protection_coverage_wilson95": [
+        0.9855,
+        1.0
+      ],
+      "raw_p90_coverage": 0.9237,
+      "demand_mae": 7.44,
+      "mean_predicted_remaining_demand": 23.76,
+      "mean_actual_remaining_demand": 23.6,
+      "release_rate": 0.1298,
+      "mean_release_seats": 4.15,
+      "mean_released_seats_unused_by_normal_demand": 4.15,
+      "normal_base_revenue_loss_ratio": 0.0
+    }
+  }
+}

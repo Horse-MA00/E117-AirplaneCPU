@@ -16,7 +16,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 
 - [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（v6：会员价上限为正常基本票价的 50%，P₀ = 上限；数学轨先用公式算 P*，再模拟附近 9 个价格）、需求筛选、座位口径、会计公式、SQLite 和 API。
 - [THREE_ROUND_RELEASE](docs/THREE_ROUND_RELEASE.md)：D28/D14/D7 放票规则；新一轮扣除前几轮仍有效的未售配额。
-- [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：整体架构、HTTP 路由表、与原计划的差异及限制。
+- [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：整体架构、数据目录（默认 HK Express 网络 `hkx-network-2`）、HTTP 路由表、与原计划的差异及限制。
 - [PITCHING_BRIEF](docs/PITCHING_BRIEF.md)：当前方案、路演讲稿、校准覆盖与证据边界。[NHPP_V3_REVIEW](docs/NHPP_V3_REVIEW.md)：平滑模型、收入校准、D28 回退及独立验证。
 - [NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：冻结的 NHPP v2 参数、输出和验证。
 - [SHARED_MARKET](docs/SHARED_MARKET.md)：共享市场引擎、财务账本和默认成本。[SHARED_MARKET_AGENT](docs/SHARED_MARKET_AGENT.md)：旅客 Agent、审计和 probe。
@@ -36,13 +36,14 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 - **NHPP v2 已冻结**：不要改 `backend/nhpp.py`，`backend/evidence.py` 会校验它的 SHA；也不要改 `simulation/generated/calibration*.json`、`nhpp_v2_*.json`。
 - v3 新增报告也已冻结，失败尝试保留；活动入口 `backend/forecast.py` 在 D28 用 v2 分布和新 guard，在 D14/D7 用平滑 v3。不得改已见 final 来调参。
 - 不要运行 `python -m simulation.evaluate_nhpp_v2 calibration` 重新调参，也不要拿 final holdout 反复调参。要改模型，就新开版本，并使用新的验证种子。
-- 已提交的数据和 manifest 不要改：`simulation/generated/`、`simulation/validation_extended/`、`simulation/network_generated/`、`simulation/member_demo_generated/`、`simulation/continuous_price_validation/`。
+- 已提交的数据和 manifest 不要改：`simulation/generated/`、`simulation/validation_extended/`、`simulation/network_generated/`、`simulation/member_demo_generated/`、`simulation/continuous_price_validation/`、`simulation/hkx_generated/`、`simulation/hkx_schedule_profile.json`、`simulation/hkx_validation/`。要改默认目录就提升 `hkx_generate.VERSION`，用新种子生成，并重跑 `python -m simulation.evaluate_hkx_validation`（只评估，不调参）。
 - **历史实验报告保持原样**：`llm_agent/experiments/` 里已有的目录、`docs/validation/`、`docs/*ATTESTATION*.json`。新实验写到新目录；不要回填或"修复"旧报告。
 - `llm_agent/prompts/` 下已有的 prompt 被实验哈希引用。要改就新建版本文件。
-- `simulation/demand_catalog.json` 不要手改：数据或模型变化后用 `python scripts/build_demand_catalog.py` 重建，再重启服务。
+- `simulation/demand_catalog_hkx.json`（默认）和 `simulation/demand_catalog.json`（旧目录）不要手改：数据、模型或 `backend/data.py` 变化后用 `python scripts/build_demand_catalog.py` 重建（旧目录前加 `UOPTION_DATASET=legacy`），再重启服务。
 - **`.env.local` 不能读出、打印或提交**，里面是 DeepSeek/OAG 密钥。`data/private/` 是被 Git 忽略的私有缓存和 SQLite，也不要提交。
 - 不要改 `.gitattributes` 的换行规则，改了冻结文件的字节哈希会对不上。
 - 不要发布 OAG 原始响应或任何密钥。真实 LLM 调用必须有用户授权，并设置明确的 `--max-calls` 上限。
+- OAG 时刻表用 `scripts/fetch_oag_schedule.py --max-calls N` 抓取，原始响应只缓存在 `data/private/`。免费额度每次最多 10 条且按分钟限流；遇到 429 就停，不要换 key 绕过。
 
 ## 授权与协作
 
@@ -69,10 +70,11 @@ python scripts/verify_artifacts.py                # 实验与数据的 SHA256 �
 ## 目录与模块
 
 - `backend/`：stdlib HTTP API（`server.py`）和 SQLite 持久化（`store.py`、`optimization_store.py`）。
+  - 数据入口 `data.py`：默认 HK Express 目录，`UOPTION_DATASET=legacy` 切回旧目录，测试用 `data.use_dataset()`。
   - 预测入口 `forecast.py`、候选 `nhpp_v3.py` 与冻结 `nhpp.py`；放票 `release_policy.py`；座位口径 `seat_inventory.py`；指定航班优化 `optimization.py`、`scoped_market.py`、`initial_policy.py`；共享市场 `shared_market.py`；座位反馈 `seat_feedback.py`。
   - 测试在 `backend/tests/`。
 - `frontend/`：Admin，原生 HTML/JS，路径 `/admin`；`frontend/members/` 是会员端，路径 `/members`。不需要构建，由后端直接提供；`*.mjs` 是浏览器 smoke 测试。
-- `simulation/`：合成数据生成器、NHPP 评估脚本和已提交的冻结数据集。
+- `simulation/`：合成数据生成器（默认目录由 `hkx_generate.py` 生成）、NHPP 评估脚本和已提交的冻结数据集。
 - `llm_agent/`：旅客 Agent、prompt、provider 适配、审计；`experiments/` 是可公开的合成实验证据。
 - `scripts/`：发布检查、证据校验、HTTP/容器 smoke、导出工具。`tests/`：根目录的发布和模拟器测试。
 - `docs/`：现行规格、证据记录和日志，见上面的文档索引。

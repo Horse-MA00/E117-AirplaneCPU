@@ -7,7 +7,7 @@ const origin=process.env.APP_URL||'http://127.0.0.1:8000';
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
 const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
 page.on('pageerror',error=>errors.push(error.message));
-const a='NET-HKG-FUK-20270515',b='NET-HKG-FUK-20270518';
+const a='UO600-20270518',b='UO600-20270615';
 let submissions=[],planFee=399,outcome='not_run',releaseDelayed,delayedSeen;
 await page.route('**/api/member-portal/plan',route=>{if(route.request().method()==='POST')planFee=route.request().postDataJSON().membership_fee;return route.fulfill({json:{membership:{fee:planFee,term_days:365}}});});
 await page.route('**/api/forecast',async route=>{
@@ -83,7 +83,7 @@ try{
   await page.waitForFunction(()=>document.querySelector('#offer-optimization-suggestion').textContent.includes('NO_OFFER'));
   assert.equal(await page.getByRole('button',{name:'Use this suggestion',exact:true}).count(),0);
   await page.getByRole('link',{name:'Optimize this flight',exact:true}).click();
-  await page.waitForFunction(()=>location.hash==='#optimization'&&document.querySelector('#optimization-flight').value==='NET-HKG-FUK-20270518'&&document.querySelector('#optimization-day').value==='7');
+  await page.waitForFunction(()=>location.hash==='#optimization'&&document.querySelector('#optimization-flight').value==='UO600-20270615'&&document.querySelector('#optimization-day').value==='7');
   assert.equal(await page.locator('#optimization-route').inputValue(),'HKG-FUK');
   await page.getByRole('link',{name:'Manage offers',exact:true}).click();
   outcome='stale';await page.locator('#offer-day').selectOption('14');

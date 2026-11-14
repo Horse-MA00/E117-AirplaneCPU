@@ -18,14 +18,25 @@ VERSION = "nhpp-d28-demand-catalog-v1"
 REFERENCE_DAY = 28
 FORECAST_SEED = 117
 THRESHOLDS = {"low_below": .60, "high_at_least": .85}
-INDEX_PATH = "simulation/demand_catalog.json"
-SOURCE_FILES = (
+from .data import DATASET, DATASETS
+
+MODEL_FILES = (
     "backend/nhpp.py", "backend/nhpp_v3.py", "backend/forecast.py", "simulation/generated/calibration_v3_robust.json", "simulation/generated/nhpp_v3_robust_final.json", "simulation/evaluate_nhpp_v3.py", "simulation/calibrate_nhpp_v3_robust.py", "simulation/generated/calibration_v3.json", "backend/data.py", "backend/demand_catalog.py",
     "simulation/generated/calibration_v2.json",
-    *tuple(f"simulation/{dataset}/{filename}"
-           for dataset in ("generated", "network_generated", "member_demo_generated")
-           for filename in ("snapshots.csv.gz", "flights.json")),
 )
+
+
+def configure(dataset):
+    """Point the index and its source fingerprint at one catalogue."""
+    global INDEX_PATH, SOURCE_FILES
+    # One index per catalogue: the legacy index stays valid when the HK Express data is active.
+    INDEX_PATH = "simulation/demand_catalog.json" if dataset == "legacy" else f"simulation/demand_catalog_{dataset}.json"
+    SOURCE_FILES = (*MODEL_FILES, *tuple(f"{directory.relative_to(ROOT).as_posix()}/{filename}"
+                                         for directory in DATASETS[dataset]
+                                         for filename in ("snapshots.csv.gz", "flights.json")))
+
+
+configure(DATASET)
 OBSERVATION_FIELDS = (
     "flight_id", "days_to_departure", "capacity", "booked_seats",
     "available_seats", "gross_bookings", "cancellations", "normal_base_fare",
@@ -148,7 +159,7 @@ def enrich(flights, root=ROOT):
         row = records.get(flight["flight_id"])
         if row is not None:
             item.update({key: row[key] for key in ("demand_band", "demand_expected_load_rate", "demand_reference_day")})
-        if row is not None and flight.get('dataset') == 'member_demo_generated':
+        if row is not None and flight.get('dataset') in ('member_demo_generated', 'hkx_generated'):
             quota = row.get('d28_releasable')
             if isinstance(quota, int) and not isinstance(quota, bool) and 0 <= quota <= flight.get('capacity', 0):
                 item['demo_d28_releasable'] = quota

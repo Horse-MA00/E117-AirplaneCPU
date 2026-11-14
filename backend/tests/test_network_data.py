@@ -11,6 +11,21 @@ from simulation.generate import validate
 from simulation.network_generate import airport_catalog, generate, OUTPUT, DATES
 
 
+# These tests pin flights, fares and expectations from the frozen legacy catalogue.
+_legacy_dataset = None
+
+
+def setUpModule():
+    global _legacy_dataset
+    from backend import data as _data
+    _legacy_dataset = _data.use_dataset('legacy')
+    _legacy_dataset.__enter__()
+
+
+def tearDownModule():
+    _legacy_dataset.__exit__(None, None, None)
+
+
 class NetworkDataTests(unittest.TestCase):
     def test_complete_catalog_has_each_direction_and_date(self):
         catalog = airport_catalog()

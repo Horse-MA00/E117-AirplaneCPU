@@ -16,6 +16,8 @@ Forecast seats and Optimize prices share a **Demand filter** (All / Low / Medium
 
 ## Supplemental observations and initial price
 
+**Default catalogue (since `hkx-network-2`):** the app serves `simulation/hkx_generated/` — 1,558 HK Express flights / 281,998 snapshots over all 40 destinations (80 directed routes) and all four fleet types, with flight numbers, departure times, aircraft and elapsed times taken from an OAG sample week. See [CURRENT_IMPLEMENTATION](CURRENT_IMPLEMENTATION.md#資料與時間). The paragraphs below describe the legacy catalogue, still available with `UOPTION_DATASET=legacy`; worked examples that cite `SYN-`, `NET-` or `DEMO-` flights refer to it.
+
 `simulation/network_generated/` contains 40,182 additional D180–D0 snapshots and separate truth. All 37 remote airports in the member catalog have both directions and three dates. The requested CTS scenario remains schedule-unconfirmed; HFE retains its announced status. These simulated dates do not assert actual airline schedules.
 
 `simulation/member_demo_generated/` adds a further 222 flights / 40,182 snapshots on the same 74 directions and dates, with deliberately low (15 May), medium (18 May) and high-demand control (21 May) normal demand, so that member supply exists on many default flights. Low-supply directions are retained; a positive member allocation is never guaranteed. These are designed business scenarios, not HK Express vacancy distributions.

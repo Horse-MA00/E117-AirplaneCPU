@@ -82,15 +82,21 @@ class DemandCatalogTests(unittest.TestCase):
 
     def test_published_catalogue_is_complete_and_matches_selected_fresh_forecasts(self):
         from backend import data
-        flights = data.flights()
-        self.assertEqual(len(flights), 1549)
-        self.assertTrue(all(f["demand_source_status"] == "current" for f in flights))
-        self.assertEqual({f["demand_band"] for f in flights}, {"low", "medium", "high"})
-        for fid in ("SYN-00001", "NET-HKG-HND-20270515", "DEMO-HKG-HND-20270515"):
-            expected = demand.forecast_record(fid, data.history(fid))
-            actual = next(f for f in flights if f["flight_id"] == fid)
-            self.assertEqual(actual["demand_band"], expected["demand_band"])
-            self.assertEqual(actual["demand_expected_load_rate"], expected["demand_expected_load_rate"])
+        def check(count, sample_ids):
+            flights = data.flights()
+            self.assertEqual(len(flights), count)
+            self.assertTrue(all(f["demand_source_status"] == "current" for f in flights))
+            self.assertEqual({f["demand_band"] for f in flights}, {"low", "medium", "high"})
+            for fid in sample_ids:
+                expected = demand.forecast_record(fid, data.history(fid))
+                actual = next(f for f in flights if f["flight_id"] == fid)
+                self.assertEqual(actual["demand_band"], expected["demand_band"])
+                self.assertEqual(actual["demand_expected_load_rate"], expected["demand_expected_load_rate"])
+        # Default HK Express catalogue and the frozen legacy catalogue each keep a current index.
+        hkx = data.manifest()
+        check(hkx["flights"], [f["flight_id"] for f in data.flights()[::400]])
+        with data.use_dataset("legacy"):
+            check(1549, ("SYN-00001", "NET-HKG-HND-20270515", "DEMO-HKG-HND-20270515"))
 
 
 if __name__ == "__main__":

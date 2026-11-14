@@ -9,6 +9,21 @@ from backend import optimization as engine
 from backend import optimization_store as store
 from backend.fare_estimate import GRID_POINTS, estimate, fine_grid
 
+
+# These tests pin flights, fares and expectations from the frozen legacy catalogue.
+_legacy_dataset = None
+
+
+def setUpModule():
+    global _legacy_dataset
+    from backend import data as _data
+    _legacy_dataset = _data.use_dataset('legacy')
+    _legacy_dataset.__enter__()
+
+
+def tearDownModule():
+    _legacy_dataset.__exit__(None, None, None)
+
 FLIGHT = 'DEMO-ISG-HKG-20270515'
 
 

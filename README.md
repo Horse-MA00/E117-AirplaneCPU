@@ -95,7 +95,8 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 
 ## What is implemented
 
-- **680,364 daily snapshots** across **3,759 synthetic flight histories** (200,000 original demo rows, two 40,182-row route/date supplements and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
+- **Default catalogue: the HK Express network** — 1,558 flights / 281,998 daily snapshots covering all 40 destinations in both directions and all four aircraft types (A320, A320neo, A321, A321neo), using an OAG sample week's flight numbers, departure times and aircraft (`simulation/hkx_generated/`; `UOPTION_DATASET=legacy` switches back).
+- **Legacy catalogue: 680,364 daily snapshots** across **3,759 synthetic flight histories** (200,000 original demo rows, two 40,182-row route/date supplements and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
 - **Flight-specific optimisation:** formula P* plus a 9-fare simulated grid on the mathematical track, 1–12 rounds on the live-LLM track, member fares capped at 50% of the normal base fare, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
@@ -155,7 +156,7 @@ python -m unittest discover -s tests -v
 python -m unittest discover -s backend/tests -v
 python scripts/check_publication.py
 python scripts/verify_artifacts.py
-python -m backend.evaluate --flight SYN-00001 --day 28
+python -m backend.evaluate --flight UO630-20270615 --day 28
 # With the local server running; creates synthetic demo transactions:
 python scripts/smoke_api.py
 python scripts/smoke_member_portal.py
