@@ -1,0 +1,702 @@
+{
+ "_说明": "前端 UI 重构的冻结约定，规则见 docs/FRONTEND_UI.md。改布局可以移动这些元素，但不能删除或改名；确需改动时，在同一个提交里同步修改 JS、smoke 测试和本文件。tests/test_frontend_contract.py 会检查。",
+ "pages": {
+  "/admin": {
+   "html": "frontend/index.html",
+   "routes": [
+    "flights",
+    "optimization",
+    "pricing",
+    "customers",
+    "market",
+    "members"
+   ],
+   "route_mechanism": "location.hash 选择 section#view-<route>.view，其余 section 设为 hidden"
+  },
+  "/members": {
+   "html": "frontend/members/index.html",
+   "routes": [
+    "flights",
+    "membership",
+    "trips",
+    "account"
+   ],
+   "route_mechanism": "同一长页面内的锚点；dialog#checkout 是订票弹窗"
+  }
+ },
+ "api": [
+  {
+   "method": "GET",
+   "path": "/api/summary",
+   "used_by": [
+    "app.js",
+    "optimization.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/flights",
+   "used_by": [
+    "app.js",
+    "optimization.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/flights/{flight_id}",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/forecast",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "flight_id",
+    "days_to_departure"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/optimize",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "flight_id",
+    "days_to_departure",
+    "config.membership_days",
+    "config.customers",
+    "config.incremental_cost",
+    "config.ancillary_margin",
+    "config.seed"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/optimization/suggestions?flight_id=&day=",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/optimization/runs",
+   "used_by": [
+    "optimization.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/optimization/runs",
+   "used_by": [
+    "optimization.js"
+   ],
+   "body": [
+    "rounds",
+    "customers",
+    "replicates",
+    "seed",
+    "release_fraction",
+    "min_service_rate",
+    "program_cost",
+    "fare_min",
+    "flight_id",
+    "forecast_day",
+    "mode",
+    "max_calls",
+    "total_live_budget"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/optimization/runs/{run_id}",
+   "used_by": [
+    "optimization.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/optimization/runs/{run_id}/resume",
+   "used_by": [
+    "optimization.js"
+   ],
+   "body": [
+    "max_calls",
+    "additional_live_budget"
+   ]
+  },
+  {
+   "method": "LINK",
+   "path": "/api/optimization/runs/{run_id}/export",
+   "used_by": [
+    "optimization.js"
+   ]
+  },
+  {
+   "method": "LINK",
+   "path": "/api/optimization/runs/{run_id}/events",
+   "used_by": [
+    "optimization.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/optimization/initial-policy",
+   "used_by": [
+    "optimization.js"
+   ],
+   "body": [
+    "flight_id",
+    "forecast_day",
+    "customers",
+    "program_cost"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/pricing/runs",
+   "used_by": [
+    "continuous.js"
+   ],
+   "body": [
+    "price_min",
+    "price_max",
+    "membership_fee",
+    "release_fraction",
+    "evaluations"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/pricing/runs/{run_id}",
+   "used_by": [
+    "continuous.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/personas",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/agents/panels",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/agents/panels",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "mode",
+    "count",
+    "member_fare",
+    "membership_fee",
+    "seed",
+    "max_calls"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/agents/panels/{run_id}",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/agents/panels/{run_id}/people/{customer_id}",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/agents/panels/{run_id}/resume",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "max_calls"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/agents/runs",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "LINK",
+   "path": "/api/agents/runs/{run_id}/export",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/market/runs",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/market/runs",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "mode",
+    "seed",
+    "member_fare",
+    "membership_fee",
+    "release_fraction",
+    "max_calls"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/market/runs/{run_id}",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/market/runs/{run_id}/cases/{case_id}",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/market/runs/{run_id}/resume",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "max_calls"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/offers",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/offers",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "flight_id",
+    "days_to_departure",
+    "quantity",
+    "base_fare",
+    "optimization_run_id?",
+    "optimization_mode?"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/plan",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/plan",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "membership_fee"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/config",
+   "used_by": [
+    "members/portal.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/flights",
+   "used_by": [
+    "members/portal.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/accounts/{customer_id}",
+   "used_by": [
+    "members/portal.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/join",
+   "used_by": [
+    "members/portal.js"
+   ],
+   "body": [
+    "customer_id",
+    "expected_fee"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/book",
+   "used_by": [
+    "members/portal.js"
+   ],
+   "body": [
+    "customer_id",
+    "offer_id",
+    "expected_total"
+   ]
+  }
+ ],
+ "events": {
+  "uoption:view": "app.js 切换页面后发出，detail.name 为路由名",
+  "uoption:optimize-flight": "Forecast/Manage offers → Optimize，detail 含 flight_id 与 day 或 forecast_day",
+  "uoption:prepare-policy": "Optimize 的建议价格 → Manage offers 表单",
+  "uoption:provider": "app.js 读取 /api/summary 后广播 LLM 是否已配置"
+ },
+ "url_and_storage": {
+  "?pricing_run=": "continuous.js 用来恢复参考实验",
+  "localStorage['uoption-member-demo-account']": "会员端的演示账号 ID"
+ },
+ "js_selectors": {
+  "admin": [
+   ".view",
+   ".view:not([hidden]) h1",
+   ".primary-nav a",
+   ".primary-nav [aria-current=page]",
+   ".skip",
+   "[data-day]",
+   "[data-nav]",
+   "[data-panel-person]",
+   "label[for=optimization-total-budget]"
+  ],
+  "admin_classes_toggled_by_js": [
+   "loading",
+   "pending",
+   "selected",
+   "price-curve-cards",
+   "price-curve-detail",
+   "price-curve-legend",
+   "price-curve-plot"
+  ],
+  "members": [
+   ".header nav a",
+   ".choose-flight"
+  ]
+ },
+ "dom_ids": {
+  "admin": [
+   "agent-budget-field",
+   "agent-button",
+   "agent-call-budget",
+   "agent-count",
+   "agent-count-hint",
+   "agent-fare",
+   "agent-fee",
+   "agent-form",
+   "agent-mode",
+   "agent-mode-message",
+   "agent-runs",
+   "agent-scenario",
+   "ancillary-margin",
+   "apply-policy",
+   "best-fare",
+   "best-fee",
+   "best-profit",
+   "bookable-detail",
+   "bookable-value",
+   "booked-detail",
+   "booked-value",
+   "booking-chart",
+   "candidate-table",
+   "chart-caption",
+   "continuous-chart",
+   "continuous-evals",
+   "continuous-fee",
+   "continuous-form",
+   "continuous-max",
+   "continuous-min",
+   "continuous-report",
+   "continuous-result",
+   "continuous-share",
+   "continuous-start",
+   "continuous-status",
+   "continuous-summary",
+   "continuous-trace",
+   "coverage",
+   "customer-count",
+   "dataset-label",
+   "day-description",
+   "day-number",
+   "day-slider",
+   "demand-value",
+   "empty-detail",
+   "empty-value",
+   "error",
+   "export-candidates",
+   "fare-curve-panel",
+   "flight-capacity",
+   "flight-date",
+   "flight-filter-empty",
+   "flight-main",
+   "flight-scenario-note",
+   "flight-select",
+   "forecast-demand",
+   "forecast-demand-status",
+   "go-pricing",
+   "headroom-detail",
+   "headroom-value",
+   "heatmap",
+   "heatmap-detail",
+   "holdout-detail",
+   "ledger-detail",
+   "legacy-price-details",
+   "live-mode-option",
+   "market-assumptions",
+   "market-audit-link",
+   "market-best-label",
+   "market-best-profit",
+   "market-call-budget",
+   "market-call-count",
+   "market-call-detail",
+   "market-candidate-origin",
+   "market-comparison-note",
+   "market-detail-grid",
+   "market-event-count",
+   "market-event-detail",
+   "market-fare",
+   "market-fee",
+   "market-flight-table",
+   "market-form",
+   "market-journey-events",
+   "market-ledger",
+   "market-live-option",
+   "market-mode",
+   "market-pause-reason",
+   "market-person-select",
+   "market-person-state",
+   "market-policy-select",
+   "market-policy-table",
+   "market-refresh",
+   "market-release",
+   "market-report",
+   "market-report-link",
+   "market-resume",
+   "market-resume-controls",
+   "market-round-note",
+   "market-round-table",
+   "market-rule-note",
+   "market-run-select",
+   "market-run-status",
+   "market-seed",
+   "market-source-counts",
+   "market-start",
+   "member-allocation-detail",
+   "member-fee",
+   "member-plan-form",
+   "membership-status",
+   "nhpp-release-detail",
+   "nhpp-release-value",
+   "notice",
+   "offer-binding-status",
+   "offer-day",
+   "offer-fare",
+   "offer-flight",
+   "offer-flight-context",
+   "offer-form",
+   "offer-optimization-suggestion",
+   "offer-quantity",
+   "offer-release-status",
+   "offer-route",
+   "offers-list",
+   "optimization-budget",
+   "optimization-budget-field",
+   "optimization-call-counts",
+   "optimization-contribution-content",
+   "optimization-curve-protocol",
+   "optimization-day",
+   "optimization-demand",
+   "optimization-demand-status",
+   "optimization-empty",
+   "optimization-error",
+   "optimization-events",
+   "optimization-export",
+   "optimization-fare-chart",
+   "optimization-final-content",
+   "optimization-flight",
+   "optimization-forecast-feedback",
+   "optimization-form",
+   "optimization-formula",
+   "optimization-horizon-note",
+   "optimization-load-demo",
+   "optimization-mode",
+   "optimization-no-release",
+   "optimization-phase",
+   "optimization-price-detail",
+   "optimization-price-evidence",
+   "optimization-price-profit",
+   "optimization-profit-chart",
+   "optimization-progress",
+   "optimization-progress-bar",
+   "optimization-refresh",
+   "optimization-result-scope",
+   "optimization-results",
+   "optimization-resume",
+   "optimization-resume-controls",
+   "optimization-round-count",
+   "optimization-rounds-table",
+   "optimization-route",
+   "optimization-run-select",
+   "optimization-scope",
+   "optimization-setup-note",
+   "optimization-start",
+   "optimization-status",
+   "optimization-total-budget",
+   "optimization-track-cards",
+   "optimization-tradeoffs",
+   "optimize-button",
+   "optimize-form",
+   "panel-audit-link",
+   "panel-booked",
+   "panel-call-counts",
+   "panel-cancelled",
+   "panel-completed",
+   "panel-completed-detail",
+   "panel-decision-filter",
+   "panel-empty",
+   "panel-joined",
+   "panel-joined-detail",
+   "panel-next",
+   "panel-overview",
+   "panel-overview-status",
+   "panel-page-label",
+   "panel-pause-message",
+   "panel-people",
+   "panel-person-detail",
+   "panel-person-title",
+   "panel-prev",
+   "panel-progress",
+   "panel-progress-bar",
+   "panel-progress-count",
+   "panel-refresh",
+   "panel-result-note",
+   "panel-results",
+   "panel-resume",
+   "panel-resume-controls",
+   "panel-run-select",
+   "panel-run-status",
+   "panel-search",
+   "panel-segments",
+   "passenger-cost",
+   "policy-detail",
+   "price-caption",
+   "price-chart",
+   "pricing-context",
+   "pricing-empty",
+   "pricing-notes",
+   "pricing-results",
+   "protection-value",
+   "publish-button",
+   "refresh-agent-runs",
+   "refresh-offers",
+   "release-decision",
+   "release-value",
+   "save-plan-button",
+   "seat-composition",
+   "seat-composition-legend",
+   "seat-inventory-warning",
+   "send-market-candidate",
+   "show-price-curve",
+   "stress-table",
+   "term-days",
+   "term-label",
+   "view-customers",
+   "view-flights",
+   "view-market",
+   "view-members",
+   "view-optimization",
+   "view-pricing"
+  ],
+  "members": [
+   "account",
+   "account-form",
+   "any-dates",
+   "available-only",
+   "checkout",
+   "checkout-content",
+   "checkout-error",
+   "checkout-form",
+   "checkout-refresh",
+   "checkout-status",
+   "checkout-step",
+   "checkout-submit",
+   "checkout-title",
+   "clear-search",
+   "current-account",
+   "customer-id",
+   "departure-date",
+   "departure-from",
+   "departure-to",
+   "destination",
+   "destination-note",
+   "destination-region",
+   "flight-results",
+   "flight-search",
+   "flight-sort",
+   "flights",
+   "header-account",
+   "hero-fee",
+   "hero-term",
+   "join-pass",
+   "main-content",
+   "membership",
+   "membership-state",
+   "new-account",
+   "next-month",
+   "origin",
+   "origin-note",
+   "pass-price",
+   "pass-term",
+   "portal-error",
+   "portal-notice",
+   "refresh-account",
+   "refresh-flights",
+   "result-count",
+   "results-title",
+   "search-button",
+   "search-date-error",
+   "search-summary",
+   "switch-account",
+   "trip-count",
+   "trip-results",
+   "trips",
+   "view-trips"
+  ]
+ }
+}

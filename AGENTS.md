@@ -22,6 +22,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 - [SHARED_MARKET](docs/SHARED_MARKET.md)：共享市场引擎、财务账本和默认成本。[SHARED_MARKET_AGENT](docs/SHARED_MARKET_AGENT.md)：旅客 Agent、审计和 probe。
 - [LLM_SCENARIO_DESIGN](docs/LLM_SCENARIO_DESIGN.md)：六阶段旅程（Customer panel）和历史 v2.1 基线。
 - [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin 和会员端的交互、面板上限、会员搜索。
+- [FRONTEND_UI](docs/FRONTEND_UI.md)：前端 UI 重构规则、冻结清单（`frontend/ui-contract.json`）、设计系统和设计决定。
 - [CONTINUOUS_PRICING](docs/CONTINUOUS_PRICING.md)：全期连续定价，**只是参考工具**。[DOCKER](docs/DOCKER.md)：容器运行和测试。
 
 ### 证据与记录
@@ -79,7 +80,7 @@ python scripts/verify_artifacts.py                # 实验与数据的 SHA256 �
 
 ## 其他约定
 
-- UI 配色：紫 `#6F2C91`、青 `#24BCDC`、白。Admin 四个入口：Forecast / Optimize / Experiments / Manage offers。
+- UI 配色：紫 `#6F2C91`、青 `#24BCDC`、白。Admin 四个入口：Forecast / Optimize / Experiments / Manage offers。改 UI 前先读 FRONTEND_UI，不能破坏 `ui-contract.json`。
 - 用户要求 Forecast 页面不放长篇模型假设、验证区块和每日数据表（API 和文档保留）。Optimize 的 “Use these prices” 只复制价格草稿，不会把实验座位 profile 部署到会员库存。
 - `NO_OFFER` 是合法结论。候选只是"已评估候选中最好的"，不要称为真实最优价。LLM 输出是合成角色扮演，不是真实客户。
 - 报告 LLM 结果时，新调用、缓存命中、强制动作、失败要分开统计。
