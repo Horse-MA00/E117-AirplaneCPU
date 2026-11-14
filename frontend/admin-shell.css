@@ -84,8 +84,8 @@ main{flex:1;min-width:0;width:100%;max-width:1680px;padding:0 var(--gutter) 64px
 .ctx-field select:focus-visible{outline:2px solid var(--purple);outline-offset:6px;border-radius:4px}
 .ctx-field::after{content:"";position:absolute;right:16px;top:50%;width:8px;height:8px;border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .ctx-field select:disabled{color:var(--faint)}
-.ctx-field.demand{flex:0 1 250px}
-.ctx-field.route{flex:0 1 230px}
+.ctx-field.demand{flex:0 1 272px}
+.ctx-field.route{flex:0 1 300px}
 .ctx-field.flight{flex:1 1 360px;max-width:520px}
 .ctx-round{flex:none;margin-left:30px;padding:10px 8px 4px 16px;gap:1px}
 .day-shortcuts{display:flex;gap:4px;margin-left:-8px}
@@ -224,3 +224,18 @@ tbody tr.selected>*{background:var(--purple-wash);font-weight:600}
 .ctx-head .info-btn{width:18px;height:18px;font-size:11px}
 h1 .info,h2 .info{margin-left:10px}
 @media (forced-colors:active){.info-tip{border:2px solid CanvasText}}
+
+/* ---------- Route search (route-search.js) ---------- */
+.ctx-field.has-search select{padding-right:76px}
+.ctx-search-btn{position:absolute;right:38px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink-2)}
+.ctx-search-btn:hover,.ctx-search-btn[aria-expanded=true]{background:var(--purple-wash);color:var(--purple)}
+.ctx-search-btn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.route-search{position:absolute;z-index:50;top:calc(100% + 8px);left:-2px;width:min(440px,calc(100vw - 32px));padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:0 16px 44px rgba(30,20,40,.18)}
+.route-search input{min-height:46px;font-size:17px}
+.route-search-list{list-style:none;margin:8px 0 0;padding:0;max-height:340px;overflow:auto}
+.route-search-list li{display:flex;flex-direction:column;gap:1px;padding:9px 12px;border-radius:var(--r-sm);cursor:pointer}
+.route-search-list li strong{font-size:16px;font-weight:700;color:var(--ink)}
+.route-search-list li span{font-size:13.5px;color:var(--muted)}
+.route-search-list li[aria-selected=true],.route-search-list li:hover{background:var(--ground)}
+.route-search-list li.current strong{color:var(--purple)}
+.route-search-empty{margin:10px 4px 4px;color:var(--muted);font-size:14px}

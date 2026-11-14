@@ -68,18 +68,18 @@
         <div id="flight-main" aria-busy="true">
           <p id="release-decision" class="message error release-decision" role="status" hidden></p>
           <div class="kpi-row forecast-metrics">
-            <article class="stat-card featured"><span class="stat-label">New seats releasable today<span class="info"><button type="button" class="info-btn" aria-describedby="tip-release" aria-label="How this number is calculated">i</button><span class="info-tip" role="tooltip" id="tip-release"><strong class="info-title">How this number is calculated</strong><p>The NHPP forecast protects normal-fare demand first. Member seats come only from what is left, after earlier rounds and sold member seats are deducted.</p><span class="info-row"><span>NHPP recommended member seats</span><strong id="nhpp-release-value">—</strong></span><small id="nhpp-release-detail">Empty seats minus seats protected for normal demand</small><span class="info-row"><span>Forecast headroom</span><strong id="headroom-value">—</strong></span><small id="headroom-detail">Safe member capacity, including usable published quota</small></span></span></span><strong id="release-value">—</strong><small id="member-allocation-detail">Checking today's release round…</small></article>
+            <article class="stat-card featured"><span class="stat-label">New seats releasable today<span class="info"><button type="button" class="info-btn" aria-describedby="tip-release" aria-label="How this number is calculated">i</button><span class="info-tip" role="tooltip" id="tip-release"><strong class="info-title">How this number is calculated</strong><p>The demand forecast protects normal-fare travellers first. Member seats come only from what is left, after earlier rounds and sold member seats are deducted.</p><span class="info-row"><span>Forecast recommendation for this flight</span><strong id="nhpp-release-value">—</strong></span><small id="nhpp-release-detail">Empty seats minus seats protected for normal demand</small><span class="info-row"><span>Forecast headroom</span><strong id="headroom-value">—</strong></span><small id="headroom-detail">Safe member capacity, including usable published quota</small></span></span></span><strong id="release-value">—</strong><small id="member-allocation-detail">Checking today's release round…</small></article>
             <article class="stat-card"><span class="stat-label">Booked</span><strong id="booked-value">—</strong><small id="booked-detail">—</small></article>
-            <article class="stat-card"><span class="stat-label">Protected for normal demand<span class="info"><button type="button" class="info-btn" aria-describedby="tip-protected" aria-label="About protected seats">i</button><span class="info-tip" role="tooltip" id="tip-protected"><strong class="info-title">Protected for normal demand</strong><p>Seats kept for travellers paying the normal fare: the P90 forecast of remaining normal bookings plus a calibrated safety allowance, capped at the seats physically available.</p><span class="info-row"><span>Normal-sales baseline unsold</span><strong id="empty-value">—</strong></span><small id="empty-detail">Expected without additional member bookings</small><span class="info-row"><span>More normal bookings before cutoff</span><strong id="demand-value">—</strong></span><small>NHPP expected value</small></span></span></span><strong id="protection-value">—</strong><small>Kept for normal-fare travellers</small></article>
+            <article class="stat-card"><span class="stat-label">Protected for normal demand<span class="info"><button type="button" class="info-btn" aria-describedby="tip-protected" aria-label="About protected seats">i</button><span class="info-tip" role="tooltip" id="tip-protected"><strong class="info-title">Protected for normal demand</strong><p>Seats kept for travellers paying the normal fare: the P90 forecast of remaining normal bookings plus a calibrated safety allowance, capped at the seats physically available.</p><p class="model-note">Forecast model: NHPP (non-homogeneous Poisson process), calibrated on the synthetic booking history.</p><span class="info-row"><span>Normal-sales baseline unsold</span><strong id="empty-value">—</strong></span><small id="empty-detail">Expected without additional member bookings</small><span class="info-row"><span>More normal bookings before cutoff</span><strong id="demand-value">—</strong></span><small>Forecast expected value</small></span></span></span><strong id="protection-value">—</strong><small>Kept for normal-fare travellers</small></article>
             <article class="stat-card"><span class="stat-label">Published and bookable</span><strong id="bookable-value">—</strong><small id="bookable-detail">Issued quota that can currently be purchased</small></article>
           </div>
-          <div class="first-row">
-            <section class="seat-overview card" aria-labelledby="seat-overview-title">
+          <section class="seat-overview card seat-strip" aria-labelledby="seat-overview-title">
               <div class="title-line"><h2 id="seat-overview-title">How the Seats Are Divided</h2><span class="info"><button type="button" class="info-btn" aria-describedby="tip-seats" aria-label="About the seat bar">i</button><span class="info-tip" role="tooltip" id="tip-seats"><strong class="info-title">How the seats are divided</strong><p>Every seat appears once: normal and member bookings, seats protected for normal demand, published member seats, unpublished member headroom, and seats held by other safety limits.</p></span></span></div>
               <p id="seat-inventory-warning" class="message error" role="alert" hidden></p>
               <div id="seat-composition" class="seat-composition" role="img" aria-label="Seat allocation loading"></div>
               <div id="seat-composition-legend" class="seat-composition-legend"></div>
             </section>
+          <div class="first-row charts-row">
             <figure class="chart-block card">
               <div class="section-line">
                 <div class="title-line"><h2>Normal Bookings Through Departure</h2><span class="info"><button type="button" class="info-btn" aria-describedby="tip-bookings" aria-label="About this chart">i</button><span class="info-tip" role="tooltip" id="tip-bookings"><strong class="info-title">Normal bookings through departure</strong><p id="chart-caption">Forecast updates at the selected day.</p></span></span></div>
@@ -93,14 +93,13 @@
                   <div class="range-labels"><span>D28</span><span>D14</span><span>Departure</span></div>
                 </div>
               </div>
-              <svg id="booking-chart" role="img" aria-label="Normal bookings and NHPP baseline forecast, excluding member demo bookings" viewBox="0 0 720 260"></svg>
+              <svg id="booking-chart" role="img" aria-label="Normal bookings and baseline forecast, excluding member demo bookings" viewBox="0 0 720 260"></svg>
             </figure>
-          </div>
-          <h2 class="more-title">More detail</h2>
-          <figure class="chart-block card">
+            <figure class="chart-block card">
             <div class="section-line"><div class="title-line"><h2>Normal Ticket Price</h2><span class="info"><button type="button" class="info-btn" aria-describedby="tip-price" aria-label="About this chart">i</button><span class="info-tip" role="tooltip" id="tip-price"><strong class="info-title">Normal ticket price</strong><p id="price-caption">Observed base fares up to the selected day. Mandatory fees shown separately.</p></span></span></div><span class="hint">HKD · base fare</span></div>
             <svg id="price-chart" role="img" aria-label="Observed normal ticket base prices" viewBox="0 0 620 260"></svg>
           </figure>
+          </div>
         </div>
       </section>
 
@@ -183,7 +182,7 @@
           <div>
             <p class="eyebrow">Evidence · Thompson experiments</p>
             <h1 id="feedback-title" tabindex="-1">What Members Said</h1>
-            <p class="intro">Purchase decisions and reasons from each saved price round. Viewing makes no new model calls.</p>
+            <p class="intro">Purchase decisions and reasons from each saved price round.</p>
           </div>
         </div>
         <div class="feedback-controls card">

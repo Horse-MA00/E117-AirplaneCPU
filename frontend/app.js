@@ -1,6 +1,7 @@
 import { thompsonUrl } from './thompson-navigation.js';
 import { seatStatus } from './seat-status.js';
 import { demandDescription, matchesDemand, populateDemandFilter } from './demand-filter.js';
+import { attachRouteSearch } from './route-search.js';
 const $ = (id) => document.getElementById(id);
 const RELEASE_DAYS = [28, 14, 7];
 const state = { flights: [], flight: null, history: [], forecast: null, day: 28, loadedFlightId: null, request: 0, forecastRequest: 0, summary: null, offers: [], offersLoaded: false, planDraft: false, planFee: null, offerFlightId: null, offerDay: 28, offerForecast: null, offerRequest: 0, offerManual: false, thompsonRuns: null };
@@ -177,7 +178,7 @@ function renderForecast() {
   const nextValid=RELEASE_DAYS.includes(seats.nextRound)&&seats.nextRound<state.day;
   const blockedRelease=seats.overage>0||seats.historical||seats.salesClosed||seats.releaseState==='round_already_issued';
   $('go-pricing').disabled=blockedRelease||Boolean(noRelease)||(!RELEASE_DAYS.includes(state.day)&&!nextValid);
-  $('go-pricing').textContent=noRelease?'NHPP: no member seats to price':seats.overage>0?'Resolve inventory conflict first':seats.historical?'Historical view · release unavailable':seats.salesClosed?'Sales are closed':seats.releaseState==='round_already_issued'?'This release round is already published':RELEASE_DAYS.includes(state.day)?'Optimize this release round →':nextValid?`Optimize next release D${seats.nextRound} →`:'No release rounds remain';
+  $('go-pricing').textContent=noRelease?'No member seats to price':seats.overage>0?'Resolve inventory conflict first':seats.historical?'Historical view · release unavailable':seats.salesClosed?'Sales are closed':seats.releaseState==='round_already_issued'?'This release round is already published':RELEASE_DAYS.includes(state.day)?'Optimize this release round →':nextValid?`Optimize next release D${seats.nextRound} →`:'No release rounds remain';
 
   if (state.offers.length) renderOffers();
   renderResults();
@@ -186,7 +187,7 @@ function renderForecast() {
 function nhppNoRelease(f,seats,day){
   if(!RELEASE_DAYS.includes(day)||seats.historical||seats.salesClosed||seats.overage>0||seats.headroom>=1)return null;
   const ceiling=Math.max(0,Math.floor(Number(f.risk_release_ceiling??f.releasable_seats)||0));
-  return {title:`NHPP decision: do not release member seats at D${day}`,
+  return {title:`Forecast decision: do not release member seats at D${day}`,
     detail:ceiling<1
       ?`The forecast expects ${number(f.expected_remaining_demand,1)} more normal bookings and protects ${number(seats.protection)} of ${number(seats.physicalRemaining)} empty seats, so 0 member seats are safe to release. There is no member fare to optimize for this round.`
       :`The forecast allows ${number(ceiling)} member seat${ceiling===1?'':'s'}, and existing member bookings already use all of them. No further member seats should be released this round.`};
@@ -196,7 +197,8 @@ function renderSeatComposition(seats) {
   const bar=$('seat-composition');
   bar.setAttribute('aria-label', `${number(seats.capacity)} total seats. `+seats.parts.map(p=>`${p.label}: ${number(p.value)} seats`).join('. '));
   bar.replaceChildren(...seats.parts.map(p=>{
-    const segment=element('span',p.value?number(p.value):'',`seat-part ${p.key}`);
+    const share=p.value/Math.max(1,seats.capacity)*100;
+    const segment=element('span',p.value&&share>=3.5?number(p.value):'',`seat-part ${p.key}`);if(p.value)segment.title=`${p.label}: ${number(p.value)} seats`;
     segment.dataset.seats=p.value;segment.dataset.part=p.key;
     segment.style.setProperty('--seat-share',String(p.value/Math.max(1,seats.capacity)*100));
     if(!p.value)segment.hidden=true;return segment;
@@ -223,6 +225,7 @@ document.querySelectorAll('[data-day]').forEach((button) => button.addEventListe
 $('flight-select').addEventListener('change', loadFlight);
 $('forecast-demand').addEventListener('change',()=>{if(fillForecastFlights())loadFlight();});
 $('context-route').addEventListener('change',()=>{if(fillForecastFlights(''))loadFlight();});
+attachRouteSearch($('context-route'));
 
 async function loadOffers() {
   try { const data = await api('/api/offers'); state.offers = data.offers || (Array.isArray(data) ? data : []); state.offersLoaded = true; renderOffers(); renderResults(); } catch (e) { error(e.message); }
@@ -250,7 +253,7 @@ async function selectOffer(flightId,day,manual=true){
   if(changed){$('offer-fare').value='';$('offer-quantity').value='';$('publish-next').hidden=true;}
   const token=++state.offerRequest;state.offerManual=manual;state.offerFlightId=flightId;state.offerDay=day;state.offerForecast=null;$('publish-button').disabled=true;
   const flight=state.flights.find(f=>f.flight_id===flightId), box=$('offer-guidance');
-  box.setAttribute('aria-busy','true');box.replaceChildren(element('p','Calculating the current NHPP release limit…'));renderPreview();
+  box.setAttribute('aria-busy','true');box.replaceChildren(element('p','Calculating the current release limit…'));renderPreview();
   if(!flight){text('offer-flight-context','Choose a flight in the bar above.');text('offer-release-status','Select a flight to calculate its current safe release limit.');$('offer-quantity').max=0;box.replaceChildren(element('p','Choose a route, departure and release round in the bar above.'));box.setAttribute('aria-busy','false');return;}
   text('offer-flight-context',`${routeKey(flight)} · ${longDate(flightDay(flight))} · ${flightId} · D${day}`);
   try{
@@ -369,7 +372,7 @@ function renderResults() {
   text('results-protected', `${number(seats.protection)} protected seats untouched`);
   const bar = $('results-composition');
   bar.setAttribute('aria-label', `${number(seats.capacity)} total seats. ` + parts.map((p) => `${p.label}: ${number(p.value)} seats`).join('. '));
-  bar.replaceChildren(...parts.map((p) => { const seg = element('span', p.value ? number(p.value) : '', `seat-part ${p.key}`); seg.style.setProperty('--seat-share', String(p.value / Math.max(1, seats.capacity) * 100)); if (!p.value) seg.hidden = true; return seg; }));
+  bar.replaceChildren(...parts.map((p) => { const share = p.value / Math.max(1, seats.capacity) * 100; const seg = element('span', p.value && share >= 3.5 ? number(p.value) : '', `seat-part ${p.key}`); if (p.value) seg.title = `${p.label}: ${number(p.value)}`; seg.style.setProperty('--seat-share', String(p.value / Math.max(1, seats.capacity) * 100)); if (!p.value) seg.hidden = true; return seg; }));
   $('results-legend').replaceChildren(...parts.map((p) => { const item = element('div', undefined, `seat-legend-item ${p.key}`), dot = element('i'); dot.setAttribute('aria-hidden', 'true'); item.append(dot, element('span', p.label), element('strong', number(p.value))); return item; }));
 }
 

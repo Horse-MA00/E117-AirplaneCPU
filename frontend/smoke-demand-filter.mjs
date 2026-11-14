@@ -52,6 +52,8 @@ try{
   await page.keyboard.press('Tab');
   assert.equal(await page.locator('#context-route').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order: demand, route, flight');
   await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(()=>document.activeElement.matches('#context-bar .ctx-search-btn')),true,'The route search button follows the route select');
+  await page.keyboard.press('Tab');
   assert.equal(await page.locator('#flight-select').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order');
   await page.locator('#forecast-demand').selectOption('medium');
   await page.waitForFunction(()=>document.getElementById('flight-select').value.includes('ICN'));

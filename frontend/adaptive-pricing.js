@@ -1,5 +1,6 @@
 import { releaseRound } from './thompson-navigation.js';
 import { matchesDemand, populateDemandFilter } from './demand-filter.js';
+import { attachRouteSearch } from './route-search.js';
 const $ = id => document.getElementById(id);
 const money = value => Number.isFinite(Number(value)) && value !== null && value !== undefined ? `HK$${Number(value).toLocaleString('en-HK', {minimumFractionDigits: Number(value) % 1 ? 2 : 0, maximumFractionDigits: 2})}` : '—';
 const numeric = value => typeof value === 'number' && Number.isFinite(value);
@@ -91,7 +92,7 @@ function renderScope(value) {
   $('flight-title').textContent = value ? `${value.origin} → ${value.destination}` : 'Your Selected Flight';
   $('flight-description').textContent = value ? `${value.departure_date} · ${value.flight_id} · ${value.departure_time || ''}` : 'A separate experiment is created for each flight and release round.';
   syncRound();
-  $('scope-message').textContent = value ? value.releasable_seats > 0 ? 'The starting price is the 80% member-fare cap, rounded down to whole HKD. The NHPP quota is held fixed during price trials.' : 'No member quota is available at this release round. Choose another flight or round.' : 'Choose a flight to load its normal fare quote and NHPP member quota.';
+  $('scope-message').textContent = value ? value.releasable_seats > 0 ? 'The starting price is the 80% member-fare cap, rounded down to whole HKD. The member seat quota is held fixed during price trials.' : 'No member quota is available at this release round. Choose another flight or round.' : 'Choose a flight to load its normal fare quote and member seat quota.';
   updateControls();
 }
 // Settings stay folded while a result is on screen; "New experiment" opens them. With no result they are the page.
@@ -336,6 +337,7 @@ async function loadSaved() {
   $('load-run').disabled=!$('saved-run').value;
 }
 $('route').addEventListener('change',()=>{clearRun();fillFlights();loadScope();});
+attachRouteSearch($('route'));
 $('opt-demand').addEventListener('change',()=>{clearRun();fillRoutes();fillFlights($('flight').value);loadScope();});
 for(const b of document.querySelectorAll('[data-round]'))b.addEventListener('click',()=>{if($('release-day').value===b.dataset.round)return;$('release-day').value=b.dataset.round;$('release-day').dispatchEvent(new Event('change'));});
 $('flight').addEventListener('change',()=>{clearRun();loadScope();});

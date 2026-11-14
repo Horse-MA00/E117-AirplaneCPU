@@ -60,7 +60,7 @@ try{
   await page.waitForFunction(()=>document.getElementById('headroom-value').textContent==='0 seats');
   assert.equal(await page.locator('#protection-value').innerText(),'110 seats');assert.equal(await sum(),180);
   assert.equal(await page.locator('#release-decision').isVisible(),true);
-  assert.match(await page.locator('#release-decision').innerText(),/NHPP decision: do not release member seats at D28/);
+  assert.match(await page.locator('#release-decision').innerText(),/Forecast decision: do not release member seats at D28/);
   assert.equal(await page.locator('#release-value').innerText(),'Do not release');
   assert.equal(await page.locator('#go-pricing').isDisabled(),true);
   for(const [mode,day,message] of [['quality',14,'data quality'],['issued',7,'already published']]){scenario=mode;await page.locator(`[data-day="${day}"]`).click();await page.waitForFunction(text=>document.getElementById('member-allocation-detail').textContent.includes(text),message);}
