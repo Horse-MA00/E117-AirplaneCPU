@@ -33,10 +33,31 @@
         <div class="search-heading"><h2 id="search-title">Find your next flight</h2><span>One way <span aria-hidden="true">·</span> 1 member traveller <span aria-hidden="true">·</span> HKD</span></div>
         <search>
           <form id="flight-search" action="/members" method="get" aria-labelledby="search-title">
-            <div class="field"><label for="origin">From</label><select id="origin" name="origin"><option value="">Any airport</option></select></div>
-            <div class="field"><label for="destination">To</label><select id="destination" name="destination"><option value="">Any destination</option></select></div>
-            <div class="field"><label for="departure-date">Departure date</label><select id="departure-date" name="date"><option value="">Any available date</option></select></div>
-            <button type="submit" class="button primary" id="search-button">Search flights</button>
+            <fieldset class="search-where">
+              <legend>Where would you like to go?</legend>
+              <div class="search-fields">
+                <div class="field"><label for="origin">Flying from</label><select id="origin" name="origin"><option value="">Any airport</option></select></div>
+                <div class="field"><label for="destination-region">Destination country / region</label><select id="destination-region" name="region"><option value="">Any country / region</option></select></div>
+              </div>
+            </fieldset>
+            <fieldset class="search-when">
+              <legend>When could you depart?</legend>
+              <div class="search-fields">
+                <div class="field"><label for="departure-from">Earliest departure</label><input type="date" id="departure-from" name="from" min="0001-01-01" max="9999-12-31" aria-describedby="date-help search-date-error"></div>
+                <div class="field"><label for="departure-to">Latest departure</label><input type="date" id="departure-to" name="to" min="0001-01-01" max="9999-12-31" aria-describedby="date-help search-date-error"></div>
+              </div>
+              <p id="date-help" class="search-help">Any departure date in this range works. Leave dates empty to explore anytime.</p>
+              <div class="date-shortcuts"><button type="button" id="next-month" class="date-shortcut">Next month</button><button type="button" id="any-dates" class="date-shortcut">Any dates</button></div>
+              <p id="search-date-error" class="search-error" role="alert" hidden></p>
+            </fieldset>
+            <details class="search-specific">
+              <summary>Choose a specific airport or date</summary>
+              <div class="search-fields">
+                <div class="field"><label for="destination">Destination airport</label><select id="destination" name="destination"><option value="">Any destination airport</option></select></div>
+                <div class="field"><label for="departure-date">Exact departure date</label><select id="departure-date" name="date"><option value="">Use the date range above</option></select></div>
+              </div>
+            </details>
+            <div class="search-actions"><button type="button" class="text-button" id="clear-search">Clear search</button><button type="submit" class="button primary" id="search-button">Search flights</button></div>
           </form>
         </search>
       </div>
@@ -44,6 +65,7 @@
       <div class="shopping-grid">
         <section aria-labelledby="results-title" class="results-column">
           <div class="results-heading"><div><h2 id="results-title" tabindex="-1">Member flights</h2><p id="result-count" class="subtle" role="status">Loading published offers…</p></div><button type="button" id="refresh-flights" class="text-button">Refresh availability</button></div>
+          <p id="search-summary" class="search-summary">Anywhere · Any dates</p>
           <div class="result-controls"><label class="check-label"><input type="checkbox" id="available-only"> Available seats only</label><label class="sort-label" for="flight-sort">Sort by <select id="flight-sort"><option value="date">Departure date</option><option value="price">Lowest ticket price</option></select></label></div>
           <div id="flight-results" class="flight-results" aria-busy="true"><div class="empty-state"><h3>Finding member flights</h3><p>Checking the latest released seats and full ticket prices.</p></div></div>
         </section>

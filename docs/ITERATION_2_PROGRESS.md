@@ -107,3 +107,12 @@ Added an interactive numeric-price versus mean-total-contribution chart and a sa
 Integrated main 0573d40 into feature/docker-containerization only. Preserved the purple/cyan Admin and Client Portal, joint optimizer, seat-feedback layer, audit exports and frozen experiments. The fixed-membership-fee price/total-contribution curve now sits directly below the primary optimizer, with a jump link, responsive brand styling and backwards-compatible saved-run navigation. Joint rounds are not presented as pure fare elasticity observations.
 
 Docker continues to package all modules in one non-root Linux service; both SQLite databases and all jobs remain under the persistent data/private volume. Validation: 151 backend + 19 simulator tests, historical artifact checks, Admin/member/continuous-curve/curve-edge-case browser suites, and a completed six-round joint optimizer browser run (18 worlds, 3,131 math choices, 2,415 forced actions, zero provider calls/failures). The original three-minute browser wait was insufficient for durable Docker audit writes; checks now support a ten-minute wait and reuse of a specified run without creating another experiment. arm64 image build and 14 HTTP/initial-policy/seat-feedback tests passed under emulation.
+### Client 彈性日期與目的地搜尋（2026-11-14）
+
+- 會員頁新增國家／地區和出發日期起訖，支援「下個月去日本，日期不限」；範圍包含兩端，也可單端或不限日期。保留機場及確切日期進階篩選，搜尋結果可沿用最低總票價排序。
+- Next month 依香港日曆計算，跨年／閏年均處理；Temporal 使用原生或本機 bundle 備援，不依賴 CDN。明確提交搜尋，刷新保存條件；已選機場最後一個優惠消失時仍保留條件，顯示零結果，不偷偷放寬範圍。
+- 日期倒置及超出四位年份範圍均阻止搜尋並保留上次有效結果；桌面雙欄、390px 手機單欄，英文介面及可見錯誤提示。
+- 搜尋測試在 Chrome 157（原生 Temporal）及 Chromium 141（本機 polyfill）通過；原有會員／購票 smoke 通過。涵蓋地區切換、起訖／單端範圍、未知機場、跨時區、刷新移除優惠、清除、無結果和手機版。全部使用隔離 fixtures，沒有新 LLM 呼叫或真實購買。
+- 技術與使用說明在 CLIENT_FLEXIBLE_SEARCH.md，frontend README 已同步。搜尋只使用已發布 SQLite 優惠；NHPP、三輪放票、優化器及購票校驗沒有修改。
+
+Docker integration follow-up: also incorporated main 1b4e98f flexible country/date search. Rebuilt and verified durable membership, booking, panel, fare-search and joint-optimization records. Flexible search passed both native Temporal and forced locally bundled polyfill paths, and member portal checkout regression passed. Only feature/docker-containerization is published; main is not changed by this integration.

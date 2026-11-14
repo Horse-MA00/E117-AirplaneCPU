@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:calendar": "esbuild temporal-polyfill --bundle --format=esm --minify --legal-comments=linked --outfile=members/vendor/temporal.js",
+    "test:flexible-search": "node smoke-flexible-search.mjs",
     "test:smoke": "node smoke.mjs",
     "test:continuous": "node smoke-continuous.mjs",
     "test:price-chart": "node smoke-price-chart.mjs",
@@ -10,6 +12,10 @@
     "test:members": "node smoke-member-portal.mjs"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
     "playwright": "1.62.1"
+  },
+  "dependencies": {
+    "temporal-polyfill": "1.0.8"
   }
 }

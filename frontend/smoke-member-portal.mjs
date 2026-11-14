@@ -49,6 +49,7 @@ try {
   assert.equal(await page.locator('#header-account').innerText(), 'Your demo account');
   assert.equal(await page.locator('a[href="/admin"]').count(), 1);
   assert.equal(await page.locator('#agent-form').count(), 0);
+  await page.locator('.search-specific summary').click();
   await page.locator('#destination').selectOption('FUK');
   // Changing a filter does not auto-submit or change the result count.
   assert.equal(await page.locator('.flight-card').count(), 2);
