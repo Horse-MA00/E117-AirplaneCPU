@@ -91,3 +91,19 @@ The new continuous-price and probabilistic-user path is documented in [CONTINUOU
 ## Price–contribution visualisation — 2026-11-14
 
 Added an interactive numeric-price versus mean-total-contribution chart and a saved-run link. Report v1.1 adds totals and their NO_OFFER reference without changing search rules. The unconstrained tested peak is visually separated from service feasibility and the actual recommendation; historical incremental-only reports are never relabelled as total profit. Full 151-test container regression, frozen artifacts, actual price-search browser checks and chart edge-case/mobile checks passed.
+### 全面介面重設及雙軌逐輪優化（2026-11-14）
+
+- 已由9996fcf快進至GitHub最新ffc997e，保留新機率旅客、連續單維票價搜尋、Windows鎖及原有證據；新增主流程同時搜尋會員費及會員基本票價。
+- Admin改用紫／青／白四主入口，Forecast以座位分配、空座預測與票價曲線呈現；移除使用者指定的長篇說明／驗證／每日表。Client全面重設搜尋、價錢排序、入會、訂票及My trips，保留伺服器權威價格與庫存。
+- 新SQLite保存run/world/round/event，數學／Live LLM各自逐輪搜尋、配對NO_OFFER與獨立holdout，會費和票價均可調；可設定輪數與每批呼叫上限，完成行動及狀態以同一交易保存。
+- NHPP base保持凍結；獨立seat_feedback層用完成的訓練市場正常請求校正均值及額外保護，原空座Monte Carlo保留。修正覆蓋率口徑、價格建議下限、容量截斷與價格草稿語義。
+- 149項backend測試、19項原模擬器測試、既有artifact checksum與新匯出source hash全部通過。Admin／Client及新優化器桌面手機瀏覽器測試通過，包含真實SQLite購買、存檔重載及分頁audit。
+- 數學6輪14人：18個完整市場，3,131數學選擇＋2,415強制動作；雙軌各3輪2人：16市場，169新DeepSeek回覆、0快取／失敗，200數學選擇＋335強制動作。兩次實驗均保留NO_OFFER，沒有以較差方案冒充最佳會員價。
+- 完整報告及原始輸出在joint_math_20261114／joint_live_20261114；資料庫／keys／OAG raw保持private。詳見JOINT_OPTIMIZATION_VALIDATION.md、OPTIMIZATION_ENGINE.md、PORTAL_REDESIGN_AND_OPTIMIZATION.md。
+
+
+## Docker branch integration of redesigned portals — 2026-11-14
+
+Integrated main 0573d40 into feature/docker-containerization only. Preserved the purple/cyan Admin and Client Portal, joint optimizer, seat-feedback layer, audit exports and frozen experiments. The fixed-membership-fee price/total-contribution curve now sits directly below the primary optimizer, with a jump link, responsive brand styling and backwards-compatible saved-run navigation. Joint rounds are not presented as pure fare elasticity observations.
+
+Docker continues to package all modules in one non-root Linux service; both SQLite databases and all jobs remain under the persistent data/private volume. Validation: 151 backend + 19 simulator tests, historical artifact checks, Admin/member/continuous-curve/curve-edge-case browser suites, and a completed six-round joint optimizer browser run (18 worlds, 3,131 math choices, 2,415 forced actions, zero provider calls/failures). The original three-minute browser wait was insufficient for durable Docker audit writes; checks now support a ten-minute wait and reuse of a specified run without creating another experiment. arm64 image build and 14 HTTP/initial-policy/seat-feedback tests passed under emulation.

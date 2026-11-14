@@ -2,6 +2,18 @@
 
 更新：2026-11-14。這份文件記錄現有程式；早期 TECHNICAL_DESIGN.md 及 PRICING_SIMULATION_PLAN.md 保留為歷史提案。使用者最新決定是先使用 NHPP，不使用 LightGBM。
 
+## 最新主流程：雙軌逐輪優化
+
+Admin 已改為紫／青／白配色，四個主入口是 Forecast seats、Optimize prices、Experiments、Manage offers。Forecast 直接顯示預計未售座位、可新增會員配額、正常需求保護、座位分配圖、訂位預測及截至所選日的正常票價走勢。使用者指定移除的長篇假設、驗證及每日快照表已從該頁移除；資料及評估 API 保留。
+
+`backend/optimization.py` 是新的主要定價入口：從可編輯或由 D28 合成報價建議的 P₀、V₀ 開始，分別用機率式數學旅客及真實 LLM 旅客，在相同起始市場上逐輪搜尋兩個價格。每輪執行共用庫存、預算、購票、取消與財務帳本，再按服務限制及相對 NO_OFFER 的增量貢獻提出下一組。不是以虛構最優價格作 supervised label，也不更新 LLM 權重。
+
+`backend/seat_feedback.py` 只在訓練市場完成後使用正常請求誤差，產生下一輪的需求均值校正及額外保護量。已取消的正常訂位仍屬 gross 請求；會員座位及 LLM 理由不作正常需求標籤。原 NHPP／空座 Monte Carlo／凍結校準檔保持不變。每個被評估候選保存其完整價格和座位 profile，最後用兩個未參與搜尋的種子驗證所選方案，驗證結果只接受或拒絕該方案。
+
+`data/private/optimization/experiments.sqlite3` 保存 run、world、round、event 四類記錄；接受的動作和市場狀態以同一交易保存。UI 可設定每軌 1–12 輪、旅客數及每批 LLM 上限，並查看每輪價格、收益、使用率、原始輸出及續跑狀態。數學和 LLM 各有自己的最佳候選，沒有足夠證據把兩者平均成單一真實市場最優價。
+
+Client 的 `/members` 專注搜尋、票價排序、會員確認、購票及 My trips。從實驗「Use these prices」只複製價格到發布草稿；選定航班仍用 Forecast 的 base-NHPP 配額，沒有將實驗座位 profile 自動部署到會員庫存。完整規格見 [優化引擎](OPTIMIZATION_ENGINE.md) 與 [本輪更改](PORTAL_REDESIGN_AND_OPTIMIZATION.md)。下文固定網格、舊單維搜尋及已發表實驗屬保留的參考工具／歷史證據。
+
 ## 架構
 
 ```mermaid

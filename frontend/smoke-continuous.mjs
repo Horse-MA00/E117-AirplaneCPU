@@ -5,7 +5,7 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.CH
 const page=await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[];page.on('pageerror',error=>errors.push(error.message));
 try {
-  await page.goto(origin+'/#pricing');
+  await page.goto(origin+'/#optimization');
   await page.locator('#continuous-form').waitFor();
   assert.equal(await page.locator('#market-mode').inputValue(),'probabilistic');
   await page.locator('#continuous-evals').fill('3');

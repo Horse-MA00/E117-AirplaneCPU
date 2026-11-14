@@ -16,6 +16,7 @@ def main():
     parser.add_argument('--url', default='http://127.0.0.1:8000')
     parser.add_argument('--record', type=Path, default=Path('data/private/container-smoke.json'))
     parser.add_argument('--verify-only', action='store_true')
+    parser.add_argument('--joint-run', help='Reuse a completed math experiment for persistence verification')
     args = parser.parse_args()
     base = args.url.rstrip('/')
 
@@ -61,9 +62,14 @@ def main():
         pricing = call('/api/pricing/runs', {'evaluations': 3, 'replicates': 1, 'customers': 4})
         pricing = wait('/api/pricing/runs/'+pricing['run_id'])
         assert pricing['report']['validation']['checks_passed']
+        joint = call('/api/optimization/runs/'+args.joint_run) if args.joint_run else call('/api/optimization/runs', {'mode': 'math', 'rounds': 3, 'customers': 4, 'flights': 6, 'replicates': 1, 'max_calls': 0})
+        joint = wait('/api/optimization/runs/'+joint['run_id'])
+        assert joint['counts']['provider_calls'] == 0
+        assert joint['config']['mode'] == 'math'
+        assert len(joint['tracks'][0]['rounds']) == joint['config']['rounds']
         args.record.parent.mkdir(parents=True, exist_ok=True)
         args.record.write_text(json.dumps({'customer_id': customer, 'booking_id': booking['id'],
-            'total': booking['total'], 'panel_id': panel['run_id'], 'pricing_id': pricing['run_id']}, indent=2), encoding='utf-8')
+            'total': booking['total'], 'panel_id': panel['run_id'], 'pricing_id': pricing['run_id'], 'joint_id': joint['run_id']}, indent=2), encoding='utf-8')
 
     record = json.loads(args.record.read_text(encoding='utf-8'))
     account = call('/api/member-portal/accounts/'+record['customer_id'])
@@ -71,6 +77,8 @@ def main():
     assert any(b['id'] == record['booking_id'] and b['total'] == record['total'] for b in account['bookings'])
     assert call('/api/agents/panels/'+record['panel_id'])['status'] == 'completed'
     assert call('/api/pricing/runs/'+record['pricing_id'])['status'] == 'completed'
+    if record.get('joint_id'):
+        assert call('/api/optimization/runs/'+record['joint_id'])['status'] == 'completed'
     print(json.dumps({'status': 'passed', 'verify_only': args.verify_only, **record}))
 
 

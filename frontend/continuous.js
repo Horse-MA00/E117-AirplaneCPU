@@ -39,13 +39,19 @@ el('continuous-form').addEventListener('submit',async event=>{
   event.preventDefault();clearTimeout(timer);el('continuous-start').disabled=true;el('continuous-result').hidden=true;
   try {
     const result=await request('/api/pricing/runs',{price_min:Number(el('continuous-min').value),price_max:Number(el('continuous-max').value),membership_fee:Number(el('continuous-fee').value),release_fraction:Number(el('continuous-share').value),evaluations:Number(el('continuous-evals').value)});
-    current=result.run_id;const url=new URL(location.href);url.searchParams.set('pricing_run',current);history.replaceState(null,'',url);el('continuous-report').href=`/api/pricing/runs/${encodeURIComponent(current)}`;poll(current);
+    current=result.run_id;const url=new URL(location.href);url.searchParams.set('pricing_run',current);url.hash='optimization';history.replaceState(null,'',url);el('continuous-report').href=`/api/pricing/runs/${encodeURIComponent(current)}`;poll(current);
   } catch(error) {el('continuous-status').textContent=error.message;el('continuous-start').disabled=false;}
 });
 
 // Opening a saved result only reads it; it never creates a new experiment.
 const savedRun=new URLSearchParams(location.search).get('pricing_run');
 if (savedRun && /^price-[a-f0-9]{16}$/.test(savedRun)) {
+  if(location.hash!=='#optimization')location.hash='optimization';
   current=savedRun;el('continuous-start').disabled=true;
   el('continuous-report').href=`/api/pricing/runs/${encodeURIComponent(current)}`;poll(current);
 }
+
+el('show-price-curve').addEventListener('click',event=>{
+  event.preventDefault();el('fare-curve-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  el('continuous-min').focus({preventScroll:true});
+});

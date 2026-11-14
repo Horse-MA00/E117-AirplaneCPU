@@ -11,7 +11,7 @@ let writes=0;
 page.on('request',r=>{if(r.url().includes('/api/pricing/runs') && r.method()==='POST')writes++;});
 await page.route('**/api/pricing/runs/price-aaaaaaaaaaaaaaaa',route=>route.fulfill({json:{status:'completed',report}}));
 try {
-  await page.goto(origin+'/?pricing_run=price-aaaaaaaaaaaaaaaa#pricing');
+  await page.goto(origin+'/?pricing_run=price-aaaaaaaaaaaaaaaa#optimization');
   await page.locator('.price-point').first().waitFor();
   assert.deepEqual(await page.locator('.price-point').evaluateAll(nodes=>nodes.map(n=>Number(n.dataset.price))),[0,100,500]);
   assert.equal(await page.locator('.price-peak').getAttribute('data-peak-price'),'100');

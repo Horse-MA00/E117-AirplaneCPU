@@ -120,7 +120,7 @@ remain separate. Totals cover the full finite simulated market, not just member
 fares, and exclude pass-through fees and aircraft fixed costs.
 
 Hover, tap or keyboard-focus a point for exact values. The saved report URL uses
-`?pricing_run=price-...#pricing`; opening or refreshing it only reads the completed
+`?pricing_run=price-...#optimization`; opening or refreshing it only reads the completed
 experiment. Old reports without totals remain unchanged and request a fresh run
 rather than presenting incremental contribution as total profit. The chart is an
 estimated mean from a small synthetic cohort, not proof of a global optimum.
@@ -130,3 +130,5 @@ continuous-price browser smoke checks plotted values against the API. A separate
 chart browser test covers an infeasible maximum versus NO_OFFER, a feasible winner,
 historical reports, numeric sorting, keyboard details, mobile resize and read-only
 reload. Run `npm run test:price-chart` with APP_URL pointed at the container.
+
+The redesigned Admin places the fixed-fee curve directly below the joint optimizer, using the purple/cyan theme. The joint optimizer varies fare, fee and a run-local seat profile; its round history is not relabelled as a one-dimensional price response curve. Earlier saved links with #pricing redirect to #optimization without starting another run.

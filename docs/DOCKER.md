@@ -128,3 +128,11 @@ docker compose exec app python -m backend.oag --date 2026-11-15
   浏览器截图或本机数据库。测试服务无外网，没有新增 LLM 或 OAG 请求。
 - Linux arm64 镜像构建成功；通过 Docker Desktop CPU 模拟执行的 22 项文件锁、
   HTTP 和连续定价关键测试全部通过。未在实体 Mac 上执行完整回归。
+
+## 新 UI 与联合优化整合
+
+Docker 分支已纳入 main 的 0573d40：新版 Admin/Client Portal、联合票价与会费优化、座位反馈、SQLite 审计。价格—总贡献曲线在 Optimize prices 页下方，保留固定会费的独立实验口径。新联合优化数据库同样位于 data/private，随命名卷持久化；启动方法不变。全部功能仍在一个应用容器中，无需另装 Node 或数据库。
+
+完整测试为 151 项 backend 加 19 项原模拟器测试，共 170 项；amd64 构建及历史实验校验通过。arm64 构建和 14 项 HTTP/初始价格/座位反馈测试通过（模拟环境）。实验执行中不要重建容器；新源码改变 provenance 时旧任务只读，需新建实验，不能混用新旧规则续跑。
+
+新版端到端检查包含六轮联合优化：18 个市场全部完成、零 provider 调用；管理端、会员端、价格曲线和联合优化浏览器检查通过。`scripts/smoke_container.py` 现在还验证联合优化 SQLite 持久化，可用 `--joint-run opt-...` 复用已完成的数学实验，避免重复运行。

@@ -4,18 +4,26 @@
 
 A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for Cathay Hackathon 2026, **Low-cost Travel — Smart Offer & Borderless Booking**. The proposed HK Express membership offers zero or low base fares plus mandatory charges.
 
-## Continuous-price branch update (2026-11-14)
+## Joint optimisation and new portals (2026-11-14)
 
-Fast screening now includes a separate continuous-price panel backed by the
-shared market and stable probabilistic rule users. Set a fare interval, fixed
-membership fee and release share; adaptive search evaluates arbitrary cent-level
-fares, then independent worlds and price-sensitivity stresses test the selected
-hypothesis. NO_OFFER remains available. No LLM calls, human ground truth,
-automatic live repricing or global-optimum guarantee are claimed.
+Admin now follows **Forecast seats → Optimize prices → Experiments → Manage offers**,
+using purple, cyan and white. Forecast shows seat allocation, normal-demand protection,
+the booking forecast and observed ticket prices. The separate Client Portal provides
+flight search, full-price comparisons, membership and saved trips.
 
-Read [the updated method](docs/CONTINUOUS_PRICING.md). Historical tier-screening
-and LLM validation below remain labelled baselines, not new-method evidence.
-Use Docker below on Windows: the current customer panel intentionally retains POSIX `fcntl`.
+The primary optimizer adapts **both membership fee and member base fare** over
+configurable rounds. Mathematical and live-LLM tracks replay shared inventory,
+learn from contribution and member use, and validate each frozen candidate on
+independent worlds. SQLite saves rounds, seat-feedback profiles, original redacted
+LLM outputs and resumable market state. Live batches have explicit call limits.
+NO_OFFER remains a valid recommendation; no global optimum or human calibration
+is claimed. The base NHPP remains frozen, with a run-local demand/protection
+correction learned from completed training worlds.
+
+Read [the new engine and database](docs/OPTIMIZATION_ENGINE.md) and
+[redesign, incoming Git changes and feedback semantics](docs/PORTAL_REDESIGN_AND_OPTIMIZATION.md).
+The [price–total-contribution curve](docs/CONTINUOUS_PRICING.md) is integrated below the joint optimizer on Optimize prices. It fixes membership fee and release share to isolate fare comparisons. Fixed-tier tools remain under Advanced tools; historical results are retained unchanged.
+Use Docker below on Windows; the customer panel retains POSIX `fcntl`.
 
 ## Quick start with Docker (Mac, Windows and Linux)
 
@@ -58,7 +66,7 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 - **600,000 daily snapshots** across **3,315 synthetic flight histories** (200,000 demo rows plus 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
-- Up to **64 fee × fare × allocation policies**; full-term hypothetical membership economics, paired ordinary-sales baseline, independent seeds and stress cases. The release schedule is fixed, and later as-of dates use only remaining rounds; after D7, a fresh screening experiment cannot issue a new offer.
+- **Joint feedback optimisation:** 1–12 rounds per mathematical/LLM track, editable or data-suggested P₀/V₀, bounded two-dimensional search, paired no-offer baselines, held-out validation and SQLite audit history. Legacy tools retain the 64-policy screen and fare-only continuous search.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
 - **Separate Admin and member interfaces:** actionable analysis navigation, panel outcome summaries, segment comparisons, searchable/paginated traveller lists, and a member-facing flight search, price review, membership and My trips flow.
 - **Larger background panels:** up to **100 live LLM travellers** or **1,000 rule-based travellers**, with a default of 100. Live batches default to 60 decision attempts (maximum120), checkpoint each traveller, show progress and resume only on explicit request. Sole legal actions need no model call.
@@ -132,6 +140,9 @@ For live experiments, create with `--modes live`, then use a bounded `--max-call
 
 ## Documentation
 
+- [Joint optimisation, seat feedback, database and APIs](docs/OPTIMIZATION_ENGINE.md)
+- [Six-round math and actual DeepSeek integration evidence](docs/JOINT_OPTIMIZATION_VALIDATION.md)
+- [Portal redesign and differences from the incoming plan](docs/PORTAL_REDESIGN_AND_OPTIMIZATION.md)
 - [Admin and member flows, panel limits and APIs](docs/ADMIN_AND_MEMBER_UX.md)
 - [Current technical architecture](docs/CURRENT_IMPLEMENTATION.md)
 - [Three-round release rule and verification](docs/THREE_ROUND_RELEASE.md)
