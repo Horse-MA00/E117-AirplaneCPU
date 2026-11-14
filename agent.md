@@ -6,7 +6,7 @@ Updated 2026-11-14, Asia/Hong_Kong. The app is implemented; the earlier November
 
 1. Inspect Git status and preserve unrelated user files. The working repo is this directory; remote is Horse-MA00/E117-AirplaneCPU. Read [README](README.md) for runnable commands.
 2. Before changing forecasts or data, read [NHPP review](docs/NHPP_V2_REVIEW.md) and [extended validation](docs/EXTENDED_VALIDATION.md). The v2 model and calibration are frozen. New development requires a new version and fresh validation seeds; retain existing reports.
-3. Before changing customer behaviour, read [journey design](docs/LLM_SCENARIO_DESIGN.md), [actual baseline experiments](docs/LLM_BASELINE_EXPERIMENTS.md), and the current shared-market documentation. Inspect `backend/shared_market.py` and `llm_agent/market_experiment.py` for the current contract.
+3. Before changing customer behaviour, read [journey design](docs/LLM_SCENARIO_DESIGN.md), its historical baseline section, and the current shared-market documentation. Inspect `backend/shared_market.py` and `llm_agent/market_experiment.py` for the current contract.
 4. Before changing UI or endpoints, read [current implementation](docs/CURRENT_IMPLEMENTATION.md). The user replaced the blue theme with purple `#6F2C91`, cyan `#24BCDC` and white. Admin uses Forecast / Optimize / Experiments / Manage offers; the separate Client Portal uses `/members`. Keep the requested long forecast disclosures, validation block and daily table off that page; retain APIs and documentation.
 5. Record completed milestones in [iteration progress](docs/ITERATION_2_PROGRESS.md). Run meaningful model/accounting/HTTP/browser checks before publishing changed behaviour.
 
@@ -16,7 +16,7 @@ The user authorized autonomous implementation, debugging, real DeepSeek experime
 
 The current release rule is fixed D28/D14/D7 rounds. Before editing inventory, pricing or UI allocation labels, read [three-round release](docs/THREE_ROUND_RELEASE.md). Each new round subtracts all earlier valid unsold quotas from the total target. Shared market v3 stores per-round cohorts; NHPP remains unchanged. The current fast screener has 64 policies; the isolated six-stage journey remains a labelled baseline.
 
-Before changing the primary price optimizer, run persistence or feedback, read [joint optimization](docs/OPTIMIZATION_ENGINE.md). `backend/optimization.py` owns separate mathematical/LLM tracks and SQLite rounds/worlds/events. Each evaluated policy freezes its own P/V/seat profile; holdout freezes the selected profile and only accepts/rejects it. `seat_feedback.py` uses completed normal-demand outcomes and preserves base NHPP protection and vacancy curves. Existing calibration files stay frozen. The UI's “Use these prices” copies a price draft; it does not deploy the experimental seat profile into member inventory.
+Before changing the primary price optimizer, run persistence or feedback, read [the flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md). `backend/optimization.py` owns separate mathematical/LLM tracks and SQLite rounds/worlds/events. Each evaluated policy freezes its own P/V/seat profile; holdout freezes the selected profile and only accepts/rejects it. `seat_feedback.py` uses completed normal-demand outcomes and preserves base NHPP protection and vacancy curves. Existing calibration files stay frozen. The UI's “Use these prices” copies a price draft; it does not deploy the experimental seat profile into member inventory.
 
 ## Evidence boundaries
 

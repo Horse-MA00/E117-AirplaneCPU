@@ -46,7 +46,7 @@ budget. NO_OFFER remains a valid decision for the selected flight, not a rejecti
 of the complete membership programme. The base NHPP remains frozen.
 
 Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md); the latest change record is [demand filter and original fare](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
-The [earlier joint engine](docs/OPTIMIZATION_ENGINE.md), whole-term continuous search
+The earlier joint P/V engine (test-only), whole-term continuous search
 and historical experiments remain available as explicitly labelled reference tools.
 Use Docker below on Windows; the customer panel retains POSIX `fcntl`.
 
@@ -183,20 +183,16 @@ For live experiments, create with `--modes live`, then use a bounded `--max-call
 ## Documentation
 
 - [Shared AI-assistant rules for Codex and Claude Code](AGENTS.md) (`CLAUDE.md` imports it; keep it updated)
-- [Joint optimisation, seat feedback, database and APIs](docs/OPTIMIZATION_ENGINE.md)
+- [Flight-specific workflow, seat feedback, database and APIs](docs/FLIGHT_SCOPED_OPTIMIZATION.md)
 - [Six-round math and actual DeepSeek integration evidence](docs/JOINT_OPTIMIZATION_VALIDATION.md)
-- [Portal redesign and differences from the incoming plan](docs/PORTAL_REDESIGN_AND_OPTIMIZATION.md)
 - [Admin and member flows, panel limits and APIs](docs/ADMIN_AND_MEMBER_UX.md)
-- [Current technical architecture](docs/CURRENT_IMPLEMENTATION.md)
+- [Current technical architecture, plan deviations and limitations](docs/CURRENT_IMPLEMENTATION.md)
 - [Three-round release rule and verification](docs/THREE_ROUND_RELEASE.md)
 - [Latest progress](docs/ITERATION_2_PROGRESS.md)
 - [Shared-market engine and financial rules](docs/SHARED_MARKET.md)
 - [Shared-market agent, auditing and probes](docs/SHARED_MARKET_AGENT.md)
-- [40-seed mathematical market results](docs/SHARED_MARKET_MATH_RESULTS.md)
-- [Live shared-market validation](docs/SHARED_MARKET_VALIDATION.md)
-- [English scenario, budget scope and six-stage walkthrough](docs/LLM_SCENARIO_DESIGN.md)
-- [Actual baseline LLM experiments](docs/LLM_BASELINE_EXPERIMENTS.md)
-- [Review, improvements and deviations from the original plan](docs/OPTIMIZATION_REVIEW.md)
+- [Live shared-market validation and 40-seed mathematical baseline](docs/SHARED_MARKET_VALIDATION.md)
+- [English scenario, six-stage walkthrough and historical baseline LLM experiments](docs/LLM_SCENARIO_DESIGN.md)
 - [Data generation and evaluation](simulation/README.md)
 - [Customer-agent scope](llm_agent/README.md)
 

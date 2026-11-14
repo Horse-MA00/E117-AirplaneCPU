@@ -15,12 +15,8 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 
 ## 已过时，不要照着做
 
-- `docs/PROJECT_PLAN.md`、`docs/TECHNICAL_DESIGN.md`、`docs/PRICING_SIMULATION_PLAN.md`：早期提案，含 LightGBM。现在只用 NHPP，**不加 LightGBM**。
-- `docs/OPTIMIZATION_ENGINE.md`：v1 全期联合引擎，只供旧实验参考。
 - `docs/CONTINUOUS_PRICING.md`：全期连续定价，属于参考工具，不是主流程。
-- `docs/SHARED_MARKET_VALIDATION.md`、`docs/SHARED_MARKET_MATH_RESULTS.md`：shared-market-v2 的历史证据，不能用来验证 v3 三轮规则。
-- `docs/LLM_BASELINE_EXPERIMENTS.md`：旧 prompt v2.1 的基线实验。
-- `docs/IMPLEMENTATION_PROGRESS.md`、`docs/PROGRESS_*.md`、`docs/SIMULATOR.md`：早期进度记录。
+- `docs/SHARED_MARKET_VALIDATION.md`：shared-market-v2 的历史证据，不能用来验证 v3 三轮规则。
 - `src/`、`configs/`：早期独立模拟器和图表导出工具，不属于当前 app。
 - `agent.md`：旧交接文档，只作背景。规则以本文件为准；最新进度看 `git log` 和 `docs/ITERATION_2_PROGRESS.md`。
 

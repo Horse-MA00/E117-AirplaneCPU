@@ -38,7 +38,7 @@
 ### 共用市場、擴大重播及真實LLM驗證完成
 
 - 600000筆資料及Codex168／DeepSeek672份基線已commit/push：689b790。新增60份未快取行為probe，3/12同情境重複組不一致；初次60個DNS失敗嘗試亦保留，沒有當作有效回答。
-- 40個種子×3政策共120個數學市場完成。新資料找出替代航班退款截止bug：修正後以同一外生種子完整重播120次，全部帳本／庫存／預算檢查通過。驗證30種子中FIXED勝25次，NO_OFFER勝5次；詳見SHARED_MARKET_MATH_RESULTS.md。
+- 40個種子×3政策共120個數學市場完成。新資料找出替代航班退款截止bug：修正後以同一外生種子完整重播120次，全部帳本／庫存／預算檢查通過。驗證30種子中FIXED勝25次，NO_OFFER勝5次；詳見SHARED_MARKET_VALIDATION.md的Deterministic 40-seed baseline一節。
 - 真實DeepSeek開發市場3政策完成：265次新有效呼叫、160次明示快取、500次唯一合法行動。正式獨立驗證3種子×3政策完成：1383次新有效呼叫、0快取、0失敗；完整輸入、raw response及action後果公開於llm_agent/experiments/。
 - 以相同4個種子再完成12個規則市場，確認外生需求／人物／出行機會hash與LLM世界相同，將行為來源差異與市場差異分開。
 - 舊v1中斷的開發記錄另外保留：240份有效新回應，另1個已記錄請求沒有回應，供應商端結果與用量未知；不算正式驗證。新v2中160次快取重播不是新獨立回答。
@@ -64,7 +64,7 @@
 - 加入明確單趟旅程＋新會費預算、全體同行報價、會費前後節省，前端顯示六階段情境與獨立庫存限制。共享市場放票規則、NHPP、校準和成本沒有修改。
 - 輸出合約在provider接受／有效快取寫入／外部Agent匯入前檢查；失敗原文留存、不改成規則決策。新舊prompt快取分開；舊suite不能混用新版續跑，歷史摘要保留原版本。
 - 真實DeepSeek五人六階段：30新回覆、0快取、0失敗、73,625 tokens，全部英文HKD；原始audit及結果已匯出`english_journey_20261114`。加入比較資訊會影響決策，不能把新舊差異當作語言因果或真人購買率。
-- 完整backend回歸最終105項全部通過（包括新增外部Agent英文匯入檢查）；14人84階段Chromium測試通過，390px無溢出，保留歷史原文。詳見LLM_SCENARIO_DESIGN.md與PROGRESS_FRONTEND.md。
+- 完整backend回歸最終105項全部通過（包括新增外部Agent英文匯入檢查）；14人84階段Chromium測試通過，390px無溢出，保留歷史原文。詳見LLM_SCENARIO_DESIGN.md（原PROGRESS_FRONTEND.md已刪除，Git歷史可查）。
 
 
 ## Continuous pricing implementation — 2026-11-14
@@ -99,7 +99,7 @@ Added an interactive numeric-price versus mean-total-contribution chart and a sa
 - NHPP base保持凍結；獨立seat_feedback層用完成的訓練市場正常請求校正均值及額外保護，原空座Monte Carlo保留。修正覆蓋率口徑、價格建議下限、容量截斷與價格草稿語義。
 - 149項backend測試、19項原模擬器測試、既有artifact checksum與新匯出source hash全部通過。Admin／Client及新優化器桌面手機瀏覽器測試通過，包含真實SQLite購買、存檔重載及分頁audit。
 - 數學6輪14人：18個完整市場，3,131數學選擇＋2,415強制動作；雙軌各3輪2人：16市場，169新DeepSeek回覆、0快取／失敗，200數學選擇＋335強制動作。兩次實驗均保留NO_OFFER，沒有以較差方案冒充最佳會員價。
-- 完整報告及原始輸出在joint_math_20261114／joint_live_20261114；資料庫／keys／OAG raw保持private。詳見JOINT_OPTIMIZATION_VALIDATION.md、OPTIMIZATION_ENGINE.md、PORTAL_REDESIGN_AND_OPTIMIZATION.md。
+- 完整報告及原始輸出在joint_math_20261114／joint_live_20261114；資料庫／keys／OAG raw保持private。詳見JOINT_OPTIMIZATION_VALIDATION.md、FLIGHT_SCOPED_OPTIMIZATION.md（舊引擎及重設紀錄已併入或刪除，Git歷史可查）。
 
 
 ## Docker branch integration of redesigned portals — 2026-11-14
