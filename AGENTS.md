@@ -19,7 +19,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 - [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：当前模块、HTTP路由及数据边界。
 - [PITCHING_BRIEF](docs/PITCHING_BRIEF.md)：当前路演内容和证据限制。
 - [NHPP_V3_REVIEW](docs/NHPP_V3_REVIEW.md)、[NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：活动预测器及冻结验证。
-- [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin与会员端流程。
+- [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin与会员端流程；[HK_EXPRESS_BOOKING_UI_REVIEW](docs/HK_EXPRESS_BOOKING_UI_REVIEW.md)：会员页订票界面规格。
 - [EXTENDED_VALIDATION](docs/EXTENDED_VALIDATION.md)：独立NHPP验证和发布完整性。
 - [DOCKER](docs/DOCKER.md)：容器配置和测试；本机开发优先原生运行。
 - [ITERATION_2_PROGRESS](docs/ITERATION_2_PROGRESS.md)：当前清理与验证记录。
@@ -67,6 +67,6 @@ HTTP检查需先 `python -m backend.server`；`scripts/smoke_api.py`是无付费
 - `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal和唯一adaptive价格引擎；测试在backend/tests。
 - `llm_agent/`：八类客群、最新提示、并行决策、provider transport及脱敏；experiments为现行公开实验。
 - `frontend/`：Admin／Thompson／会员端原生HTML/JS，无需构建；Experiments只读回馈，*.mjs为浏览器检查。
-- `simulation/`：合成航班数据生成、NHPP校准与验证；`scripts/`为当前运行、导出和发布工具。
+- `simulation/`：合成航班数据生成、NHPP校准与验证；`scripts/`为当前运行、导出和发布工具；`apply_member_fee_reference.py`为演示票备份并写入有来源的费用明细。
 - docs新增／删除／改名、模块职责、冻结清单或测试命令变动时，同一提交更新此索引；版本常量变动同步更新现行规格状态行。
 - 本文件最多100行；`CLAUDE.md`只保留 `@AGENTS.md`。发现文档与代码不符时修正文档并告知用户。

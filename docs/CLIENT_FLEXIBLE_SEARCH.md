@@ -8,28 +8,27 @@
 
 在 `/members` 的 **Find your next flight**：
 
-1. **Flying from** 選出發機場，或保留 Any airport。
-2. **Destination country / region** 選 Japan。
-3. 按 **Next month**，自動填入香港日曆中下個月的第一天及最後一天；或自行輸入 **Earliest departure** 與 **Latest departure**。
+1. **From · airport or country** 選出發機場、整個國家（例如 All Japan airports），或保留 Anywhere。
+2. **To · airport or country** 選 All Japan airports；也可在同一選單選單一機場。⇄ 互換起點與目的地。
+3. 按 **Next month**，自動填入香港日曆中下個月的第一天及最後一天；或自行輸入 **Departing from** 與 **Departing until**。
 4. 按 **Search flights**。結果同時搜尋目前目錄中所有屬於日本的目的地機場，旅客不必逐日、逐機場搜尋。
 5. 可在結果的 **Sort by → Lowest ticket price** 找區間內最便宜的已發布會員票。
 
 例如範圍設為 2027-05-01 至 2027-05-31，5 月 1 日的福岡與 5 月 31 日的大阪均符合；4 月 30 日及 6 月 1 日則不符合。這只是搜尋條件示例，頁面結果仍以當時已發布的航班為準。
 
-使用者提出的 **15–21 May 2027** 是日期範圍：Earliest departure 填 `2027-05-15`，Latest departure 填 `2027-05-21`。若只要某一天，展開 **Choose a specific airport or date**，用 **Exact departure date (optional)** 的日曆選日。這個日曆可選任意有效日期，不再只列已發布優惠的日期。
+使用者提出的 **15–21 May 2027** 是日期範圍：Departing from 填 `2027-05-15`，Departing until 填 `2027-05-21`。若只要某一天，兩個欄位填同一日期，或點結果上方的可訂日期。這個日曆可選任意有效日期，不再只列已發布優惠的日期。
 
 ## 規則與邊界
 
 | 操作 | 行為 |
 | --- | --- |
-| Flying from／Destination airport | 使用同一份完整搜尋航點目錄，按國家／地區分組。沒有優惠、或刷新後優惠消失，機場仍可選；例如可搜尋日本出發返回 HKG。 |
-| 選國家／地區 | 匹配該地區在搜尋航點目錄中的所有機場。沒有發布航班的地區仍可選，但顯示無結果。 |
+| From／To | 兩邊使用同一份完整搜尋航點目錄，按國家／地區分組；每組先列「All … airports」（只有一個機場的地區不另列），再列機場。值為機場代碼或 `region:XX`。沒有優惠、或刷新後優惠消失，機場仍可選；例如可搜尋日本出發返回 HKG。 |
+| 選整個國家／地區 | 起點或目的地都可選，匹配該地區在搜尋航點目錄中的所有機場。沒有發布航班的地區仍可選，但顯示無結果。 |
 | 自訂日期範圍 | 起訖日期均包括在內；搜尋的是單程出發日期，不是回程、入住日期或會員有效期。 |
 | 只填 earliest / latest | 分別表示該日或以後／該日或以前，不會偷偷補另一個限制。 |
 | Any dates | 清空所有日期限制，保留國家、機場及出發地；按 Search 才更新結果。 |
 | Next month | 依真正的香港當前日期計算完整下一個月，支援跨年及閏年；不會移動到合成資料所在月份。 |
-| Choose a specific airport or date | 可收窄目的地機場，或選確切一天。選確切日會將起訖設成同一天；修改日期範圍會清除確切日選項。 |
-| 切換國家／地區 | 如果已選機場不屬於新地區，立即清除該機場限制；結果仍等 Search 後才更新。 |
+| 切換國家／機場 | 同一選單只保留一個選擇，選國家即取代原機場；結果仍等 Search 後才更新。 |
 | 結束日期早於開始日期 | 顯示英文錯誤並阻止搜尋，維持上次有效結果；更正或使用日期快捷鍵即可恢復。 |
 | Refresh availability | 重新讀取已發布庫存，保留輸入及已套用的搜尋；結果摘要不會把未提交的輸入當成已套用條件。 |
 | Clear search | 重設出發地、地區、機場、全部日期及 Available seats only，立即顯示全部已發布航班。 |
@@ -75,3 +74,37 @@
 `npm run test:members` 同步通過既有入會／購票確認、價格變更、售罄、刷新失敗後保留成功紀錄、鍵盤操作及手機版回歸。測試中的購買請求由 fixture 回覆，沒有新真實付款或模型呼叫。
 
 `npm run test:route-catalog` 先在修復前重現「兩端缺航點／確切日仍是優惠日期 select」，再驗證 sparse／空優惠時 38 個航點仍完整、返回 HKG、未發布航線不生出票價、未知代碼、自由選日及刷新保存、May 15–21 的包含邊界及清除。這組測試也只允許 fixture GET。
+
+
+## Member journey demo improvements
+
+The member page opens directly with flight search, without upfront return-pair recommendations or a two-flight planning panel. After a successful purchase, checkout can suggest a published available return departing on a later calendar date and reversing the exact airports. Each ticket is reviewed and confirmed separately; an active membership is reused.
+
+Available seats only is enabled by default. Exact airport/date controls are in the primary search row; the flexible range section starts expanded. Dates with available offers uses currently available inventory matching airport filters. First-purchase totals include the pass. Supplied departure timestamps show their UTC offset; no arrival times are invented. A rights panel explains personal access, excluded extras and unsupported changes, cancellation and renewal.
+
+Before joining from flight checkout, the UI rechecks availability and ticket total. This is not a lock: joining and booking remain separate transactions, explicitly confirmed. Browser regression: `npm run test:member-journey`, using fixture APIs without consuming local demo seats.
+
+
+## Sourced demo fee breakdown (checked 2026-11-14)
+
+For the six named DEMO Hong Kong / NRT / HND / KIX offers only, `scripts/apply_member_fee_reference.py` replaces the old HKD 250 placeholder with a dated estimate. Run without `--apply` for a preview; applying backs up the existing database. It refuses to change offers with bookings. Other offers retain their published unitemized demo fee; the UI does not invent a split.
+
+[HK Express](https://www.hkexpress.com/en-hk/travel-help/fees-and-surcharges) lists **YR** for fuel/carrier charges; YQ is not separately specified. Government and airport taxes have their own codes. The 1 November 2026 reference lists fuel at HKD 318 for Hong Kong to Tokyo/Osaka and JPY 12,600 for Japan-origin journeys. Separate Japan-origin tickets also include JPY 810 e-payment fee. These are adult non-exempt one-way assumptions, not a through round-trip quotation or a 2027 rate guarantee.
+
+Hong Kong taxes: [HK 200](https://www.cad.gov.hk/english/departure_tax.html), [G3 90 short-haul economy](https://www.hongkongairport.com/en/passenger-guide/departures/airport-construction-fee.page), [I5 65](https://www.hongkongairport.com/en/media-centre/press-release/2024/pr-1716). Japanese airport assumptions: [NRT T2: SW 2,460 + security 700](https://www.narita-airport.jp/en/airportguide/psfc/), [HND T3: facility 2,950](https://www.tokyo-haneda.com/site_resource/flight/pdf/qualified_simplified_invoices_for_psfc_en.pdf), [KIX T1: facility 3,310 + security 320](https://www.kansai-airports.co.jp/en/business/airlinepartners/charges/), in JPY. [Japan tourist tax TK](https://www.nta.go.jp/english/taxes/indirect/basic_knowledge.htm) is JPY 3,000 in this reference. Security codes are listed as OI / 6I where exact ticket allocation is unavailable. Terminal assignments are demo assumptions, not flight-specific confirmations.
+
+The [ECB 13 November 2026 reference](https://www.ecb.europa.eu/stats/shared/pdf/eurofxref.pdf) is EUR/JPY 176.83 and EUR/HKD 8.6714. Convert each JPY component by 8.6714 / 176.83 and round half-up to cents, then sum. This is a frozen reference conversion, not airline FX. The script retains the numeric snapshot because source URLs can change.
+
+| Direction | Fuel (HKD) | Government / airport (HKD) | E-payment (HKD) | Fees total (HKD) |
+|---|---:|---:|---:|---:|
+| HKG → NRT / HND / KIX | 318.00 | 355.00 | — | 673.00 |
+| NRT → HKG | 617.88 | 302.07 | 39.72 | 959.67 |
+| HND → HKG | 617.88 | 291.77 | 39.72 | 949.37 |
+| KIX → HKG | 617.88 | 325.12 | 39.72 | 982.72 |
+
+Ticket total is base fare plus the grouped fee amounts. Membership is shown separately. SQLite stores both the detail and its summed fee, and rejects stale expected totals. Existing receipts are protected against repricing. Normal-price comparisons use the same fee estimate plus the original normal base fare; comparisons are omitted if that base is unavailable. Frozen model data and historical experiments remain unchanged. The browser displays the estimate, references and native currency at checkout and on saved trips.
+
+
+## Booking UI review implementation
+
+See [HK Express UI review](HK_EXPRESS_BOOKING_UI_REVIEW.md) for evidence, design decisions and acceptance criteria. The compact search puts origin, destination and exact date first, with region/range below. The available-date strip shows minimum ticket totals for applied route filters, excluding membership; selecting a date replaces the date range and restores the applied route rather than silently submitting draft filters. Airport swap clears the destination region without auto-submitting. Total-price sorting, a compact hero and sticky checkout actions improve the booking flow.

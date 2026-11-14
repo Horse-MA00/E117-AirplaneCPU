@@ -32,3 +32,15 @@ NHPP的校准与独立测试结果未改变；活动组合和风险代价见[NHP
 私有SQLite删除10个旧版本／旧客群实验，保留6次当前实验和2,106条事件；逐笔payload与导出前一致。旧定价私有缓存和前次含旧记录的备份已删除；会员交易数据库、OAG私有数据及密钥保留且不提交。已移除28个旧公开实验目录，新增6个当前v5导出目录；没有回写历史收益或以新版本冒充旧实验结果。
 
 以上是本轮软件验证，和213次已保存Live调用的实验结果分别统计。Thompson方程、当前提示、NHPP模型与核心数据字节未改；八类人物生成在12组种子／人数对照中与清理前完全一致。
+
+## 2026-11-14 Member journey branch
+
+Created feature/member-demo-journey without merging main. Added bookable Japan return pairs, two-ticket cost planning, return suggestions, available-date shortcuts, first-purchase totals and fare-rights explanations. Portal API adds supplied departure timestamps. Six prepublished demo offers remain in the persistent database. No new payment or atomic round-trip system.
+- Member page simplification: removed upfront return-pair recommendations and the two-flight plan at user request. Kept search, fee transparency and post-purchase return suggestions on `feature/member-demo-journey`.
+- Added sourced demo fee estimates for the six pitch offers: YR fuel, government/airport charges and Japan e-payment; stored breakdowns match settlement totals, with dated FX and booked-offer repricing protection.
+- 2026-11-15: documented HK Express search, airport and calendar UI observations with the post-search CAPTCHA evidence limit. Implemented a compact member booking layout, airport swap, published-date total-price strip, total-price sorting and sticky checkout actions; kept the removed round-trip recommendation absent.
+
+## 2026-11-15 · 会员搜索合并机场／国家，非会员按钮显示总额
+
+按用户手动测试意见：起点与目的地各为一个「机场或整个国家」选单（起点也可选国家），删除 Flexible dates & destination region 折叠区中的独立国家选单与精确日期，出发日期只用范围（单日即起讫同日）。未入会者结账按钮显示「Membership + ticket total」，并注明第一步只收会费、之后另行确认机票。`test:members`、`test:member-journey`、`test:flexible-search`、`test:route-catalog` 已同步更新并通过。
+会员票卡片与结账明细在会员基本票价旁以删除线显示同航班普通基本票价（读屏读作「Normal base fare」），并标注节省金额与折扣百分比；普通票价取 `normal_base_fare`，缺失时以 `normal_total − mandatory_fees` 推算，不高于会员价时不显示。

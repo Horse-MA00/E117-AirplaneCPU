@@ -19,13 +19,9 @@
   <main id="main-content">
     <div id="portal-error" class="notice error" role="alert" hidden></div>
     <div id="portal-notice" class="notice" role="status" hidden></div>
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-copy-block"><p class="eyebrow">Your personal flight membership</p><h1 id="hero-title">More trips.<br><span>Member fares.</span></h1><p class="hero-copy">Find a flight you love. See the full price.<br>Make the most of your Fly Pass.</p><a href="#flights" class="button light">Explore member flights <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>
-      <div class="pass-visual" aria-label="UOption personal membership">
-        <div class="pass-top"><span class="pass-brand">UOption <small>Fly Pass</small></span><span class="pass-tag">Personal</span></div>
-        <div class="pass-days"><strong id="hero-term">365</strong><span>days of member access</span></div>
-        <div class="pass-bottom"><div><span class="pass-price-label">Membership</span><strong id="hero-fee">Loading…</strong></div><span class="pass-rule">Flights paid separately.<br>Seats subject to availability.</span></div>
-      </div>
+    <section class="hero booking-hero" aria-labelledby="hero-title">
+      <div><p class="eyebrow">UOption Fly Pass · Member booking</p><h1 id="hero-title">Where will you fly next?</h1><p class="hero-copy">Choose your flight. Review every fee. Make it your next trip.</p></div>
+      <a class="pass-compact" href="#membership"><span>Your personal pass</span><strong id="hero-fee">Loading…</strong><span><b id="hero-term">365</b> days · flights paid separately</span></a>
     </section>
 
     <section id="flights" aria-labelledby="search-title">
@@ -33,31 +29,19 @@
         <div class="search-heading"><h2 id="search-title">Find your next flight</h2><span>One way <span aria-hidden="true">·</span> 1 member traveller <span aria-hidden="true">·</span> HKD</span></div>
         <search>
           <form id="flight-search" action="/members" method="get" aria-labelledby="search-title">
-            <fieldset class="search-where">
-              <legend>Where would you like to go?</legend>
-              <div class="search-fields">
-                <div class="field"><label for="origin">Flying from</label><select id="origin" name="origin" aria-describedby="origin-note"><option value="">Any airport</option></select><small id="origin-note" class="search-help" hidden></small></div>
-                <div class="field"><label for="destination-region">Destination country / region</label><select id="destination-region" name="region"><option value="">Any country / region</option></select></div>
-              </div>
-            </fieldset>
-            <fieldset class="search-when">
-              <legend>When could you depart?</legend>
-              <div class="search-fields">
-                <div class="field"><label for="departure-from">Earliest departure</label><input type="date" id="departure-from" name="from" min="0001-01-01" max="9999-12-31" aria-describedby="date-help search-date-error"></div>
-                <div class="field"><label for="departure-to">Latest departure</label><input type="date" id="departure-to" name="to" min="0001-01-01" max="9999-12-31" aria-describedby="date-help search-date-error"></div>
-              </div>
-              <p id="date-help" class="search-help">Any departure date in this range works. Leave dates empty to explore anytime.</p>
-              <div class="date-shortcuts"><button type="button" id="next-month" class="date-shortcut">Next month</button><button type="button" id="any-dates" class="date-shortcut">Any dates</button></div>
-              <p id="search-date-error" class="search-error" role="alert" hidden></p>
-            </fieldset>
-            <details class="search-specific">
-              <summary>Choose a specific airport or date</summary>
-              <div class="search-fields">
-                <div class="field"><label for="destination">Destination airport</label><select id="destination" name="destination" aria-describedby="destination-note"><option value="">Any destination airport</option></select><small id="destination-note" class="search-help" hidden></small></div>
-                <div class="field"><label for="departure-date">Exact departure date (optional)</label><input type="date" id="departure-date" name="date" min="0001-01-01" max="9999-12-31" aria-describedby="exact-date-help search-date-error"><small id="exact-date-help" class="search-help">Pick any single day, or use the date range above for flexible dates.</small></div>
-              </div>
-            </details>
-            <div class="search-actions"><button type="button" class="text-button" id="clear-search">Clear search</button><button type="submit" class="button primary" id="search-button">Search flights</button></div>
+            <div class="primary-search">
+              <div class="field"><label for="origin">From · airport or country</label><select id="origin" name="origin" aria-describedby="origin-note"><option value="">Anywhere</option></select><small id="origin-note" class="search-help" hidden></small></div>
+              <button type="button" id="swap-airports" class="swap-airports" aria-label="Swap from and to" title="Swap from and to">⇄</button>
+              <div class="field"><label for="destination">To · airport or country</label><select id="destination" name="destination" aria-describedby="destination-note"><option value="">Anywhere</option></select><small id="destination-note" class="search-help" hidden></small></div>
+              <div class="field"><label for="departure-from">Departing from</label><input type="date" id="departure-from" name="from" min="0001-01-01" max="9999-12-31" aria-describedby="date-help search-date-error"></div>
+              <div class="field"><label for="departure-to">Departing until</label><input type="date" id="departure-to" name="to" min="0001-01-01" max="9999-12-31" aria-describedby="date-help search-date-error"></div>
+              <button type="submit" class="button primary" id="search-button">Search flights</button>
+            </div>
+            <div class="search-extras">
+              <p id="date-help" class="search-help">Departure date range. For one day, use the same date twice; leave both empty to explore anytime.</p>
+              <div class="date-shortcuts"><button type="button" id="available-dates" class="date-shortcut">Dates with available offers</button><button type="button" id="next-month" class="date-shortcut">Next month</button><button type="button" id="any-dates" class="date-shortcut">Any dates</button><button type="button" class="text-button" id="clear-search">Clear search</button></div>
+            </div>
+            <p id="search-date-error" class="search-error" role="alert" hidden></p>
           </form>
         </search>
       </div>
@@ -65,8 +49,9 @@
       <div class="shopping-grid">
         <section aria-labelledby="results-title" class="results-column">
           <div class="results-heading"><div><h2 id="results-title" tabindex="-1">Member flights</h2><p id="result-count" class="subtle" role="status">Loading published offers…</p></div><button type="button" id="refresh-flights" class="text-button">Refresh availability</button></div>
-          <p id="search-summary" class="search-summary">Anywhere · Any dates</p>
-          <div class="result-controls"><label class="check-label"><input type="checkbox" id="available-only"> Available seats only</label><label class="sort-label" for="flight-sort">Sort by <select id="flight-sort"><option value="date">Departure date</option><option value="price">Lowest base fare</option></select></label></div>
+          <div class="search-summary-row"><p id="search-summary" class="search-summary">Anywhere · Any dates</p><a href="#flight-search" class="text-link" id="edit-search">Edit search</a></div>
+          <section id="date-fares" class="date-fares" aria-labelledby="date-fares-title" hidden><h3 id="date-fares-title">Available departure dates</h3><p class="search-help">For your applied route filters · ticket totals incl. fees, before membership. Choosing a date replaces the date range.</p><div id="date-options" class="date-options"></div></section>
+          <div class="result-controls"><label class="check-label"><input type="checkbox" id="available-only" checked> Available seats only</label><label class="sort-label" for="flight-sort">Sort by <select id="flight-sort"><option value="date">Departure date</option><option value="total">Lowest ticket total</option><option value="price">Lowest base fare</option></select></label></div>
           <div id="flight-results" class="flight-results" aria-busy="true"><div class="empty-state"><h3>Finding member flights</h3><p>Checking the latest released seats and base fares.</p></div></div>
         </section>
         <aside id="membership" class="membership-panel" aria-labelledby="pass-title">
@@ -76,6 +61,11 @@
       </div>
     </section>
 
+    <section class="fare-rights" aria-labelledby="rights-title"><h2 id="rights-title">Know what your member fare covers</h2><div class="rights-grid">
+      <div><h3>Personal access</h3><p>One member, one seat per booking. Companion and group bookings are not supported here.</p></div>
+      <div><h3>Transparent payment</h3><p>Tickets and mandatory fees are separate from the one-time membership fee. Existing active members do not pay the membership fee again.</p></div>
+      <div><h3>Extras and changes</h3><p>Baggage and seat selection are not sold here. No included checked bag is promised. Changes, cancellations and renewal are not available in this booking prototype.</p></div>
+      </div><p class="fine-print">Released seats only; availability is not guaranteed. No real payment is collected and no airline ticket is issued.</p></section>
     <section id="trips" class="trips-section" aria-labelledby="trips-title">
       <div class="section-heading"><div><p class="eyebrow">Ready when you are</p><h2 id="trips-title">My trips</h2></div><button type="button" id="refresh-account" class="text-button">Refresh my trips</button></div>
       <div id="trip-results" class="trip-results"><p class="empty-state">Loading your trips…</p></div>
@@ -90,13 +80,16 @@
 
   <dialog id="checkout" aria-labelledby="checkout-title">
     <div class="dialog-heading"><div><p class="eyebrow" id="checkout-step">Review your choice</p><h2 id="checkout-title">Review booking</h2></div><form method="dialog"><button class="text-button" type="submit" autofocus>Close</button></form></div>
+    <ol class="checkout-progress" aria-label="Booking progress"><li data-stage="review">1 · Review flight</li><li data-stage="membership">2 · Membership</li><li data-stage="confirm">3 · Confirm ticket</li></ol>
     <div id="checkout-content"></div>
     <p id="checkout-error" class="notice error" role="alert" hidden></p>
     <p id="checkout-status" class="notice" role="status" hidden></p>
+    <div class="checkout-actions">
     <form id="checkout-form" method="post" action="/api/member-portal/book" aria-labelledby="checkout-title"><button type="submit" id="checkout-submit" class="button primary" data-purchase>Confirm</button></form>
     <button type="button" id="checkout-refresh" class="button" hidden>Refresh account and availability</button>
     <button type="button" id="view-trips" class="button primary" hidden>View my trips</button>
     <p class="fine-print">Simulated booking. No payment is collected and no airline ticket is issued.</p>
+    </div>
   </dialog>
   <noscript><p class="notice">JavaScript is required for this booking prototype. No purchase can be submitted without it.</p></noscript>
 </body>
