@@ -5,8 +5,8 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
 
 const root=fileURLToPath(new URL('.',import.meta.url));
-const files={'/adaptive-pricing':'adaptive-pricing.html','/adaptive-pricing.js':'adaptive-pricing.js','/adaptive-pricing.css':'adaptive-pricing.css'};
-const server=createServer(async(req,res)=>{const file=files[new URL(req.url,'http://localhost').pathname];if(!file){res.writeHead(404).end();return;}try{const data=await readFile(root+file);res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html'});res.end(data);}catch{res.writeHead(500).end();}});
+const files={'/adaptive-pricing':'adaptive-pricing.html','/admin':'index.html'};
+const server=createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname;const file=files[path]||(/^\/[a-z0-9-]+\.(js|css)$/.test(path)?path.slice(1):null);if(!file){res.writeHead(404).end();return;}try{const data=await readFile(root+file);res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html'});res.end(data);}catch{res.writeHead(500).end();}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin=`http://127.0.0.1:${server.address().port}`;
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
@@ -20,7 +20,7 @@ const populations=[population,{...legacyPopulation,profile:'broad_coverage'}];
 const scope={flight_id:'TEST-HKG-KMQ',origin:'HKG',destination:'KMQ',departure_date:'2027-05-18',departure_time:'10:30',as_of_day:28,normal_base_fare:410,initial_member_fare:328,member_fare_cap:328,member_fare_cap_ratio:.8,releasable_seats:45};
 const flights=[scope,{...scope,flight_id:'TEST-HKG-KMQ-ZERO'},{...scope,flight_id:'TEST-HKG-FUK',destination:'FUK'}];
 const curve=[{price:0,expected_buyers:25,expected_member_revenue:0},{price:100,expected_buyers:20,expected_member_revenue:2000},{price:200,expected_buyers:16,expected_member_revenue:3200},{price:328,expected_buyers:8,expected_member_revenue:2624}];
-const rounds=[{round:1,learning_updates:24,reused_analysis:false,analysis_source:'provider_live',price:328,member_buyers:8,member_revenue:2624,weighted_conversion:.3,curve,analysis:{summary:'Several members declined because the fare exceeded their base-fare budget.'},decisions:[{person:{segment_label:'Flexible budget traveller',customer_id:'TEST-01'},decision:{action:'DECLINE',reason:'The base fare is above my travel budget. <img src=x onerror=alert(1)>'},source:'provider_live'}]},{round:2,learning_updates:0,reused_analysis:true,analysis_source:'provider_live',price:200,member_buyers:16,member_revenue:3200,weighted_conversion:.6,curve,analysis:{summary:'The lower fare increased the observed member purchases.'},decisions:[{person:{segment_label:'Student on term breaks',customer_id:'TEST-02'},decision:{action:'BUY_MEMBER',reason:'The date is suitable and this fare is within my base-fare budget.'},source:'provider_live'}]}];
+const rounds=[{round:1,learning_updates:24,reused_analysis:false,analysis_source:'provider_live',price:328,member_buyers:8,member_revenue:2624,weighted_conversion:.3,curve,analysis:{summary:'Several members declined because the fare exceeded their base-fare budget. <img src=x onerror=alert(1)>'},decisions:[{person:{segment_label:'Flexible budget traveller',customer_id:'TEST-01'},decision:{action:'DECLINE',reason:'The base fare is above my travel budget. <img src=x onerror=alert(1)>'},source:'provider_live'}]},{round:2,learning_updates:0,reused_analysis:true,analysis_source:'provider_live',price:200,member_buyers:16,member_revenue:3200,weighted_conversion:.6,curve,analysis:{summary:'The lower fare increased the observed member purchases.'},decisions:[{person:{segment_label:'Student on term breaks',customer_id:'TEST-02'},decision:{action:'BUY_MEMBER',reason:'The date is suitable and this fare is within my base-fare budget.'},source:'provider_live'}]}];
 rounds.push({...rounds[1],round:3});
 rounds[1]={...rounds[1],learning_updates:24,reused_analysis:false};
 const legacyRounds=structuredClone(rounds);
@@ -73,19 +73,18 @@ try{
  assert.match(await page.locator('#curve-caption').innerText(),/90%/);
  assert.match(await page.locator('#curve-caption').innerText(),/Final fitted posterior after all search choices/);
  assert.match(await page.locator('#round-table tr').nth(2).innerText(),/16 \/ 32.*Above initial revenue/s);
- assert.match(await page.locator('#analysis-source-note').innerText(),/Fresh LLM analysis/);
+ assert.equal(await page.locator('#feedback-section').count(),0,'Member feedback belongs only on Experiments');
+ assert.equal(await page.locator('#round-chart').count(),0,'Round-price chart is removed');
+ assert.equal(await page.locator('#round-title').innerText(),'Round results');
+ assert.equal(await page.locator('#member-feedback-link').getAttribute('href'),'/admin?run=adaptive-test-117#customers');
  assert.match(await page.locator('#run-people').innerText(),/48 unique search members/);
  assert.match(await page.locator('#break-even-rate').innerText(),/82.0%/);
  assert.match(await page.locator('#observed-rate').innerText(),/60.0%/);
  assert.match(await page.locator('#retained-price-note').innerText(),/HK\$328/);
  assert.match(await page.locator('#candidate-tradeoff').innerText(),/Highest predicted revenue: HK\$328.*Most predicted buyers: HK\$0/);
- assert.match(await page.locator('#hypothesis-note').innerText(),/From round 2: lower.*Above initial revenue/);
  assert.match(await page.locator('#validation-verdict').innerText(),/Insufficient evidence/);
  assert.equal(await page.locator('#comparison-bars .comparison-row').count(),3);
  assert.match(await page.locator('#run-counts').innerText(),/4 peak parallel calls/);
- await page.selectOption('#feedback-round','1');
- assert.match(await page.locator('#feedback-list').innerText(),/<img src=x/);
- assert.equal(await page.locator('#feedback-list img').count(),0,'LLM output is text, never executable HTML');
  await page.reload();await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$200');
  assert.equal(posts.length,1,'Saved-run reload is read-only');
  assert.match(await page.locator('#run-cohort').innerText(),/Flexible bargain travellers/);
@@ -108,7 +107,7 @@ try{
  await page.setViewportSize({width:390,height:844});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No page horizontal overflow');
  await page.evaluate(()=>{scrollTo(0,0);return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
- assert.ok(await page.locator('#round-chart').evaluate(svg=>svg.viewBox.baseVal.width<400),'Charts use readable mobile coordinates');
+ assert.ok(await page.locator('#curve-chart').evaluate(svg=>svg.viewBox.baseVal.width<400),'Remaining revenue chart uses readable mobile coordinates');
  await page.screenshot({path:root+'test-results/adaptive-pricing-mobile.png'});
  await page.locator('#recommendation').scrollIntoViewIfNeeded();
  await page.screenshot({path:root+'test-results/adaptive-pricing-mobile-result.png'});
@@ -141,7 +140,6 @@ try{
  run={...completedRun,rounds:completedRun.rounds.map((r,i)=>i===2?{...r,hypothesis_test:{...r.hypothesis_test,status:'not_supported'}}:r)};
  await page.locator('#refresh-run').click();
  await page.waitForFunction(()=>document.querySelector('#round-table tr:last-child').textContent.includes('Below initial revenue'));
- assert.match(await page.locator('#hypothesis-note').innerText(),/Below initial revenue/);
  run=completedRun;
  run={...run,status:'running',recommendation:null,validation:null};
  await page.locator('#refresh-run').click();
@@ -152,6 +150,73 @@ try{
  run={...run,status:'failed',error:'Live call budget exhausted. Completed decisions are saved.'};
  await page.locator('#refresh-run').click();await page.getByText('failed: Live call budget exhausted.',{exact:false}).waitFor();
  assert.equal(await page.locator('#start').isEnabled(),true);
+ await verifyFeedbackPage(browser,origin,completedRun,legacyRun,errors);
  assert.deepEqual(errors,[]);
- console.log('Adaptive pricing UI passed: scoped80%cap, target8groups, legacy14groups, explicitprofile, historicalprofile-reload, zeroquota, invalidweights, boundedlive explicitstart, read-onlyreload, modelcurve, freshpairedcohorts, retainedfare, break-even-rate, groundedhypothesis, historicdecimalquotes, roundtrace, independentvalidation, Englishsafeoutputs, failedrun, mobileoverflow. All API calls mocked; no paid calls.');
+ console.log('Adaptive pricing UI passed: scoped80%cap, target8groups, legacy14groups, explicitprofile, historicalprofile-reload, zeroquota, invalidweights, boundedlive explicitstart, read-onlyreload, modelcurve, freshpairedcohorts, retainedfare, break-even-rate, groundedhypothesis, historicdecimalquotes, roundtrace, independentvalidation, Englishsafeoutputs, failedrun, mobileoverflow, Experiments-only-feedback, saved-run-and-round-links, read-only-feedback-navigation, safe-summary-and-reasons, feedback-errors-and-empty-state. All API calls mocked; no paid calls.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+
+
+async function verifyFeedbackPage(browser, origin, currentRun, historicalRun, errors) {
+ const page=await browser.newPage({viewport:{width:1440,height:1000}});
+ page.on('pageerror',e=>errors.push(e.message));
+ let reads=0, writes=0, savedRuns=[currentRun,historicalRun], failReads=false;
+ await page.route('**/api/**',async route=>{
+   const request=route.request(), path=new URL(request.url()).pathname;
+   if(request.method()!=='GET'){writes++;return route.fulfill({status:405,json:{error:'Feedback is read-only'}});}
+   if(path==='/api/adaptive-pricing/runs')return route.fulfill({json:{runs:savedRuns}});
+   if(path.startsWith('/api/adaptive-pricing/runs/')){
+     reads++;
+     if(failReads)return route.fulfill({status:503,json:{error:'Saved feedback temporarily unavailable'}});
+     const id=path.split('/').at(-1), saved=savedRuns.find(r=>r.run_id===id);
+     return route.fulfill(saved?{json:saved}:{status:404,json:{error:'Saved experiment not found'}});
+   }
+   if(path==='/api/flights')return route.fulfill({json:{flights:[]}});
+   if(path==='/api/summary')return route.fulfill({json:{dataset:{rows:0},llm:{configured:false}}});
+   if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_days:365}}});
+   if(path==='/api/personas')return route.fulfill({json:{segments:[]}});
+   return route.fulfill({json:{runs:[]}});
+ });
+ try{
+   await page.goto(origin+'/admin?run=adaptive-test-117#customers');
+   await page.waitForFunction(()=>document.getElementById('feedback-summary').textContent.includes('lower fare increased'));
+   assert.equal(await page.locator('#feedback-run').inputValue(),currentRun.run_id);
+   assert.equal(await page.locator('#feedback-round').inputValue(),'3');
+   assert.equal(await page.locator('#view-customers #agent-form').count(),0,'Experiments no longer contains panel-run controls');
+   assert.equal(await page.locator('#view-customers .section-tabs').count(),0,'Experiments only contains member feedback');
+   assert.equal(await page.locator('#view-customers svg').count(),0,'Experiments contains no price charts');
+   assert.equal(await page.locator('#view-panel').isVisible(),false,'Legacy panel stays outside Experiments');
+   assert.match(await page.locator('#feedback-source').innerText(),/Saved LLM summary/);
+   assert.match(await page.locator('#feedback-hypothesis').innerText(),/From round 2: lower.*Above initial revenue/);
+   await page.selectOption('#feedback-round','1');
+   assert.doesNotMatch(await page.locator('#feedback-hypothesis').innerText(),/round null/);
+   assert.match(await page.locator('#feedback-summary').innerText(),/<img src=x/);
+   assert.match(await page.locator('#feedback-list').innerText(),/<img src=x/);
+   assert.equal(await page.locator('#view-customers img').count(),0,'Summaries and decision reasons are text, never executable HTML');
+   assert.equal(writes,0,'Reading and changing rounds never starts an experiment');
+   await mkdir(root+'test-results',{recursive:true});
+   await page.screenshot({path:root+'test-results/member-feedback-desktop.png',fullPage:true});
+   await page.selectOption('#feedback-run',historicalRun.run_id);
+   await page.waitForFunction(()=>document.getElementById('feedback-source').textContent.includes('Reused summary'));
+   assert.equal(new URL(page.url()).searchParams.get('run'),historicalRun.run_id,'Saved-run selection updates the shareable URL');
+   await page.reload();
+   await page.waitForFunction(()=>document.getElementById('feedback-run').value==='adaptive-legacy-117'&&!document.getElementById('feedback-content').hidden);
+   await page.locator('#view-customers[aria-busy="false"]').waitFor();
+   assert.equal(writes,0,'Saved feedback reload is read-only');
+   await page.setViewportSize({width:390,height:844});
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Feedback page has no mobile overflow');
+   await page.screenshot({path:root+'test-results/member-feedback-mobile.png',fullPage:true});
+   failReads=true;
+   await page.locator('#feedback-refresh').click();
+   await page.locator('#feedback-error:visible').waitFor();
+   assert.match(await page.locator('#feedback-error').innerText(),/Saved feedback temporarily unavailable/);
+   failReads=false;
+   await page.locator('#feedback-refresh').click();
+   await page.waitForFunction(()=>document.getElementById('feedback-error').hidden&&!document.getElementById('feedback-content').hidden);
+   savedRuns=[];
+   await page.goto(origin+'/admin#customers');
+   await page.locator('#feedback-empty:visible').waitFor();
+   assert.equal(await page.locator('#feedback-content').isHidden(),true);
+   assert.ok(reads>=3,'Feedback loads selected saved runs');
+   assert.equal(writes,0,'Feedback navigation, refresh, error recovery and empty state send only GET requests');
+ }finally{await page.close();}
+}

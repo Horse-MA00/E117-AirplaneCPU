@@ -14,7 +14,7 @@ let flights = [], segments = [], defaultWeights = {}, scope = null, run = null, 
 let populations = new Map(), renderedProfile = null;
 const profileNames = {flexible_deal_seekers:'Flexible bargain travellers', broad_coverage:'Broad customer coverage (legacy)'};
 const profileOf = value => value?.config?.profile || value?.population?.profile || 'broad_coverage';
-let scopeSequence = 0, runSequence = 0, pollTimer = null, submitting = false, auditLoaded = [];
+let scopeSequence = 0, runSequence = 0, pollTimer = null, submitting = false;
 
 async function api(path, body) {
   const options = body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)};
@@ -108,9 +108,10 @@ function updateControls() {
   $('call-estimate').textContent = isLive ? `Up to ${calls.toLocaleString()} calls for fresh paired cohorts and independent confirmation, before forced choices or identical-policy reuse. The configured call limit applies to the whole experiment.` : 'Uses simulated customer choices. No paid LLM calls are made in this mode.';
 }
 function clearRun() {
-  runSequence++; clearTimeout(pollTimer); run = null; auditLoaded=[];
-  for (const id of ['run-progress','recommendation','round-section','curve-section','validation-section','feedback-section']) $(id).hidden=true;
+  runSequence++; clearTimeout(pollTimer); run = null;
+  for (const id of ['run-progress','recommendation','round-section','curve-section','validation-section']) $(id).hidden=true;
   $('empty-state').hidden=false;
+  $('member-feedback-link').hidden=true;
   const url=new URL(location.href);url.searchParams.delete('run');history.replaceState(null,'',url);
   updateControls();
 }
@@ -123,7 +124,7 @@ function plot(svg, rows, {xKey,yKey,xLabel,yLabel,lineClass='model-line',priceX=
   svg.replaceChildren();
   const data=rows.filter(r=>numeric(r[xKey])&&numeric(r[yKey])).sort((a,b)=>a[xKey]-b[xKey]);
   if(!data.length)return;
-  const width=Math.max(300,svg.clientWidth||760),height=svg.id==='round-chart'?240:280,left=70,right=24,top=24,bottom=55;
+  const width=Math.max(300,svg.clientWidth||760),height=280,left=70,right=24,top=24,bottom=55;
   svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
   const maxX=Math.max(...data.map(r=>r[xKey]),1),minX=priceX?0:Math.min(...data.map(r=>r[xKey]),1),maxY=Math.max(...data.map(r=>r[yKey]),1)*1.12;
   const x=value=>left+(value-minX)/(maxX-minX||1)*(width-left-right), y=value=>height-bottom-value/maxY*(height-top-bottom);
@@ -132,13 +133,11 @@ function plot(svg, rows, {xKey,yKey,xLabel,yLabel,lineClass='model-line',priceX=
   for(const value of [...new Set(ticks)])svg.append(svgNode('text',{x:x(value),y:height-bottom+23,'text-anchor':'middle'},priceX?Math.round(value).toLocaleString():String(value)));
   svg.append(svgNode('text',{x:left,y:12,class:'axis-title'},yLabel),svgNode('text',{x:(left+width-right)/2,y:height-4,'text-anchor':'middle',class:'axis-title'},xLabel));
   svg.append(svgNode('path',{d:data.map((r,i)=>`${i?'L':'M'} ${x(r[xKey])} ${y(r[yKey])}`).join(' '),class:lineClass}));
-  if(svg.id==='round-chart')for(const r of data){const c=svgNode('circle',{cx:x(r[xKey]),cy:y(r[yKey]),r:5,class:'point'});c.append(svgNode('title',{},`Round ${r[xKey]}: ${money(r[yKey])}`));svg.append(c);}
   if(numeric(selected)&&selected>=minX&&selected<=maxX)svg.append(svgNode('line',{x1:x(selected),x2:x(selected),y1:top,y2:height-bottom,class:'selected-line'}));
 }
 function renderRounds(rounds) {
   $('round-section').hidden=!rounds.length;
   const rows=rounds.map((r,i)=>({...r,round:r.round??r.round_number??i+1}));
-  plot($('round-chart'),rows,{xKey:'round',yKey:'price',xLabel:'Price round',yLabel:'Member base fare · HKD',lineClass:'round-line'});
   $('round-table').replaceChildren(...rows.map(r=>{
     const observations=numeric(r.learning_updates)?String(r.learning_updates):'Not recorded';
     const fresh=numeric(r.unique_customers)?`${r.unique_customers} / ${observations}`:observations;
@@ -148,9 +147,6 @@ function renderRounds(rounds) {
     if(run?.recommendation?.price===r.price)row.className='selected';return row;
   }));
   $('round-caption').textContent=`${rounds.length} rounds · ${new Set(rows.map(r=>r.price)).size} different prices`;
-  const previous=$('feedback-round').value;
-  $('feedback-round').replaceChildren(...rows.map(r=>option(String(r.round),`Round ${r.round}`)));
-  if(rows.some(r=>String(r.round)===previous))$('feedback-round').value=previous;else if(rows.length)$('feedback-round').value=String(rows.at(-1).round);
 }
 function renderCurve(value) {
   const rounds=value.rounds||[];
@@ -201,28 +197,6 @@ function renderValidation(validation) {
   parts.push('These totals include member and normal base-fare sales. Membership fees and operating costs are excluded.');
   $('validation-detail').textContent=parts.join(' ');
 }
-function renderFeedback() {
-  const rounds=run?.rounds||[], index=Number($('feedback-round').value);
-  const r=rounds.find((row,i)=>(row.round??row.round_number??i+1)===index)||rounds.at(-1);
-  $('feedback-section').hidden=!r;
-  if(!r)return;
-  const analysis=r.analysis||{};
-  $('analysis-summary').textContent=typeof analysis==='string'?analysis:analysis.summary||analysis.interpretation||'This round’s decision records are available below or in the experiment export.';
-  $('analysis-source-note').textContent=r.reused_analysis?'Cached summary: the analysis from the earlier identical price is reused. No new analysis call or independent observation is implied.':r.analysis_source==='provider_live'?'Fresh LLM analysis of this round’s recorded decisions.':r.analysis_source==='synthetic_analysis'?'Rule-based summary of mathematical customer choices.':'Analysis provenance is available in the experiment export.';
-  const hypothesis=r.hypothesis_test;
-  $('hypothesis-note').hidden=!hypothesis;
-  if(hypothesis){const origin=numeric(hypothesis.source_round)?`From round ${hypothesis.source_round}: `:'';const direction=String(hypothesis.direction||'none').replaceAll('_',' ');$('hypothesis-note').textContent=`${origin}${direction} · ${hypothesisLabel(hypothesis.status)}. ${hypothesis.summary||''}`;}
-  let decisions=r.decisions||[];
-  if(!decisions.length)decisions=auditLoaded.filter(e=>!e.round||e.round===index).map(e=>e.record||e).filter(e=>e.decision);
-  $('feedback-list').replaceChildren(...decisions.slice(0,28).map(item=>{
-    const p=item.person||item.observation?.person||{},d=item.decision||item;
-    const card=node('article',undefined,'feedback-card');card.append(node('strong',p.segment_label||p.segment||item.segment||'Simulated member'));
-    card.append(node('p',String(d.action||'Decision recorded').replaceAll('_',' '),'decision'),node('p',d.reason||'No written reason recorded.'));
-    const info=[p.customer_id,item.source,item.settlement?.status].filter(Boolean).join(' · ');if(info)card.append(node('small',info));return card;
-  }));
-  $('load-audit').hidden=Boolean(decisions.length)||!safeId(run?.run_id);
-  $('feedback-note').textContent=`${decisions.length>28?`Showing 28 of ${decisions.length} decisions; the export includes all records. `:''}Reasons explain simulated choices. They are not additional independent purchase observations.`;
-}
 function renderRun(value) {
   run=value;
   $('run-progress').hidden=false;$('empty-state').hidden=true;
@@ -239,8 +213,10 @@ function renderRun(value) {
   const unique=value.progress?.cumulative_unique_customers??value.cumulative_unique_customers;
   $('run-people').textContent=numeric(unique)?`${count(unique)} unique search members · New people in every round; paired quotes share the same people.`:paired(value)?'Fresh paired search cohorts; exact budgets are private to customers.':'';
   $('run-counts').textContent=`${counts.provider_calls??0} provider calls · ${counts.cache_hits??0} cache hits · ${counts.forced??0} forced decisions · ${counts.failures??0} failures · ${counts.peak_parallel??0} peak parallel calls`;
+  $('member-feedback-link').hidden=!safeId(value.run_id);
+  if(safeId(value.run_id))$('member-feedback-link').href=`/admin?run=${encodeURIComponent(value.run_id)}#customers`;
   if(safeId(value.run_id)){$('export-run').href=`/api/adaptive-pricing/runs/${value.run_id}/export`;$('export-run').hidden=false;}
-  renderRounds(value.rounds||[]);renderCurve(value);renderValidation(value.validation);renderFeedback();
+  renderRounds(value.rounds||[]);renderCurve(value);renderValidation(value.validation);
   const recommendation=value.recommendation;
   $('recommendation').hidden=!recommendation;
   if(recommendation){
@@ -268,7 +244,7 @@ async function fetchRun(id, sequence=runSequence) {
 }
 async function showRun(id) {
   if(!safeId(id))throw new Error('Choose a valid saved experiment.');
-  clearTimeout(pollTimer);const sequence=++runSequence;auditLoaded=[];
+  clearTimeout(pollTimer);const sequence=++runSequence;
   const value=await api(`/api/adaptive-pricing/runs/${id}`);
   if(sequence!==runSequence)return;
   const url=new URL(location.href);url.searchParams.set('run',id);history.replaceState(null,'',url);
@@ -296,12 +272,7 @@ $('max-calls').addEventListener('input',()=>{$('max-calls').removeAttribute('ari
 $('reset-weights').addEventListener('click',()=>setWeights(defaultWeights));
 $('saved-run').addEventListener('change',()=>{$('load-run').disabled=!$('saved-run').value;});
 $('load-run').addEventListener('click',()=>showRun($('saved-run').value).catch(e=>error(e.message)));
-$('feedback-round').addEventListener('change',renderFeedback);
 $('refresh-run').addEventListener('click',()=>{if(!safeId(run?.run_id))return;clearTimeout(pollTimer);const sequence=++runSequence;error();fetchRun(run.run_id,sequence).catch(e=>error(e.message));});
-$('load-audit').addEventListener('click',async()=>{
-  if(!safeId(run?.run_id))return;const id=run.run_id; const sequence=runSequence;$('load-audit').disabled=true;
-  try{const result=await api(`/api/adaptive-pricing/runs/${id}/events?limit=100&offset=0`);if(sequence!==runSequence)return;auditLoaded=result.events||result.records||[];renderFeedback();$('audit-message').textContent='Showing available original decisions. Download the experiment for the complete audit.';}catch(e){error(e.message);}finally{$('load-audit').disabled=false;}
-});
 $('experiment-form').addEventListener('submit',async event=>{
   event.preventDefault();if(submitting||active(run)||!scope)return;
   if(!$('experiment-form').reportValidity())return;
@@ -313,7 +284,7 @@ $('experiment-form').addEventListener('submit',async event=>{
   submitting=true;updateControls();error();
   try{
     const value=await api('/api/adaptive-pricing/runs',body);
-    clearTimeout(pollTimer);runSequence++;auditLoaded=[];renderRun(value);
+    clearTimeout(pollTimer);runSequence++;renderRun(value);
     if(safeId(value.run_id)){const url=new URL(location.href);url.searchParams.set('run',value.run_id);history.replaceState(null,'',url);if(active(value))pollTimer=setTimeout(()=>fetchRun(value.run_id).catch(e=>error(e.message)),1500);}
     loadSaved().catch(()=>{});
   }catch(e){error(e.message);}finally{submitting=false;updateControls();}

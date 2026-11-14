@@ -25,15 +25,15 @@ async function busy(button, callback) {
   try { await callback(); } catch (e) { error(e.message); } finally { button.disabled = button.id === 'publish-button' ? !canPublish() : false; button.textContent = previous; }
 }
 function setView() {
-  const name = ['flights', 'optimization', 'pricing', 'customers', 'market', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
+  const name = ['flights', 'optimization', 'pricing', 'customers', 'panel', 'market', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
   for (const section of document.querySelectorAll('.view')) section.hidden = section.id !== `view-${name}`;
-  for (const anchor of document.querySelectorAll('.primary-nav a')) { if (anchor.hash === `#${name}` || (['customers', 'market'].includes(name) && anchor.dataset.nav === 'experiments') || (name === 'pricing' && anchor.hash === '#optimization')) anchor.setAttribute('aria-current', 'page'); else anchor.removeAttribute('aria-current'); }
+  for (const anchor of document.querySelectorAll('.primary-nav a')) { if (anchor.hash === `#${name}` || (['customers', 'panel', 'market'].includes(name) && anchor.dataset.nav === 'experiments') || (name === 'pricing' && anchor.hash === '#optimization')) anchor.setAttribute('aria-current', 'page'); else anchor.removeAttribute('aria-current'); }
   if (state.noticeView !== name) $('notice').hidden = true;
-  document.title = `${({ flights: 'Forecast seats', optimization: 'Optimize prices', pricing: 'Reference pricing', customers: 'Customer panel', market: 'Test the market', members: 'Manage offers' })[name]} — UOption Fly Pass`;
+  document.title = `${({ flights: 'Forecast seats', optimization: 'Optimize prices', pricing: 'Reference pricing', customers: 'What members said', panel: 'Customer panel', market: 'Test the market', members: 'Manage offers' })[name]} — UOption Fly Pass`;
   const selected = document.querySelector('.primary-nav [aria-current=page]');
   if (selected) { const nav = selected.parentElement; if (selected.offsetLeft < nav.scrollLeft || selected.offsetLeft + selected.offsetWidth > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = Math.max(0, selected.offsetLeft - nav.offsetLeft - 20); }
   if (name === 'members') { loadOffers(); loadMemberPlan(); }
-  if (name === 'customers') { loadPanelRuns(); if (state.panelRun) pollPanel(); }
+  if (name === 'panel') { loadPersonas(); loadAgentRuns(); loadPanelRuns(); if (state.panelRun) pollPanel(); }
   if (name === 'market') loadMarketRuns();
   if (name === 'flights' && state.forecast) requestAnimationFrame(renderForecast);
   document.dispatchEvent(new CustomEvent('uoption:view', { detail: { name } }));
@@ -768,7 +768,7 @@ async function init() {
     if (configured) { $('live-mode-option').disabled = false; $('live-mode-option').textContent = 'Live LLM'; $('market-live-option').disabled = false; $('market-live-option').textContent = 'Live LLM · bounded calls'; }
     populateDemandFilter($('forecast-demand'),state.flights); initializeOfferSelectors();
     if(fillForecastFlights())await loadFlight();
-    loadPersonas(); loadAgentRuns(); loadPanelRuns(); loadMemberPlan();
+    loadMemberPlan();
 
   } catch (e) { error(`Unable to load the workspace. ${e.message}`); text('dataset-label', 'Dataset unavailable'); }
 }

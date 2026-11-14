@@ -71,7 +71,7 @@ python scripts/verify_artifacts.py                # 实验与数据的 SHA256 �
 - `backend/`：stdlib HTTP API（`server.py`）和 SQLite 持久化（`store.py`、`optimization_store.py`）。
   - 预测 `nhpp.py`（冻结）；放票 `release_policy.py`；座位口径 `seat_inventory.py`；指定航班优化 `optimization.py`、`scoped_market.py`、`initial_policy.py`；自适应票价 `adaptive_pricing.py`、`member_response.py`（公开特征新模型）、`thompson.py`（历史基准）、审计 `adaptive_store.py`；共享市场 `shared_market.py`；座位反馈 `seat_feedback.py`。
   - 测试在 `backend/tests/`。
-- `frontend/`：Admin，原生 HTML/JS，路径 `/admin`；`frontend/members/` 是会员端，路径 `/members`。不需要构建，由后端直接提供；`*.mjs` 是浏览器 smoke 测试。
+- `frontend/`：Admin，原生 HTML/JS，路径 `/admin`；`frontend/members/` 是会员端，路径 `/members`。不需要构建，由后端直接提供；`experiments.js` 在 `#customers` 只读展示已保存的会员回馈；旧工具在 `#panel` / `#market`。`*.mjs` 是浏览器 smoke 测试。
 - `simulation/`：合成数据生成器、NHPP 评估脚本和已提交的冻结数据集。
 - `llm_agent/`：旅客 Agent、prompt、provider 适配、审计；`experiments/` 是可公开的合成实验证据；`weighted_population.py` 与 `adaptive_customers.py` 提供可选的目标／旧版分层客群、新版英文决策提示及有上限的并行调用。
 - `scripts/`：发布检查、证据校验、HTTP/容器 smoke、导出工具与 `member_choice_calibration.py` 私有人类问卷／摘要。`tests/`：根目录的发布和模拟器测试。

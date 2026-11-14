@@ -1,10 +1,10 @@
 # Admin 與會員購票介面
 
-> 状态：现行 · 对应代码：`customer-panel-v1`、`frontend/index.html`、`frontend/members/index.html`
+> 状态：现行 · 对应代码：`customer-panel-v1`、`frontend/index.html`、`frontend/experiments.js`、`frontend/adaptive-pricing.html`、`frontend/members/index.html`
 
 2026-11-14。這次更新擴大 Customer panel、重新安排 Admin 資訊，並加入獨立會員購票網站。全部介面使用英文，金額使用 HKD；航班及購買仍為 Hackathon 合成示例，沒有實際付款或航空出票。
 
-後續全面重設已完成：主配色改為紫 `#6F2C91`、青 `#24BCDC`、白。Admin 使用 Forecast / Optimize / Experiments / Manage offers；Optimize 已加入可設定輪數的數學／LLM 雙軌價格搜尋與 SQLite 保存，原 Customer panel 和 Shared market 移至 Experiments。Client 加入票價排序、只看可售座位、清楚的完整票價／會員費及三步購票流程。最新畫面及演算法以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準；下文保留原交易 API 與 panel 規則。
+後續全面重設已完成：主配色改為紫 `#6F2C91`、青 `#24BCDC`、白。Admin 使用 Forecast / Optimize / Experiments / Manage offers；Optimize 已加入可設定輪數的數學／LLM 雙軌價格搜尋與 SQLite 保存，Experiments 現在只顯示已保存的會員購票回饋。Client 加入票價排序、只看可售座位、清楚的完整票價／會員費及三步購票流程。最新畫面及演算法以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準；下文保留原交易 API 與 panel 規則。
 
 ## 兩個入口
 
@@ -14,6 +14,14 @@
 | `/members` | 模擬旅客 | 查詢已發布航班、查看完整價格、加入會員、確認預訂、查看已保存行程 |
 
 兩者共用 SQLite 的已發布優惠、會員及訂位。Admin 發布配額後，會員端才可購買；購買會實際扣除這個示例資料庫的配額，Admin 重新讀取庫存即可看到變化。兩者是介面與路徑分開，並非已完成生產環境的身份驗證或權限隔離。示例身份為本機測試 ID，不收集旅客個人資料。
+
+## Experiments：What members said
+
+`/admin#customers` 只顯示自適應定價實驗的會員回饋：選擇已保存實驗及輪次，閱讀該輪分析摘要、分析來源與個別會員的購買／拒絕理由。它直接讀取已保存的資料；開頁、切換或重新整理都不啟動實驗或呼叫付費 LLM。無結果、讀取失敗及尚無完成輪次各有明確狀態。
+
+`/admin?run=<run_id>&round=<round>#customers` 可分享指定實驗／輪次；未指定輪次時選最後一輪。摘要保持原始輸出並以純文字呈現，不能當作真實客戶研究。快取摘要、規則摘要及 LLM 摘要分開標示，個別決策保留來源。
+
+自適應定價頁 `/adaptive-pricing` 的「Read member feedback in Experiments」連結攜帶當前 run ID。原「How the price changes」折線圖已移除；該頁保留輪次結果表、價格與收入關係圖及獨立驗證。六階段舊工具仍可由 `/admin#panel` 存取，共享市場保留在 `/admin#market`；兩者不再放在 Experiments 主頁。
 
 ## 大型 Customer panel
 

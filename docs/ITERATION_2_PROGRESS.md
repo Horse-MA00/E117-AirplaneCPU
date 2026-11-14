@@ -235,3 +235,10 @@ Final native checks: 290 backend and 31 publication/data/documentation tests, wi
 - Added private blank human pilot and strict response-import/summary utility; zero real responses collected. Source authenticity remains self-reported and unverified; no automatic training or publication of participant text.
 - Post-experiment boundary fixes align fractional raw-source caps and quota-feasible confirmation; recorded integer/ample-quota results unaffected. Both new evidence directories and original hashes preserved.
 - Fullnativecheck passed349backend+31root tests; mocked and real read-only desktop/mobile checks passed. Main branch unchanged; no PR. Full results and caveats: [current specification](FLIGHT_SCOPED_OPTIMIZATION.md#executed-paired-public-feature-v4-results--14-november-2026).
+
+
+## 2026-11-14 · Experiments 會員回饋入口
+
+- 將自適應定價的 What members said 移到 `/admin#customers`，頁面只保留已保存實驗、輪次、摘要及會員理由；查閱只發 GET，不新增 LLM 呼叫。
+- 自適應定價頁移除 How the price changes 折線圖，保留輪次表、收入曲線及驗證結果，並提供帶 run ID 的回饋連結。舊六階段工具保留在 `#panel`、共享市場在 `#market`。
+- 原始模型輸出以純文字呈現；歷史資料、prompt 和凍結模型不改寫。原分支完整回歸通過：349 個後端及 31 個根目錄測試、文檔／凍結證據檢查。合併 main 後的驗證另記如下。

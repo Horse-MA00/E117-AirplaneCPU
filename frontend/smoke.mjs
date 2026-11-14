@@ -20,7 +20,7 @@ page.on('pageerror', (error) => errors.push(error.message));
 const waitForecast = () => page.waitForFunction(() => document.querySelector('#flight-main').getAttribute('aria-busy') === 'false');
 const navigate = async view => {
   if (view === 'pricing') { await page.locator('.primary-nav a[href="#optimization"]').click(); await page.locator('.advanced-link[href="#pricing"]').click(); }
-  else if (view === 'market') { await page.locator('.primary-nav a[href="#customers"]').click(); await page.locator('#view-customers .section-tabs a[href="#market"]').click(); }
+  else if (['market', 'panel'].includes(view)) { await page.evaluate(name => { location.hash = name; }, view); await page.locator(`#view-${view}`).waitFor({state:'visible'}); }
   else await page.locator(`.primary-nav a[href="#${view}"]`).click();
 };
 
@@ -73,7 +73,7 @@ try {
     assert.ok((await page.locator('#market-candidate-origin').textContent()).includes('hypothesis'));
   }
 
-  await navigate('customers');
+  await navigate('panel');
   await page.locator('#agent-count').fill('14');
   await page.locator('#agent-button').click();
   await page.waitForFunction(() => document.getElementById('panel-run-status').textContent.startsWith('Complete'), null, {timeout:120000});
@@ -137,7 +137,7 @@ try {
 
   }
 
-  for (const view of ['flights', 'pricing', 'customers', 'market', 'members']) {
+  for (const view of ['flights', 'pricing', 'customers', 'panel', 'market', 'members']) {
     await page.setViewportSize({ width: 390, height: 844 });
     await navigate(view);
     await page.waitForTimeout(200);

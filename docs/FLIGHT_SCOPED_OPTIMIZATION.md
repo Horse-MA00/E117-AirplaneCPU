@@ -34,6 +34,8 @@ New quoted fares and pass fees are whole HKD. Fractional submitted prices are re
 
 ## Adaptive member-only pricing
 
+The Admin **Experiments** page (`/admin#customers`) is a read-only view of saved adaptive member feedback. Choose a run and round to see **What members said**, including the stored analysis and individual decisions. Adaptive pricing links to the current run's feedback; its round-price line chart has been removed while the round table, revenue curve and validation comparison remain. Legacy journey and market tools remain on `#panel` / `#market`; see [UI behavior](ADMIN_AND_MEMBER_UX.md#experimentswhat-members-said).
+
 The separate `/adaptive-pricing` Admin page runs `member-thompson-v4-paired`: existing members, one optional leisure ticket per person, fresh paired search cohorts and independent confirmation. Only basic ticket receipts enter its objective; no membership fee, tax, fuel surcharge, ancillary or operating cost is deducted. The contribution/annual-fee engine below remains a separate workflow. All new executable quotes use whole HKD and the 80% normal-fare cap. Frozen NHPP, source data, earlier prompts and historical experiment reports remain unchanged.
 
 ### Target population and private motivation

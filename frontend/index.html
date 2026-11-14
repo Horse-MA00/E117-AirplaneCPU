@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>Admin — UOption Fly Pass</title>
-<link rel="stylesheet" href="/styles.css"><script type="module" src="/app.js"></script><script type="module" src="/continuous.js"></script><script type="module" src="/optimization.js"></script>
+<link rel="stylesheet" href="/styles.css"><script type="module" src="/app.js"></script><script type="module" src="/continuous.js"></script><script type="module" src="/optimization.js"></script><script type="module" src="/experiments.js"></script>
 </head>
 <body>
 <a class="skip" href="#page-title">Skip to content</a>
@@ -109,7 +109,23 @@
   <div id="pricing-results" hidden><div class="metrics pricing-metrics"><div><span>Recommended member base fare</span><strong id="best-fare">—</strong><small>Mandatory fees charged separately</small></div><div><span>Recommended membership fee</span><strong id="best-fee">—</strong><small id="term-label">For the full membership term</small></div><div><span>Simulated incremental contribution</span><strong id="best-profit">—</strong><small>Compared with no membership programme</small></div></div><div class="lower-grid"><section class="heatmap-panel"><div class="section-line"><h2>Fare × membership fee</h2><span>HK$ contribution</span></div><p class="small muted">Best feasible release share within each price pair. Only future D28 / D14 / D7 rounds are simulated. Select a cell to inspect it.</p><div id="heatmap" class="heatmap"></div><p id="heatmap-detail" class="small"></p></section><section class="candidate-detail"><h2>Recommended policy</h2><dl id="policy-detail"></dl><div id="holdout-detail" class="message"></div><details><summary>Contribution ledger</summary><dl id="ledger-detail"></dl></details><div class="policy-actions"><button id="send-market-candidate" type="button" class="button primary" disabled>Test candidate in shared market</button><button id="apply-policy" type="button" class="button">Prepare this member offer</button></div></section></div><div class="section-line"><h2>Candidate comparison</h2><button id="export-candidates" type="button" class="text-button">Export CSV</button></div><div class="table-wrapper" tabindex="0" role="region" aria-label="Pricing candidates"><table><caption>Leading candidate policies · monetary amounts in HKD</caption><thead><tr><th scope="col">Member fare</th><th scope="col">Membership</th><th scope="col">Future rounds</th><th scope="col">Release</th><th scope="col">Contribution</th><th scope="col">Feasible</th></tr></thead><tbody id="candidate-table"></tbody></table></div><div class="section-line"><h2>Baseline and stress tests</h2></div><div class="table-wrapper" tabindex="0" role="region" aria-label="Policy stress tests"><table><caption>Scenario-dependent results, not airline revenue estimates</caption><thead><tr><th scope="col">Scenario</th><th scope="col">Incremental contribution</th><th scope="col">Fulfilment</th><th scope="col">Feasible</th></tr></thead><tbody id="stress-table"></tbody></table></div><details><summary>Experiment assumptions</summary><ul id="pricing-notes"></ul></details></div>
 </section>
 <section id="view-customers" class="view" hidden>
-<nav class="section-tabs" aria-label="Experiment type"><a href="#customers" aria-current="page">Customer panel</a><a href="#market">Shared market</a></nav>
+  <div class="page-head"><div><p class="eyebrow">Experiments</p><h1 id="feedback-title" tabindex="-1">What members said</h1></div><p class="intro">Read the saved summary and purchase decisions from each price round.</p></div>
+  <div class="feedback-controls"><div class="field"><label for="feedback-run">Saved experiment</label><select id="feedback-run" disabled><option value="">Loading saved experiments…</option></select></div><div class="field"><label for="feedback-round">Round</label><select id="feedback-round" disabled><option value="">Select an experiment</option></select></div><button type="button" id="feedback-refresh" class="text-button">Refresh feedback</button></div>
+  <p id="feedback-status" class="small muted" role="status"></p>
+  <div id="feedback-error" class="message error" role="alert" hidden></div>
+  <div id="feedback-empty" class="empty-state" hidden><p id="feedback-empty-message">No saved feedback yet.</p><a href="/adaptive-pricing">Open price optimization</a></div>
+  <section id="feedback-content" class="member-feedback" aria-labelledby="feedback-title" hidden>
+    <p id="feedback-context" class="small muted"></p>
+    <p id="feedback-summary" class="feedback-summary"></p>
+    <p id="feedback-source" class="small muted"></p>
+    <p id="feedback-hypothesis" class="feedback-hypothesis small" hidden></p>
+    <p id="feedback-note" class="small muted">These are simulated member choices, not observed customer purchases.</p>
+    <div id="feedback-list" class="member-feedback-list"></div>
+    <div class="feedback-links"><a id="feedback-pricing-link" href="/adaptive-pricing">View this price experiment</a><a id="feedback-export" href="/api/adaptive-pricing/runs" download>Download saved decisions</a></div>
+  </section>
+</section>
+<section id="view-panel" class="view" hidden>
+<nav class="section-tabs" aria-label="Legacy experiment type"><a href="#panel" aria-current="page">Customer panel</a><a href="#market">Shared market</a></nav>
   <div class="page-head"><div><p class="eyebrow">Experiments / Customer panel</p><h1 tabindex="-1">Understand the customer response.</h1></div><p class="intro">Test the same offer across different travel needs. Compare outcomes first, then inspect the decisions behind them.</p></div>
   <div class="panel-purpose"><p><strong>One traveller. Six moments.</strong> Each person has a separate example inventory and a budget for one trip plus the new pass fee.</p><a href="#market">Test shared inventory instead</a></div>
   <section id="panel-overview" hidden aria-label="Current panel results"><p id="panel-overview-status" class="small muted"></p><div class="panel-metrics" aria-label="Panel outcomes"><div><span>New memberships</span><strong id="panel-joined">—</strong><small id="panel-joined-detail">Among eligible subscription decisions</small></div><div><span>Travellers who booked</span><strong id="panel-booked">—</strong><small>Includes later cancellations</small></div><div><span>Later cancelled</span><strong id="panel-cancelled">—</strong><small>Refund rules applied</small></div><div><span>Finished all six stages</span><strong id="panel-completed">—</strong><small id="panel-completed-detail">Of the configured panel</small></div></div></section>
@@ -137,7 +153,7 @@
   <details class="audit-disclosure"><summary>Earlier experiments and original model responses</summary><p class="small muted">Historical outputs retain their original language and rules. Audit links preserve inputs, raw responses and failures.</p><button type="button" class="text-button" id="refresh-agent-runs">Refresh original records</button><ul id="agent-runs"></ul></details>
 </section>
 <section id="view-market" class="view" hidden>
-<nav class="section-tabs" aria-label="Experiment type"><a href="#customers">Customer panel</a><a href="#market" aria-current="page">Shared market</a></nav>
+<nav class="section-tabs" aria-label="Legacy experiment type"><a href="#panel">Customer panel</a><a href="#market" aria-current="page">Shared market</a></nav>
   <div class="page-head"><div><p class="eyebrow">Experiments / Shared market</p><h1 tabindex="-1">Watch the market respond.</h1></div><p class="intro">Replay the same travellers and opportunities across three policies. Accepted agent decisions update seats, membership state and the financial ledger.</p></div>
   <div class="market-workflow" aria-label="Shared market experiment"><span>Fixed world</span><span>Customer choice</span><span>Inventory update</span><span>Policy contribution</span></div>
   <form id="market-form" class="market-form">
