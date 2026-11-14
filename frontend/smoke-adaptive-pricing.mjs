@@ -45,7 +45,7 @@ try{
  assert.equal(starts[0].mode,'synthetic');assert.equal('membership_fee' in starts[0],false);
  assert.equal(await page.locator('#round-table tr').count(),3);assert.equal(await page.locator('#curve-table tr').count(),4);
  assert.match(await page.locator('#curve-caption').innerText(),/Final fitted posterior.*95%/);
- assert.match(await page.locator('#marketing-fare-note').innerText(),/HK\$255 → promotional quote HK\$249/);
+ assert.match(await page.locator('#marketing-fare-note').textContent(),/HK\$255 → promotional quote HK\$249/);
  assert.match(await page.locator('#validation-table').innerText(),/Formatted initial fare\s+HK\$319/);
  assert.equal(await page.locator('#delta-initial').innerText(),'+HK$1,432');assert.equal(await page.locator('#comparison-bars .comparison-row').count(),3);
  assert.match(await page.locator('#run-counts').innerText(),/20 provider calls · 2 cache hits · 4 forced decisions · 0 failures/);
@@ -82,7 +82,7 @@ try{
  for(const path of ['/optimization.js','/continuous.js','/price-chart.js','/contribution-explanation.js','/pricing-navigation.js'])assert.equal((await page.request.get(origin+path)).status(),404);
  await page.goto(origin+'/adaptive-pricing?run=adaptive-removed');await page.locator('#page-error:visible').waitFor();assert.equal(await page.locator('#recommendation').isHidden(),true);
  await page.goto(origin+`/adaptive-pricing?run=${report.run_id}&round=2`);await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$249');
- assert.equal(await page.locator('.primary-nav a[aria-current="page"]').innerText(),'Optimize prices');assert.equal(await page.locator('.primary-nav a').count(),4);
+ assert.equal(await page.locator('.primary-nav a[aria-current="page"]').innerText(),'Optimize prices');assert.equal(await page.locator('.primary-nav a').count(),5);
  assert.match(await page.locator('#member-feedback-link').getAttribute('href'),/round=2#customers$/);
  await page.goto(origin+`/adaptive-pricing?flight_id=${scope.flight_id}&forecast_day=14`);await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D14');assert.equal(scopes.at(-1).forecast_day,14);
  for(const unavailable of ['failed','missing-target']){

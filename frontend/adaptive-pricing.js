@@ -1,4 +1,5 @@
 import { releaseRound } from './thompson-navigation.js';
+import { matchesDemand, populateDemandFilter } from './demand-filter.js';
 const $ = id => document.getElementById(id);
 const money = value => Number.isFinite(Number(value)) && value !== null && value !== undefined ? `HK$${Number(value).toLocaleString('en-HK', {minimumFractionDigits: Number(value) % 1 ? 2 : 0, maximumFractionDigits: 2})}` : '—';
 const numeric = value => typeof value === 'number' && Number.isFinite(value);
@@ -15,7 +16,7 @@ const hypothesisLabel = status => ({supported:'Above initial revenue',not_suppor
 let flights = [], segments = [], defaultWeights = {}, scope = null, run = null, liveConfigured = false;
 const TARGET_PROFILE = 'flexible_deal_seekers';
 let targetPopulation = null;
-let scopeSequence = 0, runSequence = 0, pollTimer = null, submitting = false;
+let scopeSequence = 0, runSequence = 0, pollTimer = null, submitting = false, savedRuns = [];
 
 async function api(path, body) {
   const options = body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)};
@@ -30,14 +31,23 @@ function node(tag, text, className) { const el = document.createElement(tag); if
 function option(value, text) { const el = node('option', text); el.value = value; return el; }
 function routeKey(flight) { return `${flight.origin} → ${flight.destination}`; }
 function flightDate(flight) { return flight.departure_date || String(flight.departure_at || '').slice(0, 10); }
+function longDate(iso) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  if (!y || !m || !d) return iso || '—';
+  const date = new Date(Date.UTC(y, m - 1, d)), part = (o) => date.toLocaleDateString('en-GB', { ...o, timeZone: 'UTC' });
+  return `${part({ weekday: 'short' })} ${d} ${part({ month: 'short' })} ${y}`;
+}
+const inDemand = f => matchesDemand(f, $('opt-demand').value || 'all');
 function fillRoutes() {
-  const keys = [...new Set(flights.map(routeKey))].sort();
+  const selected = $('route').value;
+  const keys = [...new Set(flights.filter(inDemand).map(routeKey))].sort();
   $('route').replaceChildren(option('', 'Choose a route'), ...keys.map(key => option(key, key)));
   $('route').disabled = false;
+  if (keys.includes(selected)) $('route').value = selected;
 }
 function fillFlights(selected = '') {
-  const matching = flights.filter(f => routeKey(f) === $('route').value).sort((a,b) => `${flightDate(a)}${a.flight_id}`.localeCompare(`${flightDate(b)}${b.flight_id}`));
-  $('flight').replaceChildren(option('', matching.length ? 'Choose a departure' : 'Choose a route first'), ...matching.map(f => option(f.flight_id, `${flightDate(f)} · ${f.flight_id}`)));
+  const matching = flights.filter(f => routeKey(f) === $('route').value && inDemand(f)).sort((a,b) => `${flightDate(a)}${a.flight_id}`.localeCompare(`${flightDate(b)}${b.flight_id}`));
+  $('flight').replaceChildren(option('', matching.length ? 'Choose a departure' : 'Choose a route first'), ...matching.map(f => option(f.flight_id, `${longDate(flightDate(f))} · ${Number(f.capacity) || '—'} seats`)));
   $('flight').disabled = !matching.length;
   if (matching.some(f => f.flight_id === selected)) $('flight').value = selected;
 }
@@ -80,8 +90,30 @@ function renderScope(value) {
   $('scope-day').textContent = value ? `D${value.as_of_day}` : 'Choose a flight';
   $('flight-title').textContent = value ? `${value.origin} → ${value.destination}` : 'Your selected flight';
   $('flight-description').textContent = value ? `${value.departure_date} · ${value.flight_id} · ${value.departure_time || ''}` : 'A separate experiment is created for each flight and release round.';
+  syncRound();
   $('scope-message').textContent = value ? value.releasable_seats > 0 ? 'The starting price is the 80% member-fare cap, rounded down to whole HKD. The NHPP quota is held fixed during price trials.' : 'No member quota is available at this release round. Choose another flight or round.' : 'Choose a flight to load its normal fare quote and NHPP member quota.';
   updateControls();
+}
+function syncRound() {
+  for (const b of document.querySelectorAll('[data-round]')) b.setAttribute('aria-pressed', String(b.dataset.round === $('release-day').value));
+}
+// The sidebar carries the current flight and round back to Admin (read there from ?flight_id=&forecast_day=).
+function updateNavLinks() {
+  const fid = $('flight').value, query = fid ? `?${new URLSearchParams({ flight_id: fid, forecast_day: $('release-day').value })}` : '';
+  for (const a of document.querySelectorAll('[data-admin-view]')) a.href = `/admin${query}#${a.dataset.adminView}`;
+}
+function updatePublishLink(value) {
+  const link = $('publish-link'), decision = value?.validation?.adoption_result || value?.validation?.decision;
+  const fare = value?.validation?.retained_price ?? null, fid = value?.scope?.flight_id ?? value?.config?.flight_id;
+  const show = value?.status === 'completed' && numeric(fare) && decision !== 'NO_OFFER' && safeId(fid);
+  link.hidden = !show; if (!show) return;
+  link.href = `/admin?${new URLSearchParams({ flight_id: fid, forecast_day: String(value.scope?.as_of_day ?? value.config?.forecast_day ?? $('release-day').value) })}#members`;
+  link.firstChild.textContent = `Publish at ${money(fare)} `;
+}
+// With no experiment in the URL, open the latest completed experiment for this flight and round.
+function latestSavedFor(flightId, day) {
+  return savedRuns.filter(r => r.status === 'completed' && (r.scope?.flight_id ?? r.config?.flight_id) === flightId && String(r.scope?.as_of_day ?? r.config?.forecast_day) === String(day))
+    .sort((a, b) => Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0))[0] || null;
 }
 async function loadScope() {
   const sequence = ++scopeSequence;
@@ -92,12 +124,15 @@ async function loadScope() {
   if (flightId) { url.searchParams.set('flight_id',flightId); url.searchParams.set('forecast_day',$('release-day').value); }
   else { url.searchParams.delete('flight_id'); url.searchParams.delete('forecast_day'); }
   history.replaceState(null,'',url);
+  updateNavLinks();
   if (!flightId) return;
   $('scope-message').textContent = 'Calculating this flight’s member quota…';
   try {
     const result = await api('/api/adaptive-pricing/scope', {flight_id:flightId, forecast_day:Number($('release-day').value),profile:TARGET_PROFILE});
     if (sequence !== scopeSequence) return;
     renderScope(result.scope || result);
+    const latest = !run && !submitting ? latestSavedFor(flightId, $('release-day').value) : null;
+    if (latest) await showRun(latest.run_id);
   } catch (e) { if (sequence === scopeSequence) { $('scope-message').textContent = 'Flight details could not be loaded.'; error(e.message); } }
 }
 function updateControls() {
@@ -105,6 +140,7 @@ function updateControls() {
   const weights = Object.values(readWeights());
   const weightsValid = targetPopulation && weights.length === 8 && weights.every(n => Number.isFinite(n) && n>=0) && Math.abs(weights.reduce((a,b)=>a+b,0)-1)<0.00001;
   $('setup-fields').disabled = busy;
+  $('scope-fields').disabled = busy;
   $('start').disabled = busy || !scope || !(scope.releasable_seats > 0) || !weightsValid || (isLive && !liveConfigured);
   $('start').textContent = submitting ? 'Starting experiment…' : isLive ? 'Start Thompson with live customers' : 'Start Thompson simulation';
   const n=Number($('rounds').value), m=Number($('customers').value), v=Number($('validation-repeats').value);
@@ -117,6 +153,7 @@ function clearRun() {
   for (const id of ['run-progress','recommendation','round-section','curve-section','validation-section']) $(id).hidden=true;
   $('empty-state').hidden=false;
   $('member-feedback-link').hidden=true;
+  $('publish-link').hidden=true;
   const url=new URL(location.href);url.searchParams.delete('run');url.searchParams.delete('round');history.replaceState(null,'',url);
   $('experiments-nav-link').href='/admin#customers';
   updateControls();
@@ -252,6 +289,7 @@ function renderRun(value) {
     const adoptions={ADOPT_CANDIDATE:'Candidate passed the confirmation rule.',KEEP_INITIAL:'Keep the formatted initial fare.',INCONCLUSIVE:'Insufficient evidence to change the formatted initial fare.',NO_OFFER:'Keep normal sales; neither member offer passed confirmation.'};
     $('validation-verdict').textContent=adoption?adoptions[adoption]||adoption:'Waiting for independent validation.';
   }
+  updatePublishLink(value);
   updateControls();
 }
 async function fetchRun(id, sequence=runSequence) {
@@ -266,8 +304,8 @@ async function showRun(id) {
   const value=await api(`/api/adaptive-pricing/runs/${id}`);
   if(sequence!==runSequence)return;
   if(!currentRun(value))throw new Error('This experiment is no longer available. Choose a current Thompson Sampling experiment.');
-  const url=new URL(location.href);if(url.searchParams.get('run')!==id)url.searchParams.delete('round');url.searchParams.set('run',id);history.replaceState(null,'',url);
-  if(value.scope){scopeSequence++;renderScope(value.scope);$('route').value=routeKey(value.scope);fillFlights(value.scope.flight_id);$('release-day').value=String(value.scope.as_of_day);}
+  const url=new URL(location.href);if(url.searchParams.get('run')!==id)url.searchParams.delete('round');url.searchParams.set('run',id);history.replaceState(null,'',url);if([...$('saved-run').options].some(o=>o.value===id)){$('saved-run').value=id;$('load-run').disabled=false;}
+  if(value.scope){scopeSequence++;renderScope(value.scope);$('route').value=routeKey(value.scope);fillFlights(value.scope.flight_id);$('release-day').value=String(value.scope.as_of_day);syncRound();updateNavLinks();}
   restoreNewExperimentWeights(value);
   for(const[id,key]of [['rounds','rounds'],['customers','customers'],['concurrency','concurrency'],['max-calls','max_calls'],['seed','seed'],['validation-repeats','validation_repeats']])if(value.config?.[key]!==undefined)$(id).value=String(value.config[key]);
   if(['synthetic','live'].includes(value.config?.mode))$('mode').value=value.config.mode;
@@ -276,14 +314,17 @@ async function showRun(id) {
 }
 async function loadSaved() {
   const data=await api('/api/adaptive-pricing/runs');
+  savedRuns=(data.runs||[]).filter(r=>safeId(r.run_id));
   const selected=$('saved-run').value;
   $('saved-run').replaceChildren(option('','Choose a saved experiment'),...(data.runs||[]).filter(r=>safeId(r.run_id)).map(r=>option(r.run_id,`${r.config?.flight_id||r.scope?.flight_id||r.run_id} · ${r.status} · ${r.config?.mode==='live'?'Live LLM customers':'Offline customers'}`)));
   if([...$('saved-run').options].some(o=>o.value===selected))$('saved-run').value=selected;
   $('load-run').disabled=!$('saved-run').value;
 }
 $('route').addEventListener('change',()=>{clearRun();fillFlights();loadScope();});
+$('opt-demand').addEventListener('change',()=>{clearRun();fillRoutes();fillFlights($('flight').value);loadScope();});
+for(const b of document.querySelectorAll('[data-round]'))b.addEventListener('click',()=>{if($('release-day').value===b.dataset.round)return;$('release-day').value=b.dataset.round;$('release-day').dispatchEvent(new Event('change'));});
 $('flight').addEventListener('change',()=>{clearRun();loadScope();});
-$('release-day').addEventListener('change',()=>{clearRun();loadScope();});
+$('release-day').addEventListener('change',()=>{syncRound();clearRun();loadScope();});
 for(const id of ['mode','rounds','customers','validation-repeats'])$(id).addEventListener('input',updateControls);
 $('max-calls').addEventListener('input',()=>{$('max-calls').removeAttribute('aria-invalid');error();});
 $('reset-weights').addEventListener('click',()=>setWeights(defaultWeights));
@@ -310,7 +351,7 @@ $('experiment-form').addEventListener('submit',async event=>{
 });
 async function init(){
   const results=await Promise.allSettled([api('/api/flights'),api('/api/adaptive-pricing/status'),loadSaved()]);
-  if(results[0].status==='fulfilled'){flights=results[0].value.flights||[];fillRoutes();}else error(results[0].reason.message);
+  if(results[0].status==='fulfilled'){flights=results[0].value.flights||[];populateDemandFilter($('opt-demand'),flights);fillRoutes();}else error(results[0].reason.message);
   if(results[1].status==='fulfilled'){
     const value=results[1].value;liveConfigured=Boolean(value.live_configured);
     const opt=$('mode').querySelector('option[value="live"]');opt.disabled=!liveConfigured;opt.textContent=liveConfigured?'Live LLM':'Live LLM · not configured';
@@ -326,7 +367,7 @@ async function init(){
   if(id)await showRun(id);
   else {
     const day=releaseRound(params.get('forecast_day')??params.get('day'));
-    if(day!==null)$('release-day').value=String(day);
+    if(day!==null){$('release-day').value=String(day);syncRound();}
     const fid=params.get('flight_id'), f=flights.find(f=>f.flight_id===fid);
     if(f){$('route').value=routeKey(f);fillFlights(fid);await loadScope();}
   }

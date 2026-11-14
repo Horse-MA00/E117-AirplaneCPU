@@ -5,15 +5,16 @@
    "html": "frontend/index.html",
    "routes": [
     "flights",
-    "customers",
-    "members"
+    "members",
+    "results",
+    "customers"
    ],
-   "route_mechanism": "location.hash 选中 section#view-<route>.view；未知或已退役的 hash（#optimization、#pricing、#panel、#market）显示 section#view-unavailable，不跳转"
+   "route_mechanism": "location.hash 选中 section#view-<route>.view；#results 为 2026-11-15 新增；未知或已退役的 hash（#optimization、#pricing、#panel、#market）显示 section#view-unavailable，不跳转。search#context-bar 是 flights/members/results 共用的航班选择栏"
   },
   "/adaptive-pricing": {
    "html": "frontend/adaptive-pricing.html",
    "routes": [],
-   "route_mechanism": "独立页面（Optimize）。网址参数 flight_id、forecast_day、run、round 恢复航班、轮次和已保存实验"
+   "route_mechanism": "独立页面（Optimize）。网址参数 flight_id、forecast_day、run、round 恢复航班、轮次和已保存实验；没有 run 时自动打开该航班和轮次最近一次已完成的实验"
   },
   "/members": {
    "html": "frontend/members/index.html",
@@ -121,7 +122,8 @@
    "path": "/api/adaptive-pricing/runs",
    "used_by": [
     "adaptive-pricing.js",
-    "experiments.js"
+    "experiments.js",
+    "app.js（Publish 页的 Thompson 参考，只读）"
    ]
   },
   {
@@ -212,7 +214,8 @@
   "/adaptive-pricing?flight_id=&forecast_day=": "Forecast 和 Manage offers 打开 Optimize 时带入航班和放票轮次（thompson-navigation.js）",
   "/adaptive-pricing?run=&round=": "恢复已保存的 Thompson 实验和轮次",
   "/admin?run=&round=#customers": "Experiments 分享指定实验和轮次的会员回馈",
-  "localStorage['uoption-member-demo-account']": "会员端的演示账号 ID"
+  "localStorage['uoption-member-demo-account']": "会员端的演示账号 ID",
+  "/admin?flight_id=&forecast_day=#<route>": "Optimize 的侧边栏和 \"Publish at HK$…\" 按钮把当前航班和轮次带回 Admin（app.js 在 init 中读取）"
  },
  "js_selectors": {
   "admin": [
@@ -228,7 +231,9 @@
   "optimize": [
    ".results",
    "option[value=…]",
-   "input（#weights 内）"
+   "input（#weights 内）",
+   "[data-round]",
+   "[data-admin-view]"
   ],
   "optimize_classes_toggled_by_js": [
    "error"
@@ -246,6 +251,8 @@
    "booked-value",
    "booking-chart",
    "chart-caption",
+   "context-bar",
+   "context-route",
    "dataset-label",
    "day-description",
    "day-number",
@@ -281,22 +288,22 @@
    "go-pricing",
    "headroom-detail",
    "headroom-value",
+   "llm-status",
    "member-allocation-detail",
    "member-fee",
    "member-plan-form",
    "membership-status",
+   "nav-optimize",
    "nhpp-release-detail",
    "nhpp-release-value",
    "notice",
-   "offer-day",
    "offer-fare",
-   "offer-flight",
    "offer-flight-context",
    "offer-form",
    "offer-guidance",
+   "offer-preview",
    "offer-quantity",
    "offer-release-status",
-   "offer-route",
    "offers-list",
    "page-title",
    "price-caption",
@@ -304,8 +311,22 @@
    "protection-value",
    "publish-button",
    "refresh-offers",
+   "refresh-results",
    "release-decision",
    "release-value",
+   "results-all-offers",
+   "results-composition",
+   "results-context",
+   "results-empty",
+   "results-fees",
+   "results-flight-offers",
+   "results-legend",
+   "results-protected",
+   "results-remaining",
+   "results-revenue",
+   "results-sold",
+   "results-sold-detail",
+   "results-updated",
    "save-plan-button",
    "seat-composition",
    "seat-composition-legend",
@@ -313,6 +334,7 @@
    "view-customers",
    "view-flights",
    "view-members",
+   "view-results",
    "view-unavailable"
   ],
   "optimize": [
@@ -349,10 +371,12 @@
    "mode",
    "normal-fare",
    "observed-rate",
+   "opt-demand",
    "page-error",
    "page-title",
    "progress-bar",
    "provider-note",
+   "publish-link",
    "recommendation",
    "recommendation-reason",
    "recommendation-stage",
@@ -376,6 +400,7 @@
    "run-status",
    "saved-run",
    "scope-day",
+   "scope-fields",
    "scope-message",
    "seed",
    "setup-fields",

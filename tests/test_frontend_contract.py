@@ -17,7 +17,7 @@ ADMIN_SCRIPTS = ("app.js", "experiments.js", "seat-status.js", "demand-filter.js
 SITES = {
     "admin": ("/admin", FRONTEND / "index.html", [FRONTEND / name for name in ADMIN_SCRIPTS]),
     "optimize": ("/adaptive-pricing", FRONTEND / "adaptive-pricing.html",
-                 [FRONTEND / "adaptive-pricing.js", FRONTEND / "thompson-navigation.js"]),
+                 [FRONTEND / name for name in ("adaptive-pricing.js", "thompson-navigation.js", "demand-filter.js")]),
     "members": ("/members", FRONTEND / "members" / "index.html", sorted((FRONTEND / "members").glob("*.js"))),
 }
 ALL_JS = [p for p in FRONTEND.glob("*.js")] + [p for p in (FRONTEND / "members").glob("*.js")]

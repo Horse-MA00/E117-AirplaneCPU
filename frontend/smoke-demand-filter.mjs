@@ -15,6 +15,7 @@ const history=f=>[28,14,7,1,0].map(days_to_departure=>({days_to_departure,capaci
 await page.route('**/*',async route=>{
   const request=route.request(),path=new URL(request.url()).pathname,reply=json=>route.fulfill({json});
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
+  if(/^\/fonts\/inter-\d{3}\.woff2$/.test(path))return route.fulfill({contentType:'font/woff2',body:await readFile(new URL(`.${path}`,import.meta.url))});
   if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
   if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:365}});
@@ -48,6 +49,8 @@ try{
   assert.equal(await page.locator('#flight-select option').count(),1);
   await page.locator('#forecast-demand').focus();
   assert.notEqual(await page.locator('#forecast-demand').evaluate(n=>getComputedStyle(n).outlineStyle),'none');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.locator('#context-route').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order: demand, route, flight');
   await page.keyboard.press('Tab');
   assert.equal(await page.locator('#flight-select').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order');
   await page.locator('#forecast-demand').selectOption('medium');

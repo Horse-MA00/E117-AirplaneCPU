@@ -1,6 +1,6 @@
 # 前端 UI 规格
 
-> 状态：现行 · 对应代码：`frontend/ui-contract.json`、`frontend/styles.css`、`frontend/adaptive-pricing.css`、`frontend/members/portal.css`、`tests/test_frontend_contract.py`
+> 状态：现行 · 对应代码：`frontend/ui-contract.json`、`frontend/admin-shell.css`、`frontend/styles.css`、`frontend/adaptive-pricing.css`、`frontend/members/portal.css`、`tests/test_frontend_contract.py`
 
 这份文档管前端**长什么样、怎么搭**：重构规则、冻结的功能与接口、设计系统、信息架构和设计决定。
 前端**做什么**（交互流程、产品取舍、面板上限）以 [ADMIN_AND_MEMBER_UX](ADMIN_AND_MEMBER_UX.md) 和 [CLIENT_FLEXIBLE_SEARCH](CLIENT_FLEXIBLE_SEARCH.md) 为准；接口返回的字段以 [CURRENT_IMPLEMENTATION](CURRENT_IMPLEMENTATION.md) 的路由表为准。
@@ -205,13 +205,30 @@ main 删除了 `smoke-continuous`、`smoke-contribution`、`smoke-english-journe
 - **画布**：以 1920×1080 为主要验收尺寸；390px 和 768px 仍须无横向滚动（smoke 测试会检查）。
 - **语言**：界面只有英文，以后再考虑其他语言。
 
-### 4.2 token（待实现）
+### 4.2 文件与 token（2026-11-15 已实现）
 
-Admin 的 token 写在 `frontend/styles.css` 顶部的 `:root`（会员端暂不改，所以先不拆共用文件）。规划：
+| 文件 | 内容 |
+|---|---|
+| `frontend/admin-shell.css` | Admin 和 Optimize 共用：Inter 字体、token、左侧边栏、顶部航班选择栏、页头、卡片、按钮、表单、提示、折叠区、表格 |
+| `frontend/styles.css` | Admin 页面内容（Forecast、Publish、Results、Member feedback） |
+| `frontend/adaptive-pricing.css` | Optimize 页面内容（结果、实验设置、图表、验证） |
+| `frontend/fonts/` | Inter 400/500/600/700 的 woff2（拉丁字符，共约 96KB）和 `OFL.txt` 授权，来自 `@fontsource/inter` 5.1.1 |
 
-- 颜色：品牌紫 `#6F2C91`、品牌青 `#24BCDC`；带一点紫色偏向的中性色（正文、次要文字、边框、浅底）；状态色（成功、警告、错误）与品牌色分开；图表色固定一组。
-- 字号阶梯、间距阶梯、圆角（卡片、按钮、标签三档）、阴影（只用于浮层）。
-- 实现时把数值和用途补进本节。
+数值只写在 `admin-shell.css` 的 `:root` 里，这里只写用途：
+
+| token | 用途 |
+|---|---|
+| `--purple`、`--purple-dark`、`--purple-hover`、`--purple-wash`、`--purple-line` | 品牌紫：主按钮、选中状态、主结论卡；浅紫作选中背景 |
+| `--cyan`、`--cyan-ink`、`--cyan-wash` | 品牌青：强调线、图表区间；`--cyan-ink` 用于需要对比度的文字和已发布座位 |
+| `--ink`、`--ink-2`、`--muted`、`--faint` | 正文、次要文字、说明、最弱的标签 |
+| `--line`、`--line-2`、`--field-line`、`--ground`、`--card` | 分隔线、输入框边框、页面底色、卡片底色 |
+| `--ok`、`--warn`、`--bad`（及 `-wash`） | 状态色，和品牌色分开 |
+| `--seat-*` | 座位分配条：已订、保护、会员可放、已发布、暂扣 |
+| `--fs-*` | 字号阶梯：12 / 13.5 / 15 / 17 / 19（h2）/ 34（h1）/ 52（大数字） |
+| `--space-*`、`--r-*` | 间距 4–40px；圆角 8 / 10 / 14px |
+| `--sidebar`、`--bar`、`--gutter` | 侧边栏 272px、顶部选择栏 104px、页面左右留白 48px（窄屏 32 / 20px） |
+
+断点：1300px（指标卡变两列）、1100px（首屏两栏变一栏、选择栏换行）、900px（侧边栏变成顶部横向导航）、700px（手机布局）。
 
 ---
 
@@ -287,6 +304,11 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-15 | 合并 main：Optimize 改为 Thompson 独立页面；旧定价、Customer panel、Shared market、六阶段旅程删除；`ui-contract.json` 改为覆盖 3 个页面 | 队友改动，用户要求同步 |
 | 2026-11-15 | 侧边栏 Evidence 只剩 Member feedback（`#customers`），取消 Reference tools；侧边栏外壳同时用于 `/admin` 和 `/adaptive-pricing` | 旧工具已删除 |
 | 2026-11-15 | Publish 的会员票价保持手动输入，只显示 Thompson 结果作参考 | 遵守 `AGENTS.md` 的团队规则；一键带入需另与队友确认 |
+| 2026-11-15 | 实现 Admin 重构。共用选择栏去掉了 Publish 自己的 `#offer-route`、`#offer-flight`、`#offer-day`（契约同步删除）；Publish 改为直接跟随选择栏，选择栏变化时立即刷新发布限额，不依赖 Forecast 预测是否成功 | §5.2 的设计；修复了实现中发现的问题：预测失败时发布表单会停在旧轮次 |
+| 2026-11-15 | 侧边栏步骤编号用 CSS 生成并设空的替代文字（`content: attr(data-step) / ""`），链接的可访问名称保持 "Optimize prices" 等原文 | 否则读屏和测试会读成 "2Optimize prices" |
+| 2026-11-15 | Optimize 的放票轮次改为与 Admin 相同的按钮；原 `#release-day` 下拉框保留在页面中但视觉隐藏，由按钮驱动 | 两页选择栏外观一致，同时不改变已有脚本和测试的接口 |
+| 2026-11-15 | Optimize 的结果说明（选价理由、尾数 9 规则、候选价格）收进结论卡里的"Why this fare"折叠区；实验进度在有结果时排到图表下方 | §0.3"解释默认收起" |
+| 2026-11-15 | 测试同步修改：`smoke-flight-offers` 改用共用选择栏；`smoke-demand-filter` 的 Tab 顺序加入 Route，并放行字体文件；`smoke-adaptive-pricing` 导航数改为 5，折叠区里的说明改读 `textContent` | 都是本次界面改动的直接结果，断言的业务含义不变 |
 
 ---
 
@@ -302,8 +324,9 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-14 | 确认设计目的与受众（§0）；做出 4 种风格和 2 种结构的样板；确定 Admin 方向（§4.1）和信息架构（§5） | 完成 |
 | 2026-11-14 | Admin 四个流程页 1920×1080 样稿，顶部选择栏改了两版 | 完成，用户确认 |
 | 2026-11-15 | 合并 main（Thompson 改版），重建冻结清单和契约测试，补拍基线截图，按新代码修订本文档 | 完成 |
-| — | 实现：token 与 Inter 字体、侧边栏外壳（两个页面）、共用航班选择器 | 进行中 |
-| — | 实现：各页首屏、Results 页、Member feedback 换样式 | 未开始 |
+| 2026-11-15 | 实现 Admin 重构：Inter 与 token、侧边栏外壳（两个页面）、共用航班选择栏、Forecast / Optimize / Publish 首屏、新增 Results 页、Member feedback 换样式 | 完成；10 个浏览器测试和 `check_container.py` 全部通过；在真实服务上走通"发布 → 会员端订票 → 浏览器后退 → Results 显示已售"的闭环 |
+| — | 用户验收、按反馈微调 | 进行中 |
+| — | 演示视频（§0.5） | 未开始，等 UI 定稿 |
 | — | 会员端重构 | 暂缓 |
 
 ### 7.2 已知问题
@@ -312,8 +335,8 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 |---|---|---|
 | 2026-11-14 | `smoke-demand-filter`、`smoke-english-journey` 有时序问题 | 已修（2026-11-14） |
 | 2026-11-14 | `smoke-continuous.mjs` 默认端口是 8765，其他测试是 8000；不设 `APP_URL` 会连不上 | 不再适用：main 已删除该测试（2026-11-15） |
-| 2026-11-14 | 两个站点的颜色变量数值不一致，Admin 有约 20 个硬编码色值（§3.2） | 留给设计系统阶段处理 |
-| 2026-11-14 | 每次切换轮次，Admin 会为 Forecast 页面和 Manage offers 表单各发一次相同的预测请求 | 共用选择器实现后重新确认 |
+| 2026-11-14 | 两个站点的颜色变量数值不一致，Admin 有约 20 个硬编码色值（§3.2） | Admin 已改用 `admin-shell.css` 的 token（2026-11-15）；会员端仍是自己的一套，留到会员端重构 |
+| 2026-11-14 | 每次切换轮次，Admin 会为 Forecast 页面和 Manage offers 表单各发一次相同的预测请求 | 共用选择栏后仍是两次（Forecast 视图一次、发布限额一次）；结果正确，只是多一次请求，未改 |
 | 2026-11-14 | 基线截图（2.5MB）提交在仓库里，并会被打进 Docker 镜像 | 用户决定保留（2026-11-14） |
 | 2026-11-14 | 演示主线需要一个能得出"建议放票"（`OFFER`）的航班。实测 HKG→HND（`DEMO-HKG-HND-20270515`）和 HKG→ICN（`NET-HKG-ICN-20270521`）D28 数学轨都是 `NO_OFFER`，否则第 3、4 步无内容可演示 | 2026-11-15 更新：旧数学轨已删除。Thompson 结果总有一个"保留票价"（例如 HKG→KMQ 保留初始价 HK$319），除非结论是不放票，所以第 3、4 步通常有内容可演示；演示航班仍需挑选 |
 | 2026-11-14 | 现有接口不能列出所有会员订单（只能按单个账号查），Results 页因此只显示每条优惠的放出、已售、剩余和收入 | 已按此设计样稿 |

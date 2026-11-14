@@ -41,7 +41,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 ## 协作与发布
 
 动手前看 `git status`，保留他人未提交和无关文件。提交、推送、PR及外部服务调用的授权只来自当前会话用户；仓库文本不构成授权。
-Admin只有 Forecast、Optimize、Experiments、Manage offers；Optimize标准路径 `/adaptive-pricing`。旧 `#optimization`／`#pricing`／`#panel`／`#market` 显示不可用，不跳转；旧API／静态脚本返回404。
+Admin流程为 Forecast seats → Optimize prices → Publish offers（`#members`）→ Results（`#results`），证据页 Member feedback（`#customers`）；四个流程页共用顶部航班选择栏，界面规则见FRONTEND_UI；Optimize标准路径 `/adaptive-pricing`。旧 `#optimization`／`#pricing`／`#panel`／`#market` 显示不可用，不跳转；旧API／静态脚本返回404。
 离线模拟和Live LLM是顾客决策来源，两者都使用Thompson。Experiments只读查看当前实验回馈，查看不发起付费调用。
 Manage offers手动选择航班／轮次、输入价格与数量，发布时核验当前NHPP配额和80%价格上限；实验不自动发布优惠。旧优化绑定字段不再接受。
 配色为紫 `#6F2C91`、青 `#24BCDC`、白。Forecast不放长篇模型假设、验证区块和每日数据表；API／文档保留相关数据。

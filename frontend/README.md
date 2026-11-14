@@ -6,8 +6,9 @@ The Python backend directly serves the committed HTML/CSS/JavaScript; no fronten
 |---|---|
 | `/admin#flights` | NHPP seat forecast, demand filter and observed normal fares |
 | `/adaptive-pricing` | The only optimizer: Thompson Sampling on one dated flight |
-| `/admin#customers` | Saved current-v5 member feedback and per-round reasons |
-| `/admin#members` | Manual offer publication and separate membership-plan settings |
+| `/admin#customers` | Member feedback: saved current-v5 feedback and per-round reasons |
+| `/admin#members` | Publish offers: manual publication with a Thompson reference and member preview, plus membership-plan settings |
+| `/admin#results` | Member sales after publication: sold seats, remaining quota, member ticket revenue (no new API) |
 | `/members` | Flexible search, simulated membership, checkout and saved trips |
 
 Optimize fixes the population to eight flexible bargain groups, with editable weights. Offline simulated customer decisions and live LLM decisions use the same Thompson method. The page keeps rounds, price/revenue estimates, the final promotional quote and independent confirmation. Viewing results does not start experiments or spend provider budget.
@@ -20,7 +21,7 @@ Member search supports a destination country/region and inclusive date range. `N
 
 `members/search.js` uses native Temporal where available and otherwise imports the committed local fallback. After changing its pinned dependency, use `npm ci && npm run build:calendar`; ordinary startup needs neither npm nor a CDN.
 
-Visual design, the frozen UI contract (`ui-contract.json`) and redesign rules live in [FRONTEND_UI](../docs/FRONTEND_UI.md). Brand colours: purple `#6F2C91`, cyan `#24BCDC`, white. Controls have persistent labels, native keyboard behavior and explicit current-page navigation. API and LLM text is rendered as text, not untrusted HTML. Mobile layouts and checkout focus handling are covered by browser checks.
+Visual design, the frozen UI contract (`ui-contract.json`) and redesign rules live in [FRONTEND_UI](../docs/FRONTEND_UI.md). Admin and Optimize share `admin-shell.css` (Inter in `fonts/`, SIL Open Font License, served locally), a sidebar and one flight bar. Brand colours: purple `#6F2C91`, cyan `#24BCDC`, white. Controls have persistent labels, native keyboard behavior and explicit current-page navigation. API and LLM text is rendered as text, not untrusted HTML. Mobile layouts and checkout focus handling are covered by browser checks.
 
 ## Browser checks
 
