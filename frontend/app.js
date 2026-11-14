@@ -67,7 +67,7 @@ const routeKey = (flight) => `${flight.origin} → ${flight.destination}`;
 function svgNode(tag, attrs, content) { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs || {}).forEach(([key, val]) => el.setAttribute(key, val)); if (content !== undefined) el.textContent = content; return el; }
 function linePath(points, x, y) { return points.map((p, i) => `${i ? 'L' : 'M'}${x(p.day).toFixed(2)},${y(p.value).toFixed(2)}`).join(' '); }
 function drawChart(id, observed, future, { maxY, yLabel, width = 720, height = 260, minDay = 28 } = {}) {
-  const svg = $(id); width = Math.max(280, Math.round(svg.getBoundingClientRect().width) || width); svg.replaceChildren(); svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  const svg = $(id); width = Math.max(280, Math.round(svg.clientWidth || svg.getBoundingClientRect().width) || width); svg.replaceChildren(); svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   const left = 44, right = 14, top = 24, bottom = 32;
   const upper = Math.max(1, maxY || 0, ...observed.map((p) => p.value), ...future.map((p) => p.high || p.value));
   const maxDay = Math.max(minDay, ...observed.map((p) => p.day));
@@ -416,7 +416,8 @@ function renderResults() {
   const bar = $('results-composition');
   bar.setAttribute('aria-label', `${number(seats.capacity)} total seats. ` + parts.map((p) => `${p.label}: ${number(p.value)} seats`).join('. '));
   bar.replaceChildren(...parts.map((p) => { const share = p.value / Math.max(1, seats.capacity) * 100; const seg = element('span', p.value && share >= 3.5 ? number(p.value) : '', `seat-part ${p.key}`); if (p.value) seg.title = `${p.label}: ${number(p.value)}`; seg.dataset.seats = p.value; seg.dataset.part = p.key; seg.style.setProperty('--seat-share', String(p.value / Math.max(1, seats.capacity) * 100)); if (!p.value) seg.hidden = true; return seg; }));
-  $('results-legend').replaceChildren(...parts.map((p) => { const item = element('div', undefined, `seat-legend-item ${p.key}`), dot = element('i'); dot.setAttribute('aria-hidden', 'true'); item.append(dot, element('span', p.label), element('strong', number(p.value))); return item; }));
+  // Like the Forecast legend: hide empty categories, but always show member sales and bookable member quota.
+  $('results-legend').replaceChildren(...parts.filter((p) => p.value > 0 || ['member-sold', 'published'].includes(p.key)).map((p) => { const item = element('div', undefined, `seat-legend-item ${p.key}`), dot = element('i'); dot.setAttribute('aria-hidden', 'true'); item.append(dot, element('span', p.label), element('strong', number(p.value))); return item; }));
 }
 
 async function init() {
