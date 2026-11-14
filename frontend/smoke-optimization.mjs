@@ -52,7 +52,7 @@ try{
   const qualified=report.tracks[0].rounds.filter(r=>r.price_evidence_qualified===true);
   assert.equal(await page.locator('#optimization-price-profit circle').count(),qualified.length);
   assert.ok(qualified.length>0,'Positive supply must produce observed member-offer exposure for this test flight');
-  assert.match(await page.locator('#optimization-tradeoffs').innerText(),/Highest tested profit/);
+  assert.match(await page.locator('#optimization-tradeoffs').innerText(),/Highest tested contribution/);
   assert.match(await page.locator('#optimization-tradeoffs').innerText(),/Most member buyers/);
   await page.locator('#optimization-price-profit circle').first().focus();
   assert.match(await page.locator('#optimization-price-detail').innerText(),/buyers/);

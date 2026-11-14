@@ -168,3 +168,11 @@ Final live context check opt-2d56cc2c1c8844b1 completed: 8 travellers, 6 worlds,
 Merged teammate commit ab613aa (published evidence verification) without changing frozen evaluation artifacts. The first combined Docker build correctly caught a local technical-document link to compose.yaml, which the image allowlist omitted. Added only the non-secret compose.yaml to the image so documentation links resolve; all .env/private exclusions remain. Committed-source publication and full merged container checks are rerun below.
 
 Merged final verification PASS: 200 backend +26 simulator/publication tests (226 total), committed archive publication, all frozen artifacts, Docker build/health. Extended evaluation endpoint returns1200 original validation histories; completed175-call experiment preserved. Only README conflict resolved; both feature sets retained.
+
+### 2026-11-14 — contribution audit and explanation
+
+Pulled main to25e27cc first, preserving unrelated localdocuments. Independently reconstructed all6 archived worlds and same-seed customer purchases for opt-2d56cc2c1c8844b1. No arithmetic discrepancy: same6buyerhouseholds substitute6×560 normal fares with6×84;4newpasses contribute532 allocatedrevenue and40 allocatedservicecost, net−2364. Fullfee cash delta still−1380; background accounts match.
+
+Implemented read-only contribution explanation and frontend tables for baseline/candidate cost/revenue, fullcash view, netbuyers versusfulfilledbuyers, andevery-replica servicegates.75% holdoutmean is100% and50%, failing60%minimuminoneworld. Legacy/missing/mismatchedexogenousworlds cannot fabricate pairedresults. Originalreports, provideroutputs, fees, profitpolicy andranking remain unchanged.28targeted backendtests pass; fullcontainer/browserchecks pending. Detailedaudit:docs/CONTRIBUTION_AUDIT_2026-11-14.md; evidence:docs/validation/contribution_audit_20261114.json.
+
+Finalcontributionverification PASS:218backendtests;26simulator/publicationtestsincontainer(25pass,1Git-onlyskip), all7publicationtests rerunonhostincludingthatcase. Actualsavedrun/read-onlyChrome desktop+390px mobile andfrozenfixturecheckscorrectbridge−2364/cash−1380, noofferreasonsandservicegate. Existingseat-supplyfixturepasses. Rawreport/auditSHAunchanged;provider_calls remains175. No newpaidcalls orpricingpolicychange.
