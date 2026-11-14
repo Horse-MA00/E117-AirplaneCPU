@@ -9,9 +9,9 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 
 ## 当前主流程以这两份为准
 
-- [docs/FLIGHT_SCOPED_OPTIMIZATION.md](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（`flight-policy-feedback-v3`）、座位口径、会计公式。
+- [docs/FLIGHT_SCOPED_OPTIMIZATION.md](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（`flight-policy-feedback-v4-original-fare`，P₀ = 当时正常基本票价）、需求筛选、座位口径、会计公式。
 - [docs/THREE_ROUND_RELEASE.md](docs/THREE_ROUND_RELEASE.md)：D28/D14/D7 放票规则；新一轮要扣除前几轮仍有效的未售配额。
-- 其他文档与这两份冲突时，以这两份为准。v3 修正的经过和证据见 [MEMBER_SUPPLY_CORRECTIONS](docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)，只作背景参考。
+- 其他文档与这两份冲突时，以这两份为准。修正经过和证据见 [MEMBER_SUPPLY_CORRECTIONS](docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)（v3）和 [DEMAND_FILTER_AND_ORIGINAL_FARE](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md)（v4），只作背景参考；行为变更要同步写进 FLIGHT_SCOPED。
 
 ## 已过时，不要照着做
 
@@ -31,6 +31,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 - 已提交的数据和 manifest 不要改：`simulation/generated/`、`simulation/validation_extended/`、`simulation/network_generated/`、`simulation/member_demo_generated/`、`simulation/continuous_price_validation/`。
 - **历史实验报告保持原样**：`llm_agent/experiments/` 里已有的目录、`docs/validation/`、`docs/*ATTESTATION*.json`。新实验写到新目录；不要回填或"修复"旧报告。
 - `llm_agent/prompts/` 下已有的 prompt 被实验哈希引用。要改就新建版本文件。
+- `simulation/demand_catalog.json` 不要手改：数据或模型变化后用 `python scripts/build_demand_catalog.py` 重建，再重启服务。
 - **`.env.local` 不能读出、打印或提交**，里面是 DeepSeek/OAG 密钥。`data/private/` 是被 Git 忽略的私有缓存和 SQLite，也不要提交。
 - 不要改 `.gitattributes` 的换行规则，改了冻结文件的字节哈希会对不上。
 - 不要发布 OAG 原始响应或任何密钥。真实 LLM 调用必须有用户授权，并设置明确的 `--max-calls` 上限。
