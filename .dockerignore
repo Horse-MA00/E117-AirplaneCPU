@@ -5,7 +5,6 @@
 !requirements.txt
 !requirements-docker.lock
 !README.md
-!agent.md
 !AGENTS.md
 !CLAUDE.md
 !backend/
