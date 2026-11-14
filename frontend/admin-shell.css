@@ -250,8 +250,9 @@ h1 .info,h2 .info{margin-left:10px}
 .ctx-search-btn:hover,.ctx-search-btn[aria-expanded=true]{background:var(--purple-wash);color:var(--purple)}
 .ctx-search-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 .place-search{position:absolute;z-index:50;top:calc(100% + 8px);left:-2px;width:min(400px,calc(100vw - 32px));padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:0 16px 44px rgba(30,20,40,.18)}
+.place-search.align-right{left:auto;right:-2px}
 .place-search input{min-height:46px;font-size:17px}
-.place-search-list{list-style:none;margin:8px 0 0;padding:0;max-height:340px;overflow:auto}
+.place-search-list{position:relative;list-style:none;margin:8px 0 0;padding:0;max-height:340px;overflow:auto}
 .place-search-list li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 12px;border-radius:var(--r-sm);cursor:pointer}
 .place-search-list li strong{font-size:16px;font-weight:600;color:var(--ink)}
 .place-search-list li span{font-size:13px;color:var(--muted);white-space:nowrap}

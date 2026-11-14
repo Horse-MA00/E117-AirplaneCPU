@@ -39,11 +39,19 @@ export function attachPlaceSearch(select, { label = 'Search places' } = {}) {
     }));
     empty.hidden = shown.length > 0;
     input.setAttribute('aria-activedescendant', shown.length ? `${list.id}-${active}` : '');
-    list.querySelector('[aria-selected=true]')?.scrollIntoView({ block: 'nearest' });
+    // Keep the active row visible by scrolling the list only (scrollIntoView could shift the whole page).
+    const row = list.querySelector('[aria-selected=true]');
+    if (row) {
+      if (row.offsetTop < list.scrollTop) list.scrollTop = row.offsetTop;
+      else if (row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight;
+    }
   }
   function open() {
     if (select.disabled) return;
-    panel.hidden = false; button.setAttribute('aria-expanded', 'true'); input.value = ''; active = 0; render(); input.focus();
+    panel.classList.remove('align-right'); panel.hidden = false;
+    // Open leftwards when the panel would run past the window edge (rects already include the Admin zoom).
+    if (panel.getBoundingClientRect().right > document.documentElement.clientWidth - 8) panel.classList.add('align-right');
+    button.setAttribute('aria-expanded', 'true'); input.value = ''; active = 0; render(); input.focus({ preventScroll: true });
   }
   function close(returnFocus) { panel.hidden = true; button.setAttribute('aria-expanded', 'false'); if (returnFocus) button.focus(); }
   function choose(value) {
