@@ -13,9 +13,12 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "frontend"
 CONTRACT = json.loads((FRONTEND / "ui-contract.json").read_text(encoding="utf-8"))
+ADMIN_SCRIPTS = ("app.js", "experiments.js", "seat-status.js", "demand-filter.js", "thompson-navigation.js")
 SITES = {
-    "admin": (FRONTEND / "index.html", sorted(p for p in FRONTEND.glob("*.js"))),
-    "members": (FRONTEND / "members" / "index.html", sorted((FRONTEND / "members").glob("*.js"))),
+    "admin": ("/admin", FRONTEND / "index.html", [FRONTEND / name for name in ADMIN_SCRIPTS]),
+    "optimize": ("/adaptive-pricing", FRONTEND / "adaptive-pricing.html",
+                 [FRONTEND / "adaptive-pricing.js", FRONTEND / "thompson-navigation.js"]),
+    "members": ("/members", FRONTEND / "members" / "index.html", sorted((FRONTEND / "members").glob("*.js"))),
 }
 ALL_JS = [p for p in FRONTEND.glob("*.js")] + [p for p in (FRONTEND / "members").glob("*.js")]
 SMOKE = "".join(p.read_text(encoding="utf-8") for p in FRONTEND.glob("*.mjs"))
@@ -32,18 +35,18 @@ def _api_prefix(path):
 
 class FrontendContractTests(unittest.TestCase):
     def test_contract_ids_exist_in_html(self):
-        for site, (html, _) in SITES.items():
+        for site, (_, html, _) in SITES.items():
             present = set(re.findall(r'\bid="([^"]+)"', html.read_text(encoding="utf-8")))
             missing = sorted(set(CONTRACT["dom_ids"][site]) - present)
             self.assertEqual(missing, [], f"{site}: JS or smoke tests depend on these ids. "
                              "Keep them, or update JS, smoke tests and ui-contract.json together.")
 
     def test_contract_ids_are_still_used(self):
-        for site, (html, scripts) in SITES.items():
+        for site, (page, html, scripts) in SITES.items():
             used = set(re.findall(r"['\"`]([\w-]+)['\"`]", _read(scripts)))
             used |= set(re.findall(r"#([A-Za-z][\w-]+)", SMOKE))
             used |= set(re.findall(r'href="#([\w-]+)"', html.read_text(encoding="utf-8")))
-            used |= {f"view-{route}" for route in CONTRACT["pages"]["/" + site]["routes"]}
+            used |= {f"view-{route}" for route in CONTRACT["pages"][page]["routes"]}
             stale = sorted(set(CONTRACT["dom_ids"][site]) - used)
             self.assertEqual(stale, [], f"{site}: nothing references these ids any more; remove them from ui-contract.json.")
 

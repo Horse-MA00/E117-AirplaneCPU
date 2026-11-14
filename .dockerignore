@@ -17,10 +17,6 @@
 !llm_agent/**
 !scripts/
 !scripts/**
-!src/
-!src/**
-!configs/
-!configs/**
 !tests/
 !tests/**
 !docs/

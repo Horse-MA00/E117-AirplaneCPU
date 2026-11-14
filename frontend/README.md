@@ -1,44 +1,39 @@
 # Frontend
 
-The Python backend serves two separate interfaces directly from committed static assets; no frontend build is needed to run the demo:
+The Python backend directly serves the committed HTML/CSS/JavaScript; no frontend build is required.
 
-- `/admin` (also `/`): Forecast seats, Optimize prices, Experiments (customer panels/shared markets), and Manage offers. Legacy price tools remain secondary.
-- `/members`: flight search, complete member pricing, membership signup, booking review and persistent My trips. Assets live in `members/`.
+| Path | Purpose |
+|---|---|
+| `/admin#flights` | NHPP seat forecast, demand filter and observed normal fares |
+| `/adaptive-pricing` | The only optimizer: Thompson Sampling on one dated flight |
+| `/admin#customers` | Saved current-v5 member feedback and per-round reasons |
+| `/admin#members` | Manual offer publication and separate membership-plan settings |
+| `/members` | Flexible search, simulated membership, checkout and saved trips |
 
-Admin panels default to100 travellers, up to100live or1,000rules. The browser starts a background job, polls progress, and displays outcome metrics, group comparisons, a searchable20-row page and one person's detailed six-stage journey. Partial decisions have explicit denominators. Resume requires an explicit action; polling never spends another provider budget.
+Optimize fixes the population to eight flexible bargain groups, with editable weights. Offline simulated customer decisions and live LLM decisions use the same Thompson method. The page keeps rounds, price/revenue estimates, the final promotional quote and independent confirmation. Viewing results does not start experiments or spend provider budget.
 
-Member offers, paid demo memberships and bookings use the same SQLite state as Admin. Published offers appear in the storefront, and booking reduces their available quota. Membership fee comes from the saved server plan. Prices include mandatory fees; new membership is a separate, explicitly confirmed step. This is a local simulated identity and checkout flow, not production authentication or real payment.
+Old Math/Math+LLM, panel, shared-market and continuous-pricing pages, scripts and data are removed. Retired hashes, including `#optimization`, show a page-unavailable state without redirecting. Removed experiment IDs and deleted assets return not found. Forecast and Manage offers preserve a selected flight and release day when opening Optimize.
 
-Member search accepts a destination country/region and an inclusive departure-date range, including open-ended ranges. `Next month` uses the Hong Kong calendar; `Any dates` clears date constraints. Exact airport/date refinements remain available in a disclosure. Search is explicit: editing criteria does not change the applied results until submission. Refresh preserves selected criteria, including when their final published offer disappears. See [flexible-search behavior and demo steps](../docs/CLIENT_FLEXIBLE_SEARCH.md).
+Manage offers is manual: review a retained Thompson result, enter a draft, then publish after current inventory checks. Experiments do not change the member site's inventory or membership plan. Client checkout shows the base fare prominently and mandatory fees/total separately; the server validates the complete amount. No real payment or ticket is issued.
 
-`members/airports.js` supplies both airport selectors independently of inventory: 37 officially listed/announced airports as checked on 2026-11-14, plus the team's requested Sapporo (CTS) with an unconfirmed-schedule label. Kuala Lumpur uses SZB; Hefei carries its announced start date. Published unknown/legacy endpoints are added without fabricating flights. The optional exact-date control is a native calendar, not a list constrained to published flight dates.
+Member search supports a destination country/region and inclusive date range. `Next month` uses the Hong Kong calendar; `Any dates` clears date constraints. The airport catalog is independent of available inventory. See [flexible search](../docs/CLIENT_FLEXIBLE_SEARCH.md).
 
-`members/search.js` uses native Temporal calendar dates when supported and otherwise dynamically imports the committed, locally bundled `members/vendor/temporal.js`. No CDN access is needed. The fallback's MIT notice is alongside the bundle. After changing the pinned dependency, run `npm ci && npm run build:calendar` to regenerate it with esbuild; regular backend startup needs neither npm nor esbuild.
+`members/search.js` uses native Temporal where available and otherwise imports the committed local fallback. After changing its pinned dependency, use `npm ci && npm run build:calendar`; ordinary startup needs neither npm nor a CDN.
 
-Visual design, the frozen UI contract (`ui-contract.json`) and redesign rules live in [FRONTEND_UI](../docs/FRONTEND_UI.md). Brand colours: purple `#6F2C91`, cyan `#24BCDC`, white. Admin prioritizes seat composition and iterative price/contribution charts; the member site uses flight cards, fare sorting, full-price breakdowns and a separate checkout. API values use `textContent`, SVG nodes and native controls, not untrusted HTML interpolation.
-
-`optimization.js` uses the SQLite-backed `/api/optimization/runs` endpoints. Configure independent math/LLM tracks, rounds, the membership fee V₀ (the starting fare P₀ is read-only, set by the server from the selected snapshot's normal base fare), bounds and a live batch budget. Saved experiments retain current and best-tested prices, independent validation and raw decision records. A price draft does not apply a learned seat profile to published inventory; flight-specific base-NHPP allocation remains authoritative.
-
-Accessibility includes labelled native progress, semantic keyboard-scrollable tables, non-colour decision labels, persistent form labels, a native checkout dialog, Escape/focus return and mobile layouts. No focusgroup or experimental animation dependency.
+Visual design, the frozen UI contract (`ui-contract.json`) and redesign rules live in [FRONTEND_UI](../docs/FRONTEND_UI.md). Brand colours: purple `#6F2C91`, cyan `#24BCDC`, white. Controls have persistent labels, native keyboard behavior and explicit current-page navigation. API and LLM text is rendered as text, not untrusted HTML. Mobile layouts and checkout focus handling are covered by browser checks.
 
 ## Browser checks
 
-With the backend running:
+With the native backend running:
 
 ```sh
 cd frontend
-npm install
-npx playwright install chromium
-npm run test:smoke
-npm run test:smoke -- --transactions
-npm run test:optimization
-npm run test:continuous
-node smoke-english-journey.mjs
-node smoke-member-portal.mjs
-npm run test:flexible-search
-npm run test:route-catalog
-# Also completes a real local SQLite membership and simulated booking:
-node smoke-member-portal.mjs --real
+npm ci
+npm run test:adaptive-pricing
+APP_URL=http://127.0.0.1:8000 npm run test:optimization
+APP_URL=http://127.0.0.1:8000 npm run test:smoke
+APP_URL=http://127.0.0.1:8000 npm run test:flight-offers
+APP_URL=http://127.0.0.1:8000 npm run test:members
 ```
 
-`APP_URL` overrides the local origin. `CHROMIUM_EXECUTABLE_PATH` selects installed Chromium. Screenshots remain ignored under `test-results/`. Admin transaction testing publishes an offer only; member checkout lives in its own smoke. All test-driven live/error states use intercepted fixtures; none of these checks calls a paid LLM. The dedicated panel check runs100real deterministic travellers and verifies600stages, filters, pagination, partial counts and manual resume.
+`CHROMIUM_EXECUTABLE_PATH` can select installed Chrome; otherwise install Playwright Chromium. The current scripts in `package.json` cover additional demand, seat and search checks. Mocked and offline tests do not call paid LLMs. Screenshots stay in ignored `test-results/`.

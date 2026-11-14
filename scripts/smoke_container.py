@@ -1,6 +1,6 @@
 """Real HTTP smoke and restart verification against a running demo container.
 
-Creates synthetic members, one booking and bounded rule-only background jobs.
+Creates synthetic members, one booking and a bounded offline Thompson experiment.
 Run --verify-only after recreating the container to check persisted state.
 """
 import argparse
@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--url', default='http://127.0.0.1:8000')
     parser.add_argument('--record', type=Path, default=Path('data/private/container-smoke.json'))
     parser.add_argument('--verify-only', action='store_true')
-    parser.add_argument('--joint-run', help='Reuse a completed math experiment for persistence verification')
+    parser.add_argument('--run-id', help='Reuse a completed current offline Thompson run')
     args = parser.parse_args()
     base = args.url.rstrip('/')
 
@@ -33,13 +33,13 @@ def main():
             result = call(path)
             if result['status'] == 'completed':
                 return result
-            if result['status'] in ('failed', 'paused_after_errors', 'interrupted'):
+            if result['status'] in ('failed', 'paused_at_budget', 'interrupted'):
                 raise AssertionError(result.get('error', result['status']))
             time.sleep(.5)
         raise TimeoutError(path)
 
     assert call('/api/health')['status'] == 'ok'
-    for path in ('/admin', '/members', '/app.js', '/continuous.js', '/members/portal.js'):
+    for path in ('/admin', '/members', '/app.js', '/adaptive-pricing', '/members/portal.js'):
         with urllib.request.urlopen(base+path, timeout=10) as response:
             assert response.status == 200 and response.read()
     if not args.verify_only:
@@ -52,33 +52,25 @@ def main():
         else:
             raise AssertionError('No new D28 quota remains in this demo volume')
         offer = call('/api/offers', {'flight_id': flight['flight_id'], 'days_to_departure': 28,
-                                    'quantity': 1, 'base_fare': 43.25})['offer']
+                                    'quantity': 1, 'base_fare': 39})['offer']
         fee = call('/api/member-portal/config')['membership']['fee']
         call('/api/member-portal/join', {'customer_id': customer, 'expected_fee': fee})
         booking = call('/api/member-portal/book', {'customer_id': customer, 'offer_id': offer['id']})['booking']
-        panel = call('/api/agents/panels', {'mode': 'deterministic', 'count': 4})
-        panel = wait('/api/agents/panels/'+panel['run_id'])
-        assert panel['runtime']['provider_calls'] == 0
-        pricing = call('/api/pricing/runs', {'evaluations': 3, 'replicates': 1, 'customers': 4})
-        pricing = wait('/api/pricing/runs/'+pricing['run_id'])
-        assert pricing['report']['validation']['checks_passed']
-        joint = call('/api/optimization/runs/'+args.joint_run) if args.joint_run else call('/api/optimization/runs', {'flight_id':flight['flight_id'], 'forecast_day':28, 'mode': 'math', 'rounds': 3, 'customers': 4, 'replicates': 1, 'max_calls': 0})
-        joint = wait('/api/optimization/runs/'+joint['run_id'])
-        assert joint['counts']['provider_calls'] == 0
-        assert joint['config']['mode'] == 'math'
-        assert len(joint['tracks'][0]['rounds']) == joint['config']['rounds']
+        run = call('/api/adaptive-pricing/runs/'+args.run_id) if args.run_id else call('/api/adaptive-pricing/runs', {'flight_id':flight['flight_id'], 'forecast_day':28, 'mode':'synthetic', 'rounds':3, 'customers':16, 'validation_repeats':3, 'max_calls':0})
+        run = wait('/api/adaptive-pricing/runs/'+run['run_id'])
+        assert run['version'] == 'member-thompson-v5-marketing'
+        assert run['config']['profile'] == 'flexible_deal_seekers'
+        assert run['counts']['provider_calls'] == 0
         args.record.parent.mkdir(parents=True, exist_ok=True)
         args.record.write_text(json.dumps({'customer_id': customer, 'booking_id': booking['id'],
-            'total': booking['total'], 'panel_id': panel['run_id'], 'pricing_id': pricing['run_id'], 'joint_id': joint['run_id']}, indent=2), encoding='utf-8')
+            'total': booking['total'], 'run_id': run['run_id']}, indent=2), encoding='utf-8')
 
     record = json.loads(args.record.read_text(encoding='utf-8'))
     account = call('/api/member-portal/accounts/'+record['customer_id'])
     assert account['membership']['active']
     assert any(b['id'] == record['booking_id'] and b['total'] == record['total'] for b in account['bookings'])
-    assert call('/api/agents/panels/'+record['panel_id'])['status'] == 'completed'
-    assert call('/api/pricing/runs/'+record['pricing_id'])['status'] == 'completed'
-    if record.get('joint_id'):
-        assert call('/api/optimization/runs/'+record['joint_id'])['status'] == 'completed'
+    result = call('/api/adaptive-pricing/runs/'+record['run_id'])
+    assert result['status'] == 'completed' and result['version'] == 'member-thompson-v5-marketing'
     print(json.dumps({'status': 'passed', 'verify_only': args.verify_only, **record}))
 
 

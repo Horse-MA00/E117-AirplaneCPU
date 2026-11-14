@@ -5,13 +5,15 @@
    "html": "frontend/index.html",
    "routes": [
     "flights",
-    "optimization",
-    "pricing",
     "customers",
-    "market",
     "members"
    ],
-   "route_mechanism": "location.hash 选择 section#view-<route>.view，其余 section 设为 hidden"
+   "route_mechanism": "location.hash 选中 section#view-<route>.view；未知或已退役的 hash（#optimization、#pricing、#panel、#market）显示 section#view-unavailable，不跳转"
+  },
+  "/adaptive-pricing": {
+   "html": "frontend/adaptive-pricing.html",
+   "routes": [],
+   "route_mechanism": "独立页面（Optimize）。网址参数 flight_id、forecast_day、run、round 恢复航班、轮次和已保存实验"
   },
   "/members": {
    "html": "frontend/members/index.html",
@@ -29,8 +31,7 @@
    "method": "GET",
    "path": "/api/summary",
    "used_by": [
-    "app.js",
-    "optimization.js"
+    "app.js"
    ]
   },
   {
@@ -38,7 +39,7 @@
    "path": "/api/flights",
    "used_by": [
     "app.js",
-    "optimization.js"
+    "adaptive-pricing.js"
    ]
   },
   {
@@ -60,237 +61,6 @@
    ]
   },
   {
-   "method": "POST",
-   "path": "/api/optimize",
-   "used_by": [
-    "app.js"
-   ],
-   "body": [
-    "flight_id",
-    "days_to_departure",
-    "config.membership_days",
-    "config.customers",
-    "config.incremental_cost",
-    "config.ancillary_margin",
-    "config.seed"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/optimization/suggestions?flight_id=&day=",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/optimization/runs",
-   "used_by": [
-    "optimization.js"
-   ]
-  },
-  {
-   "method": "POST",
-   "path": "/api/optimization/runs",
-   "used_by": [
-    "optimization.js"
-   ],
-   "body": [
-    "rounds",
-    "customers",
-    "replicates",
-    "seed",
-    "release_fraction",
-    "min_service_rate",
-    "program_cost",
-    "fare_min",
-    "flight_id",
-    "forecast_day",
-    "mode",
-    "max_calls",
-    "total_live_budget"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/optimization/runs/{run_id}",
-   "used_by": [
-    "optimization.js"
-   ]
-  },
-  {
-   "method": "POST",
-   "path": "/api/optimization/runs/{run_id}/resume",
-   "used_by": [
-    "optimization.js"
-   ],
-   "body": [
-    "max_calls",
-    "additional_live_budget"
-   ]
-  },
-  {
-   "method": "LINK",
-   "path": "/api/optimization/runs/{run_id}/export",
-   "used_by": [
-    "optimization.js"
-   ]
-  },
-  {
-   "method": "LINK",
-   "path": "/api/optimization/runs/{run_id}/events",
-   "used_by": [
-    "optimization.js"
-   ]
-  },
-  {
-   "method": "POST",
-   "path": "/api/optimization/initial-policy",
-   "used_by": [
-    "optimization.js"
-   ],
-   "body": [
-    "flight_id",
-    "forecast_day",
-    "customers",
-    "program_cost"
-   ]
-  },
-  {
-   "method": "POST",
-   "path": "/api/pricing/runs",
-   "used_by": [
-    "continuous.js"
-   ],
-   "body": [
-    "price_min",
-    "price_max",
-    "membership_fee",
-    "release_fraction",
-    "evaluations"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/pricing/runs/{run_id}",
-   "used_by": [
-    "continuous.js"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/personas",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/agents/panels",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "POST",
-   "path": "/api/agents/panels",
-   "used_by": [
-    "app.js"
-   ],
-   "body": [
-    "mode",
-    "count",
-    "member_fare",
-    "membership_fee",
-    "seed",
-    "max_calls"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/agents/panels/{run_id}",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/agents/panels/{run_id}/people/{customer_id}",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "POST",
-   "path": "/api/agents/panels/{run_id}/resume",
-   "used_by": [
-    "app.js"
-   ],
-   "body": [
-    "max_calls"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/agents/runs",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "LINK",
-   "path": "/api/agents/runs/{run_id}/export",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/market/runs",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "POST",
-   "path": "/api/market/runs",
-   "used_by": [
-    "app.js"
-   ],
-   "body": [
-    "mode",
-    "seed",
-    "member_fare",
-    "membership_fee",
-    "release_fraction",
-    "max_calls"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/market/runs/{run_id}",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "GET",
-   "path": "/api/market/runs/{run_id}/cases/{case_id}",
-   "used_by": [
-    "app.js"
-   ]
-  },
-  {
-   "method": "POST",
-   "path": "/api/market/runs/{run_id}/resume",
-   "used_by": [
-    "app.js"
-   ],
-   "body": [
-    "max_calls"
-   ]
-  },
-  {
    "method": "GET",
    "path": "/api/offers",
    "used_by": [
@@ -307,9 +77,7 @@
     "flight_id",
     "days_to_departure",
     "quantity",
-    "base_fare",
-    "optimization_run_id?",
-    "optimization_mode?"
+    "base_fare"
    ]
   },
   {
@@ -327,6 +95,69 @@
    ],
    "body": [
     "membership_fee"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/adaptive-pricing/status",
+   "used_by": [
+    "adaptive-pricing.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/adaptive-pricing/scope",
+   "used_by": [
+    "adaptive-pricing.js"
+   ],
+   "body": [
+    "flight_id",
+    "forecast_day",
+    "profile"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/adaptive-pricing/runs",
+   "used_by": [
+    "adaptive-pricing.js",
+    "experiments.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/adaptive-pricing/runs",
+   "used_by": [
+    "adaptive-pricing.js"
+   ],
+   "body": [
+    "flight_id",
+    "forecast_day",
+    "mode",
+    "profile",
+    "weights",
+    "rounds",
+    "customers",
+    "concurrency",
+    "max_calls",
+    "seed",
+    "validation_repeats"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/adaptive-pricing/runs/{run_id}",
+   "used_by": [
+    "adaptive-pricing.js",
+    "experiments.js"
+   ]
+  },
+  {
+   "method": "LINK",
+   "path": "/api/adaptive-pricing/runs/{run_id}/export",
+   "used_by": [
+    "adaptive-pricing.js",
+    "experiments.js"
    ]
   },
   {
@@ -375,13 +206,12 @@
   }
  ],
  "events": {
-  "uoption:view": "app.js 切换页面后发出，detail.name 为路由名",
-  "uoption:optimize-flight": "Forecast/Manage offers → Optimize，detail 含 flight_id 与 day 或 forecast_day",
-  "uoption:prepare-policy": "Optimize 的建议价格 → Manage offers 表单",
-  "uoption:provider": "app.js 读取 /api/summary 后广播 LLM 是否已配置"
+  "uoption:view": "app.js 切换页面后发出，experiments.js 据此在 #customers 读取已保存实验"
  },
  "url_and_storage": {
-  "?pricing_run=": "continuous.js 用来恢复参考实验",
+  "/adaptive-pricing?flight_id=&forecast_day=": "Forecast 和 Manage offers 打开 Optimize 时带入航班和放票轮次（thompson-navigation.js）",
+  "/adaptive-pricing?run=&round=": "恢复已保存的 Thompson 实验和轮次",
+  "/admin?run=&round=#customers": "Experiments 分享指定实验和轮次的会员回馈",
   "localStorage['uoption-member-demo-account']": "会员端的演示账号 ID"
  },
  "js_selectors": {
@@ -389,21 +219,19 @@
    ".view",
    ".view:not([hidden]) h1",
    ".primary-nav a",
-   ".primary-nav [aria-current=page]",
    ".skip",
-   "[data-day]",
-   "[data-nav]",
-   "[data-panel-person]",
-   "label[for=optimization-total-budget]"
+   "[data-day]"
   ],
   "admin_classes_toggled_by_js": [
-   "loading",
-   "pending",
-   "selected",
-   "price-curve-cards",
-   "price-curve-detail",
-   "price-curve-legend",
-   "price-curve-plot"
+   "loading"
+  ],
+  "optimize": [
+   ".results",
+   "option[value=…]",
+   "input（#weights 内）"
+  ],
+  "optimize_classes_toggled_by_js": [
+   "error"
   ],
   "members": [
    ".header nav a",
@@ -412,45 +240,12 @@
  },
  "dom_ids": {
   "admin": [
-   "agent-budget-field",
-   "agent-button",
-   "agent-call-budget",
-   "agent-count",
-   "agent-count-hint",
-   "agent-fare",
-   "agent-fee",
-   "agent-form",
-   "agent-mode",
-   "agent-mode-message",
-   "agent-runs",
-   "agent-scenario",
-   "ancillary-margin",
-   "apply-policy",
-   "best-fare",
-   "best-fee",
-   "best-profit",
    "bookable-detail",
    "bookable-value",
    "booked-detail",
    "booked-value",
    "booking-chart",
-   "candidate-table",
    "chart-caption",
-   "continuous-chart",
-   "continuous-evals",
-   "continuous-fee",
-   "continuous-form",
-   "continuous-max",
-   "continuous-min",
-   "continuous-report",
-   "continuous-result",
-   "continuous-share",
-   "continuous-start",
-   "continuous-status",
-   "continuous-summary",
-   "continuous-trace",
-   "coverage",
-   "customer-count",
    "dataset-label",
    "day-description",
    "day-number",
@@ -459,8 +254,22 @@
    "empty-detail",
    "empty-value",
    "error",
-   "export-candidates",
-   "fare-curve-panel",
+   "feedback-content",
+   "feedback-context",
+   "feedback-empty",
+   "feedback-empty-message",
+   "feedback-error",
+   "feedback-export",
+   "feedback-hypothesis",
+   "feedback-list",
+   "feedback-note",
+   "feedback-pricing-link",
+   "feedback-refresh",
+   "feedback-round",
+   "feedback-run",
+   "feedback-source",
+   "feedback-status",
+   "feedback-summary",
    "flight-capacity",
    "flight-date",
    "flight-filter-empty",
@@ -472,51 +281,6 @@
    "go-pricing",
    "headroom-detail",
    "headroom-value",
-   "heatmap",
-   "heatmap-detail",
-   "holdout-detail",
-   "ledger-detail",
-   "legacy-price-details",
-   "live-mode-option",
-   "market-assumptions",
-   "market-audit-link",
-   "market-best-label",
-   "market-best-profit",
-   "market-call-budget",
-   "market-call-count",
-   "market-call-detail",
-   "market-candidate-origin",
-   "market-comparison-note",
-   "market-detail-grid",
-   "market-event-count",
-   "market-event-detail",
-   "market-fare",
-   "market-fee",
-   "market-flight-table",
-   "market-form",
-   "market-journey-events",
-   "market-ledger",
-   "market-live-option",
-   "market-mode",
-   "market-pause-reason",
-   "market-person-select",
-   "market-person-state",
-   "market-policy-select",
-   "market-policy-table",
-   "market-refresh",
-   "market-release",
-   "market-report",
-   "market-report-link",
-   "market-resume",
-   "market-resume-controls",
-   "market-round-note",
-   "market-round-table",
-   "market-rule-note",
-   "market-run-select",
-   "market-run-status",
-   "market-seed",
-   "market-source-counts",
-   "market-start",
    "member-allocation-detail",
    "member-fee",
    "member-plan-form",
@@ -524,106 +288,21 @@
    "nhpp-release-detail",
    "nhpp-release-value",
    "notice",
-   "offer-binding-status",
    "offer-day",
    "offer-fare",
    "offer-flight",
    "offer-flight-context",
    "offer-form",
-   "offer-optimization-suggestion",
+   "offer-guidance",
    "offer-quantity",
    "offer-release-status",
    "offer-route",
    "offers-list",
-   "optimization-budget",
-   "optimization-budget-field",
-   "optimization-call-counts",
-   "optimization-contribution-content",
-   "optimization-curve-protocol",
-   "optimization-day",
-   "optimization-demand",
-   "optimization-demand-status",
-   "optimization-empty",
-   "optimization-error",
-   "optimization-events",
-   "optimization-export",
-   "optimization-fare-chart",
-   "optimization-final-content",
-   "optimization-flight",
-   "optimization-forecast-feedback",
-   "optimization-form",
-   "optimization-formula",
-   "optimization-horizon-note",
-   "optimization-load-demo",
-   "optimization-mode",
-   "optimization-no-release",
-   "optimization-phase",
-   "optimization-price-detail",
-   "optimization-price-evidence",
-   "optimization-price-profit",
-   "optimization-profit-chart",
-   "optimization-progress",
-   "optimization-progress-bar",
-   "optimization-refresh",
-   "optimization-result-scope",
-   "optimization-results",
-   "optimization-resume",
-   "optimization-resume-controls",
-   "optimization-round-count",
-   "optimization-rounds-table",
-   "optimization-route",
-   "optimization-run-select",
-   "optimization-scope",
-   "optimization-setup-note",
-   "optimization-start",
-   "optimization-status",
-   "optimization-total-budget",
-   "optimization-track-cards",
-   "optimization-tradeoffs",
-   "optimize-button",
-   "optimize-form",
-   "panel-audit-link",
-   "panel-booked",
-   "panel-call-counts",
-   "panel-cancelled",
-   "panel-completed",
-   "panel-completed-detail",
-   "panel-decision-filter",
-   "panel-empty",
-   "panel-joined",
-   "panel-joined-detail",
-   "panel-next",
-   "panel-overview",
-   "panel-overview-status",
-   "panel-page-label",
-   "panel-pause-message",
-   "panel-people",
-   "panel-person-detail",
-   "panel-person-title",
-   "panel-prev",
-   "panel-progress",
-   "panel-progress-bar",
-   "panel-progress-count",
-   "panel-refresh",
-   "panel-result-note",
-   "panel-results",
-   "panel-resume",
-   "panel-resume-controls",
-   "panel-run-select",
-   "panel-run-status",
-   "panel-search",
-   "panel-segments",
-   "passenger-cost",
-   "policy-detail",
+   "page-title",
    "price-caption",
    "price-chart",
-   "pricing-context",
-   "pricing-empty",
-   "pricing-notes",
-   "pricing-results",
    "protection-value",
    "publish-button",
-   "refresh-agent-runs",
    "refresh-offers",
    "release-decision",
    "release-value",
@@ -631,17 +310,86 @@
    "seat-composition",
    "seat-composition-legend",
    "seat-inventory-warning",
-   "send-market-candidate",
-   "show-price-curve",
-   "stress-table",
-   "term-days",
-   "term-label",
    "view-customers",
    "view-flights",
-   "view-market",
    "view-members",
-   "view-optimization",
-   "view-pricing"
+   "view-unavailable"
+  ],
+  "optimize": [
+   "break-even-note",
+   "break-even-panel",
+   "break-even-rate",
+   "call-estimate",
+   "candidate-tradeoff",
+   "comparison-bars",
+   "concurrency",
+   "curve-caption",
+   "curve-chart",
+   "curve-section",
+   "curve-table",
+   "curve-table-caption",
+   "customers",
+   "delta-initial",
+   "delta-label-initial",
+   "delta-label-no-offer",
+   "delta-no-offer",
+   "elapsed",
+   "empty-state",
+   "experiment-form",
+   "experiments-nav-link",
+   "export-run",
+   "flight",
+   "flight-description",
+   "flight-title",
+   "load-run",
+   "marketing-fare-note",
+   "max-calls",
+   "member-feedback-link",
+   "member-quota",
+   "mode",
+   "normal-fare",
+   "observed-rate",
+   "page-error",
+   "page-title",
+   "progress-bar",
+   "provider-note",
+   "recommendation",
+   "recommendation-reason",
+   "recommendation-stage",
+   "recommendation-title",
+   "recommended-price",
+   "refresh-run",
+   "release-day",
+   "reset-weights",
+   "retained-price-note",
+   "round-caption",
+   "round-progress",
+   "round-section",
+   "round-table",
+   "rounds",
+   "route",
+   "run-cohort",
+   "run-counts",
+   "run-people",
+   "run-progress",
+   "run-source",
+   "run-status",
+   "saved-run",
+   "scope-day",
+   "scope-message",
+   "seed",
+   "setup-fields",
+   "start",
+   "starting-fare",
+   "validation-basis",
+   "validation-detail",
+   "validation-intro",
+   "validation-repeats",
+   "validation-section",
+   "validation-table",
+   "validation-verdict",
+   "weight-total",
+   "weights"
   ],
   "members": [
    "account",

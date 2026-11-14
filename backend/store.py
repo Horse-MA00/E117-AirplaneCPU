@@ -115,7 +115,7 @@ class Store:
                 raise NotFound('Offer not found')
             return dict(row)
 
-    def offer(self, flight, day, quantity, fare, fees, max_release, expected_plan_fee=None):
+    def offer(self, flight, day, quantity, fare, fees, max_release):
         self._day(day)
         if day not in RELEASE_DAYS:
             raise ValueError('New quota is issued only at D28, D14 and D7')
@@ -123,11 +123,11 @@ class Store:
             raise ValueError('Quantity must be a positive integer')
         if any(isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or x < 0 for x in (fare, fees, max_release)):
             raise ValueError('Prices and release limit must be finite and nonnegative')
+        from .fare_policy import integer_price
+        fare = integer_price(fare, 'Member base fare')
         now = time.time()
         with self.connect() as c:
             c.execute('BEGIN IMMEDIATE')
-            if expected_plan_fee is not None and c.execute('SELECT fee FROM membership_plan WHERE id=1').fetchone()['fee'] != expected_plan_fee:
-                raise ValueError('Membership fee changed; save the suggested fee before publishing this optimized offer')
             status = self._status(c, flight, day, max_release)
             if status['blocked_reason']:
                 raise ValueError(status['blocked_reason'])
@@ -139,21 +139,12 @@ class Store:
                       (id, flight, day, quantity, quantity, fare, fees, now, cutoff, RELEASE_VERSION))
             return dict(c.execute('SELECT * FROM offers WHERE id=?', (id,)).fetchone())
 
-    def member(self, customer_id, fee):
-        now = time.time()
-        with self.connect() as c:
-            c.execute('BEGIN IMMEDIATE')
-            row = c.execute('SELECT * FROM members WHERE customer_id=?', (customer_id,)).fetchone()
-            if row:
-                if row['expires'] <= now:
-                    raise ValueError('Membership expired; renewal is not implemented in this demo')
-                return dict(row)
-            c.execute('INSERT INTO members VALUES(?,?,?,?)', (customer_id, fee, now, now + 365 * 86400))
-            return dict(c.execute('SELECT * FROM members WHERE customer_id=?', (customer_id,)).fetchone())
-
     def plan(self, fee=None):
         if fee is not None and (isinstance(fee, bool) or not isinstance(fee, (int, float)) or not math.isfinite(fee) or not 0 <= fee <= 5000):
             raise ValueError('Membership fee must be between HKD 0 and 5000')
+        from .fare_policy import integer_price
+        if fee is not None:
+            fee = integer_price(fee, 'Membership fee', 0, 5000)
         with self.connect() as c:
             if fee is not None:
                 c.execute('UPDATE membership_plan SET fee=? WHERE id=1', (fee,))

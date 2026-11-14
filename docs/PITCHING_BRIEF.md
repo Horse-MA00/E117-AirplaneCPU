@@ -1,14 +1,14 @@
 # UOption Fly Pass 方案与路演说明
 
-> 状态：现行 · 对应代码：`flight-policy-feedback-v6-formula-grid`、`formula-scan-v1`、`backend/forecast.py`、`nhpp-smooth-mixture-v3`、`three-round-release-v1`
+> 状态：现行 · 对应代码：`backend/forecast.py`、`nhpp-smooth-mixture-v3`、`three-round-release-v1`、`member-thompson-v5-marketing`、`member-marketing-fare-v1`
 
-更新日期：2026 年 11 月 14 日。团队：Airplane CPU · E117。本文供 Cathay Hackathon pitching、presentation 及评委问答使用，描述当前已实现方案与最新校准证据。
+更新日期：2026 年 11 月 15 日。团队：Airplane CPU · E117。本文供 Cathay Hackathon pitching、presentation 及评委问答使用，描述当前已实现方案与最新校准证据。
 
-**我们的方案是先保护正常销售，再把有条件释放的座位提供给会员，并在模拟市场中寻找有增量贡献的会员价格。** 当前是可运行、可审计的合成数据原型。最终校准后的保护覆盖率在 D28、D14、D7 分别为 **99.17%、99.50%、99.83%**；这些不是预测准确率，也不是对真实航空市场的保证。
+**我们的方案是先保护正常销售，再把有条件释放的座位提供给会员，并以 Thompson Sampling 测试会员基本票价。** 当前是可运行、可审计的合成数据原型。最终校准后的保护覆盖率在 D28、D14、D7 分别为 **99.17%、99.50%、99.83%**；这些不是预测准确率，也不是对真实航空市场的保证。
 
 ## 1 我们解决什么问题
 
-起飞后的空座无法再销售，但提前低价放票也可能挤掉后来愿意支付正常票价的旅客。因此，会员优惠需要同时回答三个问题：这趟航班是否适合放票、最多可以放多少、什么价格能在满足供给约束的同时带来增量贡献。
+起飞后的空座无法再销售，但提前低价放票也可能挤掉后来愿意支付正常票价的旅客。因此，会员优惠需要同时回答三个问题：这趟航班是否适合放票、最多可以放多少、什么价格能在供给约束下兼顾基本票款与会员购买人数。
 
 我们将这三个问题分开处理：需求预测负责保护正常客，配额规则负责管理座位，定价实验负责比较收益。某个价格看起来很有吸引力，并不意味着应该放票；如果没有安全余量，系统可以明确建议不放票。
 
@@ -27,7 +27,7 @@ NHPP 预测未来正常需求分布
              ↓
 有可新增会员座位时才比较价格
              ↓
-公式扫描候选价格 完整市场模拟 独立验证
+Thompson Sampling 配对价格测试 独立确认
              ↓
 管理员查看收益曲线 决定是否发布
              ↓
@@ -83,29 +83,29 @@ NHPP 建议空间、今天可新增配额、已经发布可订的配额，是三
 
 ## 4 如何判断会员价格是否合适
 
-当前主流程针对一个选定航班和日期。会员基本票价不得超过当时正常基本票价的 50%；会费在一次实验内固定，并非同时寻找最优全年会费。
+目前唯一的定价方法是 Thompson Sampling，针对一班航班的一个 D28／D14／D7 时点。每位顾客已经入会，不再次支付会费。票价上限为正常基本票价的80%，P₀等于此上限；使用整数港元。
 
-数学轨先根据模拟旅客的购买概率，以 HK$1 步长扫描允许的价格范围，找到期望增量贡献最高的初始估计 P*。之后在完整市场中评估 P* 及附近价格，通常共 9 个不同候选，再用两个独立种子验证保留的候选。它不再只比较 HK$30、70、100 等少量固定档位。
+每轮给一批新顾客候选价和初始价，两个情境的库存与人群相同。根据购买／不购买结果，模型更新公开客群特征与日期弹性对应的购买机率，再从不确定的参数分布抽样选择下一轮价格。它会探索尚不确定的价格，而不是永远选择当前估计最高的点。
 
-公式扫描只是快速定位：它忽略了会员配额、背景需求、取消和容量争夺，因此不能直接决定最终价格。完整模拟会重新计入这些约束。公式阶段使用模拟器提供的正常票价路径；将来用于真实决策，需要已知票价计划或情景预测，不能假设可以提前知道真实未来票价。
+LLM解释提供可检验的方向，例如明确拒绝者的价格异议支持尝试降价。算法会引用真实存在的模拟回答，在限定方向内测试；不会将理由直接当成新的购买标签或私人愿付价格。
 
-Live LLM 轨保留局部价格搜索，并通过同一市场引擎执行选择。两条轨各自保留结果，不把 LLM 的解释当成真实支付意愿。
+原始候选最终向下取尾数9，低于HK$30归零；例如273→269，552→549。至少三批新的顾客对照格式化候选、格式化初始价和无会员优惠，结果可能采用候选、保留初始、无定论或NO_OFFER。结果不会自动发布。
 
-我们比较同一外生世界中“有会员优惠”和“没有会员优惠”的贡献差：正常与会员基础票收入、会费分摊、附加服务毛利，减去增量载客、会员服务及计划成本。原本会买正常票的人转买会员票，其影响已经体现在配对差额中，不能再重复扣一次蚕食损失。
+目标是基本票款与购买人数的取舍，不是净利润；会费、税费、燃油及运营成本不进入这个实验。正常票替代仍通过回退购买及无优惠对照观察，因此不能把每张会员票都直接说成完全新增收入。
 
-当前单航班口径分摊三分之一的新会费及会员服务成本，实际现金仍只收取一次完整会费。后续其他行程和实际续会尚未纳入主流程，所以单航班结果不能被称为全年会员计划利润。税费等代收代付项目不算贡献，飞机固定成本也未计入。
-
-最终只能称为**已测试且通过约束的最佳候选价格**，不是已经证明的全局最优或真实市场最优。如果候选不满足增量贡献或服务门槛，系统保留 NO_OFFER。
+现有 v5 Live 示例 `SYN-00017` 的 D7 实验，以每轮16人测试10轮，原始候选273格式化为269，并在三批新顾客中通过这套原型采用规则。格式化初始549与候选269的加权平均基本票款分别为HK$722.24及HK$2,525.01，加权会员购买率分别为8.22%及58.67%。它是一次小样本合成实验，不能外推真实航空收益；另外五份离线实验保留了不采用或无定论结果。全部结果见[目前v5证据](../llm_agent/experiments/README.md)。
 
 ## 5 如何模拟用户购买与反馈
 
-模拟用户具有不同预算、价格敏感度、等待倾向、日期弹性、同行人数和行李需求。数学用户根据完整同行付款、预算与日期匹配计算各动作的相对吸引力，再以概率选择入会、买会员票、买正常票、等待或放弃。其他阶段按对应规则处理。
+新实验固定八类弹性优惠旅客：学生、目的地无所谓的优惠猎手、临时独行、频繁优惠旅行、平日弹性、朋友、情侣和偶尔被低价触发的人。权重可调，但并非已验证的HK Express市场占比。
 
-系统对同一用户和事件使用可重现的随机扰动，减少“换了价格，也顺便换了一批幸运顾客”的比较偏差。LLM 用户可补充情境化理由，但输出仍需通过预算、合法动作和库存检查。
+每人有私有预算、旅行兴趣、目的地吸引力、近期旅行和留在家的选择。付得起不代表一定购买；价格模型看不到这些私有数字。离线顾客和Live LLM是同一Thompson算法的两种行为来源，而不是两种定价方法。
 
-反馈包括报价曝光、入会、成交、等待、取消、履约和正常收入变化。一次价格比较与其独立验证期间，座位规则保持固定；完成模拟后的座位反馈只生成下一次实验的校准提案，不会在当前比较中悄悄修改供给。
+LLM只决定合法选择并说明理由，程序执行预算和共享整数配额限制。购买意愿与库存拒绝分开记账。相同一轮两种报价用同一批人，下一轮换新顾客；确认客群不会再用于训练或改选价格。
 
-这些是**合成反馈**。我们没有声称已获得真实会员购买 ground truth，也没有声称无需真实数据就能让模型自主学出市场规律。
+每次provider呼叫、缓存、唯一合法强制动作和错误分别统计。v5 Live示例记录213次新provider调用（203顾客＋10分析），零缓存、245次强制动作、零失败；这些是已保存实验，本次代码清理没有重新调用。
+
+模拟答案不是真实会员购买ground truth。下一步仍需自愿参与者的随机报价选择或实际曝光／成交数据校准。
 
 ## 6 最后校准后的保护覆盖率
 
@@ -155,7 +155,7 @@ Live LLM 轨保留局部价格搜索，并通过同一市场引擎执行选择�
 
 我们的方案 UOption Fly Pass，帮助航空公司判断哪些座位可以提供会员优惠，以及怎样定价。我们先根据近期订票、正常票价、取消和库存，预测起飞前的正常需求，并预留安全余量。系统在起飞前 28、14、7 天分轮评估，只释放扣除保护量和已有配额之后的座位。
 
-有可用座位后，我们先快速扫描价格，再把候选放进同一个模拟市场，与没有会员优惠的情况比较，检查是否带来增量贡献。系统也允许得出“不放票”的结论。
+有可用座位后，我们用Thompson Sampling逐轮测试会员票价，结合不同弹性旅客的购买选择更新判断，再用新顾客独立确认，比较基本票款和购买人数。所有人已入会，实验不再收会费；系统也允许保留初始价或得出“不放票”的结论。
 
 在另外 600 班合成航班的独立测试中，校准后的保护覆盖率分别达到 99.17%、99.50% 和 99.83%。更高保护意味着更少放票；这些结果验证的是模拟环境中的风险控制，不是真实市场准确率。下一步我们希望用航空公司的真实订票及会员响应数据校准，再进行受控试点。
 
@@ -163,7 +163,7 @@ Live LLM 轨保留局部价格搜索，并通过同一市场引擎执行选择�
 
 UOption Fly Pass helps an airline decide which seats can support a member offer and what fare to test. We first forecast normal demand from booking history, fares, cancellations and capacity, then add a calibrated safety reserve. At 28, 14 and 7 days before departure, we release only the eligible capacity left after protecting normal demand and accounting for existing quotas.
 
-For flights with available member supply, we scan fares and validate nearby candidates in a shared simulation, comparing their incremental contribution with the same market without an offer. No offer is a valid outcome.
+For flights with available member supply, Thompson Sampling tests member fares and learns from paired choices by new simulated customers. Separate panels confirm the selected fare against the initial quote and a no-offer control. We compare basic ticket receipts and purchases, not net profit; the travellers are already members. No offer is a valid outcome.
 
 On a separate test set of 600 synthetic flights, the calibrated protection coverage was 99.17%, 99.50% and 99.83% at the three horizons. Higher protection comes with fewer released seats. These are simulation results, and our next step is calibration with real airline data and a controlled pilot.
 
@@ -174,12 +174,12 @@ On a separate test set of 600 synthetic flights, the calibrated protection cover
 | 1 业务问题 | 空座损失与低价挤占正常销售之间的取舍 | 一架飞机的空座与正常需求示意 |
 | 2 解决方案 | 先保护正常需求，再释放会员位，再比较价格 | 本文流程图 |
 | 3 放票机制 | 三轮更新、需求分布、安全余量、配额结转 | Forecast 页面及简单配额例子 |
-| 4 定价与用户模拟 | 公式定位加完整模拟，比较有优惠和无优惠 | 价格—贡献曲线及 NO_OFFER 基线 |
+| 4 定价与用户模拟 | Thompson探索、LLM选择与新顾客确认 | 价格—票款曲线和初始／候选／无优惠比较 |
 | 5 风险验证 | 三个保护覆盖率与突增组表现 | 本文覆盖率表，标注 synthetic 和 n=600 |
 | 6 可运行产品 | 管理员到会员端，库存和结果可追查 | 一段端到端 demo |
 | 7 下一步 | 真实数据校准、受控试点及全年会员价值评估 | 数据需求与试点指标 |
 
-价格图的最高贡献、最高利润率和最多买家可能对应不同价格；不要把三个目标混为一个最优点。演示时优先说明增量贡献是否优于无优惠基线。
+价格图的最高票款与最多买家可能对应不同价格；最终选择在接近最高预期票款的已测试候选中偏好更多会员购买，再交给独立确认。不要把票款称为净利润，或把模型曲线每一点说成已实际测试。
 
 ## 9 评委可能追问什么
 
@@ -193,7 +193,7 @@ On a separate test set of 600 synthetic flights, the calibrated protection cover
 
 **是不是已经找到最赚钱的票价？** 我们找到的是当前假设、价格边界与候选范围内，通过验证的最佳已测试价格。当前没有证明真实市场的全局最优。
 
-**利润是否包括全年会员价值？** 当前主流程只针对所选航班，并按规则分摊会费。未来其他行程和真实续会贡献尚未建模，不能用单航班 NO_OFFER 推断全年计划一定不可行。
+**是否包括全年会员价值？** 没有。当前只比较已入会顾客的一次基本票购买，不计会费与未来续会，也没有全年成本账目。不能把一次NO_OFFER推断成全年会员计划不可行。
 
 **是否已经使用航空公司真实订票数据？** 尚未。当前订票和用户响应是合成数据；班表或容量信息不等于真实订票曲线。模型需要真实订单时间、取消、库存/售罄、价格和促销，以及会员曝光和转化记录进一步校准。
 
@@ -202,11 +202,9 @@ On a separate test set of 600 synthetic flights, the calibrated protection cover
 路演数字对应 [第二轮最终测试](../simulation/generated/nhpp_v3_robust_final.json) 的 `summary`：D28 取 `v2/D28/all`，D14/D7 取 `v3/D14/all`、`v3/D7/all`；旧规则取 `frozen_v2_summary`。不要误用报告中的全量 v3 D28 作为已启用方案。
 
 - [NHPP 平滑与校准详解](NHPP_V3_REVIEW.md)：公式、失败尝试、版本及证据边界。
-- [当前航班优化规格](FLIGHT_SCOPED_OPTIMIZATION.md)：价格扫描、用户模拟、会计和 API。
+- [当前航班优化规格](FLIGHT_SCOPED_OPTIMIZATION.md)：Thompson、用户模拟、基本票款和 API。
 - [三轮配额规则](THREE_ROUND_RELEASE.md)：扣除已售与前轮有效配额，防止重复放票。
 - [第二轮校准配置](../simulation/generated/calibration_v3_robust.json)：参数、种子与验收门槛。
 - [第二轮校准评分](../simulation/generated/nhpp_v3_robust_calibration.json)：1,200 班校准证据。
 
-合并前最终验证：Linux Docker 的 249 项后端测试全部通过，根目录测试 30 项通过、1 项因容器不含 Git 而跳过；本机 31 项根目录测试全部通过。发布链接、文档索引和历史制品校验通过。这属于软件验证，不能替代市场验证。
-
-对外建议使用“独立合成测试”“校准后保护覆盖”“已测试最佳候选”“单航班贡献”等措辞。不要使用“99% 预测准确率”“真实顾客 ground truth”“已证明全年盈利”“永不挤占正常客”等说法。
+对外建议使用“独立合成测试”“校准后保护覆盖”“已测试最佳候选”“合成基本票款”等措辞。不要使用“99% 预测准确率”“真实顾客 ground truth”“已证明全年盈利”“永不挤占正常客”等说法。

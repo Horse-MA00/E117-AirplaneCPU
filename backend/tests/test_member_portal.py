@@ -23,8 +23,6 @@ class MemberPortalTests(unittest.TestCase):
             self.assertEqual(server.get('/api/member-portal/config')['membership']['fee'],399)
             joined = server.post('/api/member-portal/join', {'customer_id':'demo-person','membership_fee':0,'expected_fee':399})
             self.assertEqual(joined['member']['fee'],399)
-            legacy = server.post('/api/members', {'customer_id':'legacy-person','membership_fee':0})
-            self.assertEqual(legacy['member']['fee'],399)
             server.post('/api/member-portal/plan', {'membership_fee':599})
             again = server.post('/api/member-portal/join', {'customer_id':'demo-person','expected_fee':599})
             self.assertEqual(again['member'],joined['member'])

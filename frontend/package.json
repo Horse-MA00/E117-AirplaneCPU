@@ -7,15 +7,13 @@
     "test:flexible-search": "node smoke-flexible-search.mjs",
     "test:route-catalog": "node smoke-route-catalog.mjs",
     "test:smoke": "node smoke.mjs",
-    "test:continuous": "node smoke-continuous.mjs",
-    "test:price-chart": "node smoke-price-chart.mjs",
     "test:optimization": "node smoke-optimization.mjs",
     "test:flight-offers": "node smoke-flight-offers.mjs",
     "test:seat-status": "node test-seat-status.mjs",
     "test:seat-supply": "node smoke-seat-supply.mjs",
     "test:members": "node smoke-member-portal.mjs",
-    "test:contribution": "node smoke-contribution.mjs",
-    "test:demand-filter": "node smoke-demand-filter.mjs"
+    "test:demand-filter": "node smoke-demand-filter.mjs",
+    "test:adaptive-pricing": "node smoke-adaptive-pricing.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",
