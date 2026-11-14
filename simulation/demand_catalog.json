@@ -15,24 +15,26 @@
     "simulation/evaluate_nhpp_v3.py": "3ad53033881bbf27188326022a3e8c85974a431af8d06b25280383f3a9ee9267",
     "simulation/calibrate_nhpp_v3_robust.py": "53c2e0ecb5be82d004011772a281980cb5b428af129c80dd86b974bf7f536a2d",
     "simulation/generated/calibration_v3.json": "41e64ad1f1b5e338de6e264a3f59eb947a268bb81b47727c86d2876ed4956dc6",
-    "backend/data.py": "9e1a4de6b6d7fe5abaec670e03e5d4f8aed079c95d53313a5fd552a218a59ae7",
-    "backend/demand_catalog.py": "11b04882cf984662e11c6abd10b6110db01b1c116548b5d970a408eb53328f54",
+    "backend/data.py": "9ca07bbc48b059619919d832e059eed96c0838e246becef44d24ae2fdc36e0ae",
+    "backend/demand_catalog.py": "dd89b1614df5e82283cbb7102e40e24e8e4253f6a44de7c3a5737d72df23add2",
     "simulation/generated/calibration_v2.json": "44b0b5e264508a893292f84319f053afeec7fed4f1c76c79842b56bceda63f40",
     "simulation/generated/snapshots.csv.gz": "a8df8b18de2e65721e3fdbf695de56fd2294d8058f25bc3367c8ebb3cedbedcf",
     "simulation/generated/flights.json": "e9c21d8cb3adfb0f0716cddd44b6d75dc3b7b0b6e40728a1e2a26466270765d5",
     "simulation/network_generated/snapshots.csv.gz": "f333d081de932f57af41daf9a9519cdbe6cab00a2dcb34e4d251069d730de947",
     "simulation/network_generated/flights.json": "efbe4498117e809cc047788012d5d2c3a193d609d65b4c4e38c5518a599b23fd",
     "simulation/member_demo_generated/snapshots.csv.gz": "1b37be3b22122e1818e3bd0e98f3871b3dc5e94fdab0595b706787324de339b2",
-    "simulation/member_demo_generated/flights.json": "0e0b9378832f3e563083632a831028d336bc6ef61f0c0a21aa8b62b91085f24c"
+    "simulation/member_demo_generated/flights.json": "0e0b9378832f3e563083632a831028d336bc6ef61f0c0a21aa8b62b91085f24c",
+    "simulation/hkx_recent_generated/snapshots.csv.gz": "b5c83f74a37a8a2d0df2fd7fbe8f5fe9cffdae03b05a5810d8db0087ae6436ce",
+    "simulation/hkx_recent_generated/flights.json": "53ca640dcd011af75ff4ca20a32b60f5a200b0c55bc51a46ee75226afaf689d3"
   },
   "interpretation": "D28 NHPP expected final normal occupancy; display-only bands, not realized demand or member release quotas.",
-  "flight_count": 1549,
+  "flight_count": 1915,
   "counts": {
-    "high": 766,
-    "low": 336,
-    "medium": 447
+    "high": 963,
+    "low": 370,
+    "medium": 582
   },
-  "records_sha256": "ecbb42f0be3e40c647f365d7a248853ff5e09a60bc410c310acc64d803ea724e",
+  "records_sha256": "a417be54cf9038f07afc916fc442c956ab111890b1d130a020e968f52b477acd",
   "records": [
     {
       "flight_id": "DEMO-BKI-HKG-20270515",
@@ -10874,6 +10876,2568 @@
       "flight_id": "SYN-01105",
       "demand_band": "low",
       "demand_expected_load_rate": 0.56328333,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO108-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.86832979,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO108-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99961702,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO108-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.65608511,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO109-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.78601596,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO109-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99662234,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO109-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.43160638,
+      "demand_reference_day": 28,
+      "d28_releasable": 3
+    },
+    {
+      "flight_id": "UO110-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.96244783,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO110-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.67588261,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO110-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.82361739,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO111-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.75516957,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO111-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.78325652,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO111-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.62403913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO112-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98770763,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO112-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99995339,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO112-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.67365678,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO113-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95719915,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO113-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98180085,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO113-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.65924576,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO114-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.8474734,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO114-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.82290426,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO114-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.62391489,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO115-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91796809,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO115-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.96018085,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO115-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87668617,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO116-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.8182839,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO116-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9987839,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO116-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.88374576,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO117-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99898305,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO117-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99714407,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO117-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98860169,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO130-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.92202174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO130-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.65311304,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO130-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.85042174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO131-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.69991304,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO131-20261129",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.41327826,
+      "demand_reference_day": 28,
+      "d28_releasable": 47
+    },
+    {
+      "flight_id": "UO131-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.8243,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO132-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99127391,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO132-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.65801739,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO132-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99832174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO133-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99806087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO133-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8809913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO133-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.51147826,
+      "demand_reference_day": 28,
+      "d28_releasable": 1
+    },
+    {
+      "flight_id": "UO134-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.63089362,
+      "demand_reference_day": 28,
+      "d28_releasable": 6
+    },
+    {
+      "flight_id": "UO134-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98297872,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO134-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.75702128,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO135-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.96814362,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO135-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95492553,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO135-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.42848936,
+      "demand_reference_day": 28,
+      "d28_releasable": 62
+    },
+    {
+      "flight_id": "UO172-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9301087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO172-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99931304,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO172-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.59006522,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO173-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9536,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO173-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.96521304,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO173-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.6408087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO182-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.79375,
+      "demand_reference_day": 28,
+      "d28_releasable": 20
+    },
+    {
+      "flight_id": "UO182-20261129",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.58488136,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO182-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.56564831,
+      "demand_reference_day": 28,
+      "d28_releasable": 16
+    },
+    {
+      "flight_id": "UO183-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99650847,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO183-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91615254,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO183-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.62236017,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO192-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99998305,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO192-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.86375424,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO192-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.61722034,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO193-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.70059746,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO193-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87823729,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO193-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.6685,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO214-20261122",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.51188333,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO214-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.61247222,
+      "demand_reference_day": 28,
+      "d28_releasable": 22
+    },
+    {
+      "flight_id": "UO214-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.67867222,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO215-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.84407222,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO215-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.80100556,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO215-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.94773333,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO226-20261122",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.49319915,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO226-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.72411864,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO226-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97495339,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO227-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95575847,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO227-20261129",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.5575,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO227-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.71859746,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO250-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.68172872,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO250-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87728191,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO250-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.64289894,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO251-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99955851,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO251-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.94762766,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO251-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.58092021,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO260-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93258475,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO260-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.92663559,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO260-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.77422881,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO261-20261123",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.92589407,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO261-20261130",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.74585169,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO272-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97937778,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO272-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.75478333,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO272-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8725,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO273-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.71500556,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO273-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.83626111,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO273-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.39891667,
+      "demand_reference_day": 28,
+      "d28_releasable": 59
+    },
+    {
+      "flight_id": "UO522-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8775,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO522-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.73945652,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO522-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.57369565,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO523-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.67848261,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO523-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99963478,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO523-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.89266087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO534-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99972174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO534-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.8316913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO534-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.79352609,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO535-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99871739,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO535-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98939565,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO535-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.68258261,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO540-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.79294681,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO540-20261129",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.51718085,
+      "demand_reference_day": 28,
+      "d28_releasable": 13
+    },
+    {
+      "flight_id": "UO540-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.67069149,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO541-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.78906383,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO541-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99845745,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO541-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.80571277,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO552-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8598,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO552-20261129",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.5730913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO552-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91246522,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO553-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99894783,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO553-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95815652,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO553-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.90421739,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO556-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.77635217,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO556-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95475652,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO556-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.64418261,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO557-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99667826,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO557-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.94043478,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO557-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.86400435,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO568-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93573913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO568-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9454913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO568-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.64801304,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO569-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8808,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO569-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.94343478,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO569-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.75084783,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO598-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9401117,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO598-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.90773936,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO598-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99992021,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO599-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99267553,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO599-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.88114362,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO599-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.77061702,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO600-20261122",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.56755932,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO600-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99927966,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO600-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.62484746,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO601-20261122",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.44851271,
+      "demand_reference_day": 28,
+      "d28_releasable": 25
+    },
+    {
+      "flight_id": "UO601-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98521186,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO601-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.46930508,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO614-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98619068,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO614-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.83174576,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO614-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.88037238,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO615-20261123",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.86620763,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO615-20261130",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97370339,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO618-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9123913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO618-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.89612174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO618-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95165217,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO619-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99277826,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO619-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.70513478,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO619-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.69024348,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO622-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99900847,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO622-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.90949153,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO622-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.51580932,
+      "demand_reference_day": 28,
+      "d28_releasable": 27
+    },
+    {
+      "flight_id": "UO623-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.62832203,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO623-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99887288,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO623-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93541525,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO624-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO624-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98432203,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO624-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.80186441,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO625-20261123",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.58499576,
+      "demand_reference_day": 28,
+      "d28_releasable": 10
+    },
+    {
+      "flight_id": "UO625-20261130",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91002119,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO626-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87985593,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO626-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98483475,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO626-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.69868644,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO627-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99610169,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO627-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98558898,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO627-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.39603814,
+      "demand_reference_day": 28,
+      "d28_releasable": 103
+    },
+    {
+      "flight_id": "UO628-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.73087712,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO628-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.74510169,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO628-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.46724153,
+      "demand_reference_day": 28,
+      "d28_releasable": 54
+    },
+    {
+      "flight_id": "UO629-20261123",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.81200424,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO629-20261130",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.88770763,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO630-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95169068,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO630-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9299322,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO630-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.49725847,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO631-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91641949,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO631-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99052542,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO631-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.88391949,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO638-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87462609,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO638-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99997826,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO638-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.7097087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO639-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9156087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO639-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.96773913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO639-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.81348696,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO640-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.68584783,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO640-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.81084783,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO640-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8688913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO641-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.70483043,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO641-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8811913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO641-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87543043,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO642-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.78601064,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO642-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98921809,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO642-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99837766,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO643-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99948936,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO643-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99701596,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO643-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.70481915,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO646-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.94958475,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO646-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99616318,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO646-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.72580508,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO647-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87430085,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO647-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99939331,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO647-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.51904661,
+      "demand_reference_day": 28,
+      "d28_releasable": 37
+    },
+    {
+      "flight_id": "UO650-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99922034,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO650-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99613983,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO650-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.77402542,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO651-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.90362288,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO651-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.74028814,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO651-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.85346186,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO652-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.94173305,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO652-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.84885593,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO652-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.88193644,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO653-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.62222458,
+      "demand_reference_day": 28,
+      "d28_releasable": 29
+    },
+    {
+      "flight_id": "UO653-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93765254,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO653-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99983475,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO674-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99961864,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO674-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.69925847,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO674-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.83725,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO675-20261122",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.5909322,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO675-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.94092797,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO675-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.78986864,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO676-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.73010593,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO676-20261129",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.48828033,
+      "demand_reference_day": 28,
+      "d28_releasable": 37
+    },
+    {
+      "flight_id": "UO676-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.78873305,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO677-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.94276271,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO677-20261129",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.48157741,
+      "demand_reference_day": 28,
+      "d28_releasable": 19
+    },
+    {
+      "flight_id": "UO677-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.73685593,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO680-20261122",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.36326695,
+      "demand_reference_day": 28,
+      "d28_releasable": 84
+    },
+    {
+      "flight_id": "UO680-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.92934322,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO680-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99933051,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO681-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.94796186,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO681-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93975,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO681-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.61288136,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO684-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99682627,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO684-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98782203,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO684-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.71885169,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO685-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99355508,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO685-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.71952542,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO685-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.85905508,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO686-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99954661,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO686-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97562288,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO686-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.89612971,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO687-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.85881356,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO687-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93872458,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO687-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.74720084,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO688-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.88607203,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO688-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91129237,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO688-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.71404237,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO689-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99902119,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO689-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9993178,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO689-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.75062712,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO700-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.76712174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO700-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87722174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO700-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95091304,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO701-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.81596522,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO701-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99712174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO701-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.7549,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO702-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95713043,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO702-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.82285217,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO702-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.84463043,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO703-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99936087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO703-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.71582174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO703-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.96893043,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO712-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.84560638,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO712-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.68709574,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO712-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.78828191,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO713-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.78795745,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO713-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93028723,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO713-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.89141489,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO716-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.84263298,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO716-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.88528191,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO716-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.57039362,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO717-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.64963298,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO717-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87605851,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO717-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.56884043,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO724-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8844913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO724-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.66404348,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO724-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.66272174,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO725-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.71557391,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO725-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.76963913,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO725-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.60464783,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO734-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.80900435,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO734-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99826087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO734-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.83154348,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO735-20261123",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8755,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO735-20261130",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93625652,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO744-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.69271739,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO744-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.66366087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO744-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9563087,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO745-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91639565,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO745-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.84906522,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO745-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97814348,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO746-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97999468,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO746-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.6861117,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO746-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.68010638,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO747-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9322766,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO747-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97609574,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO747-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.55545745,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO756-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98935169,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO756-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98317797,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO756-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99814644,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO757-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99912288,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO757-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.64867797,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO757-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91286611,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO790-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99788298,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO790-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91673404,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO790-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91535106,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO791-20261123",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.81244149,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO791-20261130",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.87284043,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO820-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8817839,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO820-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99984746,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO820-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99511017,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO821-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.96784746,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO821-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.95891525,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO821-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.91215678,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO824-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93017826,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO824-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.93,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO824-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.4874913,
+      "demand_reference_day": 28,
+      "d28_releasable": 22
+    },
+    {
+      "flight_id": "UO825-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99712609,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO825-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.61693478,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO825-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.92645217,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO848-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.62212288,
+      "demand_reference_day": 28,
+      "d28_releasable": 7
+    },
+    {
+      "flight_id": "UO848-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99963983,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO848-20261213",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.52897458,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO849-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99775424,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO849-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.78058475,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO849-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.64643644,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO850-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.64558475,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO850-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8750678,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO850-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97841525,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO851-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.74477542,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO851-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.72839407,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO851-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.8109661,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO854-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99812288,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO854-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99941102,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO854-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.62637712,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO855-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98400424,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO855-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.96898729,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO855-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.75483898,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO862-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97404787,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO862-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.62964894,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO862-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.7183883,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO863-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.84098404,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO863-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.8663883,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO863-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.70807979,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO870-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.82683898,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO870-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99977966,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO870-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.71564407,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO871-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99025,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO871-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.9985339,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO871-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.74739831,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO890-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.73712222,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO890-20261129",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.66175556,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO890-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.71543889,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO891-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.97765556,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO891-20261129",
+      "demand_band": "low",
+      "demand_expected_load_rate": 0.54278333,
+      "demand_reference_day": 28,
+      "d28_releasable": 4
+    },
+    {
+      "flight_id": "UO891-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.79552222,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO898-20261122",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.88534746,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO898-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99692797,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO898-20261213",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.63155085,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO899-20261122",
+      "demand_band": "medium",
+      "demand_expected_load_rate": 0.70011864,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO899-20261129",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.99327966,
+      "demand_reference_day": 28,
+      "d28_releasable": 0
+    },
+    {
+      "flight_id": "UO899-20261213",
+      "demand_band": "high",
+      "demand_expected_load_rate": 0.98855508,
       "demand_reference_day": 28,
       "d28_releasable": 0
     }

@@ -50,7 +50,8 @@ class NetworkDataTests(unittest.TestCase):
         manifest = data.manifest()
         self.assertEqual(manifest['rows'], 200000)
         self.assertEqual(manifest['flights'], 1105)
-        self.assertEqual(manifest['catalog_rows'], 280364)
+        # Original 280,364-row catalogue plus the near-term supplement.
+        self.assertEqual(manifest['catalog_rows'], 280364 + manifest['recent']['rows'])
         self.assertEqual(manifest['catalog_flights'], len(data.flights()))
         self.assertEqual(sum(map(len, data.histories().values())), manifest['catalog_rows'])
 

@@ -6,6 +6,10 @@ ROOT=Path(__file__).resolve().parents[1]
 DATA=ROOT/'simulation/generated'
 NETWORK_DATA=ROOT/'simulation/network_generated'
 MEMBER_DEMO_DATA=ROOT/'simulation/member_demo_generated'
+# Near-term HK Express departures 7/14/28 days after the generator's anchor date.
+# Published only up to that date, like a live feed (simulation/hkx_recent_generate.py).
+RECENT_DATA=ROOT/'simulation/hkx_recent_generated'
+SUPPLEMENTS=(NETWORK_DATA,MEMBER_DEMO_DATA,RECENT_DATA)
 _lock=threading.Lock(); _rows=None
 INTS={'days_to_departure','capacity','booked_seats','available_seats','gross_bookings','cancellations'}
 FLOATS={'empty_rate','normal_base_fare','mandatory_fees','normal_total_fare','interval_days','member_initial_base_fare'}
@@ -16,16 +20,17 @@ def manifest():
     # historical calibration. Catalog totals explicitly include additive history.
     supplemental=json.loads((NETWORK_DATA/'manifest.json').read_text()) if (NETWORK_DATA/'manifest.json').exists() else None
     member_demo=json.loads((MEMBER_DEMO_DATA/'manifest.json').read_text()) if (MEMBER_DEMO_DATA/'manifest.json').exists() else None
-    supplements=[value for value in (supplemental,member_demo) if value]
+    recent=json.loads((RECENT_DATA/'manifest.json').read_text(encoding='utf-8')) if (RECENT_DATA/'manifest.json').exists() else None
+    supplements=[value for value in (supplemental,member_demo,recent) if value]
     return {**original,'catalog_rows':original['rows']+sum(value['rows'] for value in supplements),
             'catalog_flights':original['flights']+sum(value['flights'] for value in supplements),
-            'supplemental':supplemental,'member_demo':member_demo,'supplements':supplements}
+            'supplemental':supplemental,'member_demo':member_demo,'recent':recent,'supplements':supplements}
 @lru_cache(maxsize=1)
 def flights():
     original=json.loads((DATA/'flights.json').read_text())
     extra=[]
-    for directory in (NETWORK_DATA,MEMBER_DEMO_DATA):
-        if (directory/'flights.json').exists():extra.extend(json.loads((directory/'flights.json').read_text()))
+    for directory in SUPPLEMENTS:
+        if (directory/'flights.json').exists():extra.extend(json.loads((directory/'flights.json').read_text(encoding='utf-8')))
     report_path=MEMBER_DEMO_DATA/'headroom_validation.json'
     if report_path.exists():
         report=json.loads(report_path.read_text())
@@ -46,7 +51,7 @@ def histories():
         if _rows is None:
             result={}
             paths=[DATA/'snapshots.csv.gz']
-            for directory in (NETWORK_DATA,MEMBER_DEMO_DATA):
+            for directory in SUPPLEMENTS:
                 if (directory/'snapshots.csv.gz').exists():paths.append(directory/'snapshots.csv.gz')
             for path in paths:
                 with gzip.open(path,'rt',newline='') as f:

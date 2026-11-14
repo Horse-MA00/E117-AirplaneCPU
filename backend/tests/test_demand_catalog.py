@@ -83,7 +83,8 @@ class DemandCatalogTests(unittest.TestCase):
     def test_published_catalogue_is_complete_and_matches_selected_fresh_forecasts(self):
         from backend import data
         flights = data.flights()
-        self.assertEqual(len(flights), 1549)
+        # Original 1,549-flight catalogue plus the near-term supplement.
+        self.assertEqual(len(flights), 1549 + data.manifest()["recent"]["flights"])
         self.assertTrue(all(f["demand_source_status"] == "current" for f in flights))
         self.assertEqual({f["demand_band"] for f in flights}, {"low", "medium", "high"})
         for fid in ("SYN-00001", "NET-HKG-HND-20270515", "DEMO-HKG-HND-20270515"):

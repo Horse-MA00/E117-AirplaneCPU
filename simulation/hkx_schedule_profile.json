@@ -1,0 +1,3292 @@
+{
+ "source": "Derived from OAG Flight Info (flight-instances), carrier UO, operating, non-stop departures from HKG.",
+ "sample_week": [
+  "2026-11-16",
+  "2026-11-22"
+ ],
+ "season": "IATA northern winter 2026/27 (sample week)",
+ "fields": "Only weekday, flight number, destination, local departure time, aircraft code and elapsed time are kept.",
+ "departures": 410,
+ "entries": [
+  {
+   "weekday": 0,
+   "flight_number": "UO854",
+   "destination": "NRT",
+   "departure_local": "02:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO656",
+   "destination": "TAE",
+   "departure_local": "02:25",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 190
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO676",
+   "destination": "CJU",
+   "departure_local": "02:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO618",
+   "destination": "ICN",
+   "departure_local": "07:15",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO724",
+   "destination": "HKT",
+   "departure_local": "07:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO820",
+   "destination": "OKA",
+   "departure_local": "07:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO540",
+   "destination": "HAN",
+   "departure_local": "07:35",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO522",
+   "destination": "CRK",
+   "departure_local": "07:40",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO600",
+   "destination": "FUK",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO756",
+   "destination": "CNX",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO598",
+   "destination": "PQC",
+   "departure_local": "07:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 170
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO130",
+   "destination": "KHH",
+   "departure_local": "08:00",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO716",
+   "destination": "SZB",
+   "departure_local": "08:10",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO552",
+   "destination": "DAD",
+   "departure_local": "08:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO686",
+   "destination": "KIX",
+   "departure_local": "08:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO250",
+   "destination": "SYX",
+   "departure_local": "08:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO674",
+   "destination": "PUS",
+   "departure_local": "08:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO712",
+   "destination": "BKK",
+   "departure_local": "09:15",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO642",
+   "destination": "TAK",
+   "departure_local": "09:20",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO848",
+   "destination": "NRT",
+   "departure_local": "09:20",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO822",
+   "destination": "HIJ",
+   "departure_local": "09:30",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO850",
+   "destination": "KIX",
+   "departure_local": "09:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO680",
+   "destination": "NGO",
+   "departure_local": "10:00",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO630",
+   "destination": "ICN",
+   "departure_local": "10:30",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO556",
+   "destination": "DAD",
+   "departure_local": "10:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO172",
+   "destination": "RMQ",
+   "departure_local": "10:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO870",
+   "destination": "NRT",
+   "departure_local": "10:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO668",
+   "destination": "FUK",
+   "departure_local": "11:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO110",
+   "destination": "TPE",
+   "departure_local": "11:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO898",
+   "destination": "KIX",
+   "departure_local": "11:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO746",
+   "destination": "PEN",
+   "departure_local": "11:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 225
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO112",
+   "destination": "TPE",
+   "departure_local": "12:10",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO132",
+   "destination": "KHH",
+   "departure_local": "12:45",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO638",
+   "destination": "FUK",
+   "departure_local": "12:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO646",
+   "destination": "NRT",
+   "departure_local": "13:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO202",
+   "destination": "YIW",
+   "departure_local": "13:25",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 125
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO700",
+   "destination": "BKK",
+   "departure_local": "13:35",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO650",
+   "destination": "NRT",
+   "departure_local": "14:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO688",
+   "destination": "KIX",
+   "departure_local": "14:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO652",
+   "destination": "NRT",
+   "departure_local": "14:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO684",
+   "destination": "NGO",
+   "departure_local": "15:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO640",
+   "destination": "CJU",
+   "departure_local": "15:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO862",
+   "destination": "KIX",
+   "departure_local": "15:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO824",
+   "destination": "OKA",
+   "departure_local": "15:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO214",
+   "destination": "WUX",
+   "departure_local": "16:20",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO626",
+   "destination": "ICN",
+   "departure_local": "16:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO108",
+   "destination": "RMQ",
+   "departure_local": "16:50",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO702",
+   "destination": "BKK",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO744",
+   "destination": "CNX",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO534",
+   "destination": "MNL",
+   "departure_local": "17:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO272",
+   "destination": "CZX",
+   "departure_local": "17:45",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO622",
+   "destination": "HND",
+   "departure_local": "17:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO182",
+   "destination": "RMQ",
+   "departure_local": "18:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO116",
+   "destination": "TPE",
+   "departure_local": "18:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO628",
+   "destination": "HND",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO260",
+   "destination": "PKX",
+   "departure_local": "22:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO506",
+   "destination": "MNL",
+   "departure_local": "23:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 0,
+   "flight_number": "UO624",
+   "destination": "HND",
+   "departure_local": "23:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO854",
+   "destination": "NRT",
+   "departure_local": "02:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO676",
+   "destination": "CJU",
+   "departure_local": "02:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO618",
+   "destination": "ICN",
+   "departure_local": "07:15",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO724",
+   "destination": "HKT",
+   "departure_local": "07:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO820",
+   "destination": "OKA",
+   "departure_local": "07:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO522",
+   "destination": "CRK",
+   "departure_local": "07:40",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO600",
+   "destination": "FUK",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO756",
+   "destination": "CNX",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO598",
+   "destination": "PQC",
+   "departure_local": "07:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 170
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO130",
+   "destination": "KHH",
+   "departure_local": "08:00",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO552",
+   "destination": "DAD",
+   "departure_local": "08:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO686",
+   "destination": "KIX",
+   "departure_local": "08:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO674",
+   "destination": "PUS",
+   "departure_local": "08:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO890",
+   "destination": "SDJ",
+   "departure_local": "09:00",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO712",
+   "destination": "BKK",
+   "departure_local": "09:15",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO848",
+   "destination": "NRT",
+   "departure_local": "09:20",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO814",
+   "destination": "KMQ",
+   "departure_local": "09:30",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO850",
+   "destination": "KIX",
+   "departure_local": "09:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO680",
+   "destination": "NGO",
+   "departure_local": "10:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO630",
+   "destination": "ICN",
+   "departure_local": "10:30",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO556",
+   "destination": "DAD",
+   "departure_local": "10:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO172",
+   "destination": "RMQ",
+   "departure_local": "10:50",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO870",
+   "destination": "NRT",
+   "departure_local": "10:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO668",
+   "destination": "FUK",
+   "departure_local": "11:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO110",
+   "destination": "TPE",
+   "departure_local": "11:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO898",
+   "destination": "KIX",
+   "departure_local": "11:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO746",
+   "destination": "PEN",
+   "departure_local": "11:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 225
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO112",
+   "destination": "TPE",
+   "departure_local": "12:10",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO132",
+   "destination": "KHH",
+   "departure_local": "12:45",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO638",
+   "destination": "FUK",
+   "departure_local": "12:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO646",
+   "destination": "NRT",
+   "departure_local": "13:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO700",
+   "destination": "BKK",
+   "departure_local": "13:35",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO650",
+   "destination": "NRT",
+   "departure_local": "14:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO652",
+   "destination": "NRT",
+   "departure_local": "14:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO684",
+   "destination": "NGO",
+   "departure_local": "15:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO640",
+   "destination": "CJU",
+   "departure_local": "15:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO862",
+   "destination": "KIX",
+   "departure_local": "15:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO824",
+   "destination": "OKA",
+   "departure_local": "15:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO214",
+   "destination": "WUX",
+   "departure_local": "16:20",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO108",
+   "destination": "RMQ",
+   "departure_local": "16:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO626",
+   "destination": "ICN",
+   "departure_local": "16:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO702",
+   "destination": "BKK",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO744",
+   "destination": "CNX",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO534",
+   "destination": "MNL",
+   "departure_local": "17:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO622",
+   "destination": "HND",
+   "departure_local": "17:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO182",
+   "destination": "RMQ",
+   "departure_local": "18:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO116",
+   "destination": "TPE",
+   "departure_local": "18:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO226",
+   "destination": "NGB",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO628",
+   "destination": "HND",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO790",
+   "destination": "BKI",
+   "departure_local": "21:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO506",
+   "destination": "MNL",
+   "departure_local": "23:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 1,
+   "flight_number": "UO624",
+   "destination": "HND",
+   "departure_local": "23:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO854",
+   "destination": "NRT",
+   "departure_local": "02:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO604",
+   "destination": "PUS",
+   "departure_local": "02:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO676",
+   "destination": "CJU",
+   "departure_local": "02:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO618",
+   "destination": "ICN",
+   "departure_local": "07:15",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO724",
+   "destination": "HKT",
+   "departure_local": "07:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO820",
+   "destination": "OKA",
+   "departure_local": "07:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO540",
+   "destination": "HAN",
+   "departure_local": "07:35",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO522",
+   "destination": "CRK",
+   "departure_local": "07:40",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO600",
+   "destination": "FUK",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO756",
+   "destination": "CNX",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO598",
+   "destination": "PQC",
+   "departure_local": "07:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 170
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO130",
+   "destination": "KHH",
+   "departure_local": "08:00",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO716",
+   "destination": "SZB",
+   "departure_local": "08:10",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO552",
+   "destination": "DAD",
+   "departure_local": "08:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO686",
+   "destination": "KIX",
+   "departure_local": "08:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO674",
+   "destination": "PUS",
+   "departure_local": "08:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO890",
+   "destination": "SDJ",
+   "departure_local": "09:00",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO712",
+   "destination": "BKK",
+   "departure_local": "09:15",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO642",
+   "destination": "TAK",
+   "departure_local": "09:20",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO848",
+   "destination": "NRT",
+   "departure_local": "09:20",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO822",
+   "destination": "HIJ",
+   "departure_local": "09:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO850",
+   "destination": "KIX",
+   "departure_local": "09:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO680",
+   "destination": "NGO",
+   "departure_local": "10:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO630",
+   "destination": "ICN",
+   "departure_local": "10:30",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO556",
+   "destination": "DAD",
+   "departure_local": "10:45",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO172",
+   "destination": "RMQ",
+   "departure_local": "10:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO870",
+   "destination": "NRT",
+   "departure_local": "10:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO668",
+   "destination": "FUK",
+   "departure_local": "11:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO110",
+   "destination": "TPE",
+   "departure_local": "11:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO898",
+   "destination": "KIX",
+   "departure_local": "11:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO746",
+   "destination": "PEN",
+   "departure_local": "11:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 225
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO112",
+   "destination": "TPE",
+   "departure_local": "12:10",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO132",
+   "destination": "KHH",
+   "departure_local": "12:45",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO638",
+   "destination": "FUK",
+   "departure_local": "12:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO646",
+   "destination": "NRT",
+   "departure_local": "13:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO202",
+   "destination": "YIW",
+   "departure_local": "13:25",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 125
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO700",
+   "destination": "BKK",
+   "departure_local": "13:35",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO650",
+   "destination": "NRT",
+   "departure_local": "14:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO688",
+   "destination": "KIX",
+   "departure_local": "14:45",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO652",
+   "destination": "NRT",
+   "departure_local": "14:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO684",
+   "destination": "NGO",
+   "departure_local": "15:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO640",
+   "destination": "CJU",
+   "departure_local": "15:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO862",
+   "destination": "KIX",
+   "departure_local": "15:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO824",
+   "destination": "OKA",
+   "departure_local": "15:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO214",
+   "destination": "WUX",
+   "departure_local": "16:20",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO626",
+   "destination": "ICN",
+   "departure_local": "16:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO108",
+   "destination": "RMQ",
+   "departure_local": "16:50",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO702",
+   "destination": "BKK",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO744",
+   "destination": "CNX",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO534",
+   "destination": "MNL",
+   "departure_local": "17:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO272",
+   "destination": "CZX",
+   "departure_local": "17:45",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO622",
+   "destination": "HND",
+   "departure_local": "17:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO182",
+   "destination": "RMQ",
+   "departure_local": "18:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO116",
+   "destination": "TPE",
+   "departure_local": "18:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO628",
+   "destination": "HND",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO260",
+   "destination": "PKX",
+   "departure_local": "22:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 2,
+   "flight_number": "UO624",
+   "destination": "HND",
+   "departure_local": "23:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO854",
+   "destination": "NRT",
+   "departure_local": "02:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO676",
+   "destination": "CJU",
+   "departure_local": "02:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO618",
+   "destination": "ICN",
+   "departure_local": "07:15",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO724",
+   "destination": "HKT",
+   "departure_local": "07:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO820",
+   "destination": "OKA",
+   "departure_local": "07:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO522",
+   "destination": "CRK",
+   "departure_local": "07:40",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO600",
+   "destination": "FUK",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO756",
+   "destination": "CNX",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO598",
+   "destination": "PQC",
+   "departure_local": "07:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 170
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO130",
+   "destination": "KHH",
+   "departure_local": "08:00",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO552",
+   "destination": "DAD",
+   "departure_local": "08:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO686",
+   "destination": "KIX",
+   "departure_local": "08:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO674",
+   "destination": "PUS",
+   "departure_local": "08:35",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO712",
+   "destination": "BKK",
+   "departure_local": "09:15",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO848",
+   "destination": "NRT",
+   "departure_local": "09:20",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO814",
+   "destination": "KMQ",
+   "departure_local": "09:30",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO850",
+   "destination": "KIX",
+   "departure_local": "09:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO680",
+   "destination": "NGO",
+   "departure_local": "10:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO630",
+   "destination": "ICN",
+   "departure_local": "10:30",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO556",
+   "destination": "DAD",
+   "departure_local": "10:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO172",
+   "destination": "RMQ",
+   "departure_local": "10:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO870",
+   "destination": "NRT",
+   "departure_local": "10:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO668",
+   "destination": "FUK",
+   "departure_local": "11:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO110",
+   "destination": "TPE",
+   "departure_local": "11:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO898",
+   "destination": "KIX",
+   "departure_local": "11:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO746",
+   "destination": "PEN",
+   "departure_local": "11:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 225
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO112",
+   "destination": "TPE",
+   "departure_local": "12:10",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO132",
+   "destination": "KHH",
+   "departure_local": "12:45",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO638",
+   "destination": "FUK",
+   "departure_local": "12:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO646",
+   "destination": "NRT",
+   "departure_local": "13:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO202",
+   "destination": "YIW",
+   "departure_local": "13:25",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 125
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO700",
+   "destination": "BKK",
+   "departure_local": "13:35",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO650",
+   "destination": "NRT",
+   "departure_local": "14:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO652",
+   "destination": "NRT",
+   "departure_local": "14:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO684",
+   "destination": "NGO",
+   "departure_local": "15:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO640",
+   "destination": "CJU",
+   "departure_local": "15:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO862",
+   "destination": "KIX",
+   "departure_local": "15:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO824",
+   "destination": "OKA",
+   "departure_local": "15:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO214",
+   "destination": "WUX",
+   "departure_local": "16:20",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO108",
+   "destination": "RMQ",
+   "departure_local": "16:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO626",
+   "destination": "ICN",
+   "departure_local": "16:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO702",
+   "destination": "BKK",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO744",
+   "destination": "CNX",
+   "departure_local": "16:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO534",
+   "destination": "MNL",
+   "departure_local": "17:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO622",
+   "destination": "HND",
+   "departure_local": "17:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO250",
+   "destination": "SYX",
+   "departure_local": "18:10",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO182",
+   "destination": "RMQ",
+   "departure_local": "18:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO116",
+   "destination": "TPE",
+   "departure_local": "18:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO226",
+   "destination": "NGB",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO628",
+   "destination": "HND",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO614",
+   "destination": "ICN",
+   "departure_local": "21:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO790",
+   "destination": "BKI",
+   "departure_local": "21:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO506",
+   "destination": "MNL",
+   "departure_local": "23:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 3,
+   "flight_number": "UO624",
+   "destination": "HND",
+   "departure_local": "23:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO854",
+   "destination": "NRT",
+   "departure_local": "02:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO656",
+   "destination": "TAE",
+   "departure_local": "02:25",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 190
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO676",
+   "destination": "CJU",
+   "departure_local": "02:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO618",
+   "destination": "ICN",
+   "departure_local": "07:15",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO724",
+   "destination": "HKT",
+   "departure_local": "07:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO820",
+   "destination": "OKA",
+   "departure_local": "07:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO540",
+   "destination": "HAN",
+   "departure_local": "07:35",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO522",
+   "destination": "CRK",
+   "departure_local": "07:40",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO600",
+   "destination": "FUK",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO756",
+   "destination": "CNX",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO598",
+   "destination": "PQC",
+   "departure_local": "07:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 170
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO130",
+   "destination": "KHH",
+   "departure_local": "08:00",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO716",
+   "destination": "SZB",
+   "departure_local": "08:10",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO552",
+   "destination": "DAD",
+   "departure_local": "08:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO686",
+   "destination": "KIX",
+   "departure_local": "08:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO250",
+   "destination": "SYX",
+   "departure_local": "08:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO674",
+   "destination": "PUS",
+   "departure_local": "08:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO890",
+   "destination": "SDJ",
+   "departure_local": "09:00",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO712",
+   "destination": "BKK",
+   "departure_local": "09:15",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO642",
+   "destination": "TAK",
+   "departure_local": "09:20",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO848",
+   "destination": "NRT",
+   "departure_local": "09:20",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO822",
+   "destination": "HIJ",
+   "departure_local": "09:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO850",
+   "destination": "KIX",
+   "departure_local": "09:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO680",
+   "destination": "NGO",
+   "departure_local": "10:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO630",
+   "destination": "ICN",
+   "departure_local": "10:30",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO556",
+   "destination": "DAD",
+   "departure_local": "10:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO172",
+   "destination": "RMQ",
+   "departure_local": "10:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO870",
+   "destination": "NRT",
+   "departure_local": "10:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO668",
+   "destination": "FUK",
+   "departure_local": "11:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO110",
+   "destination": "TPE",
+   "departure_local": "11:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO898",
+   "destination": "KIX",
+   "departure_local": "11:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO746",
+   "destination": "PEN",
+   "departure_local": "11:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 225
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO112",
+   "destination": "TPE",
+   "departure_local": "12:10",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO132",
+   "destination": "KHH",
+   "departure_local": "12:45",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO638",
+   "destination": "FUK",
+   "departure_local": "12:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO646",
+   "destination": "NRT",
+   "departure_local": "13:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO700",
+   "destination": "BKK",
+   "departure_local": "13:35",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO650",
+   "destination": "NRT",
+   "departure_local": "14:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO688",
+   "destination": "KIX",
+   "departure_local": "14:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO652",
+   "destination": "NRT",
+   "departure_local": "14:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO684",
+   "destination": "NGO",
+   "departure_local": "15:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO640",
+   "destination": "CJU",
+   "departure_local": "15:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO862",
+   "destination": "KIX",
+   "departure_local": "15:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO824",
+   "destination": "OKA",
+   "departure_local": "15:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO214",
+   "destination": "WUX",
+   "departure_local": "16:20",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO108",
+   "destination": "RMQ",
+   "departure_local": "16:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO626",
+   "destination": "ICN",
+   "departure_local": "16:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO702",
+   "destination": "BKK",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO744",
+   "destination": "CNX",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO534",
+   "destination": "MNL",
+   "departure_local": "17:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO272",
+   "destination": "CZX",
+   "departure_local": "17:45",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO622",
+   "destination": "HND",
+   "departure_local": "17:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO182",
+   "destination": "RMQ",
+   "departure_local": "18:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO116",
+   "destination": "TPE",
+   "departure_local": "18:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO226",
+   "destination": "NGB",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO628",
+   "destination": "HND",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO614",
+   "destination": "ICN",
+   "departure_local": "21:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO790",
+   "destination": "BKI",
+   "departure_local": "21:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO260",
+   "destination": "PKX",
+   "departure_local": "22:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO506",
+   "destination": "MNL",
+   "departure_local": "23:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 4,
+   "flight_number": "UO624",
+   "destination": "HND",
+   "departure_local": "23:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO854",
+   "destination": "NRT",
+   "departure_local": "02:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO604",
+   "destination": "PUS",
+   "departure_local": "02:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO676",
+   "destination": "CJU",
+   "departure_local": "02:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO618",
+   "destination": "ICN",
+   "departure_local": "07:15",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO724",
+   "destination": "HKT",
+   "departure_local": "07:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO820",
+   "destination": "OKA",
+   "departure_local": "07:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO540",
+   "destination": "HAN",
+   "departure_local": "07:35",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO522",
+   "destination": "CRK",
+   "departure_local": "07:40",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO192",
+   "destination": "RMQ",
+   "departure_local": "07:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO600",
+   "destination": "FUK",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO756",
+   "destination": "CNX",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO598",
+   "destination": "PQC",
+   "departure_local": "07:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 170
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO130",
+   "destination": "KHH",
+   "departure_local": "08:00",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO716",
+   "destination": "SZB",
+   "departure_local": "08:10",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO552",
+   "destination": "DAD",
+   "departure_local": "08:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO686",
+   "destination": "KIX",
+   "departure_local": "08:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO250",
+   "destination": "SYX",
+   "departure_local": "08:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO674",
+   "destination": "PUS",
+   "departure_local": "08:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO890",
+   "destination": "SDJ",
+   "departure_local": "09:00",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO712",
+   "destination": "BKK",
+   "departure_local": "09:15",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO848",
+   "destination": "NRT",
+   "departure_local": "09:20",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO814",
+   "destination": "KMQ",
+   "departure_local": "09:30",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO822",
+   "destination": "HIJ",
+   "departure_local": "09:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO850",
+   "destination": "KIX",
+   "departure_local": "09:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO680",
+   "destination": "NGO",
+   "departure_local": "10:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO630",
+   "destination": "ICN",
+   "departure_local": "10:30",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO556",
+   "destination": "DAD",
+   "departure_local": "10:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO172",
+   "destination": "RMQ",
+   "departure_local": "10:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO870",
+   "destination": "NRT",
+   "departure_local": "10:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO668",
+   "destination": "FUK",
+   "departure_local": "11:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO110",
+   "destination": "TPE",
+   "departure_local": "11:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO898",
+   "destination": "KIX",
+   "departure_local": "11:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO746",
+   "destination": "PEN",
+   "departure_local": "11:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 225
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO112",
+   "destination": "TPE",
+   "departure_local": "12:10",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO132",
+   "destination": "KHH",
+   "departure_local": "12:45",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO638",
+   "destination": "FUK",
+   "departure_local": "12:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO646",
+   "destination": "NRT",
+   "departure_local": "13:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO202",
+   "destination": "YIW",
+   "departure_local": "13:25",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 125
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO700",
+   "destination": "BKK",
+   "departure_local": "13:35",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO650",
+   "destination": "NRT",
+   "departure_local": "14:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO688",
+   "destination": "KIX",
+   "departure_local": "14:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO652",
+   "destination": "NRT",
+   "departure_local": "14:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO114",
+   "destination": "TPE",
+   "departure_local": "15:00",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO684",
+   "destination": "NGO",
+   "departure_local": "15:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO640",
+   "destination": "CJU",
+   "departure_local": "15:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO862",
+   "destination": "KIX",
+   "departure_local": "15:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO824",
+   "destination": "OKA",
+   "departure_local": "15:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO568",
+   "destination": "PQC",
+   "departure_local": "16:10",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 175
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO214",
+   "destination": "WUX",
+   "departure_local": "16:20",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO626",
+   "destination": "ICN",
+   "departure_local": "16:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO108",
+   "destination": "RMQ",
+   "departure_local": "16:50",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO702",
+   "destination": "BKK",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO744",
+   "destination": "CNX",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO534",
+   "destination": "MNL",
+   "departure_local": "17:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO622",
+   "destination": "HND",
+   "departure_local": "17:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO182",
+   "destination": "RMQ",
+   "departure_local": "18:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO116",
+   "destination": "TPE",
+   "departure_local": "18:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO134",
+   "destination": "KHH",
+   "departure_local": "18:50",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO226",
+   "destination": "NGB",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO628",
+   "destination": "HND",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO614",
+   "destination": "ICN",
+   "departure_local": "21:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO790",
+   "destination": "BKI",
+   "departure_local": "21:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO734",
+   "destination": "BKK",
+   "departure_local": "21:40",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO260",
+   "destination": "PKX",
+   "departure_local": "22:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO506",
+   "destination": "MNL",
+   "departure_local": "23:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 5,
+   "flight_number": "UO624",
+   "destination": "HND",
+   "departure_local": "23:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO854",
+   "destination": "NRT",
+   "departure_local": "02:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO676",
+   "destination": "CJU",
+   "departure_local": "02:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO618",
+   "destination": "ICN",
+   "departure_local": "07:15",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO724",
+   "destination": "HKT",
+   "departure_local": "07:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO820",
+   "destination": "OKA",
+   "departure_local": "07:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO540",
+   "destination": "HAN",
+   "departure_local": "07:35",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO522",
+   "destination": "CRK",
+   "departure_local": "07:40",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO192",
+   "destination": "RMQ",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO600",
+   "destination": "FUK",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO756",
+   "destination": "CNX",
+   "departure_local": "07:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO598",
+   "destination": "PQC",
+   "departure_local": "07:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 170
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO130",
+   "destination": "KHH",
+   "departure_local": "08:00",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO716",
+   "destination": "SZB",
+   "departure_local": "08:10",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO552",
+   "destination": "DAD",
+   "departure_local": "08:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO686",
+   "destination": "KIX",
+   "departure_local": "08:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO674",
+   "destination": "PUS",
+   "departure_local": "08:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO890",
+   "destination": "SDJ",
+   "departure_local": "09:00",
+   "aircraft_iata": "32A",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO712",
+   "destination": "BKK",
+   "departure_local": "09:15",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO642",
+   "destination": "TAK",
+   "departure_local": "09:20",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO848",
+   "destination": "NRT",
+   "departure_local": "09:20",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO850",
+   "destination": "KIX",
+   "departure_local": "09:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO680",
+   "destination": "NGO",
+   "departure_local": "10:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO630",
+   "destination": "ICN",
+   "departure_local": "10:30",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO556",
+   "destination": "DAD",
+   "departure_local": "10:45",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 115
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO172",
+   "destination": "RMQ",
+   "departure_local": "10:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO870",
+   "destination": "NRT",
+   "departure_local": "10:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO110",
+   "destination": "TPE",
+   "departure_local": "11:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO898",
+   "destination": "KIX",
+   "departure_local": "11:50",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO746",
+   "destination": "PEN",
+   "departure_local": "11:55",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 225
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO112",
+   "destination": "TPE",
+   "departure_local": "12:10",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO132",
+   "destination": "KHH",
+   "departure_local": "12:45",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO638",
+   "destination": "FUK",
+   "departure_local": "12:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO646",
+   "destination": "NRT",
+   "departure_local": "13:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO700",
+   "destination": "BKK",
+   "departure_local": "13:35",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO650",
+   "destination": "NRT",
+   "departure_local": "14:00",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO688",
+   "destination": "KIX",
+   "departure_local": "14:45",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO652",
+   "destination": "NRT",
+   "departure_local": "14:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 245
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO114",
+   "destination": "TPE",
+   "departure_local": "15:00",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO684",
+   "destination": "NGO",
+   "departure_local": "15:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 210
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO640",
+   "destination": "CJU",
+   "departure_local": "15:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 165
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO862",
+   "destination": "KIX",
+   "departure_local": "15:45",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 215
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO824",
+   "destination": "OKA",
+   "departure_local": "15:50",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO568",
+   "destination": "PQC",
+   "departure_local": "16:10",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 175
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO214",
+   "destination": "WUX",
+   "departure_local": "16:20",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO626",
+   "destination": "ICN",
+   "departure_local": "16:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO108",
+   "destination": "RMQ",
+   "departure_local": "16:50",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO702",
+   "destination": "BKK",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO744",
+   "destination": "CNX",
+   "departure_local": "16:55",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO534",
+   "destination": "MNL",
+   "departure_local": "17:25",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 150
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO272",
+   "destination": "CZX",
+   "departure_local": "17:45",
+   "aircraft_iata": "320",
+   "elapsed_minutes": 145
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO622",
+   "destination": "HND",
+   "departure_local": "17:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO250",
+   "destination": "SYX",
+   "departure_local": "18:10",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO182",
+   "destination": "RMQ",
+   "departure_local": "18:15",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 95
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO116",
+   "destination": "TPE",
+   "departure_local": "18:40",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 105
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO134",
+   "destination": "KHH",
+   "departure_local": "18:50",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 85
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO226",
+   "destination": "NGB",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 135
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO628",
+   "destination": "HND",
+   "departure_local": "19:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO614",
+   "destination": "ICN",
+   "departure_local": "21:05",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 205
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO790",
+   "destination": "BKI",
+   "departure_local": "21:30",
+   "aircraft_iata": "32N",
+   "elapsed_minutes": 185
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO734",
+   "destination": "BKK",
+   "departure_local": "21:40",
+   "aircraft_iata": "321",
+   "elapsed_minutes": 180
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO260",
+   "destination": "PKX",
+   "departure_local": "22:25",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 195
+  },
+  {
+   "weekday": 6,
+   "flight_number": "UO624",
+   "destination": "HND",
+   "departure_local": "23:55",
+   "aircraft_iata": "32Q",
+   "elapsed_minutes": 230
+  }
+ ]
+}

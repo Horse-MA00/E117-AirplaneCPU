@@ -23,7 +23,7 @@ SOURCE_FILES = (
     "backend/nhpp.py", "backend/nhpp_v3.py", "backend/forecast.py", "simulation/generated/calibration_v3_robust.json", "simulation/generated/nhpp_v3_robust_final.json", "simulation/evaluate_nhpp_v3.py", "simulation/calibrate_nhpp_v3_robust.py", "simulation/generated/calibration_v3.json", "backend/data.py", "backend/demand_catalog.py",
     "simulation/generated/calibration_v2.json",
     *tuple(f"simulation/{dataset}/{filename}"
-           for dataset in ("generated", "network_generated", "member_demo_generated")
+           for dataset in ("generated", "network_generated", "member_demo_generated", "hkx_recent_generated")
            for filename in ("snapshots.csv.gz", "flights.json")),
 )
 OBSERVATION_FIELDS = (

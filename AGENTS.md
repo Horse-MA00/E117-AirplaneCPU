@@ -31,6 +31,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 - 不改冻结的 `backend/nhpp.py` 或NHPP校准／验证文件；`backend/evidence.py`校验SHA。活动入口 `backend/forecast.py` 在D28使用v2分布及新guard，D14/D7使用平滑v3。
 - 不用已见final holdout调参，不重跑v2 calibration覆盖证据。改模型须新版本和新验证种子。
 - `simulation/generated/`、`validation_extended/`、`network_generated/`、`member_demo_generated/` 保留原始字节；这些是当前预测器依赖的数据。
+- `simulation/hkx_recent_generated/`（`hkx-recent-2`，`simulation/hkx_recent_generate.py`）为第三个附加目录：锚定2026-11-15后7／14／28天出发的366班HK Express近期航班，只含锚定日当天及以前的快照；不改动原1,549班及已保存实验所用航班。换日期须新目录，不覆写已有字节。
 - `llm_agent/experiments/`只发布现行v5／八类客群实验。报告、审计与manifest不可回填；新实验写新目录，失败和未改善结果也应如实报告。
 - 服务启动以只读方式加载公开实验，私有同ID记录优先；新增公开证据须测试空数据库、无密钥部署可查看Saved experiments及原始回覆，查看不调用provider。
 - 当前customer v4与analyst v2 prompt被实验哈希引用；修改提示须新增版本文件。报告中的旧来源哈希描述实际执行时源码，不能冒称由重构后的代码生成。

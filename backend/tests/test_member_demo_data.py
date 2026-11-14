@@ -23,8 +23,10 @@ class MemberDemoDataTests(unittest.TestCase):
         self.assertEqual({(f['origin'], f['destination'], f['departure_date']) for f in extra}, expected)
         self.assertEqual(len(extra), len(expected))
         self.assertEqual(validate(OUTPUT)['rows'], 222*181)
-        self.assertEqual(len(data.flights()), 1549)
-        self.assertEqual(len({f['flight_id'] for f in data.flights()}), 1549)
+        # Original 1,549-flight catalogue plus the near-term supplement.
+        total = 1549 + data.manifest()['recent']['flights']
+        self.assertEqual(len(data.flights()), total)
+        self.assertEqual(len({f['flight_id'] for f in data.flights()}), total)
         for flight in extra:
             self.assertTrue(flight['flight_id'].startswith('DEMO-'))
             self.assertEqual(flight['scenario'], SCENARIOS[flight['demo_priority']]['name'])
