@@ -47,7 +47,7 @@ class EvidenceTests(unittest.TestCase):
         root = Path(folder)
         shutil.copytree(ROOT / 'simulation/validation_extended', root / 'simulation/validation_extended')
         (root / 'backend').mkdir()
-        shutil.copy2(ROOT / 'backend/nhpp.py', root / 'backend/nhpp.py')
+        shutil.copy2(ROOT / 'backend/nhpp_v2.py', root / 'backend/nhpp_v2.py')
         return root
 
     def test_missing_payload_cannot_pass_as_a_valid_report(self):

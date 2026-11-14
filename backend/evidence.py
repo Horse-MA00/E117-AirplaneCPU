@@ -91,8 +91,8 @@ def verify_extended(root):
     report = read_evaluation(root, extended=True)
     if report.get('generation_seeds') != list(SEEDS) or report.get('additional_snapshot_rows') != 400000 or report.get('additional_histories') != 2210:
         _fail(f'{EXTENDED}/report.json', 'dataset scope does not match')
-    if hashlib.sha256(_bytes(root, 'backend/nhpp.py')).hexdigest() != report.get('forecast_code_sha256'):
-        _fail('backend/nhpp.py', 'frozen forecast source differs from the evaluated version')
+    if hashlib.sha256(_bytes(root, 'backend/nhpp_v2.py')).hexdigest() != report.get('forecast_code_sha256'):
+        _fail('backend/nhpp_v2.py', 'frozen v2 forecast source differs from the evaluated version')
     for seed in SEEDS:
         folder = f'{EXTENDED}/seed-{seed}'
         dataset = _json(root, folder + '/manifest.json')

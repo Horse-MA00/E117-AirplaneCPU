@@ -16,6 +16,15 @@ class SeatFeedbackTests(unittest.TestCase):
         self.assertEqual(a['releasable_seats'], 0)
         self.assertEqual(forecast['expected_remaining_demand'], 20)
 
+    def test_between_round_refresh_uses_next_longer_horizon(self):
+        p = initial_profile()
+        p['horizons']['28'].update(extra_protection=5)
+        p['horizons']['14'].update(extra_protection=9)
+        forecast = {'expected_remaining_demand': 20, 'protection_p90': 35,
+                    'available_seats': 100, 'capacity': 180, 'releasable_seats': 65, 'expected_empty_seats': 80}
+        self.assertEqual(apply_profile(forecast, p, 20)['protection_p90'], 40)
+        self.assertEqual(apply_profile(forecast, p, 10)['protection_p90'], 44)
+
     def test_incomplete_world_cannot_supply_future_labels(self):
         with self.assertRaises(ValueError):
             collect_samples({'pending': None, 'cursor': 0, 'events': [{}]})

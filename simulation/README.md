@@ -1,6 +1,6 @@
 # 每日機票與空座模擬
 
-目前合計600000筆：下文original generated/為200000筆，validation_extended/有兩批各200000筆。新NHPP請使用evaluate_nhpp_v2；文末v1數字保留為歷史。詳見[擴大驗證](../docs/EXTENDED_VALIDATION.md)。
+目前合計600000筆：下文original generated/為200000筆，validation_extended/有兩批各200000筆。v2（凍結於backend/nhpp_v2.py）請使用evaluate_nhpp_v2；執行中的v3使用evaluate_nhpp_v3，見[NHPP v3](../docs/NHPP_V3.md)。文末v1數字保留為歷史。詳見[擴大驗證](../docs/EXTENDED_VALIDATION.md)。
 
 本模組生成 **200,000 筆**每日快照。1,104 班有完整 D180–D0 的 181 筆；最後一班保留 D175–D0 的 176 筆，合計正好 200,000。最後一班同樣從 D180 開始模擬，只省略最初五筆輸出。所有航班均包含完整 D28–D0 決策期。
 
@@ -10,6 +10,9 @@ python -m simulation.generate --validate-only
 python -m simulation.evaluate_nhpp_v2 development
 # Calibration is explicit; do not overwrite or tune against the committed final report.
 python -m simulation.evaluate_nhpp_v2 calibration
+# Runtime NHPP v3 (backend/nhpp.py): recalibrate, then a one-time final on a new seed.
+python -m simulation.evaluate_nhpp_v3 calibration
+python -m simulation.evaluate_nhpp_v3 final
 python -m unittest discover -s tests -p 'test_simulation_data.py' -v
 ```
 

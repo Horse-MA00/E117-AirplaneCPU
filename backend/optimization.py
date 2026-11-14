@@ -86,7 +86,7 @@ def _id(run_id):
 def provenance():
     files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py', 'backend/data.py', 'backend/contribution_explanation.py',
              'backend/probabilistic_customer.py', 'backend/nhpp.py', 'backend/release_policy.py', 'backend/seat_feedback.py',
-             'simulation/generate.py', 'simulation/generated/calibration_v2.json',
+             'simulation/generate.py', 'simulation/generated/calibration_v3.json',
              'llm_agent/market_adapter.py', 'llm_agent/population.py', 'llm_agent/output_contract.py',
              'llm_agent/prompts/shared_market_v3_en.txt']
     if (ROOT/'simulation/network_generated/manifest.json').exists():

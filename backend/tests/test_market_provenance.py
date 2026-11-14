@@ -1,4 +1,4 @@
-"""Regression: freeze the calibration artifact actually read by NHPP v2."""
+"""Regression: freeze the calibration artifact actually read by the runtime NHPP (v3)."""
 import hashlib
 import json
 from pathlib import Path
@@ -11,7 +11,7 @@ from llm_agent import audit, market_experiment
 
 class MarketProvenanceTests(unittest.TestCase):
     def test_snapshot_contains_runtime_guard(self):
-        guard = 'simulation/generated/calibration_v2.json'
+        guard = 'simulation/generated/calibration_v3.json'
         root = Path(market_experiment.__file__).resolve().parents[1]
         self.assertEqual(market_experiment.implementation_hashes().get(guard),
                          hashlib.sha256((root / guard).read_bytes()).hexdigest())
@@ -23,7 +23,7 @@ class MarketProvenanceTests(unittest.TestCase):
             original = Path.read_bytes
             def altered(path):
                 raw = original(path)
-                return raw + b'\n' if path.name == 'calibration_v2.json' else raw
+                return raw + b'\n' if path.name == 'calibration_v3.json' else raw
             with patch.object(Path, 'read_bytes', altered):
                 with self.assertRaisesRegex(ValueError, 'implementation changed'):
                     market_experiment.run_batch(output, 0, 1)

@@ -3,6 +3,9 @@ import math
 
 VERSION = 'three-round-release-v1'
 RELEASE_DAYS = (28, 14, 7)
+# Between rounds a weekday-matched surge alarm may refresh the forecast and
+# raise normal-demand protection. It never issues, cancels or resets quota.
+MONITOR_VERSION = 'inter-round-tighten-only-v1'
 
 
 def release_budget(available, protection, outstanding, release_fraction=1.0):

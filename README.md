@@ -26,7 +26,8 @@ Admin also explains each retained candidate with paired revenue/cost tables, the
 
 SQLite saves rounds, seat-feedback profiles, redacted original LLM outputs and resumable
 market state. Live runs automatically cross internal batches within a selected total
-budget. NO_OFFER remains a valid result. The base NHPP remains frozen.
+budget. NO_OFFER remains a valid result. The runtime NHPP is now v3 (see below); the v2 model
+and its reports stay frozen in `backend/nhpp_v2.py`.
 
 Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md).
 The [earlier joint engine](docs/OPTIMIZATION_ENGINE.md), whole-term continuous search
@@ -73,6 +74,7 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 
 - **680,364 daily snapshots** across **3,759 synthetic flight histories** (200,000 original demo rows, two 40,182-row route/date supplements and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
+- **NHPP v3:** whole-week alignment (35-day window, 7/14/21/28-day change points, weekly-block slope likelihood), an asymptotic significance gate on small releases, a weekend/holiday near-term shock prior, and a weekday-matched surge alarm that only tightens protection between D28/D14/D7. See [NHPP v3](docs/NHPP_V3.md).
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
 - **Flight-specific optimisation:** 1–12 rounds per mathematical/LLM track, dataset-derived P₀, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
@@ -102,6 +104,8 @@ evaluation. The publication check additionally verifies every payload checksum.
 This is a **synthetic-market decision prototype**, not a calibrated production revenue-management system or a representative survey of HK Express customers. OAG Flight Info supplies schedules and capacity estimates, not daily bookings or airfare history. All 680,364 simulation rows remain synthetic even when an OAG connection is available.
 
 On **240 fresh synthetic test flights**, v2's D28 sustained-surge protection coverage is **82.5%**. On the same flights, v1 with its original 16-seat margin scores **30.0%**, while v1 recalibrated using the same procedure scores **80.0%**. The historical 47.62% came from a different cohort. D14/D7 demand MAE improves, but D28 demand MAE worsens and D7 unseen-surges still have only 75% protection coverage. See the [full comparison and limitations](docs/NHPP_V2_REVIEW.md), [frozen final report](simulation/generated/nhpp_v2_final.json) and [calibration](simulation/generated/calibration_v2.json). Raw predictive bands and calibrated operational protection are separate.
+
+**NHPP v3** (runtime) was recalibrated on the v2 calibration seed and compared once on a new 240-flight seed: D28 surge protection coverage **85.0%** vs v2 **82.5%**, D7 surge **95.0%** vs **92.5%**, never lower at any horizon, at the cost of about 0.7–1.1 fewer released seats per flight and slightly worse overall demand MAE. 11 of 12 surges starting between D28 and D14 raised the between-round alarm before D14. See [NHPP v3](docs/NHPP_V3.md); the v2 figures below are unchanged v2 evidence.
 
 An additional frozen-model evaluation on **1,200 fresh flights** yields **91.5% D28 surge protection coverage** (200 surge flights), versus **89.5%** for equivalently recalibrated v1. D7 unseen-surges remain only **81.48%** covered. [Expanded evidence](docs/EXTENDED_VALIDATION.md) preserves the earlier final result rather than replacing it.
 
@@ -137,7 +141,7 @@ python scripts/smoke_api.py
 python scripts/smoke_member_portal.py
 ```
 
-V2 calibration is a separate explicit operation: `python -m simulation.evaluate_nhpp_v2 calibration`. The committed final report must not be overwritten to retune against it. Do not repeatedly tune on the final holdout. Read [simulation instructions](simulation/README.md) before changing generator or forecast assumptions.
+V2 calibration is a separate explicit operation: `python -m simulation.evaluate_nhpp_v2 calibration`. Runtime v3 uses `python -m simulation.evaluate_nhpp_v3 calibration` and a one-time `final`. The committed final report must not be overwritten to retune against it. Do not repeatedly tune on the final holdout. Read [simulation instructions](simulation/README.md) before changing generator or forecast assumptions.
 
 ## Optional services
 
@@ -171,6 +175,7 @@ For live experiments, create with `--modes live`, then use a bounded `--max-call
 - [Admin and member flows, panel limits and APIs](docs/ADMIN_AND_MEMBER_UX.md)
 - [Current technical architecture](docs/CURRENT_IMPLEMENTATION.md)
 - [Three-round release rule and verification](docs/THREE_ROUND_RELEASE.md)
+- [NHPP v3: weekly alignment, release significance gate and between-round surge alarm](docs/NHPP_V3.md)
 - [Latest progress](docs/ITERATION_2_PROGRESS.md)
 - [Shared-market engine and financial rules](docs/SHARED_MARKET.md)
 - [Shared-market agent, auditing and probes](docs/SHARED_MARKET_AGENT.md)

@@ -15,8 +15,8 @@ from datetime import date, timedelta
 
 import numpy as np
 
-from backend.nhpp import forecast
-from backend.release_policy import RELEASE_DAYS, VERSION as RELEASE_VERSION, release_budget
+from backend.nhpp import forecast, surge_alarm
+from backend.release_policy import RELEASE_DAYS, VERSION as RELEASE_VERSION, MONITOR_VERSION, release_budget
 from llm_agent.population import population
 from simulation.generate import simulate_flight
 
@@ -279,6 +279,28 @@ def _cancel(state, bid):
     return b
 
 
+def _monitor(state, f, d, predict):
+    """Between rounds: a weekday-matched surge alarm refreshes the forecast.
+
+    Tighten-only. It may raise normal-demand protection, which blocks valid
+    unsold quota from sale, but it never issues, cancels or resets quota.
+    """
+    alarm = surge_alarm(f["history"], d)
+    if not alarm["alarm"]:
+        return
+    prediction = predict()
+    state["monitor_forecast_calls"] = state.get("monitor_forecast_calls", 0) + 1
+    available = f["capacity"] - f["occupied"]
+    refreshed = max(prediction["protection_p90"], available - prediction["releasable_seats"])
+    before = f["protection_remaining"]
+    f["protection_remaining"] = max(before, refreshed)
+    f.setdefault("monitor_history", []).append({
+        "day": state["day"], "days_to_departure": d, "monitor_version": MONITOR_VERSION,
+        "alarm": alarm, "refreshed_protection": refreshed, "protection_before": before,
+        "protection_after": f["protection_remaining"], "tightened": f["protection_remaining"] > before,
+        "member_remaining": f["member_remaining"], "member_sellable": _member_sellable(f)})
+
+
 def _automatic(state, event):
     kind = event["kind"]
     if kind == "background":
@@ -308,12 +330,18 @@ def _automatic(state, event):
                                   "gross_bookings": f["normal_since_snapshot"], "cancellations": f["cancel_since_snapshot"],
                                   "interval_days": 22 / 24 if d == 0 else 1.})
         f["normal_since_snapshot"] = f["cancel_since_snapshot"] = 0
-        if d in RELEASE_DAYS and not any(c["round_day"] == d for c in f["quota_cohorts"]):
-            seed_offset = int(f['flight_id'][-3:]) if f['flight_id'][-3:].isdigit() else int(hashlib.sha256(f['flight_id'].encode()).hexdigest()[:6],16)
+        seed_offset = int(f['flight_id'][-3:]) if f['flight_id'][-3:].isdigit() else int(hashlib.sha256(f['flight_id'].encode()).hexdigest()[:6],16)
+
+        def predict():
             prediction = forecast(f["history"], d, state["seed"] + seed_offset)
             if state["policy"].get("seat_calibration") is not None:
                 from backend.seat_feedback import apply_profile
                 prediction = apply_profile(prediction, state["policy"]["seat_calibration"], d)
+            return prediction
+        if 0 < d < max(RELEASE_DAYS) and d not in RELEASE_DAYS and f["member_remaining"] > 0:
+            _monitor(state, f, d, predict)
+        if d in RELEASE_DAYS and not any(c["round_day"] == d for c in f["quota_cohorts"]):
+            prediction = predict()
             f["forecast"] = {k: prediction[k] for k in ("model", "days_to_departure", "expected_remaining_demand", "raw_protection_p90", "protection_p90", "releasable_seats", "expected_empty_seats")}
             f["forecast"].update({k: prediction[k] for k in ("base_expected_remaining_demand", "base_protection_p90", "seat_feedback_version", "seat_feedback_generation") if k in prediction})
             state["forecast_calls"] += 1
@@ -684,6 +712,7 @@ def summarize(state: dict) -> dict:
                             "capacity": f["capacity"], "legacy_seats": f["legacy_seats"], "occupied": f["occupied"], "available": f["capacity"] - f["occupied"],
                             "member_remaining": f["member_remaining"], "member_seats": sum(b["member_seats"] for b in matching),
                             "background_denied": f["background_denied"], "quota_history": copy.deepcopy(f["quota_history"]),
+                            "monitor_history": copy.deepcopy(f.get("monitor_history", [])),
                             "quota_cohorts": copy.deepcopy(f.get("quota_cohorts", [])), "member_sellable": _member_sellable(f),
                             "inventory_conserved": f["occupied"] == f["legacy_seats"] + sum(b["party_size"] for b in matching)})
     checks = {"cash_identity": cash_identity, "inventory_conserved": all(f["inventory_conserved"] for f in inventories),
@@ -711,6 +740,7 @@ def summarize(state: dict) -> dict:
             "cancellations": sum(b["status"] == "cancelled" for b in agent),
             "renewal_intent_count": sum(c["renewal_intention"] == "RENEW_INTENT" for c in state["customers"].values()),
             "renewal_is_intention_only": True, "decision_count": len(state["records"]), "forecast_calls": state["forecast_calls"],
+            "monitor_forecast_calls": state.get("monitor_forecast_calls", 0), "inter_round_monitor_version": MONITOR_VERSION,
             "charged_members_full_term_observed": sum(c["membership_term_closed"] for c in joined),
             "last_observed_calendar_day": round(state["day"], 4),
             "flights": inventories, "checks": checks,
@@ -718,7 +748,7 @@ def summarize(state: dict) -> dict:
                             "The same seed creates identical latent background demand and customer occasions across policies. Demand never reads forecast means or quotas.",
                             ("The NHPP receives completed as-of normal-booking intervals, excluding member seats. Fixed D28/D14/D7 rounds add max(0,total target minus all earlier valid unsold quota); FIFO consumption and cutoff expiry are explicit."
                              if state.get("version") == VERSION else "Legacy saved market: quotas were reset at each enabled checkpoint, without the new cross-round cohort rules."),
-                            ("Unspent quotas persist until cutoff, but sales remain subject to physical capacity and normal-demand protection. Cancellation returns physical seats without minting quota. No new quota between rounds."
+                            ("Unspent quotas persist until cutoff, but sales remain subject to physical capacity and normal-demand protection. Cancellation returns physical seats without minting quota. No new quota between rounds; a weekday-matched surge alarm between rounds may only refresh and raise protection."
                              if state.get("version") == VERSION else "Historical saved result; not reinterpreted as validation of the three-round additive policy."),
                             "A pass discounts only its holder; companions pay normal fares. Every party purchase succeeds completely or not at all.",
                             "Pre-D28 bookings are existing occupancy; their sunk payments and operating costs are outside the comparative ledger.",

@@ -176,3 +176,13 @@ Pulled main to25e27cc first, preserving unrelated localdocuments. Independently 
 Implemented read-only contribution explanation and frontend tables for baseline/candidate cost/revenue, fullcash view, netbuyers versusfulfilledbuyers, andevery-replica servicegates.75% holdoutmean is100% and50%, failing60%minimuminoneworld. Legacy/missing/mismatchedexogenousworlds cannot fabricate pairedresults. Originalreports, provideroutputs, fees, profitpolicy andranking remain unchanged.28targeted backendtests pass; fullcontainer/browserchecks pending. Detailedaudit:docs/CONTRIBUTION_AUDIT_2026-11-14.md; evidence:docs/validation/contribution_audit_20261114.json.
 
 Finalcontributionverification PASS:218backendtests;26simulator/publicationtestsincontainer(25pass,1Git-onlyskip), all7publicationtests rerunonhostincludingthatcase. Actualsavedrun/read-onlyChrome desktop+390px mobile andfrozenfixturecheckscorrectbridge−2364/cash−1380, noofferreasonsandservicegate. Existingseat-supplyfixturepasses. Rawreport/auditSHAunchanged;provider_calls remains175. No newpaidcalls orpricingpolicychange.
+
+### 2026-11-14 — NHPP v3: weekly alignment, release significance gate, between-round surge alarm
+
+- Located three defects first, reproduced each as a failing test (`backend/tests/test_nhpp_v3_fixes.py`, 13 of 14 fail on the previous code), then fixed them. Details and evidence: [NHPP v3](NHPP_V3.md).
+- Seven-day alignment: window is exactly 35 daily intervals (v2 took 36), change points at 7/14/21/28 days (v2: 3/5/7/10/14), slope likelihood weighted by 7-day blocks; beta no longer depends on the weekday phase of the decision day.
+- Small releases must exceed 1.645 × the asymptotic SE of the guarded protection quantile; weekend (Fri–Sun) or explicitly flagged holiday departures get a 1.5× near-term shock prior.
+- Shared market: a weekday-matched surge alarm on non-release days refreshes the forecast and can only raise protection (`inter-round-tighten-only-v1`); quotas are never issued, cancelled or reset between D28/D14/D7.
+- v2 is frozen byte-for-byte in `backend/nhpp_v2.py`; all v2 reports verify unchanged. v3 recalibrated on seed 20261115, one-time final on new seed 20261117: coverage never below v2 (D28 surge 85.0% vs 82.5%), about 0.7–1.1 fewer released seats per flight, slightly worse overall demand MAE; 11/12 D28–D14 surges alarmed before D14.
+- Member-demo headroom audit regenerated with v3 (D28 positive 126 → 112); dataset bytes reproduced, only the generator hash in its manifest updated.
+- Checks: 233 backend + 26 simulation/publication tests pass; `scripts/check_publication.py` and `scripts/verify_artifacts.py` pass.

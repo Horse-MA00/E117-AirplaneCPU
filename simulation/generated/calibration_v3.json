@@ -1,0 +1,56 @@
+{
+  "version": 3,
+  "model_version": "nhpp-regime-mixture-v3",
+  "relative_guard_by_horizon": {
+    "28": 0.5142857142857142,
+    "14": 1.1162790697674418,
+    "7": 1.1304347826086956
+  },
+  "generation_seed": 20261115,
+  "final_generation_seed_reserved": 20261117,
+  "flights": 240,
+  "target_coverage": 0.9,
+  "forecast_code_sha256": "fdfedb07e4f35684cf48882b588d939d14cae5bd661ef83b71ff7a262d15843d",
+  "settings": {
+    "window_days": 35,
+    "beta_prior_mean": 0.012,
+    "beta_prior_sd": 0.025,
+    "price_elasticity": 0.8,
+    "future_persistent_probability_28d": 0.22,
+    "future_pulse_probability_28d": 0.1,
+    "shock_multiplier_range": [
+      2.0,
+      4.0
+    ],
+    "late_shock_prior_floor_fraction": 0.5,
+    "changepoint_log_lr_threshold": 5.0,
+    "max_beta": 0.1,
+    "min_beta": -0.08,
+    "weekly_block_days": 7,
+    "changepoint_candidate_days": [
+      7,
+      14,
+      21,
+      28
+    ],
+    "release_significance_z": 1.645,
+    "release_quantile_density_halfwidth": 0.05,
+    "peak_departure_weekdays": [
+      4,
+      5,
+      6
+    ],
+    "peak_departure_shock_prior_multiplier": 1.5,
+    "surge_monitor_recent_days": 3,
+    "surge_monitor_reference_weeks": 4,
+    "surge_monitor_min_reference_weeks": 2,
+    "surge_monitor_ratio": 1.8,
+    "surge_monitor_log_lr_threshold": 4.0,
+    "surge_monitor_min_recent_count": 6
+  },
+  "method": "worst synthetic regime upper order statistic of relative residual; one global scale per horizon",
+  "notes": [
+    "Scoring labels calibrate one global guard shared by every runtime flight; no scenario label enters forecasting.",
+    "Guarded protection is not a probability P90. It trades release volume for robustness across these synthetic regimes."
+  ]
+}

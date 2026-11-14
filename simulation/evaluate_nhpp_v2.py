@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 from simulation.generate import simulate_flight, _integral
 from simulation.baselines.nhpp_v1 import forecast as v1
-from backend.nhpp import forecast as v2, SETTINGS, VERSION
+from backend.nhpp_v2 import forecast as v2, SETTINGS, VERSION
 
 ROOT=Path(__file__).resolve().parents[1]
 OUTPUT=ROOT/'simulation/generated'
@@ -102,7 +102,7 @@ def detection_probe(seed,count=60):
 def run(phase,count=None):
     OUTPUT.mkdir(exist_ok=True)
     count=count or (180 if phase=='development' else 240)
-    model_hash=hashlib.sha256((ROOT/'backend/nhpp.py').read_bytes()).hexdigest()
+    model_hash=hashlib.sha256((ROOT/'backend/nhpp_v2.py').read_bytes()).hexdigest()
     artifact=OUTPUT/f'nhpp_v2_{phase}.json'
     allowances={}
     if phase=='final':

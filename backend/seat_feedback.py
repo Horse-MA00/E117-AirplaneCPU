@@ -39,7 +39,10 @@ def apply_profile(prediction, profile, day):
     """Adjust the feedback layer, retaining the base model and all fail-closed gates."""
     validate_profile(profile)
     adjusted = dict(prediction)
-    settings = profile["horizons"][str(day)]
+    # Between-round refreshes use the next longer calibrated horizon, the same
+    # convention as the NHPP protection guard.
+    horizon = next((d for d in sorted(DAYS) if d >= day), max(DAYS))
+    settings = profile["horizons"][str(horizon)]
     mean = float(prediction["expected_remaining_demand"])
     protection = float(prediction["protection_p90"])
     new_mean = mean * settings["rate_scale"]

@@ -89,7 +89,8 @@ class NHPPTests(unittest.TestCase):
         rows = history()
         rows[-29]["cancellations"] = 4
         result = forecast(rows, 28)
-        self.assertEqual(result["diagnostics"]["observed_gross_count"], 36)
+        # v3 window: exactly five whole weeks (35 daily intervals, not 36).
+        self.assertEqual(result["diagnostics"]["observed_gross_count"], 35)
         rows[-29]["gross_bookings"] = -1
         with self.assertRaises(ValueError):
             forecast(rows, 28)
