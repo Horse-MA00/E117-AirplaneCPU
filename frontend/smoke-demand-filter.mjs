@@ -8,24 +8,27 @@ const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[],
 page.on('pageerror',e=>errors.push(e.message));
 const flights=[['HND','low',.42,350],['ICN','medium',.74,560],['TPE','high',.92,830]].map(([destination,demand_band,demand_expected_load_rate,normal_base_fare])=>({flight_id:`DEMO-HKG-${destination}-20270515`,origin:'HKG',destination,departure_at:'2027-05-15T10:00:00+08:00',departure_date:'2027-05-15',capacity:180,demand_band,demand_expected_load_rate,demand_reference_day:28,normal_base_fare}));
 let includeUnknown=false,starts=0,forecastCalls=0;
+const population={profile:'flexible_deal_seekers',segments:Array.from({length:8},(_,i)=>({id:`flexible-${i}`,name:`Flexible travellers ${i+1}`,weight:1/8}))};
 const scopeRequests=[];
 const catalogue=()=>includeUnknown?[...flights,{...flights[0],flight_id:'UNCLASSIFIED-HKG-HND',demand_band:undefined,demand_expected_load_rate:null}]:flights;
 const history=f=>[28,14,7,1,0].map(days_to_departure=>({days_to_departure,capacity:180,booked_seats:70,available_seats:110,normal_base_fare:f.normal_base_fare,normal_total_fare:f.normal_base_fare+250,mandatory_fees:250}));
 await page.route('**/*',async route=>{
   const request=route.request(),path=new URL(request.url()).pathname,reply=json=>route.fulfill({json});
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
-  if(['/app.js','/experiments.js','/optimization.js','/demand-filter.js','/contribution-explanation.js','/seat-status.js','/styles.css','/continuous.js','/price-chart.js'].includes(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
+  if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
   if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:365}});
   if(path==='/api/flights')return reply({flights:catalogue()});
   if(path.startsWith('/api/flights/')){const f=catalogue().find(f=>f.flight_id===decodeURIComponent(path.split('/').at(-1)));return reply({flight:f,history:history(f)});}
   if(path==='/api/forecast'){forecastCalls++;return reply({forecast:{expected_remaining_demand:20,expected_empty_seats:90,expected_empty_rate:.5,protection_p90:70,releasable_seats:40,risk_release_ceiling:40,beta:.012,rate_now:.7,forecast_curve:[],release_status:{safe_capacity:40,member_sold:0,total_active_unsold:0,currently_bookable:0,new_release_limit:40,round_history:[]}}});}
-  if(path==='/api/optimization/initial-policy'){
+  if(path==='/adaptive-pricing')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./adaptive-pricing.html',import.meta.url),'utf8')});
+  if(path==='/api/adaptive-pricing/status')return reply({live_configured:false,population,populations:[population]});
+  if(path==='/api/adaptive-pricing/scope'){
     const body=request.postDataJSON(),flight=catalogue().find(f=>f.flight_id===body.flight_id);
     scopeRequests.push(body);
-    return reply({initial_member_fare:Math.floor(flight.normal_base_fare*.8),initial_membership_fee:399,scope:{...flight,as_of_day:body.forecast_day,available_seats:110,normal_base_fare:flight.normal_base_fare,member_fare_cap:Math.floor(flight.normal_base_fare*.8),member_fare_cap_ratio:.8,releasable_seats:40,member_supply_exposure:40,optimization_eligible:true}});
+    return reply({population,scope:{initial_member_fare:Math.floor(flight.normal_base_fare*.8),...flight,as_of_day:body.forecast_day,available_seats:110,normal_base_fare:flight.normal_base_fare,member_fare_cap:Math.floor(flight.normal_base_fare*.8),member_fare_cap_ratio:.8,releasable_seats:40,member_supply_exposure:40,optimization_eligible:true}});
   }
-  if(path==='/api/optimization/runs'){if(request.method()==='POST')starts++;return reply({runs:[]});}
+  if(path==='/api/adaptive-pricing/runs'){if(request.method()==='POST')starts++;return reply({runs:[]});}
   if(path.startsWith('/api/'))return reply({runs:[],panels:[],segments:[],offers:[]});
   if(path==='/favicon.ico')return route.fulfill({status:204});
   blocked.push(path);return route.abort();
@@ -34,7 +37,7 @@ try{
   await mkdir(new URL('test-results/',import.meta.url),{recursive:true});
   await page.goto(origin+'/admin');
   await page.waitForFunction(()=>document.getElementById('headroom-value').textContent==='40 seats');
-  assert.equal(await page.getByLabel('Demand level',{exact:true}).count(),2);
+  assert.equal(await page.getByLabel('Demand level',{exact:true}).count(),1);
   assert.equal(await page.locator('search[aria-label="Filter forecast flights"]').count(),1);
   assert.equal(await page.locator('#forecast-demand option[value="low"]').innerText(),'Low demand (1)');
   assert.equal(await page.locator('#forecast-demand option[value="medium"]').innerText(),'Medium demand (1)');
@@ -68,49 +71,27 @@ try{
   await page.locator('#forecast-demand').selectOption('low');
   await page.waitForFunction(()=>!document.getElementById('flight-main').hidden&&document.getElementById('headroom-value').textContent==='40 seats');
   await page.screenshot({path:'test-results/demand-filter-forecast-desktop.png',fullPage:true});
-  await page.locator('a[href="#optimization"]').first().click();
-  await page.locator('#optimization-demand').selectOption('high');
-  assert.equal(await page.locator('#optimization-route option').count(),2);
-  await page.locator('#optimization-route').selectOption('HKG-TPE');
-  await page.locator('#optimization-flight').selectOption(flights[2].flight_id);
-  await page.waitForFunction(()=>document.getElementById('optimization-scope').textContent.includes('HKG → TPE')&&!document.getElementById('optimization-start').disabled);
-  assert.equal(await page.locator('#optimization-fare, #optimization-fee, #optimization-fare-max, #optimization-suggest, .optimization-settings').count(),0,'Server-derived prices need no editable setup controls');
-  assert.match(await page.locator('#optimization-setup-note').innerText(),/fixed at HK\$399/);
-  await page.locator('#optimization-day').selectOption('14');
-  await page.waitForFunction(()=>document.getElementById('optimization-scope').textContent.includes('D14.')&&!document.getElementById('optimization-start').disabled);
-  assert.equal(scopeRequests.at(-1).forecast_day,14,'Changing the release round must refresh the snapshot');
-  assert.equal(scopeRequests.at(-1).flight_id,flights[2].flight_id);
-  assert.ok(scopeRequests.every(body=>!['initial_member_fare','initial_membership_fee','fare_max'].some(key=>key in body)),'Snapshot requests must leave price policy to the server');
-  await page.locator('#optimization-demand').selectOption('all');
-  assert.equal(await page.locator('#optimization-flight').inputValue(),flights[2].flight_id);
-  await page.waitForFunction(()=>document.getElementById('optimization-scope').textContent.includes('HKG → TPE')&&!document.getElementById('optimization-start').disabled);
-  await page.locator('#optimization-demand').selectOption('unknown');
-  assert.equal(await page.locator('#optimization-route').isDisabled(),true);
-  assert.equal(await page.locator('#optimization-flight').isDisabled(),true);
-  assert.match(await page.locator('#optimization-scope').innerText(),/No flight selected/);
-  assert.equal(await page.locator('#optimization-start').isDisabled(),true);
-  assert.match(await page.locator('#optimization-demand-status').innerText(),/No flights match/);
-  assert.equal(starts,0,'Filters must never start an optimization');
-  await page.locator('#optimization-demand').selectOption('high');
-  await page.locator('a[href="#flights"]').first().click();
-  assert.equal(await page.locator('#forecast-demand').inputValue(),'low','Each view retains its own filter');
   await page.locator('[data-day="28"]').click();
   await page.waitForFunction(()=>!document.getElementById('go-pricing').disabled);
   await page.locator('#go-pricing').click();
-  await page.waitForFunction(()=>document.getElementById('optimization-scope').textContent.includes('HKG → HND')&&!document.getElementById('optimization-start').disabled);
-  assert.equal(await page.locator('#optimization-demand').inputValue(),'all','Cross-view navigation clears an incompatible filter');
-  assert.equal(await page.locator('#optimization-flight').inputValue(),flights[0].flight_id);
+  await page.waitForFunction(()=>document.getElementById('scope-day')?.textContent==='D28');
+  assert.equal(await page.locator('#flight').inputValue(),flights[0].flight_id,'Filtered Forecast selection reaches Thompson');
+  assert.equal(await page.locator('#release-day').inputValue(),'28');
+  assert.equal(await page.locator('#optimization-form').count(),0);
+  await page.locator('#release-day').selectOption('14');
+  await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D14');
+  assert.equal(scopeRequests.at(-1).forecast_day,14);
+  assert.equal(scopeRequests.at(-1).flight_id,flights[0].flight_id);
+  assert.ok(scopeRequests.every(body=>!['initial_member_fare','initial_membership_fee','fare_max'].some(key=>key in body)));
+  assert.equal(starts,0,'Opening a scoped Thompson experiment never starts it');
   await page.screenshot({path:'test-results/demand-filter-optimization-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Mobile layout must not overflow');
-  assert.ok(await page.locator('#optimization-demand').evaluate(n=>n.getBoundingClientRect().height>=48));
-  assert.ok(await page.locator('#optimization-demand').evaluate(n=>parseFloat(getComputedStyle(n).fontSize)>=16));
-  await page.evaluate(()=>window.scrollTo(0,0));
   await page.screenshot({path:'test-results/demand-filter-optimization-mobile.png',fullPage:true});
   includeUnknown=true;await page.goto(origin+'/admin');
   await page.waitForFunction(()=>document.querySelector('#forecast-demand option[value="unknown"]').textContent==='Unclassified (1)');
   await page.locator('#forecast-demand').selectOption('unknown');
   assert.equal(await page.locator('#flight-select').inputValue(),'UNCLASSIFIED-HKG-HND','Missing metadata must stay unclassified');
   assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
-  console.log(JSON.stringify({status:'passed',checks:['three demand bands and counts','fixed D28 reference','selection preservation','empty state and stale-request prevention','independent view filters','cross-view reset','scope refresh without price overrides','keyboard labels and mobile layout','missing metadata fallback'],optimization_starts:starts}));
+  console.log(JSON.stringify({status:'passed',checks:['three demand bands and counts','fixed D28 reference','selection preservation','empty state and stale-request prevention','filtered-flight Thompson entry','scope refresh without price overrides','keyboard labels and mobile layout','missing metadata fallback'],optimization_starts:starts}));
 }finally{await browser.close();}

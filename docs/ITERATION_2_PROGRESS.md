@@ -298,3 +298,22 @@ Final native checks: 290 backend and 31 publication/data/documentation tests, wi
 - 前端區分搜尋價、宣傳候選與最終保留價；更新製品驗證器以檢查 v5 原始選價／最終報價及配對驗證，舊制品不改寫。
 - 380 個後端及31個根目錄測試通過；完整文檔及凍結制品檢查通過。瀏覽器 mock 測試通過宣傳價邊界、格式化初始對照、最終草稿複製、歷史結果和手機版。
 - 新的純數學端到端 run `adaptive-14158362bab541cc`（seed20261124，3輪，16人，3批獨立驗證）完成：原始選價163→159，初始328→319；驗證 INCONCLUSIVE，保留319。0次provider呼叫。新本地匯出 `.runtime/marketing-fare-v5-check` 的244條audit紀錄通過製品驗證；結果不宣稱改善或真實客戶證據。
+
+
+## 2026-11-15 · Optimize 統一為 Thompson Sampling
+
+- Admin Optimize 直接進入 `/adaptive-pricing`，保留完整 Admin 導航；舊 `#optimization` 書籤保留 adaptive run／round，Forecast 與 Manage offers 帶入指定航班及放票日。
+- 移除舊 Math／Math+LLM 表單、雙軌結果、成本貢獻圖與參考定價區塊；主 Admin 不再載入 `optimization.js`／`continuous.js`。既有 API、私有 SQLite、已保存 Thompson 實驗、回饋、凍結資料及歷史實驗證據保留原樣。
+- 離線模擬顧客與 Live LLM 仍可作為同一 Thompson 演算法的行為來源；保留客群權重、輪數、人數、呼叫上限、價格／票款曲線、逐輪結果和獨立驗證。80% 上限、整數及最終尾數9／低於30歸零規則不變。
+- Manage offers 的相容建議與發布檢查仍在，Thompson 不自動發布或改寫會員 plan。同步更新 README 及現行 UI／架構／航班規格，區分主流程和相容引擎。
+- 已用原書籤讀取 `adaptive-1afc5c96d92f465d`／round 4：正確進入 Thompson，6 輪結果及歷史保留價 HK$255 未改寫；零 POST、零舊 optimizer API 請求、零頁面錯誤，1440px 桌面及390px手機無水平溢出。修改前後完整實驗回應逐字節一致（SHA256 `247db10572bc24fbe06d48475d330c83202984a000462a5139faf988a7dae63e`）。
+- `check_container.py` 通過380項後端、31項根目錄測試、209條相對連結及凍結證據檢查。6組瀏覽器測試通過：adaptive-pricing、optimization、demand-filter、seat-supply、flight-offers、smoke；涵蓋新舊入口、航班／輪次帶入、回饋連結、宣傳價與歷史報價、手機版及重新整理。
+- 新離線端到端實驗 `adaptive-612add209e864fdc`：`NET-HKG-KMQ-20270518` D28、3輪、每輪16人；建議及最終保留價HK$319，`KEEP_INITIAL`。126次模擬選擇、50次環境強制動作、0 provider、0 cache、0 failures；完成報告匯出及刷新驗證。此結果驗證介面接線，不宣稱新定價改善。本次沒有付費LLM呼叫。
+
+
+### 2026-11-15 · 固定八類彈性優惠客群
+
+- 按最新要求移除 Optimize 的 Target customer scenario 選擇器及 Legacy 客群選項。所有新 UI 實驗固定 `flexible_deal_seekers` 八類客群，仍可自行調整八類權重。
+- 舊 `broad_coverage` 實驗保留原人物、提示、結果與只讀顯示；後端相容支援及凍結證據不刪除，不將歷史記錄重標成八類客群。這次 UI 整理不更改模型版本。
+- README 與現行航班／架構／UI 規格同步更新。再次通過380項後端、31項根目錄測試及發布／凍結制品校驗；6組瀏覽器回歸通過，新增「讀取舊十四類結果後仍提交八類新實驗」及設定缺失時禁用啟動的測試。真實保存實驗也以唯讀方式確認：無選擇器／Legacy標籤，原有HK$255結果及手機版正常，未發出POST。
+- 推送前已建立私有SQLite備份，並核對16次實驗的全部payload及7,673條事件完全一致；已提交實驗目錄的Git tree維持 `d7cf0f426a6b8a996824d38b94c506687d287b9b`。私有資料不加入Git；這次追加驗證沒有新實驗或付費LLM呼叫。

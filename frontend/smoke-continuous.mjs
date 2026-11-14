@@ -1,3 +1,5 @@
+/** Legacy UI check: targets the retired Math / Math+LLM Optimize page.
+ * Not part of the current test scripts; retained as historical test source. */
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 const origin=process.env.APP_URL || 'http://127.0.0.1:8765';

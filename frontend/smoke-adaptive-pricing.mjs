@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
 
 const root=fileURLToPath(new URL('.',import.meta.url));
-const files={'/adaptive-pricing':'adaptive-pricing.html','/admin':'index.html'};
+const files={'/adaptive-pricing':'adaptive-pricing.html','/admin':'index.html','/':'index.html'};
 const server=createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname;const file=files[path]||(/^\/[a-z0-9-]+\.(js|css)$/.test(path)?path.slice(1):null);if(!file){res.writeHead(404).end();return;}try{const data=await readFile(root+file);res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html'});res.end(data);}catch{res.writeHead(500).end();}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin=`http://127.0.0.1:${server.address().port}`;
@@ -52,13 +52,13 @@ try{
  await page.goto(origin+'/adaptive-pricing');
  await page.locator('#route:not([disabled])').waitFor();
  assert.equal(await page.locator('#weights input').count(),8);
- assert.equal(await page.locator('#profile').inputValue(),'flexible_deal_seekers');
+ assert.equal(await page.locator('#profile').count(),0,'Customer scenario selector is removed');
+ assert.equal(await page.getByText('Target customer scenario',{exact:true}).count(),0);
+ assert.doesNotMatch(await page.locator('body').innerText(),/\blegacy\b/i);
  assert.equal(await page.locator('#customers').inputValue(),'16');
  assert.equal(await page.locator('#customers').getAttribute('min'),'8');
  assert.equal(await page.locator('#validation-repeats').inputValue(),'3');
- await page.selectOption('#profile','broad_coverage');assert.equal(await page.locator('#weights input').count(),14);assert.equal(await page.locator('#customers').getAttribute('min'),'14');
- await page.selectOption('#profile','flexible_deal_seekers');assert.equal(await page.locator('#weights input').count(),8);
- assert.equal(posts.length,0,'Changing the scenario never starts a paid experiment');
+ assert.equal(posts.length,0,'Opening setup never starts an experiment');
  assert.equal(await page.locator('#start').isDisabled(),true);
  await page.selectOption('#route','HKG → KMQ');await page.selectOption('#flight','TEST-HKG-KMQ');
  await page.waitForFunction(()=>document.getElementById('starting-fare').textContent==='HK$328');
@@ -89,17 +89,23 @@ try{
  assert.equal(posts.length,1,'Saved-run reload is read-only');
  assert.match(await page.locator('#run-cohort').innerText(),/Flexible bargain travellers/);
  await page.selectOption('#saved-run','adaptive-legacy-117');await page.locator('#load-run').click();
- await page.waitForFunction(()=>document.getElementById('profile').value==='broad_coverage');
- assert.equal(await page.locator('#weights input').count(),14,'Historical run restores its own broad-cohort weights');
+ await page.waitForFunction(()=>document.getElementById('run-cohort').textContent.includes('Broad customer coverage'));
+ assert.equal(await page.locator('#weights input').count(),8,'Historical report does not replace the new-experiment population');
+ assert.equal(await page.locator('#customers').getAttribute('min'),'8');
+ assert.deepEqual(await page.locator('#weights input').evaluateAll(inputs=>inputs.map(input=>input.dataset.segment)),population.segments.map(s=>s.id));
+ assert.doesNotMatch(await page.locator('body').innerText(),/\blegacy\b/i);
  assert.match(await page.locator('#run-cohort').innerText(),/Broad customer coverage.*14 assumed customer groups/);
  assert.equal(posts.length,1,'Loading a historical population is read-only');
  assert.equal(await page.locator('#recommended-price').innerText(),'HK$269.54','Historical decimal prices remain exact');
  assert.equal(await page.locator('#break-even-panel').isHidden(),true);
  assert.match(await page.locator('#round-table tr').nth(2).innerText(),/0.*Cached summary/s);
- await page.reload();await page.waitForFunction(()=>document.getElementById('profile').value==='broad_coverage');
- assert.equal(await page.locator('#weights input').count(),14);
+ await page.reload();await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$269.54');
+ assert.equal(await page.locator('#weights input').count(),8);
+ await page.locator('#refresh-run').click();
+ await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$269.54');
+ assert.match(await page.locator('#run-cohort').innerText(),/Broad customer coverage.*14 assumed customer groups/);
  await page.selectOption('#saved-run','adaptive-test-117');await page.locator('#load-run').click();
- await page.waitForFunction(()=>document.getElementById('profile').value==='flexible_deal_seekers');
+ await page.waitForFunction(()=>document.getElementById('run-cohort').textContent.includes('Flexible bargain travellers'));
  assert.equal(await page.locator('#weights input').count(),8);
  assert.equal(posts.length,1);
  await mkdir(root+'test-results',{recursive:true});
@@ -175,12 +181,68 @@ try{
  run={...run,status:'failed',error:'Live call budget exhausted. Completed decisions are saved.'};
  await page.locator('#refresh-run').click();await page.getByText('failed: Live call budget exhausted.',{exact:false}).waitFor();
  assert.equal(await page.locator('#start').isEnabled(),true);
+ await verifyFixedNewPopulation(browser,origin,legacyRun,errors);
  await verifyFeedbackPage(browser,origin,completedRun,legacyRun,errors);
- await verifyPromotionalScopedOffer(browser,origin,errors);
+ await verifyThompsonOnlyNavigation(browser,origin,completedRun,errors);
  assert.deepEqual(errors,[]);
- console.log('Adaptive pricing UI passed: scoped80%cap, target8groups, legacy14groups, explicitprofile, historicalprofile-reload, zeroquota, invalidweights, boundedlive explicitstart, read-onlyreload, modelcurve, freshpairedcohorts, retainedfare, break-even-rate, groundedhypothesis, historicdecimalquotes, roundtrace, independentvalidation, Englishsafeoutputs, failedrun, mobileoverflow, Experiments-only-feedback, saved-run-and-round-links, read-only-feedback-navigation, safe-summary-and-reasons, feedback-errors-and-empty-state, promotional-boundaries, formatted-initial-holdout, final-offer-copy-and-matching-metrics, missing-final-no-raw-fallback. All API calls mocked; no paid calls.');
+ console.log('Adaptive pricing UI passed: scoped80%cap, fixed8groups-without-selector, historical14group-reports-preserved, explicitfixedprofile, new8group-run-after-historical-load, setup-failure-safe, zeroquota, invalidweights, boundedlive explicitstart, read-onlyreload, modelcurve, freshpairedcohorts, retainedfare, break-even-rate, groundedhypothesis, historicdecimalquotes, roundtrace, independentvalidation, Englishsafeoutputs, failedrun, mobileoverflow, Experiments-only-feedback, saved-run-and-round-links, read-only-feedback-navigation, safe-summary-and-reasons, feedback-errors-and-empty-state, promotional-boundaries, formatted-initial-holdout, Thompson-only-Admin-navigation, bookmarked-run-and-round-preservation, exact-flight-round-entry, no-legacy-optimizer-requests. All API calls mocked; no paid calls.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 
+
+async function verifyFixedNewPopulation(browser, origin, historicalRun, errors) {
+ for (const setup of ['ready','failed','missing-target']) {
+  const page=await browser.newPage();
+  page.on('pageerror',e=>errors.push(e.message));
+  const starts=[], scopes=[];
+  await page.route('**/api/**',async route=>{
+   const path=new URL(route.request().url()).pathname, method=route.request().method();
+   if(path==='/api/flights')return route.fulfill({json:{flights}});
+   if(path==='/api/adaptive-pricing/status'){
+    if(setup==='failed')return route.fulfill({status:503,json:{error:'Setup unavailable'}});
+    return route.fulfill({json:{live_configured:false,population:setup==='ready'?population:legacyPopulation,populations:setup==='ready'?populations:[{...legacyPopulation,profile:'broad_coverage'}]}});
+   }
+   if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill({json:{runs:[historicalRun]}});
+   if(path===`/api/adaptive-pricing/runs/${historicalRun.run_id}`)return route.fulfill({json:historicalRun});
+   if(path==='/api/adaptive-pricing/runs'&&method==='POST'){
+    const body=route.request().postDataJSON();starts.push(body);
+    return route.fulfill({json:{run_id:'adaptive-fixed-population',status:'completed',scope,population,config:body,rounds:[]}});
+   }
+   if(path==='/api/adaptive-pricing/scope'){
+    const body=route.request().postDataJSON();scopes.push(body);
+    return route.fulfill({json:{scope:{...scope,as_of_day:body.forecast_day},population}});
+   }
+   return route.fulfill({status:404,json:{error:'Unexpected mock API route'}});
+  });
+  try {
+   await page.goto(`${origin}/adaptive-pricing?run=${historicalRun.run_id}`);
+   await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$269.54');
+   assert.equal(await page.locator('#profile').count(),0);
+   assert.match(await page.locator('#run-cohort').innerText(),/Broad customer coverage.*14 assumed customer groups/);
+   assert.doesNotMatch(await page.locator('body').innerText(),/\blegacy\b/i);
+   assert.equal(starts.length,0,'Viewing a saved population is read-only');
+   if(setup==='ready'){
+    assert.equal(await page.locator('#weights input').count(),8);
+    assert.equal(await page.locator('#start').isEnabled(),true);
+    await page.locator('#start').click();
+    await page.waitForFunction(()=>document.getElementById('run-cohort').textContent.includes('Flexible bargain travellers'));
+    assert.equal(starts.length,1);
+    assert.equal(starts[0].profile,'flexible_deal_seekers');
+    assert.deepEqual(starts[0].weights,Object.fromEntries(population.segments.map(s=>[s.id,s.weight])),'Historical weights never enter a new experiment');
+    await page.selectOption('#release-day','14');
+    await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D14');
+    assert.equal(scopes.at(-1).profile,'flexible_deal_seekers');
+    assert.equal(starts.length,1,'Changing the release round only loads its scope');
+   }else{
+    assert.equal(await page.locator('#start').isDisabled(),true,'Missing target configuration blocks new starts');
+    assert.equal(await page.locator('#weights input').count(),0,'Saved broad groups cannot substitute for missing configuration');
+    await page.locator('#experiment-form').evaluate(form=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    assert.equal(starts.length,0,'The submit handler also enforces configured target population');
+    await page.locator('#refresh-run').click();
+    assert.equal(await page.locator('#recommended-price').innerText(),'HK$269.54');
+   }
+  }finally{await page.close();}
+ }
+}
 
 async function verifyFeedbackPage(browser, origin, currentRun, historicalRun, errors) {
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
@@ -255,43 +317,62 @@ async function verifyFeedbackPage(browser, origin, currentRun, historicalRun, er
  }finally{await page.close();}
 }
 
-async function verifyPromotionalScopedOffer(browser, origin, errors) {
+async function verifyThompsonOnlyNavigation(browser, origin, currentRun, errors) {
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
  page.on('pageerror',error=>errors.push(error.message));
- const raw={round:1,member_fare:255,membership_fee:399,total_contribution:500,incremental_contribution:111,baseline_contribution:389,service_rate:.8,mean_member_buyers:5,mean_regular_buyers:2,member_supply_exposure:20,feasible:true,price_evidence_qualified:true,price_evidence_status:'observed_member_sales'};
- const final={...raw,member_fare:249,raw_member_fare:255,incremental_contribution:90,total_contribution:479,final_member_fare_policy:'member-marketing-fare-v1',validated:true};
- const config={mode:'math',rounds:1,customers:14,initial_member_fare:328,initial_membership_fee:399,release_fraction:.5,scope,final_member_fare_policy:'member-marketing-fare-v1'};
- let saved={run_id:'opt-promo-test',status:'completed',config,counts:{},progress:{completed_rounds:1,total_rounds:1},tracks:[{mode:'math',rounds:[raw],best:raw,final_offer:final,validation:final,decision:'OFFER'}]};
+ const bookmarked={...currentRun,run_id:'adaptive-1afc5c96d92f465d',rounds:[...currentRun.rounds,{...currentRun.rounds.at(-1),round:4}]};
+ let starts=0, legacyReads=0, unrelatedReads=0;
+ const snapshots=[];
  await page.route('**/api/**',async route=>{
-   const path=new URL(route.request().url()).pathname;
-   if(path==='/api/summary')return route.fulfill({json:{dataset:{rows:0},llm:{configured:false}}});
-   if(path==='/api/flights')return route.fulfill({json:{flights:[]}});
-   if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_days:365}}});
-   if(path==='/api/optimization/runs')return route.fulfill({json:{runs:[saved]}});
-   if(path==='/api/optimization/runs/opt-promo-test')return route.fulfill({json:saved});
-   if(path==='/api/offers')return route.fulfill({json:{offers:[]}});
-   return route.fulfill({status:404,json:{error:'Unexpected promotional UI mock route'}});
+   const request=route.request(), path=new URL(request.url()).pathname;
+   if(path.startsWith('/api/optimization'))legacyReads++;
+   if(path==='/api/flights')return route.fulfill({json:{flights}});
+   if(path==='/api/adaptive-pricing/status')return route.fulfill({json:{live_configured:true,population,populations}});
+   if(path==='/api/adaptive-pricing/runs'&&request.method()==='GET')return route.fulfill({json:{runs:[bookmarked]}});
+   if(path===`/api/adaptive-pricing/runs/${bookmarked.run_id}`)return route.fulfill({json:bookmarked});
+   if(path==='/api/adaptive-pricing/scope'){
+     const body=request.postDataJSON();snapshots.push(body);
+     return route.fulfill({json:{scope:{...scope,flight_id:body.flight_id,as_of_day:body.forecast_day},population}});
+   }
+   if(request.method()!=='GET')starts++;
+   unrelatedReads++;
+   return route.fulfill({status:404,json:{error:'Unexpected navigation request'}});
  });
  try {
-   await page.goto(origin+'/admin#optimization');
-   await page.waitForFunction(()=>document.getElementById('optimization-final-content').textContent.includes('HK$249 promotional base fare'));
-   assert.match(await page.locator('#optimization-final-content').innerText(),/HK\$90 incremental contribution/);
-   assert.match(await page.locator('#optimization-track-cards').innerText(),/Promotional base fare\s+HK\$249/);
-   assert.match(await page.locator('#optimization-track-cards .track-profit').innerText(),/HK\$90/);
-   assert.match(await page.locator('#optimization-rounds-table').innerText(),/HK\$255/,'Raw search round stays unchanged');
-   await page.evaluate(()=>{window.addEventListener('uoption:prepare-policy',event=>{window.preparedPolicy=event.detail;});});
-   await page.locator('#optimization-final-content button').click();
-   const prepared=await page.evaluate(()=>window.preparedPolicy);
-   assert.equal(prepared.member_fare,249,'Offer draft uses the final validated quote, not track.best');
-   assert.equal(prepared.incremental_contribution,90,'Draft retains matching final-quote evaluation');
-   await page.goto(origin+'/admin#optimization');
-   saved={...saved,tracks:[{...saved.tracks[0],final_offer:null}]};
-   await page.locator('#optimization-refresh').click();
-   await page.waitForFunction(()=>document.getElementById('optimization-final-content').textContent.includes('final promotional quote is unavailable'));
-   assert.equal(await page.locator('#optimization-final-content button').count(),0,'Missing final quote never falls back to raw search in a new-policy run');
-   saved={...saved,config:{...config,final_member_fare_policy:undefined},tracks:[{...saved.tracks[0],best:{...raw,member_fare:255.5},validation:{...raw,member_fare:255.5},final_offer:undefined}]};
-   await page.locator('#optimization-refresh').click();
-   await page.waitForFunction(()=>document.getElementById('optimization-final-content').textContent.includes('HK$255.5 member base fare'));
-   assert.equal(await page.locator('#optimization-final-content button').count(),1,'Historical scoped records retain their original unformatted quote');
+   await page.goto(origin+'/admin?run=adaptive-1afc5c96d92f465d&round=4#optimization');
+   await page.waitForURL('**/adaptive-pricing?**');
+   await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$200');
+   assert.equal(new URL(page.url()).searchParams.get('run'),bookmarked.run_id);
+   assert.equal(new URL(page.url()).searchParams.get('round'),'4');
+   assert.equal(await page.locator('#round-table tr').count(),4,'Saved Thompson observations are preserved');
+   assert.equal(await page.locator('#optimization-form, #optimization-mode, #optimization-track-cards, #continuous-form').count(),0);
+   assert.equal(await page.locator('script[src="/optimization.js"], script[src="/continuous.js"]').count(),0);
+   assert.equal(await page.locator('.primary-nav a').count(),4);
+   assert.equal(await page.locator('.primary-nav a[aria-current="page"]').innerText(),'Optimize prices');
+   for(const label of ['Forecast seats','Experiments','Manage offers'])assert.equal(await page.getByRole('link',{name:label,exact:true}).count(),1);
+   assert.equal(await page.locator('#mode option').count(),2,'Customer sources share the same Thompson optimizer');
+   assert.match(await page.locator('#mode option[value="synthetic"]').innerText(),/offline/i);
+   assert.equal(legacyReads,0);assert.equal(unrelatedReads,0,'Initial bookmark redirect skips old Admin requests');
+   assert.equal(starts,0,'Viewing an existing run never starts another experiment');
+   await page.reload();await page.waitForFunction(()=>document.getElementById('round-table').children.length===4);
+   assert.equal(starts,0,'Reload is read-only');
+   await page.goto(origin+'/admin?flight_id=TEST-HKG-KMQ&forecast_day=14#optimization');
+   await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D14');
+   assert.equal(await page.locator('#flight').inputValue(),'TEST-HKG-KMQ');
+   assert.equal(await page.locator('#release-day').inputValue(),'14');
+   assert.equal(new URL(page.url()).searchParams.has('run'),false);
+   assert.equal(await page.locator('#recommendation').isHidden(),true,'New flight context does not show a previous recommendation');
+   assert.equal(snapshots.at(-1).forecast_day,14);
+   await page.goto(origin+'/?flight_id=TEST-HKG-KMQ&day=13#optimization');
+   await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D7');
+   assert.equal(snapshots.at(-1).forecast_day,7);
+   await page.goto(origin+'/admin?run=opt-legacy-117#optimization');
+   await page.locator('#route:not([disabled])').waitFor();
+   assert.equal(new URL(page.url()).pathname,'/adaptive-pricing');
+   assert.equal(new URL(page.url()).searchParams.has('run'),false,'Old optimizer IDs never load as Thompson runs');
+   assert.equal(legacyReads,0);assert.equal(unrelatedReads,0);assert.equal(starts,0);
+   await page.setViewportSize({width:390,height:844});
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Admin navigation fits on mobile');
+   await page.screenshot({path:root+'test-results/thompson-only-admin-mobile.png',fullPage:true});
  } finally { await page.close(); }
 }

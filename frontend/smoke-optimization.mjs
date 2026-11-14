@@ -1,83 +1,68 @@
+/** Current Optimize entry: real offline Thompson run, no paid provider calls. */
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
 
 const origin=process.env.APP_URL||'http://127.0.0.1:8000';
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
-const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[];
+const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[],legacyRequests=[];
 page.on('pageerror',e=>errors.push(e.message));
+page.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/optimization'))legacyRequests.push(r.url());});
 try{
   await mkdir('test-results',{recursive:true});
-  await page.goto(origin+'/admin#optimization');
-  await page.locator('#optimization-form').waitFor();
+  const savedId=process.env.OPTIMIZATION_RUN_ID;
+  await page.goto(origin+`/admin${savedId?'?run='+encodeURIComponent(savedId):''}#optimization`);
+  await page.waitForURL('**/adaptive-pricing**');
+  await page.locator('#experiment-form').waitFor();
+  assert.equal(await page.locator('#optimization-form, #optimization-mode').count(),0);
   let creation;
-  if(process.env.OPTIMIZATION_RUN_ID){
-    creation={run_id:process.env.OPTIMIZATION_RUN_ID};
-    await page.locator('#optimization-run-select').selectOption(creation.run_id);
-  }else{
-  await page.waitForFunction(()=>document.querySelectorAll('#optimization-route option').length>1);
-  assert.equal(await page.locator('#optimization-start').isDisabled(),true);
-  await page.locator('#optimization-route').selectOption('HKG-ICN');
-  const suggested=page.waitForResponse(r=>r.url().endsWith('/api/optimization/initial-policy')&&r.request().method()==='POST');
-  await page.locator('#optimization-flight').selectOption('NET-HKG-ICN-20270521');
-  const suggestion=await (await suggested).json();
-  assert.equal(suggestion.scope.flight_id,'NET-HKG-ICN-20270521');
-  assert.equal(suggestion.scope.as_of_day,28);
-  assert.equal(suggestion.initial_membership_fee,399);
-  await page.waitForFunction(()=>!document.getElementById('optimization-start').disabled);
-  assert.equal(await page.locator('#optimization-fare, #optimization-fee, #optimization-rounds, #optimization-customers, .optimization-settings').count(),0);
-  await page.locator('#optimization-mode').selectOption('math');
-  const started=page.waitForResponse(r=>r.url().endsWith('/api/optimization/runs')&&r.request().method()==='POST');
-  await page.locator('#optimization-start').click();
-  const startResponse=await started; const sent=startResponse.request().postDataJSON();assert.equal(sent.flight_id,'NET-HKG-ICN-20270521');assert.equal(sent.forecast_day,28);assert.equal('initial_member_fare' in sent,false);assert.equal('initial_membership_fee' in sent,false);assert.equal(sent.customers,14);assert.equal(sent.rounds,6);assert.equal(sent.replicates,2);assert.equal(sent.release_fraction,0.5);
-  creation=await startResponse.json();assert.ok(creation.run_id,JSON.stringify(creation));
+  if(savedId){creation={run_id:savedId};}
+  else{
+    await page.locator('#route:not([disabled])').waitFor();
+    await page.locator('#route').selectOption('HKG → KMQ');
+    const scopeResponse=page.waitForResponse(r=>r.url().endsWith('/api/adaptive-pricing/scope')&&r.request().method()==='POST');
+    await page.locator('#flight').selectOption('NET-HKG-KMQ-20270518');
+    const snapshot=await (await scopeResponse).json();
+    assert.equal(snapshot.scope.flight_id,'NET-HKG-KMQ-20270518');
+    assert.equal(snapshot.scope.as_of_day,28);
+    assert.ok(snapshot.scope.releasable_seats>0,'This offline demo needs a positive NHPP member quota');
+    await page.waitForFunction(()=>!document.getElementById('start').disabled);
+    await page.locator('#mode').selectOption('synthetic');
+    await page.locator('#rounds').fill('3');
+    await page.locator('#customers').fill('16');
+    const started=page.waitForResponse(r=>r.url().endsWith('/api/adaptive-pricing/runs')&&r.request().method()==='POST');
+    await page.locator('#start').click();
+    const response=await started,sent=response.request().postDataJSON();
+    assert.equal(sent.flight_id,'NET-HKG-KMQ-20270518');assert.equal(sent.forecast_day,28);assert.equal(sent.mode,'synthetic');
+    assert.equal(sent.rounds,3);assert.equal('initial_member_fare' in sent,false);assert.equal('membership_fee' in sent,false);
+    creation=await response.json();assert.ok(creation.run_id,JSON.stringify(creation));
   }
-  await page.waitForFunction(id=>document.getElementById('optimization-export').getAttribute('href')===`/api/optimization/runs/${id}/export` && ['Completed','Run needs attention'].includes(document.getElementById('optimization-status').textContent),creation.run_id,{timeout:600000});
-  const response=await page.request.get(origin+`/api/optimization/runs/${creation.run_id}/export`);
+  await page.waitForFunction(()=>document.getElementById('run-status').textContent.startsWith('Complete.'),null,{timeout:180000});
+  const response=await page.request.get(origin+`/api/adaptive-pricing/runs/${creation.run_id}/export`);
   assert.equal(response.status(),200);
-  const report=await response.json();assert.equal(report.status,'completed',report.error || 'Experiment not completed');
-  assert.equal(report.config.initial_membership_fee,399);
-  // Mathematical track: formula P* first, then the fixed fine grid; live defaults to six rounds.
-  const grid=report.config.formula_estimate.grid;
-  assert.equal(report.tracks[0].rounds.length,grid.length);
-  assert.deepEqual(report.tracks[0].rounds.map(r=>r.member_fare),grid);
-  assert.equal(report.tracks[0].rounds[0].search_step,'formula_p_star');
-  assert.ok(report.tracks[0].rounds.every(r=>r.member_fare<=report.config.scope.member_fare_cap));
-  assert.match(await page.locator('#optimization-formula').innerText(),/Formula estimate P\* = HK\$/);
-  assert.equal(await page.locator('#optimization-rounds-table tr').count(),grid.length);
-  assert.ok(report.tracks[0].rounds.some(r=>r.member_fare!==report.config.initial_member_fare));
-  assert.ok(report.tracks[0].rounds.every(r=>r.membership_fee===report.config.initial_membership_fee));
-  assert.equal(report.config.scope.flight_id,'NET-HKG-ICN-20270521');
-  const qualified=report.tracks[0].rounds.filter(r=>r.price_evidence_qualified===true);
-  assert.equal(await page.locator('#optimization-price-profit circle').count(),qualified.length);
-  assert.ok(qualified.length>0,'Positive supply must produce observed member-offer exposure for this test flight');
-  assert.match(await page.locator('#optimization-tradeoffs').innerText(),/Highest tested contribution/);
-  assert.match(await page.locator('#optimization-tradeoffs').innerText(),/Most member buyers/);
-  await page.locator('#optimization-price-profit circle').first().focus();
-  assert.match(await page.locator('#optimization-price-detail').innerText(),/buyers/);
-  assert.ok(report.worlds.every(w=>w.status==='completed'&&Object.values(w.result.checks).every(Boolean)));
-  assert.ok(report.search_seeds.every(seed=>!report.validation_seeds.includes(seed)));
-  assert.equal(report.counts.provider_calls,0);
-  assert.ok(report.tracks[0].validation);
-  assert.ok(['OFFER','NO_OFFER'].includes(report.tracks[0].decision));
-  const eventPage=await (await page.request.get(origin+`/api/optimization/runs/${creation.run_id}/events?limit=2&offset=1`)).json();
-  assert.equal(eventPage.events.length,2);assert.equal(eventPage.offset,1);
-  const firstEvents=await (await page.request.get(origin+`/api/optimization/runs/${creation.run_id}/events?limit=1`)).json();
-  assert.ok(eventPage.events[0].id>firstEvents.events[0].id);
-  await page.evaluate(()=>window.scrollTo(0,0));
+  const exported=await response.json(),report=exported.report;
+  assert.ok(exported.events.length>0,'Experiment audit events remain exportable');
+  assert.equal(report.status,'completed',report.error||'Run did not complete');
+  assert.match(report.version,/member-thompson/);
+  assert.equal(report.counts.provider_calls,0,'Offline smoke must never call a paid LLM');
+  assert.equal(report.rounds.length,report.config.rounds);
+  assert.ok(report.rounds.every(r=>Number.isInteger(r.price)&&r.price>=0&&r.price<=report.scope.member_fare_cap));
+  assert.equal(await page.locator('#round-table tr').count(),report.rounds.length);
+  assert.ok(report.recommendation);assert.ok(report.validation);
+  assert.equal(await page.locator('#curve-section').isVisible(),true);
+  assert.equal(await page.locator('#validation-section').isVisible(),true);
+  assert.equal(await page.locator('#comparison-bars .comparison-row').count(),3);
+  assert.equal(await page.locator('#member-feedback-link').getAttribute('href'),`/admin?run=${creation.run_id}#customers`);
+  assert.deepEqual(legacyRequests,[],'The Optimize page never loads the retired optimizer');
   await page.screenshot({path:'test-results/optimization-completed-desktop.png',fullPage:true});
   for(const width of [390,768]){
     await page.setViewportSize({width,height:900});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow at ${width}`);
   }
-  await page.setViewportSize({width:390,height:844});
-  await page.evaluate(()=>window.scrollTo(0,0));
   await page.screenshot({path:'test-results/optimization-completed-mobile.png',fullPage:true});
   await page.reload();
-  await page.locator('#optimization-run-select').selectOption(creation.run_id);
-  await page.waitForFunction(()=>document.getElementById('optimization-status').textContent==='Completed');
-  assert.equal(await page.locator('#optimization-rounds-table tr').count(),grid.length);
+  await page.waitForFunction(()=>document.getElementById('run-status').textContent.startsWith('Complete.'));
+  assert.equal(await page.locator('#round-table tr').count(),report.rounds.length);
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({status:'passed',run_id:creation.run_id,rounds:grid.length,worlds:report.worlds.length,
-    decisions:report.counts,selected:report.tracks[0].best,decision:report.tracks[0].decision}));
+  console.log(JSON.stringify({status:'passed',run_id:creation.run_id,optimizer:report.version,rounds:report.rounds.length,counts:report.counts,recommendation:report.recommendation.price,retained:report.validation.retained_price,verdict:report.validation.adoption_result}));
 }finally{await browser.close();}

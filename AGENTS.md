@@ -4,7 +4,7 @@ Codex 直接读取本文件，Claude Code 通过 `CLAUDE.md` 中的 `@AGENTS.md`
 
 ## 项目定位
 
-UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法：用 NHPP 预测正常需求，在 D28/D14/D7 分三轮释放会员座位，再在指定航班上比较会员票价和会费。
+UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法：用 NHPP 预测正常需求，在 D28/D14/D7 分三轮释放会员座位，再用 Thompson Sampling 优化指定航班的会员基本票价；旅客已入会，定价实验不计会费。
 项目是**合成数据**上的决策原型，不是生产收益管理系统。所有购票都是模拟的。
 
 ## 文档索引（docs/ 每份文档都必须列在这里）
@@ -14,7 +14,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 
 ### 现行规格
 
-- [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（v9：票价／会费为整数港元，最终会员价向下取尾数9、低于30归零，会员价上限为正常基本票价的 80%，P₀ = 上限；数学轨先用公式算 P*，再模拟附近 9 个价格；新增八类弹性优惠客群／旧版十四类对照、公开特征 Thompson Sampling、新客群配对及 LLM 假说实验）、需求筛选、座位口径、会计公式、SQLite 和 API。
+- [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin Optimize 只用 Thompson Sampling（adaptive v5）；新 UI 实验固定八类弹性客群，可调权重；旧十四类结果只读保留。含公开特征学习、新客群配对、LLM 假说、SQLite 和 API。整数会员价上限为正常基本票价的 80%，P₀ = 上限，最终向下取尾数9、低于30归零；旧 v9 引擎保留兼容接口及历史证据。
 - [THREE_ROUND_RELEASE](docs/THREE_ROUND_RELEASE.md)：D28/D14/D7 放票规则；新一轮扣除前几轮仍有效的未售配额。
 - [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：整体架构、HTTP 路由表、与原计划的差异及限制。
 - [PITCHING_BRIEF](docs/PITCHING_BRIEF.md)：当前方案、路演讲稿、校准覆盖与证据边界。[NHPP_V3_REVIEW](docs/NHPP_V3_REVIEW.md)：平滑模型、收入校准、D28 回退及独立验证。
@@ -73,7 +73,7 @@ python scripts/verify_artifacts.py                # 实验与数据的 SHA256 �
 - `backend/`：stdlib HTTP API（`server.py`）和 SQLite 持久化（`store.py`、`optimization_store.py`）。
   - 预测入口 `forecast.py`、候选 `nhpp_v3.py` 与冻结 `nhpp.py`；放票 `release_policy.py`；座位口径 `seat_inventory.py`；指定航班优化 `optimization.py`、`scoped_market.py`、`initial_policy.py`；最终宣传票价 `fare_policy.py`；自适应票价 `adaptive_pricing.py`、`member_response.py`（公开特征新模型）、`thompson.py`（历史基准）、审计 `adaptive_store.py`；共享市场 `shared_market.py`；座位反馈 `seat_feedback.py`。
   - 测试在 `backend/tests/`。
-- `frontend/`：Admin，原生 HTML/JS，路径 `/admin`；`frontend/members/` 是会员端，路径 `/members`。不需要构建，由后端直接提供；`experiments.js` 在 `#customers` 只读展示已保存的会员回馈；旧工具在 `#panel` / `#market`。`*.mjs` 是浏览器 smoke 测试。
+- `frontend/`：Admin 原生 HTML/JS，路径 `/admin`；Optimize 唯一入口 `/adaptive-pricing`，旧 `#optimization` 链接保留实验／航班上下文后跳转；会员端 `/members`。无需构建；`experiments.js` 在 `#customers` 只读展示会员回馈；旧工具在 `#pricing` / `#panel` / `#market`。`*.mjs` 是浏览器 smoke 测试。
 - `simulation/`：合成数据生成器、NHPP 评估脚本和已提交的冻结数据集。
 - `llm_agent/`：旅客 Agent、prompt、provider 适配、审计；`experiments/` 是可公开的合成实验证据；`weighted_population.py` 与 `adaptive_customers.py` 提供可选的目标／旧版分层客群、新版英文决策提示及有上限的并行调用。
 - `scripts/`：发布检查、证据校验、HTTP/容器 smoke、导出工具与 `member_choice_calibration.py` 私有人类问卷／摘要。`tests/`：根目录的发布和模拟器测试。
@@ -82,7 +82,7 @@ python scripts/verify_artifacts.py                # 实验与数据的 SHA256 �
 ## 其他约定
 
 - UI 配色：紫 `#6F2C91`、青 `#24BCDC`、白。Admin 四个入口：Forecast / Optimize / Experiments / Manage offers。
-- 用户要求 Forecast 页面不放长篇模型假设、验证区块和每日数据表（API 和文档保留）。Optimize 的 “Use these prices” 只复制价格草稿，不会把实验座位 profile 部署到会员库存。
+- Forecast 页面不放长篇模型假设、验证区块和每日数据表。Optimize 的离线模拟／Live LLM 是顾客决策来源，两者均使用 Thompson；保留其历史、曲线及验证。实验结果不自动发布会员库存；Manage offers 的旧兼容建议仍需独立发布核验。
 - `NO_OFFER` 是合法结论。候选只是"已评估候选中最好的"，不要称为真实最优价。LLM 输出是合成角色扮演，不是真实客户。
 - 报告 LLM 结果时，新调用、缓存命中、强制动作、失败要分开统计。
 

@@ -1,3 +1,4 @@
+import { releaseRound } from './pricing-navigation.js';
 const $ = id => document.getElementById(id);
 const money = value => Number.isFinite(Number(value)) && value !== null && value !== undefined ? `HK$${Number(value).toLocaleString('en-HK', {minimumFractionDigits: Number(value) % 1 ? 2 : 0, maximumFractionDigits: 2})}` : '—';
 const numeric = value => typeof value === 'number' && Number.isFinite(value);
@@ -12,8 +13,9 @@ const promotional = value => value?.config?.final_member_fare_policy === 'member
 const budgetUpper = (rounds,members,panels) => rounds*(2*members+1)+3*panels*members;
 const hypothesisLabel = status => ({supported:'Above initial revenue',not_supported:'Below initial revenue'}[status] || String(status||'not_tested').replaceAll('_',' '));
 let flights = [], segments = [], defaultWeights = {}, scope = null, run = null, liveConfigured = false;
-let populations = new Map(), renderedProfile = null;
-const profileNames = {flexible_deal_seekers:'Flexible bargain travellers', broad_coverage:'Broad customer coverage (legacy)'};
+const TARGET_PROFILE = 'flexible_deal_seekers';
+let targetPopulation = null;
+const profileNames = {flexible_deal_seekers:'Flexible bargain travellers', broad_coverage:'Broad customer coverage'};
 const profileOf = value => value?.config?.profile || value?.population?.profile || 'broad_coverage';
 let scopeSequence = 0, runSequence = 0, pollTimer = null, submitting = false;
 
@@ -41,26 +43,25 @@ function fillFlights(selected = '') {
   $('flight').disabled = !matching.length;
   if (matching.some(f => f.flight_id === selected)) $('flight').value = selected;
 }
-function renderPopulation(population, {reset=false}={}) {
-  if (!Array.isArray(population?.segments) || !population.segments.length) return;
-  const profile=population.profile || 'broad_coverage';
-  if (!reset && renderedProfile===profile && segments.map(s=>s.id).join('|')===population.segments.map(s=>s.id).join('|')) return;
-  if (![...$('profile').options].some(o=>o.value===profile)) $('profile').append(option(profile,profileNames[profile]||profile));
-  $('profile').value=profile;
-  renderedProfile=profile;
-  $('profile-note').textContent=profile==='flexible_deal_seekers'
-    ? 'Students, spontaneous trips and destination-flexible bargain seekers. Assumed target audience, not measured HK Express customer shares.'
-    : 'Earlier broad coverage, including fixed-date and essential travel scenarios. Assumed test mix, not measured HK Express customer shares.';
-  segments = population.segments;
-  const defaultSegments=populations.get(profile)?.segments||segments;
-  defaultWeights = Object.fromEntries(defaultSegments.map(s => [s.id, Number(s.assumed_weight ?? s.weight ?? 0)]));
+function renderTargetPopulation() {
+  if (!targetPopulation) return;
+  segments = targetPopulation.segments;
+  defaultWeights = Object.fromEntries(segments.map(s => [s.id, Number(s.assumed_weight ?? s.weight ?? 0)]));
   $('weights').replaceChildren(...segments.map((s, index) => {
     const row = node('div', undefined, 'weight-row');
     const label = node('label', `${s.name || s.label || s.id} (%)`); label.htmlFor = `weight-${index}`;
-    const input = node('input'); Object.assign(input, {type:'number', min:'0', max:'100', step:'0.01', value:String(Math.round(Number(s.weight??s.assumed_weight??0)*10000)/100), id:`weight-${index}`}); input.dataset.segment = s.id; input.required = true;
+    const input = node('input'); Object.assign(input, {type:'number', min:'0', max:'100', step:'0.01', value:String(Math.round(defaultWeights[s.id]*10000)/100), id:`weight-${index}`}); input.dataset.segment = s.id; input.required = true;
     input.addEventListener('input', updateWeightTotal); row.append(label,input); return row;
   }));
   updateWeightTotal();
+}
+function restoreNewExperimentWeights(savedRun) {
+  // Historical populations belong to the result, never to the next experiment.
+  renderTargetPopulation();
+  if (targetPopulation && profileOf(savedRun) === TARGET_PROFILE) {
+    const weights = savedRun.config?.weights || Object.fromEntries((savedRun.population?.segments || []).map(s => [s.id, Number(s.weight ?? s.assumed_weight ?? 0)]));
+    setWeights(weights);
+  }
 }
 function readWeights() { return Object.fromEntries([...$('weights').querySelectorAll('input')].map(input => [input.dataset.segment, Number(input.value)/100])); }
 function updateWeightTotal() {
@@ -88,21 +89,26 @@ async function loadScope() {
   const sequence = ++scopeSequence;
   renderScope(null); error();
   const flightId = $('flight').value;
+  const url = new URL(location.href);
+  url.searchParams.delete('day');
+  if (flightId) { url.searchParams.set('flight_id',flightId); url.searchParams.set('forecast_day',$('release-day').value); }
+  else { url.searchParams.delete('flight_id'); url.searchParams.delete('forecast_day'); }
+  history.replaceState(null,'',url);
   if (!flightId) return;
   $('scope-message').textContent = 'Calculating this flight’s member quota…';
   try {
-    const result = await api('/api/adaptive-pricing/scope', {flight_id:flightId, forecast_day:Number($('release-day').value),profile:$('profile').value});
+    const result = await api('/api/adaptive-pricing/scope', {flight_id:flightId, forecast_day:Number($('release-day').value),profile:TARGET_PROFILE});
     if (sequence !== scopeSequence) return;
-    renderPopulation(result.population); renderScope(result.scope || result);
+    renderScope(result.scope || result);
   } catch (e) { if (sequence === scopeSequence) { $('scope-message').textContent = 'Flight details could not be loaded.'; error(e.message); } }
 }
 function updateControls() {
   const isLive = $('mode').value === 'live', busy = submitting || active(run);
   const weights = Object.values(readWeights());
-  const weightsValid = weights.length && weights.every(n => Number.isFinite(n) && n>=0) && Math.abs(weights.reduce((a,b)=>a+b,0)-1)<0.00001;
+  const weightsValid = targetPopulation && weights.length === 8 && weights.every(n => Number.isFinite(n) && n>=0) && Math.abs(weights.reduce((a,b)=>a+b,0)-1)<0.00001;
   $('setup-fields').disabled = busy;
   $('start').disabled = busy || !scope || !(scope.releasable_seats > 0) || !weightsValid || (isLive && !liveConfigured);
-  $('start').textContent = submitting ? 'Starting experiment…' : isLive ? 'Start live LLM experiment' : 'Start mathematical simulation';
+  $('start').textContent = submitting ? 'Starting experiment…' : isLive ? 'Start Thompson with live customers' : 'Start Thompson simulation';
   const n=Number($('rounds').value), m=Number($('customers').value), v=Number($('validation-repeats').value);
   const calls=budgetUpper(n,m,v);
   $('customers').min=String(Math.max(1,weights.filter(w=>w>0).length));
@@ -113,7 +119,8 @@ function clearRun() {
   for (const id of ['run-progress','recommendation','round-section','curve-section','validation-section']) $(id).hidden=true;
   $('empty-state').hidden=false;
   $('member-feedback-link').hidden=true;
-  const url=new URL(location.href);url.searchParams.delete('run');history.replaceState(null,'',url);
+  const url=new URL(location.href);url.searchParams.delete('run');url.searchParams.delete('round');history.replaceState(null,'',url);
+  $('experiments-nav-link').href='/admin#customers';
   updateControls();
 }
 function tableRow(values, rowHeader=true) {
@@ -211,7 +218,7 @@ function renderRun(value) {
   $('progress-bar').max=Math.max(1,total);$('progress-bar').value=completed;
   const seconds=value.elapsed_seconds??(value.updated_at&&value.created_at?value.updated_at-value.created_at:null);
   $('elapsed').textContent=numeric(seconds)?`${Math.floor(seconds/60)}m ${Math.floor(seconds%60)}s elapsed`:'Elapsed time pending';
-  $('run-source').textContent=value.config?.mode==='live'?'Live LLM · simulated members':'Mathematical simulation';
+  $('run-source').textContent=value.config?.mode==='live'?'Thompson Sampling · live LLM':'Thompson Sampling · offline customers';
   $('run-cohort').textContent=`${profileNames[profileOf(value)]||profileOf(value)} · ${value.population?.segments?.length||0} assumed customer groups · This result uses the experiment’s saved population.`;
   const phase=String(['failed','interrupted','paused_at_budget'].includes(value.status)?value.status:value.progress?.phase||value.status||'').replaceAll('_',' ');
   $('run-status').textContent=value.error?`${phase}: ${value.error}`:value.status==='completed'?'Complete. Selection and independent validation are saved.':`${phase.charAt(0).toUpperCase()+phase.slice(1)}. Progress is saved; this page can be reopened.`;
@@ -220,7 +227,13 @@ function renderRun(value) {
   $('run-people').textContent=numeric(unique)?`${count(unique)} unique search members · New people in every round; paired quotes share the same people.`:paired(value)?'Fresh paired search cohorts; exact budgets are private to customers.':'';
   $('run-counts').textContent=`${counts.provider_calls??0} provider calls · ${counts.cache_hits??0} cache hits · ${counts.forced??0} forced decisions · ${counts.failures??0} failures · ${counts.peak_parallel??0} peak parallel calls`;
   $('member-feedback-link').hidden=!safeId(value.run_id);
-  if(safeId(value.run_id))$('member-feedback-link').href=`/admin?run=${encodeURIComponent(value.run_id)}#customers`;
+  if(safeId(value.run_id)){
+    const params=new URLSearchParams({run:value.run_id});
+    const selectedRound=new URL(location.href).searchParams.get('round');
+    if(/^[1-9]\d*$/.test(selectedRound||''))params.set('round',selectedRound);
+    $('member-feedback-link').href=`/admin?${params}#customers`;
+    $('experiments-nav-link').href=$('member-feedback-link').href;
+  }
   if(safeId(value.run_id)){$('export-run').href=`/api/adaptive-pricing/runs/${value.run_id}/export`;$('export-run').hidden=false;}
   renderRounds(value.rounds||[]);renderCurve(value);renderValidation(value.validation);
   const recommendation=value.recommendation;
@@ -257,26 +270,24 @@ async function showRun(id) {
   clearTimeout(pollTimer);const sequence=++runSequence;
   const value=await api(`/api/adaptive-pricing/runs/${id}`);
   if(sequence!==runSequence)return;
-  const url=new URL(location.href);url.searchParams.set('run',id);history.replaceState(null,'',url);
+  const url=new URL(location.href);if(url.searchParams.get('run')!==id)url.searchParams.delete('round');url.searchParams.set('run',id);history.replaceState(null,'',url);
   if(value.scope){scopeSequence++;renderScope(value.scope);$('route').value=routeKey(value.scope);fillFlights(value.scope.flight_id);$('release-day').value=String(value.scope.as_of_day);}
-  renderPopulation({...value.population,profile:profileOf(value)},{reset:true});
+  restoreNewExperimentWeights(value);
   for(const[id,key]of [['rounds','rounds'],['customers','customers'],['concurrency','concurrency'],['max-calls','max_calls'],['seed','seed'],['validation-repeats','validation_repeats']])if(value.config?.[key]!==undefined)$(id).value=String(value.config[key]);
   if(['synthetic','live'].includes(value.config?.mode))$('mode').value=value.config.mode;
-  if(value.config?.weights)setWeights(value.config.weights);
   renderRun(value);error();
   if(active(value))pollTimer=setTimeout(()=>fetchRun(id,sequence).catch(e=>error(e.message)),1500);
 }
 async function loadSaved() {
   const data=await api('/api/adaptive-pricing/runs');
   const selected=$('saved-run').value;
-  $('saved-run').replaceChildren(option('','Choose a saved experiment'),...(data.runs||[]).filter(r=>safeId(r.run_id)).map(r=>option(r.run_id,`${r.config?.flight_id||r.scope?.flight_id||r.run_id} · ${r.status} · ${r.config?.mode||''}`)));
+  $('saved-run').replaceChildren(option('','Choose a saved experiment'),...(data.runs||[]).filter(r=>safeId(r.run_id)).map(r=>option(r.run_id,`${r.config?.flight_id||r.scope?.flight_id||r.run_id} · ${r.status} · ${r.config?.mode==='live'?'Live LLM customers':'Offline customers'}`)));
   if([...$('saved-run').options].some(o=>o.value===selected))$('saved-run').value=selected;
   $('load-run').disabled=!$('saved-run').value;
 }
 $('route').addEventListener('change',()=>{clearRun();fillFlights();loadScope();});
 $('flight').addEventListener('change',()=>{clearRun();loadScope();});
 $('release-day').addEventListener('change',()=>{clearRun();loadScope();});
-$('profile').addEventListener('change',()=>{clearRun();const population=populations.get($('profile').value);if(population)renderPopulation(population,{reset:true});loadScope();});
 for(const id of ['mode','rounds','customers','validation-repeats'])$(id).addEventListener('input',updateControls);
 $('max-calls').addEventListener('input',()=>{$('max-calls').removeAttribute('aria-invalid');error();});
 $('reset-weights').addEventListener('click',()=>setWeights(defaultWeights));
@@ -284,18 +295,20 @@ $('saved-run').addEventListener('change',()=>{$('load-run').disabled=!$('saved-r
 $('load-run').addEventListener('click',()=>showRun($('saved-run').value).catch(e=>error(e.message)));
 $('refresh-run').addEventListener('click',()=>{if(!safeId(run?.run_id))return;clearTimeout(pollTimer);const sequence=++runSequence;error();fetchRun(run.run_id,sequence).catch(e=>error(e.message));});
 $('experiment-form').addEventListener('submit',async event=>{
-  event.preventDefault();if(submitting||active(run)||!scope)return;
+  event.preventDefault();if(submitting||active(run)||!scope||!targetPopulation)return;
   if(!$('experiment-form').reportValidity())return;
   const weights=readWeights();if(Math.abs(Object.values(weights).reduce((a,b)=>a+b,0)-1)>0.00001){error('Customer weights must total 100%.');return;}
-  const body={flight_id:scope.flight_id,forecast_day:Number($('release-day').value),mode:$('mode').value,profile:$('profile').value,weights};
+  const body={flight_id:scope.flight_id,forecast_day:Number($('release-day').value),mode:$('mode').value,profile:TARGET_PROFILE,weights};
   for(const[id,key]of [['rounds','rounds'],['customers','customers'],['concurrency','concurrency'],['max-calls','max_calls'],['seed','seed'],['validation-repeats','validation_repeats']])body[key]=Number($(id).value);
   const needed=budgetUpper(body.rounds,body.customers,body.validation_repeats);
   if(body.mode==='live'&&body.max_calls<needed){const field=$('max-calls');field.setAttribute('aria-invalid','true');error(`The call limit must be at least ${needed} for this configuration. Reduce the panel or rounds, or increase the explicit call limit.`);field.focus();return;}
   submitting=true;updateControls();error();
   try{
     const value=await api('/api/adaptive-pricing/runs',body);
-    clearTimeout(pollTimer);runSequence++;renderRun(value);
-    if(safeId(value.run_id)){const url=new URL(location.href);url.searchParams.set('run',value.run_id);history.replaceState(null,'',url);if(active(value))pollTimer=setTimeout(()=>fetchRun(value.run_id).catch(e=>error(e.message)),1500);}
+    clearTimeout(pollTimer);runSequence++;
+    if(safeId(value.run_id)){const url=new URL(location.href);url.searchParams.delete('round');url.searchParams.set('run',value.run_id);history.replaceState(null,'',url);}
+    renderRun(value);
+    if(safeId(value.run_id)&&active(value))pollTimer=setTimeout(()=>fetchRun(value.run_id).catch(e=>error(e.message)),1500);
     loadSaved().catch(()=>{});
   }catch(e){error(e.message);}finally{submitting=false;updateControls();}
 });
@@ -305,16 +318,22 @@ async function init(){
   if(results[1].status==='fulfilled'){
     const value=results[1].value;liveConfigured=Boolean(value.live_configured??value.configured??value.provider?.live_configured);
     const opt=$('mode').querySelector('option[value="live"]');opt.disabled=!liveConfigured;opt.textContent=liveConfigured?'Live LLM':'Live LLM · not configured';
-    $('provider-note').textContent=liveConfigured?'A provider is configured. Only starting a live experiment makes paid calls.':'Live LLM is unavailable. Mathematical simulations remain available.';
-    const known=value.populations||[value.population||value];
-    populations=new Map(known.filter(p=>Array.isArray(p.segments)).map(p=>[p.profile||'broad_coverage',p]));
-    $('profile').replaceChildren(...[...populations].map(([id])=>option(id,profileNames[id]||id)));
-    $('profile').disabled=populations.size<1;
-    renderPopulation(value.population||value);
-  }else{$('provider-note').textContent='Provider status is unavailable. Live experiments are disabled.';}
+    $('provider-note').textContent=liveConfigured?'A provider is configured. Only starting a live experiment makes paid calls.':'Live LLM is unavailable. Thompson Sampling with offline customer choices remains available.';
+    const known=[...(value.populations||[]),value.population||value];
+    targetPopulation=known.find(p=>p?.profile===TARGET_PROFILE&&Array.isArray(p.segments)&&p.segments.length===8&&new Set(p.segments.map(s=>s.id)).size===8)||null;
+    renderTargetPopulation();
+    if(!targetPopulation)$('provider-note').textContent='Customer configuration is unavailable. Reload before starting a new experiment.';
+  }else{$('provider-note').textContent='Experiment setup is unavailable. Saved results can still be viewed; reload before starting a new experiment.';}
   updateControls();
-  const id=new URL(location.href).searchParams.get('run');if(id)await showRun(id);
-  else {const fid=new URL(location.href).searchParams.get('flight_id');const f=flights.find(f=>f.flight_id===fid);if(f){$('route').value=routeKey(f);fillFlights(fid);await loadScope();}}
+  const params=new URL(location.href).searchParams;
+  const id=params.get('run');
+  if(id)await showRun(id);
+  else {
+    const day=releaseRound(params.get('forecast_day')??params.get('day'));
+    if(day!==null)$('release-day').value=String(day);
+    const fid=params.get('flight_id'), f=flights.find(f=>f.flight_id===fid);
+    if(f){$('route').value=routeKey(f);fillFlights(fid);await loadScope();}
+  }
 }
 let lastChartWidth=0;
 new ResizeObserver(entries=>{

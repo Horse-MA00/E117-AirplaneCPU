@@ -1,34 +1,36 @@
 # NHPP 會員優惠平台技術實作
 
-> 状态：现行 · 对应代码：`flight-policy-feedback-v9-marketing`、`formula-scan-v2-whole-hkd`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`shared-market-v3`、`three-round-release-v1`、`member-marketing-fare-v1`
+> 状态：现行 · 对应代码：`flight-policy-feedback-v9-marketing`、`formula-scan-v2-whole-hkd`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`shared-market-v3`、`three-round-release-v1`、`member-marketing-fare-v1`、`member-thompson-v5-marketing`、`frontend/adaptive-pricing.html`
 
-更新：2026-11-14。新報價為整數港元，歷史觀測與證據保留原樣。最終會員基本票價向下取尾數9；取整後低於30元也設為0，所以30–38元歸零。Adaptive v5 每輪更換客群、配對比較初始價；優化器只讀公開特徵，私人預算與動機只供旅客及環境使用；每三輪可測試 LLM 提出的有據方向，最終以三批以上新客群，在格式化的候選價／格式化初始價／無優惠三種情境確認是否採用；收益按實際調整後價格計算。新增 `/adaptive-pricing`：預設為八類彈性、價格敏感的休閒旅客，保留舊版十四類客群選項；所有人均已入會，只比較單張基本票價及分層加權客群、Logistic 近似後驗及 Thompson Sampling；並行 LLM 意向由程式統一扣位，獨立驗證保留收入下降的結果。詳細數學、口徑及運行命令以[現行規格](FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing)為準。這份文件記錄現有程式；早期提案文件已刪除（Git 歷史可查），與原計劃的差異見下文「與原計劃的差異及限制」。使用者最新決定是先使用 NHPP，不使用 LightGBM。
+更新：2026-11-15。新報價為整數港元，歷史觀測與證據保留原樣。最終會員基本票價向下取尾數9；取整後低於30元也設為0，所以30–38元歸零。Adaptive v5 每輪更換客群、配對比較初始價；優化器只讀公開特徵，私人預算與動機只供旅客及環境使用；每三輪可測試 LLM 提出的有據方向，最終以三批以上新客群，在格式化的候選價／格式化初始價／無優惠三種情境確認是否採用；收益按實際調整後價格計算。主 Optimize 入口 `/adaptive-pricing`：新 UI 實驗固定使用八類彈性、價格敏感的休閒旅客；移除目標情境／Legacy 選項，保留舊十四類客群的只讀歷史結果；所有人均已入會，只比較單張基本票價及分層加權客群、Logistic 近似後驗及 Thompson Sampling；並行 LLM 意向由程式統一扣位，獨立驗證保留收入下降的結果。詳細數學、口徑及運行命令以[現行規格](FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing)為準。這份文件記錄現有程式；早期提案文件已刪除（Git 歷史可查），與原計劃的差異見下文「與原計劃的差異及限制」。使用者最新決定是先使用 NHPP，不使用 LightGBM。
 
-## 最新主流程：雙軌逐輪優化
+## 最新主流程：Thompson Sampling
 
-**最新修正：** 現行規格以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準（`flight-policy-feedback-v9-marketing`）。v5 曾採用 50% 上限，現行 v9 維持 80% 並使用整數港元，最終會員票價再向下取尾數 9，低於 HK$30 歸零；v6 起數學軌先以公式找出 P*，再以完整模擬測試 P* 附近 9 個價格。需求篩選、原價 P₀ 與收益範圍的修改經過見 [需求篩選與原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)；會員供應、配額三種口徑、零供應阻擋、購買者分組及固定座位 profile 的修正經過與驗證證據見 [2026-11-14 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md)。新增 member demo 後主目錄 1,549 班／280,364 筆，含獨立驗證合共 680,364 筆。
+Admin 四個入口為 Forecast seats、Optimize prices、Experiments、Manage offers。**Optimize 只保留 Thompson Sampling**，標準路徑 `/adaptive-pricing`；舊 `/admin?run=adaptive-…&round=4#optimization` 以 history replacement 轉到相同已保存實驗。Forecast／Manage offers 可攜帶航班與有效 D28／D14／D7 放票日進入。舊 Math／Math+LLM 表單、成本貢獻圖和參考定價區塊已移除，主頁不再載入 `optimization.js`／`continuous.js`。後端模型版本、資料庫及凍結證據沒有因介面整理而更動。
 
-Admin 已改為紫／青／白配色，四個主入口是 Forecast seats、Optimize prices、Experiments、Manage offers。Forecast 分開顯示 NHPP 建議會員座位（空位減正常需求 P90 保護及安全餘量）、預測會員空間、今天可新增配額、已發布可訂座位；NHPP 不建議放票的輪次直接顯示「不應放票」並停用定價；座位圖使用同一 API 分解。正常需求基線的預計空位／訂位曲線及截至所選日的正常基本票價另外顯示。使用者指定移除的長篇假設、驗證及每日快照表已從該頁移除；資料及評估 API 保留。 Experiments 現在只讀展示已保存的 What members said、輪次摘要與個別理由，並支援帶 run ID 的連結；舊六階段 panel 在 `#panel`，共享市場在 `#market`。
+Forecast 分開顯示 NHPP 建議會員座位、預測會員空間、今天可新增配額、已發布可訂座位，配合座位圖、正常需求基線的預計訂位及歷史正常基本票價。NHPP 不建議放票的輪次停用定價。需求篩選仍按 D28 預測起飛時正常訂位率分類：Low <60%，Medium 60%–<85%，High ≥85%；缺失或過期資料為 Unclassified。當下配額仍按所選日重新計算，需求標籤不能代替供應檢查。
 
-Forecast seats 及 Optimize prices 均可按 Low／Medium／High demand 篩選航班。分類使用固定 D28 的 NHPP 預測起飛時正常訂位率，低於 60% 為 Low，60% 至低於 85% 為 Medium，85% 或以上為 High；不是直接讀取模擬情境名稱或事後真值。索引缺失、過期或無有效預測的航班列為 Unclassified。切換 D14／D7 後仍使用明示的 D28 分類參考；當下預測、供應及放票規則照常重新計算。
+Thompson (`member-thompson-v5-marketing`) 在一班航班的一個放票時點，測試既有會員是否購買基本票價。P₀ 為正常基本票價的 80% 上限；可設定輪數、每輪人數、八類客群的權重、種子、驗證批數及 LLM 並行／呼叫上限。新 UI 實驗固定 `flexible_deal_seekers`，不再提供 Target customer scenario 或 Legacy 客群切換；相容 API 及舊結果保留原客群設定。離線顧客模擬和 Live LLM 是兩種行為來源，**並非兩套價格優化方法**。兩者都以公開特徵購買反應模型和 Thompson Sampling 選下一個價格，保留已保存實驗、逐輪表、價格／票款曲線、最終候選和獨立驗證。私人預算不提供給價格學習器；入會費、稅費、燃油和營運成本不計入這個基本票款實驗。
 
-`backend/optimization.py` 的主流程版本為 `flight-policy-feedback-v9-marketing`，必須選擇航線、日期／航班及 D28／D14／D7。會員基本票價上限為所選時點最近可見正常基本票價的 80%（`backend/fare_policy.py`）；新實驗的 P₀ 等於此上限，不能手動覆寫，搜尋上限亦收窄至此值，發布優惠時再次檢查；新指定航班實驗由後端固定 V₀ = HK$399，前端移除 P₀／V₀、輪數、旅客數及進階設定輸入；預設 14 位旅客、2 個搜尋市場、6 輪 Live LLM，數學軌按細網格決定測試點。數學及 Live LLM 都在同一指定航班的獨立反事實世界內運行，使用該班已訂位、空位、正常基本票價及歷史；不再以一般多航班市場代替所選航班。啟動前檢查所選輪次有正會員配額。數學軌先用 `backend/fare_estimate.py`（`formula-scan-v2-whole-hkd`）以相同旅客、數學模型的選擇機率計算 0 至上限每隔 HK$1 的期望增量貢獻，取最高者為 P*（約 20 毫秒），再以完整模擬測試 P* 及附近 8 個價格；Live LLM 軌仍在 P₀ 附近先測試 ±25%，再做明示邊界探索。價格圖同時顯示貢獻、利潤率及會員買家，三項最大值分開標示，並以虛線顯示同一航班無會員優惠時的貢獻及逐點差額；結果不再重複顯示固定會費；普通票買家、入會、票數及報價曝光另列，無供應／無曝光不作價格排名。
+Experiments 只讀展示已保存的 What members said、輪次摘要與個別理由；支援 run／round 連結，查看或刷新不發起付費呼叫。歷史 Thompson 價格、規則與收益保持原樣，不套用新宣傳價覆寫。舊六階段 panel 仍在 `#panel`，共享市場在 `#market`。
 
-当前预测统一经 `backend/forecast.py`：D28 使用冻结 v2 需求分布及新校准的 v2 安全余量；D14/D7 使用完整窗口与近期窗口混合的 v3 及新余量。D28 的平滑候选未通过独立测试的突增组收入门槛，因此未启用。历史 v2 模型及报告保留，详见 [NHPP 平滑与校准](NHPP_V3_REVIEW.md) 和 [路演说明](PITCHING_BRIEF.md)。 同一次價格搜尋和獨立驗證固定初始座位 profile，以免供應規則變化混入價格比較。完成市場仍根據正常需求誤差計算 proposed next calibration，僅記錄為下次實驗提案，不在本次套用。最後用兩個獨立種子驗證保留的價格候選。單航班收入分攤三分之一新年費／會員服務成本，實際現金仍收全額一次，因此不宣稱是最佳全年會費。詳見 [現行航班優化規格](FLIGHT_SCOPED_OPTIMIZATION.md)；修正經過見 [v3 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md) 及 [v4 原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)（v4 的原價 P₀ 已由 v5 的 50% 上限取代）。
+活動預測入口仍為 `backend/forecast.py`：D28 使用凍結 v2 分布及新安全餘量，D14/D7 使用平滑 v3。詳見 [NHPP 平滑與校準](NHPP_V3_REVIEW.md)。主目錄仍為 1,549 班／280,364 筆，含獨立驗證共 680,364 筆。
 
-SQLite 保存 run、world、round、event。Scoped Live 現在可在指定總額度內自動跨越內部小批次；總額度耗盡或 provider 失敗仍停止，UI 可追加額度。Manage offers 自行選航班／輪次，只建議同航班同輪次、版本符合且獨立驗證接受的結果，發布時再扣除已售會員位及前輪有效未售配額。Client 主要金額顯示 base fare，下方小字顯示費用及總付款；結帳核價不變。
+Manage offers 保留自己的發布流程與相容引擎已驗證建議。Thompson 本次沒有自動套用或發布功能；審閱保留票價後需明確輸入優惠草稿，發布時重新檢查會員票價上限、已售位和前輪有效未售配額。Client 顯示基本票價及較小的費用／總付款；會員 plan 和結帳核價不變。
 
-以下快速網格、多航班會員期搜尋和既有實驗仍保留為參考及歷史證據。舊聯合優化引擎（`joint-policy-feedback-v1`）的兩維 P/V 搜尋只供測試及歷史實驗，不再是主要 Admin 的行為。
+相容後端 `backend/optimization.py`（`flight-policy-feedback-v9-marketing`）仍保留 HK$399 固定會費、數學 P* 加細網格、舊 Live 搜尋、獨立市場驗證和 SQLite 帳目，供原有 API／Manage offers 建議及歷史審計使用。快速網格、全期連續定價與舊聯合 P/V 引擎也仍在程式內，但不是 Optimize 頁面的方法。詳細技術契約以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準。
 
 ## 收入成本與 NO_OFFER 解釋
+
+以下是保留的相容貢獻引擎及歷史案例；主 Thompson 頁面使用基本票款與獨立配對驗證，不顯示這些舊成本／利潤率欄位。
 
 每條 optimization track 額外返回唯讀 `contribution_explanation`（`paired-contribution-explanation-v1`）：分開保留候選的搜尋及獨立驗證，按相同 seed／外生世界 SHA 配對。內容包括無優惠／有優惠的收入成本橋接、會費分攤及完整現金口徑、買家淨差、完成乘搭戶數和每次重播的服務門檻。資料缺失或配對身分不符時顯示 unavailable，不用 0 代替缺值。讀取不建立實驗、不修改舊結果或呼叫 LLM。
 
 歷史實例 P84／V399 的 6 戶會員買家是對照市場中會買普通票的同 6 戶。在當時定義的單航班分攤口徑下，增量為 −HK$2,364；若計入本次實收全額新會費，現金貢獻差額為 −HK$1,380。兩者都沒有模擬會員後續行程的收入、成本或未來續會，不能據此推論完整會員計劃虧損或不可行。後續收益是「尚未建模」，不是零；也不能任意加上預期收入而省略相應成本、座位替代及對照市場。平均 75% 會員使用不代表每次都過 60%，兩次驗證為 100%／50%。歷史帳目及原始輸出保留於[逐筆審計](CONTRIBUTION_AUDIT_2026-11-14.md)。
 
-主流程的 `NO_OFFER` 只表示這次單航班測試未接受候選，並非全年會員產品的結論。要回答完整會員期的盈利能力，需要在相同會員、完整時間線及多次行程中，只收一次會費，計入每次基本票價、附加收入、履約與服務成本，再與沒有會員方案的完整期間對照比較。這次需求篩選及原價起點更新沒有替單航班主流程新增全年市場模擬。
+相容引擎的 `NO_OFFER` 只表示這次單航班測試未接受候選，並非全年會員產品的結論。要回答完整會員期的盈利能力，需要在相同會員、完整時間線及多次行程中，只收一次會費，計入每次基本票價、附加收入、履約與服務成本，再與沒有會員方案的完整期間對照比較。這次需求篩選及原價起點更新沒有替相容引擎新增全年市場模擬。
 
-所選航班從實驗時點到起飛之間的後續普通票、會員票及取消已在事件時間線內，不能說主流程只算當天收入。尚未建模的是會員之後其他行程與實付續會。讀取結果另有 `economic_scope`，明示 `membership_term_evaluated: false`，未建模後續行程及續會貢獻使用 `null`，不是零。
+所選航班從實驗時點到起飛之間的後續普通票、會員票及取消已在事件時間線內，不能說該相容引擎只算當天收入。尚未建模的是會員之後其他行程與實付續會。讀取結果另有 `economic_scope`，明示 `membership_term_evaluated: false`，未建模後續行程及續會貢獻使用 `null`，不是零。
 
 ## 架構
 
@@ -37,14 +39,15 @@ flowchart TD
     S[合成主目錄 280364 列] --> D[當時可見歷史與正常票價]
     D --> N[NHPP 正常需求與風險保護]
     N --> R[D28 / D14 / D7 可新增配額]
-    R --> P[P0 為正常基本票價 80% 上限 數學軌公式 P* 加細網格 V0 固定]
-    P --> W[固定座位 profile 的獨立配對市場]
-    M[數學選擇或 LLM 選擇] --> W
-    T[獨立模擬未來需求與事件] --> W
-    W --> E[分項帳目 曝光 成交與獨立驗證]
-    E --> F[Admin 價格圖與有效建議]
-    E --> U[下一次座位校準提案 不在本輪套用]
-    F --> A[發布時重新檢查庫存]
+    D --> P[P0 為正常基本票價 80% 上限]
+    R --> W[固定配額 新會員樣本配對測價]
+    P --> W
+    M[離線或 LLM 顧客決策] --> W
+    W --> T[購買反應模型與 Thompson Sampling]
+    T --> W
+    T --> V[宣傳票價格式化與獨立驗證]
+    V --> E[已保存結果 票款曲線與會員回饋]
+    E -. 人工審閱與輸入草稿 .-> A[Manage offers 重新檢查價格與庫存]
     R --> A
     A --> Q[SQLite 優惠與配額]
     Q --> C[Client 入會與模擬購票]
@@ -81,7 +84,7 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 
 ## 快速篩選用的定價市場
 
-> 參考工具：UI 位於 Optimize 頁底的 “Advanced tools · earlier pricing methods”（`#pricing`），不是主流程。
+> 相容參考工具：舊 `#pricing` 頁仍可直接存取；已從 Optimize 的導航與介面移除，並非 Thompson 主流程。
 
 一次比較完整會員期的同一客群、出行機會與正常購買意圖。會員費每個人只收一次；航班日程均在設定會員期內，期間所有模擬用票成本均計入。正常票價固定，因此原正常購買者轉去會員票可用配對基線衡量，不把原需求重新作一次獨立價格過濾。
 
@@ -107,7 +110,7 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 
 ## Admin與會員入口
 
-新增`/admin`及`/members`兩個介面。Admin的Customer panel改為背景工作，Live上限100人、規則模式1,000人，預設100；先看結果摘要、客群分組及可搜尋分頁名單，再載入單人的六階段。每批Live預設60、最多120個決策嘗試，唯一合法動作不呼叫LLM，快取與真正dispatch分開。每人checkpoint與prompt／model／實作hash支持安全續跑，輪詢不自動延長額度。
+Admin 位於 `/admin`，Optimize 使用 `/adaptive-pricing`，會員端位於 `/members`。舊 `#panel` 的 Customer panel 使用背景工作，Live上限100人、規則模式1,000人，預設100；先看結果摘要、客群分組及可搜尋分頁名單，再載入單人的六階段。每批Live預設60、最多120個決策嘗試，唯一合法動作不呼叫LLM，快取與真正dispatch分開。每人checkpoint與prompt／model／實作hash支持安全續跑，輪詢不自動延長額度。
 
 會員端從同一SQLite已發布優惠查詢航班、確認完整價格、按伺服器plan入會及購票，並保存My trips。Admin只管理會費和發布庫存，不再混放旅客入會／購買控制。這是UI與路徑分開，沒有宣稱生產權限隔離。詳見[新介面與API](ADMIN_AND_MEMBER_UX.md)。
 
@@ -116,7 +119,9 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 | 方法及路徑 | 用途 |
 | --- | --- |
 | GET /api/health | 健康檢查（Docker healthcheck 使用） |
-| POST / GET /api/optimization/runs、GET /api/optimization/runs/{id}、POST …/{id}/resume、GET …/{id}/events、GET …/{id}/export | 指定航班優化實驗，完整契約見 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md#persistence-and-api) |
+| GET /api/adaptive-pricing/status、POST /api/adaptive-pricing/scope | Thompson 客群／provider 狀態及指定航班配額與 P₀ |
+| POST / GET /api/adaptive-pricing/runs、GET /api/adaptive-pricing/runs/{id}、GET …/{id}/events、GET …/{id}/export | 主 Optimize 的 Thompson 實驗、保存輪次、會員回饋及驗證 |
+| POST / GET /api/optimization/runs、GET /api/optimization/runs/{id}、POST …/{id}/resume、GET …/{id}/events、GET …/{id}/export | 相容貢獻／會費實驗 API；不在 Optimize UI 中使用，完整契約見 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md#persistence-and-api) |
 | POST /api/optimization/initial-policy | 由所選航班快照計算 P₀，V₀ 固定 HK$399，不呼叫 LLM |
 | GET /api/optimization/suggestions | 指定 flight_id／forecast_day 的已驗證價格及即時可發布配額建議 |
 | POST / GET /api/pricing/runs、GET /api/pricing/runs/{id} | 參考用全期連續定價，見 [CONTINUOUS_PRICING](CONTINUOUS_PRICING.md) |
@@ -124,7 +129,7 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 | GET /api/flights | 航班目錄及 D28 預測需求分類 |
 | GET /api/flights/{id} | 航班與歷史快照 |
 | POST /api/forecast | flight_id、days_to_departure；返回風險預測及三輪放票狀態，讀取本身不發位 |
-| POST /api/optimize | 參考用 64 組快速篩選（Advanced tools · earlier pricing methods）；返回候選／最佳／基線／測試 |
+| POST /api/optimize | 相容參考用 64 組快速篩選（舊 `#pricing`）；返回候選／最佳／基線／測試 |
 | GET /api/evaluation | 獨立測試報告 |
 | GET /api/export/snapshots | gzip資料下載 |
 | GET /api/personas | 客群覆蓋及假設人物 |
@@ -161,11 +166,11 @@ POST需要JSON、同源Origin、有效數值與ID。服務只綁定127.0.0.1，�
 | 原文beta截斷0至0.06 | 明示工程網格與先驗，無業界上限聲稱 | 允許需求衰退並揭露邊界假設 |
 | 將需求均值直接當未售位 | 800條需求／取消／容量路徑 | 正確處理需求超容量與非線性截斷 |
 | 名義P90當90%保護 | 原始分位數＋逐時點分情境校準保護量，保留兩批獨立驗證 | v2不同批次D28突增82.5%／91.5%；未知未來突增仍有缺口 |
-| 用LLM虛擬人物當真實客群 | 14類情境、Codex實際pilot、DeepSeek真實呼叫，與規則來源分開 | 原始回應可稽核，但模型選擇仍不是真人ground truth |
+| 用LLM虛擬人物當真實客群 | 新Thompson固定八類彈性客群；歷史14類情境、Codex pilot及DeepSeek呼叫保留並區分來源 | 原始回應可稽核，但模型選擇仍不是真人ground truth |
 | 每輪重新訓練預測模型 | 固定NHPP及市場，搜尋商業參數 | 能分辨收益改變來自策略或世界假設 |
-| 直接最優化P與V | 固定D28/D14/D7三輪；主流程在指定航班上固定V₀、只搜尋會員票價P，與NO_OFFER配對比較 | 按最新業務規則把放票時點與數量分開；全期P/V搜尋只留作參考工具 |
-| 預設高級優化／RL | 參考用快速篩選器為完整有限網格（64組）；主流程為有界局部票價搜尋 | 固定三輪後移除開放日維度；不用先建立昂貴RL訓練 |
-| 一年會費與一班28天比較 | 固定會員期內多班合成目錄，全部用票成本計入 | 避免重複算會費或漏算後續使用 |
+| 直接最優化P與V | 主流程固定D28/D14/D7放票時點；Thompson針對已入會顧客，只測試會員基本票價P | 會費與全年產品收益不在這個實驗內；全期P/V與固定會費引擎留作相容參考 |
+| 預設高級優化／RL | 公開特徵購買反應模型、Thompson Sampling、每輪新客群和獨立確認 | 在80%票價上限內探索，區分搜尋與未見客群驗證，不宣稱真實最優價 |
+| 一年會費與一班28天比較 | 主Thompson只比較一班的基本票款，既有會員不再次收費 | 結果不證明全年會員計劃盈利；其他多班／成本工具保留為相容參考 |
 | 全部資料混放 | frontend/backend/simulation/llm_agent獨立 | 各角色可獨立開發與驗證 |
 | OAG視為訂位／票價來源 | OAG背景私有快取，合成數據另列 | 實際取得10筆UO航班，座位是預測容量 |
 

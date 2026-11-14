@@ -3,7 +3,7 @@
 
 路演与当前方案：[Pitching brief](docs/PITCHING_BRIEF.md)，含最新校准保护覆盖率、讲稿和评委问答。
 
-**Forecast normal demand. Release additional member seats at D28, D14 and D7, and compare fares and membership fees.**
+**Forecast normal demand. Release additional member seats at D28, D14 and D7, and test member fares with Thompson Sampling.**
 
 A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for Cathay Hackathon 2026, **Low-cost Travel — Smart Offer & Borderless Booking**. The proposed HK Express membership offers zero or low base fares plus mandatory charges.
 
@@ -19,49 +19,47 @@ This prototype turns a normal-demand forecast into concrete, auditable release a
 
 ## Adaptive member pricing — Thompson Sampling
 
-Open [Adaptive pricing](http://127.0.0.1:8000/adaptive-pricing) from Admin. This experiment treats every traveller as an existing member and compares **basic ticket fares only**, capped at **80% of the observed normal base fare**. It fits a small, weighted purchase-response model and uses Thompson Sampling to choose the next price. Prices use whole HKD. Final member quotes round down to an amount ending in 9; amounts below HK$30 become a promotional HK$0 base fare (including HK$30–38 after rounding). Independent confirmation uses the adjusted prices, and historical results remain unchanged. Each round tests new members in paired candidate/initial worlds; the learner never receives their private budgets. Customer LLM calls run concurrently; a deterministic clearing engine alone allocates integer seats. Open **Experiments → What members said** to read saved round summaries and individual purchase reasons; viewing feedback does not make new LLM calls.
+Open **Optimize prices** in Admin, or [Thompson Sampling](http://127.0.0.1:8000/adaptive-pricing) directly. This is the only optimizer exposed on that page. This experiment treats every traveller as an existing member and compares **basic ticket fares only**, capped at **80% of the observed normal base fare**. It fits a small, weighted purchase-response model and uses Thompson Sampling to choose the next price. Prices use whole HKD. Final member quotes round down to an amount ending in 9; amounts below HK$30 become a promotional HK$0 base fare (including HK$30–38 after rounding). Independent confirmation uses the adjusted prices, and historical results remain unchanged. Each round tests new members in paired candidate/initial worlds; the learner never receives their private budgets. Customer LLM calls run concurrently; a deterministic clearing engine alone allocates integer seats. Open **Experiments → What members said** to read saved round summaries and individual purchase reasons; viewing feedback does not make new LLM calls.
 
-Eight explicitly assumed groups of flexible, price-sensitive leisure members are sampled with poststratification weights. The earlier 14-group broad-coverage population remains selectable for comparison. The formatted final quote is frozen before fresh holdout panels compare it with the formatted starting quote and no member offer. Separate charts show member purchases, actual panel receipts and weighted target-mix estimates. This is synthetic evidence, not observed HK Express conversion or airline profit. Full design, commands and results are in the [current technical specification](docs/FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing).
+New UI experiments use eight explicitly assumed groups of flexible, price-sensitive leisure members, sampled with poststratification weights. Their weights remain editable. The target-scenario selector and legacy broad-coverage option have been removed; earlier 14-group results remain readable with their original settings. The formatted final quote is frozen before fresh holdout panels compare it with the formatted starting quote and no member offer. Separate charts show member purchases, actual panel receipts and weighted target-mix estimates. This is synthetic evidence, not observed HK Express conversion or airline profit. Full design, commands and results are in the [current technical specification](docs/FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing).
 
-## Joint optimisation and new portals (2026-11-14)
+## Admin workflow (2026-11-15)
 
-Admin now follows **Forecast seats → Optimize prices → Experiments → Manage offers**,
+Admin follows **Forecast seats → Optimize prices → Experiments → Manage offers**,
 using purple, cyan and white. Forecast shows seat allocation, normal-demand protection,
 the booking forecast and observed ticket prices. The separate Client Portal provides
 flight search, base fares with a separate fees/total line, membership and saved trips.
 
-The primary optimizer now requires a **specific route, flight date and D28/D14/D7 snapshot**.
-Member base fares are capped at **80% of the flight's latest observed normal base fare**;
-P₀ starts at that cap automatically; new flight-scoped runs fix the membership fee
-at **HK$399** on the server. The simplified setup uses 14 travellers, 2 search markets
-and 6 Live LLM rounds; the mathematical track determines its own fine-grid count. The mathematical track scores every fare up to the cap with a
-closed-form expectation of its customer model, then simulates the best estimate P*
-and eight nearby fares. Mathematical and live-LLM tracks replay this flight's
-inventory, compare contributions and purchases, and validate the candidate on independent
-worlds. Price/profit plots distinguish maximum contribution, margin and buyer count.
-Manage offers automatically shows matching validated suggestions with current quota checks.
-Uncomputed flights link directly to Optimize with the same flight and round selected;
-NO_OFFER, unfinished and historical results are labelled separately.
-The latest correction separates forecast headroom, new quota and published bookable seats.
-New member-opportunity examples supply inventory; zero-supply runs are blocked. Member and
-regular purchasers are counted separately, and each new fare comparison freezes its seat
-profile. See [the inventory and price-evidence corrections](docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md).
+**Optimize prices now contains Thompson Sampling only.** Select a route, dated flight
+and D28/D14/D7 snapshot, then set price rounds, customer count and population weights.
+Choose offline simulated customer decisions or bounded live LLM decisions; both feed
+the same Thompson price learner. The page retains saved experiments, round results,
+price/revenue curves, independent validation and links to saved member feedback.
+P₀ is derived from the selected flight's 80% normal-fare cap. Every simulated customer
+is already a member, so this experiment does not charge or optimize an annual fee.
 
-Forecast and Optimize both filter flights by **Low / Medium / High demand**, using
-the D28 NHPP forecast of final normal occupancy (below 60%, 60% to below 85%, and at least 85%).
-Unavailable or stale classifications remain Unclassified. See the
-[demand filter and original-fare contract](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
+Old `/admin?run=adaptive-…&round=…#optimization` bookmarks open the same saved experiment
+in the Thompson workspace. Forecast and Manage offers links carry the selected flight
+and release round. Opening a result does not start an experiment or call an LLM.
+The old Math / Math+LLM controls, contribution charts and reference-price widgets have
+been removed from Optimize. Their backend APIs, saved databases and frozen evidence
+remain available for compatibility and historical audit.
 
-Admin also explains each retained candidate with paired revenue/cost tables, the full membership-fee cash view and per-replay service requirements. The [historical HK$2,364 contribution audit](docs/CONTRIBUTION_AUDIT_2026-11-14.md) includes subsequent sales of the selected flight through departure. Other future member trips and renewal revenue/costs are not modelled, so it does not establish whole-term membership profitability.
+Forecast filters flights by **Low / Medium / High demand**, using the D28 NHPP forecast
+of final normal occupancy (below 60%, 60% to below 85%, and at least 85%). Unavailable
+or stale classifications remain Unclassified. A low-demand label does not guarantee
+member inventory; the selected release round must still have a positive NHPP quota.
 
-SQLite saves rounds, seat-feedback profiles, redacted original LLM outputs and resumable
-market state. Live runs automatically cross internal batches within a selected total
-budget. NO_OFFER remains a valid decision for the selected flight, not a rejection
-of the complete membership programme. The base NHPP remains frozen.
+Manage offers keeps its separate publication checks and existing legacy validated
+suggestions. Thompson results are not automatically published or bound to an offer;
+review a retained fare and enter the desired draft explicitly. Viewing or testing
+prices never changes the Client Portal's membership plan or inventory.
 
-Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md); the latest changes (80% member fare cap, formula-guided fare search, NHPP seat card) are logged in [iteration progress](docs/ITERATION_2_PROGRESS.md); the v4 record is [demand filter and original fare](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
-The earlier joint P/V engine (test-only), whole-term continuous search
-and historical experiments remain available as explicitly labelled reference tools.
+SQLite preserves Thompson rounds, decisions, feedback, source counts and validation.
+The pricing result is synthetic member-ticket revenue, not total airline profit.
+The [current specification](docs/FLIGHT_SCOPED_OPTIMIZATION.md) separates this active
+workflow from the retained contribution/fee engine and historical evidence. Changes
+and test results are recorded in [iteration progress](docs/ITERATION_2_PROGRESS.md).
 Use Docker below on Windows; the customer panel retains POSIX `fcntl`.
 
 ## Quick start with Docker (Mac, Windows and Linux)
@@ -98,18 +96,18 @@ python -m pip install -r requirements.txt
 python -m backend.server
 ```
 
-Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices, run customer panels, and publish member offers. Open the separate **[member booking site](http://127.0.0.1:8000/members)** to search released flights, join the pass, review full prices and book a simulated seat. Both use the same SQLite inventory, memberships and saved trips. The committed compressed dataset loads automatically. No payment or real ticket is issued.
+Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, test member fares with Thompson Sampling, read saved customer feedback, and publish member offers. Open the separate **[member booking site](http://127.0.0.1:8000/members)** to search released flights, join the pass, review full prices and book a simulated seat. Both use the same SQLite inventory, memberships and saved trips. The committed compressed dataset loads automatically. No payment or real ticket is issued.
 
 ## What is implemented
 
 - **680,364 daily snapshots** across **3,759 synthetic flight histories** (200,000 original demo rows, two 40,182-row route/date supplements and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
-- **Flight-specific optimisation:** formula P* plus a 9-fare simulated grid on the mathematical track, 1–12 rounds on the live-LLM track, member fares capped at 80% of the normal base fare, server-fixed HK$399 V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
+- **Flight-specific Thompson Sampling:** fresh paired customer panels, a weighted public-feature purchase-response model, bounded LLM calls, independent validation and SQLite audit history. Member fares start at the 80% normal-fare cap and use the final promotional quote rule. Supplemental simulations cover 74 directed routes on three dates. The former fixed-fee/formula-grid engine remains a compatibility API, outside the Optimize page.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
 - **Separate Admin and member interfaces:** actionable analysis navigation, panel outcome summaries, segment comparisons, searchable/paginated traveller lists, and a member-facing flight search, price review, membership and My trips flow.
 - **Larger background panels:** up to **100 live LLM travellers** or **1,000 rule-based travellers**, with a default of 100. Live batches default to 60 decision attempts (maximum120), checkpoint each traveller, show progress and resume only on explicit request. Sole legal actions need no model call.
-- Fourteen assumed customer archetypes; audited **actual DeepSeek calls**, Codex subagent pilot outputs, bounded/resumable batches and repeated-choice/price/order/language probes. Forced actions, cache replay and fresh calls are separate.
+- Eight flexible, price-sensitive customer groups for new Thompson experiments; historical fourteen-group pilots remain available as evidence. Audited **actual DeepSeek calls**, Codex subagent pilot outputs, bounded/resumable batches and repeated-choice/price/order/language probes are retained. Forced actions, cache replay and fresh calls are separate.
 - Optional OAG Flight Info integration, private caching, timeouts and quota-aware failure handling.
 
 ## Evidence and limitations

@@ -1,3 +1,4 @@
+import { thompsonUrl, redirectLegacyOptimization } from './pricing-navigation.js';
 import { seatStatus } from './seat-status.js';
 import { demandDescription, matchesDemand, populateDemandFilter } from './demand-filter.js';
 const $ = (id) => document.getElementById(id);
@@ -25,11 +26,12 @@ async function busy(button, callback) {
   try { await callback(); } catch (e) { error(e.message); } finally { button.disabled = button.id === 'publish-button' ? !canPublish() : false; button.textContent = previous; }
 }
 function setView() {
-  const name = ['flights', 'optimization', 'pricing', 'customers', 'panel', 'market', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
+  if (redirectLegacyOptimization()) return true;
+  const name = ['flights', 'pricing', 'customers', 'panel', 'market', 'members'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights';
   for (const section of document.querySelectorAll('.view')) section.hidden = section.id !== `view-${name}`;
-  for (const anchor of document.querySelectorAll('.primary-nav a')) { if (anchor.hash === `#${name}` || (['customers', 'panel', 'market'].includes(name) && anchor.dataset.nav === 'experiments') || (name === 'pricing' && anchor.hash === '#optimization')) anchor.setAttribute('aria-current', 'page'); else anchor.removeAttribute('aria-current'); }
+  for (const anchor of document.querySelectorAll('.primary-nav a')) { if (anchor.hash === `#${name}` || (['customers', 'panel', 'market'].includes(name) && anchor.dataset.nav === 'experiments') || (name === 'pricing' && anchor.pathname === '/adaptive-pricing')) anchor.setAttribute('aria-current', 'page'); else anchor.removeAttribute('aria-current'); }
   if (state.noticeView !== name) $('notice').hidden = true;
-  document.title = `${({ flights: 'Forecast seats', optimization: 'Optimize prices', pricing: 'Reference pricing', customers: 'What members said', panel: 'Customer panel', market: 'Test the market', members: 'Manage offers' })[name]} — UOption Fly Pass`;
+  document.title = `${({ flights: 'Forecast seats', pricing: 'Reference pricing', customers: 'What members said', panel: 'Customer panel', market: 'Test the market', members: 'Manage offers' })[name]} — UOption Fly Pass`;
   const selected = document.querySelector('.primary-nav [aria-current=page]');
   if (selected) { const nav = selected.parentElement; if (selected.offsetLeft < nav.scrollLeft || selected.offsetLeft + selected.offsetWidth > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = Math.max(0, selected.offsetLeft - nav.offsetLeft - 20); }
   if (name === 'members') { loadOffers(); loadMemberPlan(); refreshOfferSuggestionsOnEntry(); }
@@ -42,7 +44,10 @@ function setView() {
 window.addEventListener('hashchange', setView);
 document.querySelector('.skip').addEventListener('click', (event) => { event.preventDefault(); document.querySelector('.view:not([hidden]) h1')?.focus(); });
 let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (state.forecast) renderForecast(); }, 120); });
-$('go-pricing').addEventListener('click', () => { location.hash = 'optimization'; window.dispatchEvent(new CustomEvent('uoption:optimize-flight',{detail:{flight_id:state.loadedFlightId,day:state.day}})); });
+$('go-pricing').addEventListener('click', () => {
+  if ($('go-pricing').disabled || !state.loadedFlightId) return;
+  location.assign(thompsonUrl({flightId:state.loadedFlightId, day:state.day}));
+});
 
 function svgNode(tag, attrs, content) { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs || {}).forEach(([key, val]) => el.setAttribute(key, val)); if (content !== undefined) el.textContent = content; return el; }
 function linePath(points, x, y) { return points.map((p, i) => `${i ? 'L' : 'M'}${x(p.day).toFixed(2)},${y(p.value).toFixed(2)}`).join(' '); }
@@ -683,8 +688,7 @@ function initializeOfferSelectors(){
   $('offer-route').replaceChildren(new Option('Choose a route',''),...[...new Set(state.flights.map(offerRouteKey))].sort().map(route=>new Option(route.replace('-', ' → '),route)));
 }
 function offerOptimizeLink(flightId,day){
-  const link=element('a','Optimize this flight','button primary');link.href='#optimization';
-  link.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('uoption:optimize-flight',{detail:{flight_id:flightId,forecast_day:day}})));
+  const link=element('a','Optimize this flight','button primary');link.href=thompsonUrl({flightId,day});
   return link;
 }
 function renderOfferSuggestions(response,flightId,day){
@@ -692,7 +696,7 @@ function renderOfferSuggestions(response,flightId,day){
   const latest=response.latest_run,modeLabel=mode=>mode==='live'?'Live LLM':'Mathematical';
   if(latest&&latest.status!=='completed'){
     const label=({queued:'Optimization queued',running:'Optimization in progress',failed:'Optimization failed',paused:'Optimization paused at its call limit',paused_at_budget:'Optimization paused at its call limit',paused_after_errors:'Optimization paused after errors',interrupted:'Optimization interrupted'})[latest.status]||'Optimization not complete';
-    box.append(element('strong',label),element('p','Review this run in Optimize. Its unfinished results cannot be used as an offer suggestion.'),element('p',latest.run_id,'small muted'));
+    box.append(element('strong',label),element('p','This is a saved legacy optimization. Its unfinished results cannot be used as an offer suggestion.'),element('p',latest.run_id,'small muted'));
   }
   for(const suggestion of state.offerSuggestions){
     const item=element('div');item.append(element('strong',`${modeLabel(suggestion.mode)} suggestion`),element('p',`${money(suggestion.member_fare)} base fare · ${money(suggestion.membership_fee)} pass fee · ${number(suggestion.suggested_new_seats??suggestion.release_seats)} new seats`),element('p',`${suggestion.run_id} · current release cap ${number(response.current_release_limit)}`,'small muted'));
@@ -706,7 +710,7 @@ function renderOfferSuggestions(response,flightId,day){
     if(outcome.decision==='NO_OFFER')item.append(element('p','No offer was recommended for this flight and release round.'));
     else if(!outcome.validated)item.append(element('p','This run has no independently validated offer to apply.'));
     if(outcome.member_fare!=null)item.append(element('p',`Tested ${money(outcome.member_fare)} base fare · ${money(outcome.membership_fee)} pass fee`));
-    if(historical)item.append(element('p','This result uses an earlier model or configuration. Rerun Optimize before using a suggestion.'));
+    if(historical)item.append(element('p','This result uses an earlier model or configuration and cannot be applied as a current suggestion. Thompson experiments are reviewed separately.'));
     if(outcome.decision_reason)item.append(element('p',outcome.decision_reason));
     item.append(element('p',`${outcome.run_id}${outcome.model_version?` · ${outcome.model_version}`:''}`,'small muted'));box.append(item);
   }
@@ -789,7 +793,7 @@ $('member-plan-form').addEventListener('submit', (event) => { event.preventDefau
 $('refresh-offers').addEventListener('click', loadOffers);
 
 async function init() {
-  setView();
+  if (setView()) return;
   try {
     const [summary, flightData] = await Promise.all([api('/api/summary'), api('/api/flights')]); state.summary = summary; state.flights = flightData.flights || flightData;
     text('dataset-label', `${number(summary.dataset?.catalog_rows ?? summary.dataset?.rows ?? summary.rows)} daily snapshots · synthetic`);

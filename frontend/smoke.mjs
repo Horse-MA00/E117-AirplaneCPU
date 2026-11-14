@@ -19,7 +19,7 @@ const errors = [];
 page.on('pageerror', (error) => errors.push(error.message));
 const waitForecast = () => page.waitForFunction(() => document.querySelector('#flight-main').getAttribute('aria-busy') === 'false');
 const navigate = async view => {
-  if (view === 'pricing') { await page.locator('.primary-nav a[href="#optimization"]').click(); await page.locator('.advanced-link[href="#pricing"]').click(); }
+  if (view === 'pricing') { await page.evaluate(() => { location.hash = 'pricing'; }); await page.locator('#view-pricing').waitFor({state:'visible'}); }
   else if (['market', 'panel'].includes(view)) { await page.evaluate(name => { location.hash = name; }, view); await page.locator(`#view-${view}`).waitFor({state:'visible'}); }
   else await page.locator(`.primary-nav a[href="#${view}"]`).click();
 };

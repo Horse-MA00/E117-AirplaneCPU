@@ -57,7 +57,7 @@ try{
   await page.waitForFunction(()=>!document.querySelector('#publish-button').disabled);
   assert.equal(planFee,499);
   assert.equal(await page.locator('#flight-select').inputValue(),forecastFlight,'Manage selection must not switch Forecast selection');
-  await page.getByRole('link',{name:'Optimize prices',exact:true}).click();
+  await page.getByRole('link',{name:'Experiments',exact:true}).click();
   await page.getByRole('link',{name:'Manage offers',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#offer-optimization-suggestion').getAttribute('aria-busy')==='false'&&document.querySelector('#offer-fare').value==='42');
   assert.equal(await page.locator('#offer-quantity').inputValue(),'3','Returning to Manage retains a still-valid linked draft');
@@ -72,7 +72,8 @@ try{
   await page.waitForFunction(()=>document.querySelector('#offer-optimization-suggestion').textContent.includes('No completed validated optimization'));
   assert.equal(await page.locator('#offer-fare').inputValue(),'','Changing flight clears the old price draft');
   assert.equal(await page.getByRole('button',{name:'Use this suggestion',exact:true}).count(),0);
-  assert.equal(await page.getByRole('link',{name:'Optimize this flight',exact:true}).getAttribute('href'),'#optimization');
+  const optimizeLink=new URL(await page.getByRole('link',{name:'Optimize this flight',exact:true}).getAttribute('href'),origin);
+  assert.equal(optimizeLink.pathname,'/adaptive-pricing');assert.equal(optimizeLink.searchParams.get('flight_id'),b);assert.equal(optimizeLink.searchParams.get('forecast_day'),'14');
   await page.locator('#offer-fare').fill('50');await page.locator('#offer-quantity').fill('2');
   const posted=page.waitForResponse(response=>response.url().endsWith('/api/offers')&&response.request().method()==='POST');
   await page.locator('#publish-button').click();
@@ -83,9 +84,11 @@ try{
   await page.waitForFunction(()=>document.querySelector('#offer-optimization-suggestion').textContent.includes('NO_OFFER'));
   assert.equal(await page.getByRole('button',{name:'Use this suggestion',exact:true}).count(),0);
   await page.getByRole('link',{name:'Optimize this flight',exact:true}).click();
-  await page.waitForFunction(()=>location.hash==='#optimization'&&document.querySelector('#optimization-flight').value==='NET-HKG-FUK-20270518'&&document.querySelector('#optimization-day').value==='7');
-  assert.equal(await page.locator('#optimization-route').inputValue(),'HKG-FUK');
+  await page.waitForFunction(()=>location.pathname==='/adaptive-pricing'&&document.querySelector('#flight')?.value==='NET-HKG-FUK-20270518'&&document.querySelector('#release-day').value==='7');
+  assert.equal(await page.locator('#route').inputValue(),'HKG → FUK');
   await page.getByRole('link',{name:'Manage offers',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelectorAll('#offer-route option').length>1);
+  await page.locator('#offer-route').selectOption('HKG-FUK');await page.locator('#offer-flight').selectOption(b);
   outcome='stale';await page.locator('#offer-day').selectOption('14');
   await page.waitForFunction(()=>document.querySelector('#offer-optimization-suggestion').textContent.includes('Historical Mathematical result'));
   assert.match(await page.locator('#offer-optimization-suggestion').innerText(),/HK\$65.*base fare/);

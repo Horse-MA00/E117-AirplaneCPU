@@ -1,3 +1,5 @@
+/** Legacy UI check: targets the retired Math / Math+LLM Optimize page.
+ * Not part of the current test scripts; retained as historical test source. */
 /** Read-only UI regression using the frozen live experiment; no provider calls. */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
