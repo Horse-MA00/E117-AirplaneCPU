@@ -32,7 +32,7 @@
   font-synthesis:none; font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
 }
 *{box-sizing:border-box}
-body{margin:0;min-height:100dvh;background:var(--ground);font-size:var(--fs-md);line-height:1.5}
+body{margin:0;min-height:calc(100dvh / var(--zoom, 1));background:var(--ground);font-size:var(--fs-md);line-height:1.5}
 button,input,select{font:inherit;color:inherit}
 button,a,input,select,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 a{color:var(--purple);text-underline-offset:4px}
@@ -44,13 +44,14 @@ button:disabled,select:disabled{cursor:not-allowed}
 .skip:focus{position:fixed;inset:10px auto auto 10px;background:#fff;padding:14px 18px;z-index:100;border-radius:var(--r-sm);box-shadow:0 6px 24px rgba(30,20,40,.18)}
 
 /* ---------- Shell ---------- */
-.app-shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);min-height:100dvh}
-.sidebar{position:sticky;top:0;height:100dvh;display:flex;flex-direction:column;gap:2px;padding:26px 18px 22px;background:var(--card);border-right:1px solid var(--line);overflow-y:auto}
-.brand{display:flex;align-items:center;gap:12px;margin:0 10px 26px;text-decoration:none;color:var(--ink)}
-.brand-mark{width:32px;height:32px;border-radius:9px;background:var(--purple);position:relative;flex:none}
-.brand-mark::after{content:"";position:absolute;right:7px;bottom:7px;width:10px;height:10px;border-radius:3px;background:var(--cyan)}
-.brand-text{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
-.brand-text small{display:block;font-size:12px;font-weight:500;letter-spacing:0;color:var(--muted);margin-top:3px}
+.app-shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);min-height:calc(100dvh / var(--zoom, 1))}
+.sidebar{position:sticky;top:0;height:calc(100dvh / var(--zoom, 1));display:flex;flex-direction:column;gap:2px;padding:26px 18px 22px;background:var(--card);border-right:1px solid var(--line);overflow-y:auto}
+/* Wordmark: same type and treatment as the member site (members/portal.css .brand), plus the Admin role */
+.brand{display:flex;flex-direction:column;align-items:flex-start;gap:9px;margin:2px 10px 28px;text-decoration:none;color:var(--purple);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+.brand-word{display:flex;align-items:center;font-size:32px;line-height:.9;font-weight:800;letter-spacing:-1.6px;white-space:nowrap}
+.brand-pass{display:inline-block;margin-left:10px;padding:4px 0 4px 10px;border-left:2px solid var(--cyan);font-size:10.5px;font-weight:600;letter-spacing:.13em;line-height:1.2;text-transform:uppercase}
+.brand-role{font-family:var(--font);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.brand:hover .brand-word{color:var(--purple-hover)}
 .primary-nav{display:flex;flex-direction:column;gap:2px;counter-reset:step}
 .nav-group{display:block;font-size:var(--fs-xs);font-weight:600;color:var(--faint);letter-spacing:.07em;text-transform:uppercase;margin:16px 12px 6px}
 .nav-group:first-child{margin-top:0}
@@ -75,7 +76,7 @@ button:disabled,select:disabled{cursor:not-allowed}
 main{flex:1;min-width:0;width:100%;max-width:1680px;padding:0 var(--gutter) 64px}
 
 /* ---------- Shared flight bar ---------- */
-.context-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:var(--bar);padding:14px var(--gutter);background:rgba(255,255,255,.97);border-bottom:1px solid var(--line);backdrop-filter:saturate(1.2) blur(6px)}
+.context-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:var(--bar);padding:14px var(--gutter);background:rgba(255,255,255,.97);border-bottom:1px solid var(--line);backdrop-filter:saturate(1.2) blur(6px)}
 .ctx-field,.ctx-round{position:relative;display:flex;flex-direction:column;justify-content:center;height:76px;border:1.5px solid var(--field-line);border-radius:12px;background:var(--card);min-width:0}
 .ctx-field{padding:9px 16px 10px}
 .ctx-field:focus-within,.ctx-round:focus-within{border-color:var(--purple)}
@@ -84,16 +85,16 @@ main{flex:1;min-width:0;width:100%;max-width:1680px;padding:0 var(--gutter) 64px
 .ctx-field select:focus-visible{outline:2px solid var(--purple);outline-offset:6px;border-radius:4px}
 .ctx-field::after{content:"";position:absolute;right:16px;top:50%;width:8px;height:8px;border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .ctx-field select:disabled{color:var(--faint)}
-.ctx-field.demand{flex:0 0 240px}
+.ctx-field.demand{flex:0 0 236px}
 .ctx-field.demand select{font-size:18px}
-.ctx-places{flex:2 1 470px;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);align-items:center;gap:10px}
+.ctx-places{flex:1 1 530px;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);align-items:center;gap:8px}
 .flight-direction{width:20px;height:20px;fill:none;stroke:var(--purple);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.ctx-field.place select{font-size:17px}
-.ctx-field.flight{flex:2 1 360px;max-width:none}
+.ctx-field.place select{font-size:16px}
+.ctx-field.flight{flex:1.2 1 500px;max-width:none}
 .ctx-field.flight select{font-size:16px}
 .ctx-round{flex:none;margin-left:0;padding:10px 8px 4px 16px;gap:1px}
 .day-shortcuts{display:flex;gap:4px;margin-left:-8px}
-.day-shortcuts button,.round-buttons button{min-height:34px;padding:1px 18px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink-2);font-size:20px;font-weight:600}
+.day-shortcuts button,.round-buttons button{min-height:34px;padding:1px 14px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink-2);font-size:20px;font-weight:600}
 .day-shortcuts button:hover:not(:disabled),.round-buttons button:hover:not(:disabled){background:var(--ground)}
 .day-shortcuts button[aria-pressed=true],.round-buttons button[aria-pressed=true]{background:var(--purple);color:#fff}
 .day-shortcuts button:disabled,.round-buttons button:disabled{color:#C4BCCA;font-weight:500;opacity:1}
@@ -166,7 +167,7 @@ tbody tr:last-child>*{border-bottom:0}
 tbody tr.selected>*{background:var(--purple-wash);font-weight:600}
 
 /* ---------- Narrow screens ---------- */
-@media (max-width:1700px){
+@media (max-width:1359px){
   .context-bar{display:grid;grid-template-columns:240px minmax(0,1fr) 240px}
   .ctx-places{grid-column:span 2}
   .ctx-field.flight{grid-column:span 2}
@@ -242,3 +243,19 @@ h1 .info,h2 .info{margin-left:10px}
   .ctx-field.place select,.ctx-field.flight select{font-size:16px}
   .section-line{flex-wrap:wrap}
 }
+
+/* ---------- Place search (place-search.js) ---------- */
+.ctx-field.has-search select{padding-right:64px}
+.ctx-search-btn{position:absolute;right:34px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink-2)}
+.ctx-search-btn:hover,.ctx-search-btn[aria-expanded=true]{background:var(--purple-wash);color:var(--purple)}
+.ctx-search-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.place-search{position:absolute;z-index:50;top:calc(100% + 8px);left:-2px;width:min(400px,calc(100vw - 32px));padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:0 16px 44px rgba(30,20,40,.18)}
+.place-search.align-right{left:auto;right:-2px}
+.place-search input{min-height:46px;font-size:17px}
+.place-search-list{position:relative;list-style:none;margin:8px 0 0;padding:0;max-height:340px;overflow:auto}
+.place-search-list li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 12px;border-radius:var(--r-sm);cursor:pointer}
+.place-search-list li strong{font-size:16px;font-weight:600;color:var(--ink)}
+.place-search-list li span{font-size:13px;color:var(--muted);white-space:nowrap}
+.place-search-list li[aria-selected=true],.place-search-list li:hover{background:var(--ground)}
+.place-search-list li.current strong{color:var(--purple)}
+.place-search-empty{margin:10px 4px 4px;color:var(--muted);font-size:14px}

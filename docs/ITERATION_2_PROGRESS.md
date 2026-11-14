@@ -97,3 +97,5 @@ Analyst仍不可用时存`analysis=null`、error、attempt metadata和unavailabl
 验证：新adapter、worker、审计API与浏览器测试先在旧行为失败，再修复通过。完整原生`check_container.py`通过216项后端＋24项根目录，共240项；发布链接及冻结SHA验证通过。完整worker mock测试让3轮Analyst各失败3次，记录9次失败、6次重试、3轮分析不可用，仍完成Thompson及独立确认。测试同时覆盖恢复成功、预算边界、永久／暂时错误、原始回覆保存、audit／内部失败停止排队、历史audit投影与大小上限。
 
 浏览器`test:analyst-diagnostics`、`test:adaptive-pricing`、真实服务`test:smoke`通过；额外在实际旧失败实验验证第10轮具体错误／原文及已保存顾客选择在两页均可读，未启动新实验。桌面／390px截图检查通过，包含恶意HTML作为纯文字、迟到响应隔离、加载失败重试。整个修复没有真实LLM／OAG调用或库存交易；确认无活动实验后重启原生8000服务。
+
+推送前发现main更新至`167d1d2`，合并保留新的地点搜索、屏宽缩放及品牌字标；唯一文档冲突保留双方章节。合并后240项完整检查再次通过；Analyst诊断、Optimize、Demand／地点搜索及真实Admin浏览器检查再次通过，没有覆盖远端UI改动。

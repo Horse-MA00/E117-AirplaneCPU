@@ -60,7 +60,11 @@ try{
   await page.keyboard.press('Tab');
   assert.equal(await page.locator('#context-from').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order: demand, From, To, flight');
   await page.keyboard.press('Tab');
-  assert.equal(await page.locator('#context-to').evaluate(n=>document.activeElement===n),true,'To follows From without a hidden route-search control');
+  assert.equal(await page.evaluate(()=>{const b=document.activeElement;return b?.classList.contains('ctx-search-btn')&&b.closest('.ctx-field')?.contains(document.getElementById('context-from'))&&b.offsetParent!==null;}),true,'From is followed by its visible place-search button');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.locator('#context-to').evaluate(n=>document.activeElement===n),true,'To follows the From search button without hidden controls');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(()=>{const b=document.activeElement;return b?.classList.contains('ctx-search-btn')&&b.closest('.ctx-field')?.contains(document.getElementById('context-to'))&&b.offsetParent!==null;}),true,'To is followed by its visible place-search button');
   await page.keyboard.press('Tab');
   assert.equal(await page.locator('#flight-select').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order');
   await page.locator('#forecast-demand').selectOption('medium');
@@ -119,7 +123,25 @@ try{
     }
   };
   await checkFullPlaces('context-from','context-to');
-  await page.selectOption('#context-from','HND');await page.selectOption('#context-to','HKG');
+  // Place search: the magnifier filters the select's own options and fires its normal change event.
+  const searchPlace=async(id,query)=>{
+    await page.locator(`.ctx-field:has(#${id}) .ctx-search-btn`).click();
+    const box=page.locator(`.ctx-field:has(#${id}) .place-search input`);
+    assert.equal(await box.evaluate(n=>document.activeElement===n),true,'Search box takes focus');
+    await box.fill(query);
+    const names=await page.locator(`#${id}-search-results li strong`).allInnerTexts();
+    await box.press('Enter');
+    assert.equal(await page.locator(`.ctx-field:has(#${id}) .place-search`).isHidden(),true,'Choosing a result closes the search');
+    return names;
+  };
+  assert.deepEqual(await searchPlace('context-from','haneda'),['Tokyo Haneda (HND)']);
+  assert.ok((await searchPlace('context-to','hkg'))[0].includes('(HKG)'),'Codes match');
+  assert.equal(await page.locator('#context-from').inputValue(),'HND');assert.equal(await page.locator('#context-to').inputValue(),'HKG');
+  await page.locator('.ctx-field:has(#context-to) .ctx-search-btn').click();
+  await page.locator('.ctx-field:has(#context-to) .place-search input').fill('zzzz');
+  assert.equal(await page.locator('.ctx-field:has(#context-to) .place-search-empty').isVisible(),true,'No-match message');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#context-to').inputValue(),'HKG','Escape keeps the current place');
   await page.waitForFunction(()=>document.getElementById('flight-select').value==='RETURN-HND-HKG');
   await page.selectOption('#context-from','region:JP');
   assert.equal(await page.locator('#flight-select').inputValue(),'RETURN-HND-HKG','Country From includes returning flights');
@@ -159,5 +181,5 @@ try{
   await page.locator('#forecast-demand').selectOption('unknown');
   assert.equal(await page.locator('#flight-select').inputValue(),'UNCLASSIFIED-HKG-HND','Missing metadata must stay unclassified');
   assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
-  console.log(JSON.stringify({status:'passed',checks:['three demand bands and counts','fixed D28 reference','selection preservation','empty state and stale-request prevention','filtered-flight Thompson entry','scope refresh without price overrides','keyboard labels and mobile layout','missing metadata fallback','full airport/country choices independent of filters','return routes and country matching','same-day flight identifiers','empty From/To state and scope guard'],optimization_starts:starts}));
+  console.log(JSON.stringify({status:'passed',checks:['three demand bands and counts','fixed D28 reference','selection preservation','empty state and stale-request prevention','filtered-flight Thompson entry','scope refresh without price overrides','keyboard labels and mobile layout','missing metadata fallback','full airport/country choices independent of filters','From/To place search','return routes and country matching','same-day flight identifiers','empty From/To state and scope guard'],optimization_starts:starts}));
 }finally{await browser.close();}

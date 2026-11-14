@@ -2,6 +2,7 @@ import { analysisDiagnostics, analysisUnavailable, analysisLabel } from './analy
 import { releaseRound } from './thompson-navigation.js';
 import { matchesDemand, populateDemandFilter } from './demand-filter.js';
 import { populatePlaces, matchesFlightPlaces, setFlightPlaces, flightOptionLabel } from './flight-picker.js';
+import { attachPlaceSearch } from './place-search.js';
 const $ = id => document.getElementById(id);
 const analystDiagnostics = analysisDiagnostics($('run-analysis-diagnostics'));
 const money = value => Number.isFinite(Number(value)) && value !== null && value !== undefined ? `HK$${Number(value).toLocaleString('en-HK', {minimumFractionDigits: Number(value) % 1 ? 2 : 0, maximumFractionDigits: 2})}` : '—';
@@ -345,6 +346,7 @@ async function loadSaved() {
   $('load-run').disabled=!$('saved-run').value;
 }
 for(const id of ['opt-from','opt-to','opt-demand'])$(id).addEventListener('change',()=>{const selected=$('flight').value;clearRun();fillFlights(selected);loadScope();});
+attachPlaceSearch($('opt-from'),{label:'Search departure places'});attachPlaceSearch($('opt-to'),{label:'Search destination places'});
 for(const b of document.querySelectorAll('[data-round]'))b.addEventListener('click',()=>{if($('release-day').value===b.dataset.round)return;$('release-day').value=b.dataset.round;$('release-day').dispatchEvent(new Event('change'));});
 $('flight').addEventListener('change',()=>{clearRun();loadScope();});
 $('release-day').addEventListener('change',()=>{syncRound();clearRun();loadScope();});

@@ -46,11 +46,15 @@ export function populatePlaces(select, flights, selected = select.value) {
   const children = order.map(region => {
     const group = document.createElement('optgroup');
     group.label = groupName(region);
-    if (region) group.append(option(document, `Entire ${groupName(region)}`, `${regionPrefix}${region}`));
+    // A one-airport region would list the same choice twice ("Entire Hong Kong" / "Hong Kong (HKG)").
+    if (region && groups.get(region).length > 1) group.append(option(document, `Entire ${groupName(region)}`, `${regionPrefix}${region}`));
     group.append(...groups.get(region).map(code => option(document, airportLabel(code), code)));
     return group;
   });
   select.replaceChildren(option(document, 'Anywhere', ''), ...children);
+  if (typeof selected === 'string' && selected.startsWith(regionPrefix) && groups.get(selected.slice(regionPrefix.length))?.length === 1) {
+    selected = groups.get(selected.slice(regionPrefix.length))[0];
+  }
   select.value = [...select.options].some(item => item.value === selected) ? selected : '';
 }
 

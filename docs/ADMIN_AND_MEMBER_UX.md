@@ -6,7 +6,7 @@
 
 2026-11-15 介面重構（版面與視覺規則見 [FRONTEND_UI](FRONTEND_UI.md)）：Admin 與 Optimize 共用左側導航，流程為 Forecast seats → Optimize prices → Publish offers（原 Manage offers，路由仍為 `#members`）→ Results（新增 `#results`），證據頁 Member feedback（原 Experiments，路由仍為 `#customers`）。四個流程頁共用頂部航班選擇欄（Demand、From → To、Flight、放票輪次），在頁面之間保留航班，並以 `?flight_id=&forecast_day=` 在 Admin 與 `/adaptive-pricing` 之間傳遞。
 
-From／To 使用 Client 的完整機場／國家目錄，也支持 Anywhere；需求分類只篩選 Flight，不刪減地點選項。Flight 顯示日期及完整合成航班編號；地區範圍包含多條航線時也顯示出發及到達機場。無匹配時保留篩選條件並停用相關航班操作，不會自動改去另一條航線。
+From／To 使用 Client 的完整機場／國家目錄，也支持 Anywhere；需求分類只篩選 Flight，不刪減地點選項。Flight 顯示日期及完整合成航班編號；地區範圍包含多條航線時也顯示出發及到達機場。無匹配時保留篩選條件並停用相關航班操作，不會自動改去另一條航線。From／To 框內的放大鏡可輸入城市、機場代碼或國家名稱快速搜尋，選中結果等同在下拉框中選擇。
 
 ## Forecast seats
 
