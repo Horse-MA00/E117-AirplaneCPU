@@ -66,8 +66,9 @@ See [Docker instructions](DOCKER.md). The larger customer panel retains POSIX
 `fcntl`; use the Linux container on Windows. Native Mac/Linux development remains
 available through the README commands.
 
-Open Fast screening: the new panel searches a range; the original tier screener
-below remains an explicitly labelled legacy comparison. Shared market offers
+Open Optimize prices and expand the collapsed “Reference experiment: generic full-term market”
+section: the panel searches a range. The original 64-policy tier screener is a separate
+legacy view, “Advanced tools · earlier pricing methods” (`#pricing`). Shared market offers
 `probabilistic` alongside `deterministic` and bounded `live` modes.
 
 ```sh
@@ -125,10 +126,10 @@ experiment. Old reports without totals remain unchanged and request a fresh run
 rather than presenting incremental contribution as total profit. The chart is an
 estimated mean from a small synthetic cohort, not proof of a global optimum.
 
-Validation: 151 container regression tests and artifact checks passed. The real
+Validation at the time: container regression tests and artifact checks passed (current counts: run `python scripts/check_container.py`). The real
 continuous-price browser smoke checks plotted values against the API. A separate
 chart browser test covers an infeasible maximum versus NO_OFFER, a feasible winner,
 historical reports, numeric sorting, keyboard details, mobile resize and read-only
 reload. Run `npm run test:price-chart` with APP_URL pointed at the container.
 
-The redesigned Admin places the fixed-fee curve directly below the joint optimizer, using the purple/cyan theme. The joint optimizer varies fare, fee and a run-local seat profile; its round history is not relabelled as a one-dimensional price response curve. Earlier saved links with #pricing redirect to #optimization without starting another run.
+The redesigned Admin places the fixed-fee curve directly below the joint optimizer, using the purple/cyan theme. The joint optimizer varies fare, fee and a run-local seat profile; its round history is not relabelled as a one-dimensional price response curve. `#pricing` is still a separate routed view for the 64-policy reference screener.

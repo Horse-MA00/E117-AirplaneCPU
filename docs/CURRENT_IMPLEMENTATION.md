@@ -73,6 +73,8 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 
 ## 快速篩選用的定價市場
 
+> 參考工具：UI 位於 Optimize 頁底的 “Advanced tools · earlier pricing methods”（`#pricing`），不是主流程。
+
 一次比較完整會員期的同一客群、出行機會與正常購買意圖。會員費每個人只收一次；航班日程均在設定會員期內，期間所有模擬用票成本均計入。正常票價固定，因此原正常購買者轉去會員票可用配對基線衡量，不把原需求重新作一次獨立價格過濾。
 
 放票時點固定為D28、D14、D7三輪。搜尋P={0,30,70,100}、V={199,399,599,799}及可釋出量比例={.25,.5,.75,1}，最多64組；開放日不再是搜尋維度。每輪先計算保護後的目標未售配額，再扣除所有前輪尚未售出的有效配額，只新增差額。D13開始的全新篩選只包含未來D7輪；D6開始已沒有新的放票輪次。最終仍與NO_OFFER比較。服務限制包括合資格請求履約率與未用過會員比例。
@@ -105,12 +107,16 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 
 | 方法及路徑 | 用途 |
 | --- | --- |
+| GET /api/health | 健康檢查（Docker healthcheck 使用） |
+| POST / GET /api/optimization/runs、GET /api/optimization/runs/{id}、POST …/{id}/resume、GET …/{id}/events、GET …/{id}/export | 指定航班優化實驗，完整契約見 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md#persistence-and-api) |
+| POST /api/optimization/initial-policy | 由所選航班快照計算 P₀ 與預設 V₀，不呼叫 LLM |
 | GET /api/optimization/suggestions | 指定 flight_id／forecast_day 的已驗證價格及即時可發布配額建議 |
+| POST / GET /api/pricing/runs、GET /api/pricing/runs/{id} | 參考用全期連續定價，見 [CONTINUOUS_PRICING](CONTINUOUS_PRICING.md) |
 | GET /api/summary | 列數、航班數、模型與LLM配置狀態 |
 | GET /api/flights | 航班目錄及 D28 預測需求分類 |
 | GET /api/flights/{id} | 航班與歷史快照 |
 | POST /api/forecast | flight_id、days_to_departure；返回風險預測及三輪放票狀態，讀取本身不發位 |
-| POST /api/optimize | flight_id、days_to_departure、config；返回候選／最佳／基線／測試 |
+| POST /api/optimize | 參考用 64 組快速篩選（Advanced tools · earlier pricing methods）；返回候選／最佳／基線／測試 |
 | GET /api/evaluation | 獨立測試報告 |
 | GET /api/export/snapshots | gzip資料下載 |
 | GET /api/personas | 客群覆蓋及假設人物 |
@@ -119,10 +125,10 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 | GET /api/agents/panels/{id} | 進度、來源計數、分組及精簡人物列 |
 | GET /api/agents/panels/{id}/people/{customer_id} | 按需讀取一人完整階段 |
 | POST /api/agents/panels/{id}/resume | 明確增加一批額度 |
-| GET /api/member-portal/config、flights、accounts/{id} | 會員plan、已發布航班、會員和行程 |
+| GET /api/member-portal/config（或 plan）、flights、accounts/{id} | 會員plan、已發布航班、會員和行程 |
 | POST /api/member-portal/plan、join、book | 管理會費、按plan入會、確認會員票 |
-| GET /api/agents/runs/{id} | 保存的審計與原始輸出；大實驗以gzip匯出讀取 |
-| POST /api/market/runs | 背景執行共用市場三組政策，逐批呼叫上限 |
+| GET /api/agents/runs、/api/agents/runs/{id} | 保存的審計與原始輸出；大實驗以gzip匯出讀取 |
+| POST / GET /api/market/runs | 背景執行共用市場三組政策（逐批呼叫上限）／列出實驗 |
 | GET /api/market/runs/{id} | 狀態、政策比較、財務及實驗統計 |
 | GET /api/market/runs/{id}/cases/{case_id} | 同一case的航班、旅客、行為與帳本 |
 | POST /api/market/runs/{id}/resume | 明確追加一批呼叫；不自動延長額度 |
@@ -167,7 +173,7 @@ POST需要JSON、同源Origin、有效數值與ID。服務只綁定127.0.0.1，�
 
 ## 執行及驗證
 
-參見README安裝與啟動指令。兩組unittest分別覆蓋既有模擬器／新資料、NHPP／市場／交易；本次91＋19項全部通過。`scripts/smoke_api.py`對實際HTTP服務驗證資料、預測、64組搜尋、停售、人物、訂閱／購買及私有路徑保護。`scripts/smoke_three_round_api.py`驗證同班三輪發布、結轉、購票及不合法輪次拒絕。三輪回歸另檢查第二輪扣第一輪、第三輪扣前兩輪、售出不重扣、過期不結轉及輪次冪等。兩個API smoke及前端完整交易smoke皆重新通過。前端另有桌面及390px手機瀏覽器檢查，記錄於前端進度文件。
+參見README安裝與啟動指令。兩組unittest分別覆蓋既有模擬器／新資料、NHPP／市場／交易；目前 `backend/tests` 226 項、`tests/` 28 項，以 `python scripts/check_container.py` 一次執行。`scripts/smoke_api.py`對實際HTTP服務驗證資料、預測、64組搜尋、停售、人物、訂閱／購買及私有路徑保護。`scripts/smoke_three_round_api.py`驗證同班三輪發布、結轉、購票及不合法輪次拒絕。三輪回歸另檢查第二輪扣第一輪、第三輪扣前兩輪、售出不重扣、過期不結轉及輪次冪等。兩個API smoke及前端完整交易smoke皆重新通過。前端另有桌面及390px手機瀏覽器檢查，記錄於前端進度文件。
 
 新三輪環境另外完成40種子×3政策＝120個規則市場，3240筆逐輪公式和所有帳本／庫存檢查通過，沒有新增LLM呼叫。結果與限制見[本次三輪驗證](THREE_ROUND_RELEASE.md#本次三輪規則的獨立市場重播)；v2報告保留為歷史證據。
 

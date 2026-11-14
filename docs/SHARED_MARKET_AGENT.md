@@ -23,7 +23,7 @@ flowchart LR
 | 檔案 | 責任 |
 |---|---|
 | `backend/shared_market.py` | `create_market`、`next_observation`、`apply_decision`、`summarize`；環境及金額以整數分計帳 |
-| `llm_agent/market_adapter.py` | 同一公開 observation 交給 deterministic 或 live；合法動作驗證、Provider 呼叫及快取來源 |
+| `llm_agent/market_adapter.py` | 同一公開 observation 交給 deterministic、probabilistic 或 live；合法動作驗證、Provider 呼叫及快取來源 |
 | `llm_agent/market_experiment.py` | 事先固定政策、seed 及開發／驗證分組；有限批次、續跑、成對比較、分享匯出 |
 | `llm_agent/behavior_probes.py` | 不執行交易的獨立價格／重複／選項順序／語言診斷 |
 | `llm_agent/audit.py` | 私有 JSONL 原始紀錄、秘密遮蔽、安全 run ID |
