@@ -35,3 +35,8 @@ The current release rule is fixed D28/D14/D7 rounds. Before editing inventory, p
 - `docs/`: architecture, per-area progress, model review and optimization deviations.
 
 For exact latest completion, checks and commits, inspect Git and `docs/ITERATION_2_PROGRESS.md`; do not infer completion from an old handoff. Local keys must remain untracked. All UI purchases are simulated; no payment or airline ticket is issued.
+
+
+## Branch continuation — 2026-11-14
+
+The new continuous-price and probabilistic-user path is documented in [docs/CONTINUOUS_PRICING.md](docs/CONTINUOUS_PRICING.md). It uses the existing shared engine, a fixed membership fee/release share, bounded cent-resolution search, paired NO_OFFER, independent validation and sensitivity stresses. Historical fixed-tier and LLM reports remain unchanged. No online human learning or autonomous live repricing is implemented. Windows locks and frozen prompt byte copies are portable; checkout rules preserve frozen NHPP source bytes.

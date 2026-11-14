@@ -1,2 +1,6 @@
-# CSV exports use the standard CRLF record delimiter.
-*.csv whitespace=cr-at-eol
+# Stable checkout bytes preserve frozen model and artifact checksums.
+* text=auto eol=lf
+*.csv -text whitespace=cr-at-eol
+*.gz binary
+*.png binary
+*.pdf binary

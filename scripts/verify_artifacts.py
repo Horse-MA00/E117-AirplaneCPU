@@ -48,5 +48,6 @@ if __name__ == "__main__":
     manifests = [ROOT / "simulation/generated/manifest.json"]
     manifests += sorted((ROOT / "simulation/validation_extended").glob("seed-*/manifest.json"))
     manifests += sorted((ROOT / "llm_agent/experiments").glob("*/manifest.json"))
+    manifests += sorted((ROOT / "simulation/continuous_price_validation").glob("manifest.json"))
     results = [verify(path) for path in manifests]
     print(json.dumps({"status": "passed", "artifacts": results}, indent=2))

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
-import fcntl
+from .file_lock import exclusive_lock
 import gzip
 import hashlib
 import json
@@ -27,7 +27,7 @@ DEFAULT_POLICIES = [
 def implementation_hashes():
     root = Path(__file__).resolve().parents[1]
     files = ("backend/shared_market.py", "backend/release_policy.py", "backend/nhpp.py", "simulation/generate.py", "simulation/generated/calibration_v2.json",
-             "llm_agent/market_adapter.py", "llm_agent/population.py", "llm_agent/output_contract.py")
+             "llm_agent/market_adapter.py", "llm_agent/population.py", "llm_agent/output_contract.py", "backend/probabilistic_customer.py", "llm_agent/file_lock.py")
     return {name: hashlib.sha256((root/name).read_bytes()).hexdigest() for name in files}
 
 
@@ -41,8 +41,8 @@ def create_experiment(output, config=None, seeds=None, policies=None, modes=None
     seeds = list(seeds or [117])
     policies = policies or DEFAULT_POLICIES
     modes = list(modes or ["deterministic"])
-    if any(mode not in ("deterministic", "live") for mode in modes):
-        raise ValueError("Modes must be deterministic/live")
+    if any(mode not in ("deterministic", "probabilistic", "live") for mode in modes):
+        raise ValueError("Modes must be deterministic/probabilistic/live")
     if len(set(seeds)) != len(seeds) or not all(isinstance(x, int) and x >= 0 for x in seeds):
         raise ValueError("Seeds must be unique nonnegative integers")
     if len(seeds) > 100 or len(policies) > 20:
@@ -73,20 +73,13 @@ def run_batch(output, max_calls=12, max_steps=1000, language="en"):
     if not isinstance(max_steps, int) or not 1 <= max_steps <= 100000:
         raise ValueError("max_steps must be 1..100000")
     output = Path(output)
-    with (output / ".run.lock").open("a") as lock:
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise ValueError("A batch is already running for this experiment") from None
-        try:
-            return _run_batch(output, max_calls, max_steps, language)
-        finally:
-            fcntl.flock(lock, fcntl.LOCK_UN)
+    with exclusive_lock(output / ".run.lock"):
+        return _run_batch(output, max_calls, max_steps, language)
 
 
 def _run_batch(output, max_calls, max_steps, language):
     from backend.shared_market import next_observation, apply_decision, summarize
-    spec = json.loads((output / "experiment.json").read_text())
+    spec = json.loads((output / "experiment.json").read_text(encoding="utf-8"))
     if {lang: hashlib.sha256(path.read_bytes()).hexdigest() for lang, path in PROMPTS.items()} != spec["prompt_hashes"]:
         raise ValueError("Prompt changed since experiment creation; create a new experiment")
     if spec.get("implementation_hashes") != implementation_hashes():
@@ -94,7 +87,7 @@ def _run_batch(output, max_calls, max_steps, language):
     audit = Audit("shared_market_experiment", {"prompt_version": VERSION, "config": spec["config"], "cases": len(spec["cases"]),
                                               "experiment_path": str(output)}, run_id=spec["experiment_id"], resume=True)
     audit.update(status="running")
-    states = {case["case_id"]: json.loads((output / f"{case['case_id']}.json").read_text()) for case in spec["cases"] if not case["completed"]}
+    states = {case["case_id"]: json.loads((output / f"{case['case_id']}.json").read_text(encoding="utf-8")) for case in spec["cases"] if not case["completed"]}
     calls = steps = forced = cache_hits = failures = 0
     blocked = set()
     dirty = set()
@@ -183,10 +176,10 @@ def iter_audit(run_id):
 
 
 def run_status(output):
-    spec = json.loads((Path(output) / "experiment.json").read_text())
+    spec = json.loads((Path(output) / "experiment.json").read_text(encoding="utf-8"))
     from .audit import _path
     metadata = _path(spec["experiment_id"]) / "metadata.json"
-    return json.loads(metadata.read_text()) if metadata.exists() else {"run_id": spec["experiment_id"], "status": "created"}
+    return json.loads(metadata.read_text(encoding="utf-8")) if metadata.exists() else {"run_id": spec["experiment_id"], "status": "created"}
 
 
 def runtime_counts(run_id):
@@ -205,7 +198,7 @@ def runtime_counts(run_id):
         counts["cache_hits"] += int(record.get("cache_hit", False))
         source = record.get("source")
         counts[{"environment_forced": "environment_forced", "deterministic_assumption": "deterministic_choices",
-                "provider_live": "validated_live_choices"}.get(source, "other_choices")] += 1
+                "probabilistic_assumption": "probabilistic_choices", "provider_live": "validated_live_choices"}.get(source, "other_choices")] += 1
         if record.get("provider_call"):
             counts["provider_successes"] += 1
             for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
@@ -218,7 +211,7 @@ def inspect_cases(output, case_id=None, event_limit=200):
     """Dashboard views of current accounting and memory, never latent futures."""
     from backend.shared_market import summarize, MONEY
     output = Path(output)
-    spec = json.loads((output / "experiment.json").read_text())
+    spec = json.loads((output / "experiment.json").read_text(encoding="utf-8"))
     cases = [case for case in spec["cases"] if case_id is None or case["case_id"] == case_id]
     if case_id is not None and not cases:
         raise ValueError("Unknown case ID")
@@ -228,7 +221,7 @@ def inspect_cases(output, case_id=None, event_limit=200):
     sources = {(record["case_id"], record["environment_record"]["packet_id"]): {key: record.get(key) for key in ("source", "cache_hit", "forced", "provider_call")}
                for record in iter_audit(spec["experiment_id"]) if record.get("event") == "market_transition"}
     for case in cases:
-        state = json.loads((output / (case["case_id"] + ".json")).read_text())
+        state = json.loads((output / (case["case_id"] + ".json")).read_text(encoding="utf-8"))
         metrics = summarize(state)
         customers = [{"customer_id": cid, "person": c["person"], "remaining_budget": round(c["budget_cents"]/100, 2),
                       "joined_this_run": c["joined_this_run"], "membership_expires_day": c["membership_expires"],
@@ -249,7 +242,7 @@ def inspect_cases(output, case_id=None, event_limit=200):
 
 def report(output):
     output = Path(output)
-    spec = json.loads((output / "experiment.json").read_text())
+    spec = json.loads((output / "experiment.json").read_text(encoding="utf-8"))
     complete = [c for c in spec["cases"] if c["completed"]]
     groups = defaultdict(list)
     for c in complete:
@@ -270,8 +263,8 @@ def report(output):
         if not baseline or not case["policy"].get("enabled", True):
             continue
         current, base = _numeric_metrics(case["metrics"]), _numeric_metrics(baseline["metrics"])
-        policy_state = json.loads((output / (case["case_id"] + ".json")).read_text())
-        baseline_state = json.loads((output / (baseline["case_id"] + ".json")).read_text())
+        policy_state = json.loads((output / (case["case_id"] + ".json")).read_text(encoding="utf-8"))
+        baseline_state = json.loads((output / (baseline["case_id"] + ".json")).read_text(encoding="utf-8"))
         baseline_normal = {(b["customer_id"], b["occasion_id"]): b for b in baseline_state["bookings"].values()
                            if b["customer_id"] is not None and b["status"] == "flown" and b["member_seats"] == 0}
         policy_member = {(b["customer_id"], b["occasion_id"]): b for b in policy_state["bookings"].values()
@@ -327,7 +320,7 @@ def report(output):
 
 def export_public(output, destination):
     output, destination = Path(output), Path(destination)
-    spec = json.loads((output / "experiment.json").read_text())
+    spec = json.loads((output / "experiment.json").read_text(encoding="utf-8"))
     destination.mkdir(parents=True, exist_ok=True)
     _save(destination / "report.json", sanitize(report(output)))
     _save(destination / "experiment.json", sanitize(spec))
@@ -368,7 +361,7 @@ def main():
     args = parser.parse_args()
     if args.command == "create":
         result = create_experiment(args.output, {"horizon_days":365,"flight_count":args.flights,"customer_count":args.customers,"occasions_per_customer":3},
-          [int(x) for x in args.seeds.split(",")], json.loads(args.policy_file.read_text()) if args.policy_file else None,
+          [int(x) for x in args.seeds.split(",")], json.loads(args.policy_file.read_text(encoding="utf-8")) if args.policy_file else None,
           args.modes.split(","), [int(x) for x in args.validation_seeds.split(",") if x])
     elif args.command == "run":
         result = run_batch(args.output, args.max_calls, args.max_steps, args.language)

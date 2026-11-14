@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from urllib.parse import urlparse,unquote
 from pathlib import Path
 from functools import lru_cache
-from . import data,market_jobs
+from . import data,market_jobs,pricing_jobs
 from .store import Store
 from .oag import load_env
 from llm_agent import runner,audit
@@ -31,6 +31,8 @@ def forecast_for(flight,day):
  return forecast(data.history(flight),days_to_departure=day,seed=117)
 
 def get(path):
+ if path.startswith('/api/pricing/runs/'):
+  return pricing_jobs.read(ident(path.split('/')[-1]))
  if path=='/api/summary':return {'dataset':{'rows':data.manifest()['rows'],'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':runner.status()}
  if path=='/api/evaluation':
   p=ROOT/'simulation/generated/nhpp_v2_final.json'
@@ -67,6 +69,7 @@ def get(path):
 
 _optimizer_lock=threading.Lock()
 def post(path,body):
+ if path=='/api/pricing/runs':return pricing_jobs.start(body)
  if path=='/api/market/runs':return market_jobs.start(body)
  if path.startswith('/api/market/runs/') and path.endswith('/resume'):
   parts=path.strip('/').split('/')

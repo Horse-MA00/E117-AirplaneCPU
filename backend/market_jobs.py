@@ -33,12 +33,12 @@ def _save(path, value):
 
 
 def _worker(run_id, options, resume):
-    from llm_agent import market_experiment as experiment
-    from llm_agent.audit import BASE as audits
     folder = _folder(run_id)
     metadata = {'run_id': run_id, 'status': 'running', 'updated_at': time.time()}
     _save(folder / 'job.json', metadata)
     try:
+        from llm_agent import market_experiment as experiment
+        from llm_agent.audit import BASE as audits
         if not resume:
             policies = [dict(p) for p in experiment.DEFAULT_POLICIES]
             policies[-1].update({key: options[key] for key in ('member_fare', 'membership_fee', 'open_day', 'release_fraction')})
@@ -61,7 +61,7 @@ def start(body, run_id=None):
     options = {'max_calls': _number(body.get('max_calls', 60), 'max_calls', 0, 100, True)}
     if not resume:
         mode = body.get('mode', 'deterministic')
-        if mode not in ('deterministic', 'live'):
+        if mode not in ('deterministic', 'probabilistic', 'live'):
             raise ValueError('Unknown decision mode')
         from llm_agent.runner import status
         if mode == 'live' and not status()['live_configured']:

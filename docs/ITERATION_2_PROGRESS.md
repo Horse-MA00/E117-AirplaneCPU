@@ -65,3 +65,8 @@
 - 輸出合約在provider接受／有效快取寫入／外部Agent匯入前檢查；失敗原文留存、不改成規則決策。新舊prompt快取分開；舊suite不能混用新版續跑，歷史摘要保留原版本。
 - 真實DeepSeek五人六階段：30新回覆、0快取、0失敗、73,625 tokens，全部英文HKD；原始audit及結果已匯出`english_journey_20261114`。加入比較資訊會影響決策，不能把新舊差異當作語言因果或真人購買率。
 - 完整backend回歸最終105項全部通過（包括新增外部Agent英文匯入檢查）；14人84階段Chromium測試通過，390px無溢出，保留歷史原文。詳見LLM_SCENARIO_DESIGN.md與PROGRESS_FRONTEND.md。
+
+
+## Continuous pricing implementation — 2026-11-14
+
+The new continuous-price and probabilistic-user path is documented in [CONTINUOUS_PRICING.md](CONTINUOUS_PRICING.md). It uses the existing shared engine, a fixed membership fee/release share, bounded cent-resolution search, paired NO_OFFER, independent validation and sensitivity stresses. Historical fixed-tier and LLM reports remain unchanged. No online human learning or autonomous live repricing is implemented. Windows locks and frozen prompt byte copies are portable; checkout rules preserve frozen NHPP source bytes.

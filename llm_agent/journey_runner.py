@@ -25,7 +25,7 @@ def _transport(request):
 def provider_decision(packet, audit):
     context = packet["context"]
     endpoint, key, model = (os.environ.get(k, "") for k in ("LLM_API_URL", "LLM_API_KEY", "LLM_MODEL"))
-    messages = [{"role": "system", "content": PROMPT.read_text()}, {"role": "user", "content": canonical(context)}]
+    messages = [{"role": "system", "content": PROMPT.read_text(encoding="utf-8")}, {"role": "user", "content": canonical(context)}]
     request_body = {"model": model, "messages": messages, "temperature": 0, "max_tokens": 600,
                     "response_format": {"type": "json_object"}}
     if urllib.parse.urlsplit(endpoint).hostname == "api.deepseek.com":
@@ -53,7 +53,7 @@ def provider_decision(packet, audit):
         cache_key = hashlib.sha256((endpoint + canonical(request_body)).encode()).hexdigest()
         cache = cache_dir / (cache_key + ".json")
         if cache.exists():
-            envelope = json.loads(cache.read_text())
+            envelope = json.loads(cache.read_text(encoding="utf-8"))
             raw_text = envelope["raw_response_text"]
             raw = json.loads(raw_text)
             record["cache_hit"] = True
