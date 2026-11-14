@@ -1,0 +1,17 @@
+{
+  "name": "uoption-demo-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tts": "node build.mjs tts",
+    "record": "node record.mjs",
+    "compose": "node build.mjs compose",
+    "render": "node build.mjs render",
+    "all": "node build.mjs tts && node record.mjs && node build.mjs compose && node build.mjs render"
+  },
+  "devDependencies": {
+    "gsap": "3.13.0",
+    "hyperframes": "0.9.47",
+    "playwright": "1.62.1"
+  }
+}

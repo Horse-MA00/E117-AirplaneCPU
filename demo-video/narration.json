@@ -1,0 +1,41 @@
+{
+  "voice": "af_heart",
+  "speed": 1.0,
+  "lines": [
+    {
+      "id": "forecast",
+      "caption": "Hong Kong to Hiroshima, 28 days out. UOption first protects the seats normal travellers may still buy, leaving 20 it can safely offer to members.",
+      "say": "Hong Kong to Hiroshima, twenty-eight days out. UOption first protects the seats normal travellers may still buy, leaving twenty it can safely offer to members."
+    },
+    {
+      "id": "optimize-run",
+      "caption": "Next, it tests member fares in a simulated market, against the same flight with no offer.",
+      "say": "Next, it tests member fares in a simulated market, against the same flight with no offer."
+    },
+    {
+      "id": "optimize-result",
+      "caption": "HK$370, half the normal fare, is the best tested price, and it passes an independent check.",
+      "say": "Three hundred and seventy Hong Kong dollars, half the normal fare, is the best tested price, and it passes an independent check."
+    },
+    {
+      "id": "publish",
+      "caption": "The manager applies the suggestion and publishes ten member seats.",
+      "say": "The manager applies the suggestion and publishes ten member seats."
+    },
+    {
+      "id": "member-search",
+      "caption": "On the member site, a traveller searches Japan and sees the full price upfront.",
+      "say": "On the member site, a traveller searches Japan and sees the full price up front."
+    },
+    {
+      "id": "member-book",
+      "caption": "They join Fly Pass for HK$399, then book the seat.",
+      "say": "They join Fly Pass for three hundred and ninety-nine dollars, then book the seat."
+    },
+    {
+      "id": "closing",
+      "caption": "Back in admin, bookable member seats drop from ten to nine: one shared inventory, end to end.",
+      "say": "Back in admin, bookable member seats drop from ten to nine: one shared inventory, end to end."
+    }
+  ]
+}
