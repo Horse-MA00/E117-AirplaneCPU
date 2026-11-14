@@ -36,7 +36,7 @@
             <fieldset class="search-where">
               <legend>Where would you like to go?</legend>
               <div class="search-fields">
-                <div class="field"><label for="origin">Flying from</label><select id="origin" name="origin"><option value="">Any airport</option></select></div>
+                <div class="field"><label for="origin">Flying from</label><select id="origin" name="origin" aria-describedby="origin-note"><option value="">Any airport</option></select><small id="origin-note" class="search-help" hidden></small></div>
                 <div class="field"><label for="destination-region">Destination country / region</label><select id="destination-region" name="region"><option value="">Any country / region</option></select></div>
               </div>
             </fieldset>
@@ -53,8 +53,8 @@
             <details class="search-specific">
               <summary>Choose a specific airport or date</summary>
               <div class="search-fields">
-                <div class="field"><label for="destination">Destination airport</label><select id="destination" name="destination"><option value="">Any destination airport</option></select></div>
-                <div class="field"><label for="departure-date">Exact departure date</label><select id="departure-date" name="date"><option value="">Use the date range above</option></select></div>
+                <div class="field"><label for="destination">Destination airport</label><select id="destination" name="destination" aria-describedby="destination-note"><option value="">Any destination airport</option></select><small id="destination-note" class="search-help" hidden></small></div>
+                <div class="field"><label for="departure-date">Exact departure date (optional)</label><input type="date" id="departure-date" name="date" min="0001-01-01" max="9999-12-31" aria-describedby="exact-date-help search-date-error"><small id="exact-date-help" class="search-help">Pick any single day, or use the date range above for flexible dates.</small></div>
               </div>
             </details>
             <div class="search-actions"><button type="button" class="text-button" id="clear-search">Clear search</button><button type="submit" class="button primary" id="search-button">Search flights</button></div>

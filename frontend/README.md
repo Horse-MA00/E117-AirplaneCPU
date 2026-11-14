@@ -11,6 +11,8 @@ Member offers, paid demo memberships and bookings use the same SQLite state as A
 
 Member search accepts a destination country/region and an inclusive departure-date range, including open-ended ranges. `Next month` uses the Hong Kong calendar; `Any dates` clears date constraints. Exact airport/date refinements remain available in a disclosure. Search is explicit: editing criteria does not change the applied results until submission. Refresh preserves selected criteria, including when their final published offer disappears. See [flexible-search behavior and demo steps](../docs/CLIENT_FLEXIBLE_SEARCH.md).
 
+`members/airports.js` supplies both airport selectors independently of inventory: 37 officially listed/announced airports as checked on 2026-11-14, plus the team's requested Sapporo (CTS) with an unconfirmed-schedule label. Kuala Lumpur uses SZB; Hefei carries its announced start date. Published unknown/legacy endpoints are added without fabricating flights. The optional exact-date control is a native calendar, not a list constrained to published flight dates.
+
 `members/search.js` uses native Temporal calendar dates when supported and otherwise dynamically imports the committed, locally bundled `members/vendor/temporal.js`. No CDN access is needed. The fallback's MIT notice is alongside the bundle. After changing the pinned dependency, run `npm ci && npm run build:calendar` to regenerate it with esbuild; regular backend startup needs neither npm nor esbuild.
 
 Visual direction: white surfaces, Helvetica Neue, purple `#6F2C91` and cyan `#24BCDC`, with explicit grids. This replaces the former blue design at the user's request. Admin prioritizes seat composition and iterative price/contribution charts; the member site uses flight cards, fare sorting, full-price breakdowns and a separate checkout. API values use `textContent`, SVG nodes and native controls, not untrusted HTML interpolation.
@@ -34,6 +36,7 @@ npm run test:continuous
 node smoke-english-journey.mjs
 node smoke-member-portal.mjs
 npm run test:flexible-search
+npm run test:route-catalog
 # Also completes a real local SQLite membership and simulated booking:
 node smoke-member-portal.mjs --real
 ```

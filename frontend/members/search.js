@@ -1,17 +1,9 @@
+import { regions } from './airports.js';
+export { regions } from './airports.js';
+
 // Keep travel dates as calendar dates, independent of the viewer's time zone.
 // The local fallback avoids a runtime CDN dependency and respects the server CSP.
 const temporal = globalThis.Temporal ?? (await import('./vendor/temporal.js')).Temporal;
-
-export const regions = {
-  JP: { name: 'Japan', airports: ['FUK', 'KIX', 'NRT', 'HND', 'NGO', 'OKA'] },
-  KR: { name: 'South Korea', airports: ['ICN', 'PUS'] },
-  TW: { name: 'Taiwan', airports: ['TPE', 'KHH'] },
-  TH: { name: 'Thailand', airports: ['BKK', 'DMK', 'CNX'] },
-  VN: { name: 'Vietnam', airports: ['DAD', 'HAN', 'SGN'] },
-  PH: { name: 'Philippines', airports: ['MNL', 'CEB'] },
-  SG: { name: 'Singapore', airports: ['SIN'] },
-  HK: { name: 'Hong Kong', airports: ['HKG'] },
-};
 
 export function inRegion(airport, region) {
   return !region || Boolean(regions[region]?.airports.includes(airport));

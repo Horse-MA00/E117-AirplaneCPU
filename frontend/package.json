@@ -5,6 +5,7 @@
   "scripts": {
     "build:calendar": "esbuild temporal-polyfill --bundle --format=esm --minify --legal-comments=linked --outfile=members/vendor/temporal.js",
     "test:flexible-search": "node smoke-flexible-search.mjs",
+    "test:route-catalog": "node smoke-route-catalog.mjs",
     "test:smoke": "node smoke.mjs",
     "test:continuous": "node smoke-continuous.mjs",
     "test:optimization": "node smoke-optimization.mjs",

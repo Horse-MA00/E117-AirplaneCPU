@@ -1,8 +1,8 @@
 import { regions, inRegion, nextMonthRange, dateLabel, dateParts, reversedRange, matchesSearch } from './search.js';
+import { airports, catalogAirportCodes, airportNames, airportLabel } from './airports.js';
 
 const $ = (id) => document.getElementById(id);
 const STORAGE_KEY = 'uoption-member-demo-account';
-const airportNames = { HKG: 'Hong Kong', FUK: 'Fukuoka', KIX: 'Osaka Kansai', NRT: 'Tokyo Narita', HND: 'Tokyo Haneda', NGO: 'Nagoya', OKA: 'Okinawa', TPE: 'Taipei', KHH: 'Kaohsiung', ICN: 'Seoul Incheon', PUS: 'Busan', BKK: 'Bangkok', DMK: 'Bangkok Don Mueang', CNX: 'Chiang Mai', DAD: 'Da Nang', HAN: 'Hanoi', SGN: 'Ho Chi Minh City', MNL: 'Manila', CEB: 'Cebu', SIN: 'Singapore' };
 const state = { config: null, flights: [], account: null, customerId: '', filters: {}, checkout: null, busy: false, loadVersion: 0, refreshRequired: false };
 const money = (value) => `HKD ${new Intl.NumberFormat('en-HK', { maximumFractionDigits: 2 }).format(Number(value || 0))}`;
 const airport = (code) => airportNames[code] ? `${airportNames[code]} (${code})` : code;
@@ -45,15 +45,35 @@ function populateSelect(id, values, firstLabel, format = String) {
   if (values.includes(previous)) select.value = previous;
 }
 function populateSearch() {
-  populateSelect('origin', [...new Set(state.flights.map((f) => f.origin))].sort(), 'Any airport', airport);
-  populateSelect('destination-region', Object.keys(regions).sort((a, b) => regions[a].name.localeCompare(regions[b].name)), 'Any country / region', (code) => regions[code].name);
+  populateAirports('origin', 'origin');
+  const knownRegions = new Set([...catalogAirportCodes, ...state.flights.map((f) => f.destination)].map((code) => airports[code]?.region).filter(Boolean));
+  populateSelect('destination-region', [...knownRegions].sort((a, b) => regions[a].name.localeCompare(regions[b].name)), 'Any country / region', (code) => regions[code].name);
   populateDestinations();
-  populateSelect('departure-date', [...new Set(state.flights.map((f) => f.departure_date))].sort(), 'Use the date range above', dateLabel);
+}
+function populateAirports(id, field, region = '') {
+  const select = $(id); const previous = select.value;
+  const codes = [...new Set([...catalogAirportCodes, ...state.flights.map((f) => f[field]), ...(previous ? [previous] : [])])].filter((code) => inRegion(code, region));
+  const first = new Option(id === 'origin' ? 'Any airport' : region ? `Any airport in ${regions[region].name}` : 'Any destination airport', '');
+  const groups = new Map();
+  for (const code of codes.sort((a, b) => airport(a).localeCompare(airport(b)))) {
+    const label = regions[airports[code]?.region]?.name || 'Other published airports';
+    if (!groups.has(label)) { const group = document.createElement('optgroup'); group.label = label; groups.set(label, group); }
+    groups.get(label).append(new Option(airportLabel(code), code));
+  }
+  const labels = [...groups.keys()].sort((a, b) => a === 'Hong Kong' ? -1 : b === 'Hong Kong' ? 1 : a.localeCompare(b));
+  select.replaceChildren(first, ...labels.map((label) => groups.get(label)));
+  if (codes.includes(previous)) select.value = previous;
+  renderAirportNote(id);
+}
+function renderAirportNote(id) {
+  const code = $(id).value; const note = airports[code]?.note || '';
+  $(id).title = code ? airportLabel(code) : '';
+  $(`${id}-note`).textContent = note; $(`${id}-note`).hidden = !note;
 }
 function populateDestinations() {
   const region = $('destination-region').value;
   if (!inRegion($('destination').value, region)) $('destination').value = '';
-  populateSelect('destination', [...new Set(state.flights.filter((f) => inRegion(f.destination, region)).map((f) => f.destination))].sort(), region ? `Any airport in ${regions[region].name}` : 'Any destination airport', airport);
+  populateAirports('destination', 'destination', region);
 }
 function searchDescription() {
   const { origin, region, destination, from, to } = state.filters;
@@ -62,7 +82,7 @@ function searchDescription() {
   return `${place} · ${dates}${origin ? ` · Flying from ${airport(origin)}` : ''}`;
 }
 function validateDates() {
-  const fields = [$('departure-from'), $('departure-to')];
+  const fields = [$('departure-from'), $('departure-to'), $('departure-date')];
   for (const field of fields) { field.setCustomValidity(''); field.removeAttribute('aria-invalid'); }
   // Check the native date domain first: browsers can accept unsigned five-digit
   // years, but our API uses four-digit ISO dates. Never pass those to Temporal.
@@ -250,18 +270,35 @@ $('flight-search').addEventListener('submit', (event) => {
   state.filters = { origin: $('origin').value, region: $('destination-region').value, destination: $('destination').value, from: $('departure-from').value, to: $('departure-to').value };
   renderFlights(); $('results-title').focus();
 });
+// Native validation runs before submit. Reveal a collapsed exact-date field so
+// the browser can focus the error instead of leaving the user on Search.
+$('flight-search').addEventListener('invalid', (event) => {
+  const details = event.target.closest('details');
+  if (details) details.open = true;
+  validateDates();
+}, true);
 $('destination-region').addEventListener('change', populateDestinations);
+for (const id of ['origin', 'destination']) $(id).addEventListener('change', () => renderAirportNote(id));
 for (const id of ['departure-from', 'departure-to']) {
   $(id).addEventListener('input', () => {
     $('departure-date').value = '';
     // Clear existing errors during editing; announce new errors only on exit/submit.
-    for (const field of [$('departure-from'), $('departure-to')]) { field.setCustomValidity(''); field.removeAttribute('aria-invalid'); }
+    for (const field of [$('departure-from'), $('departure-to'), $('departure-date')]) { field.setCustomValidity(''); field.removeAttribute('aria-invalid'); }
     $('search-date-error').hidden = true;
   });
   $(id).addEventListener('change', validateDates);
   $(id).addEventListener('blur', validateDates);
 }
-$('departure-date').addEventListener('change', () => setDates($('departure-date').value, $('departure-date').value));
+$('departure-date').addEventListener('input', () => {
+  for (const field of [$('departure-from'), $('departure-to'), $('departure-date')]) { field.setCustomValidity(''); field.removeAttribute('aria-invalid'); }
+  $('search-date-error').hidden = true;
+});
+$('departure-date').addEventListener('change', () => {
+  const exact = $('departure-date');
+  if (exact.validity.badInput || exact.validity.rangeOverflow || exact.validity.rangeUnderflow) validateDates();
+  else setDates(exact.value, exact.value);
+});
+$('departure-date').addEventListener('blur', validateDates);
 $('next-month').addEventListener('click', () => { const dates = nextMonthRange(); $('departure-date').value = ''; setDates(dates.from, dates.to); });
 $('any-dates').addEventListener('click', () => { $('departure-date').value = ''; setDates('', ''); });
 $('clear-search').addEventListener('click', clearSearch);
