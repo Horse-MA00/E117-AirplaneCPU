@@ -14,7 +14,8 @@
     "test:seat-status": "node test-seat-status.mjs",
     "test:seat-supply": "node smoke-seat-supply.mjs",
     "test:members": "node smoke-member-portal.mjs",
-    "test:contribution": "node smoke-contribution.mjs"
+    "test:contribution": "node smoke-contribution.mjs",
+    "test:demand-filter": "node smoke-demand-filter.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

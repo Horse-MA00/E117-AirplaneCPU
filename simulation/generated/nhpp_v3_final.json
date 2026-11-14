@@ -9,7 +9,7 @@
     14,
     7
   ],
-  "model_sha256": "fdfedb07e4f35684cf48882b588d939d14cae5bd661ef83b71ff7a262d15843d",
+  "model_sha256": "67ed568f818c00055d8bab947bc50cfeaa9867f969fd1062393c4ac164cf9201",
   "settings": {
     "window_days": 35,
     "beta_prior_mean": 0.012,
@@ -33848,7 +33848,7 @@
     }
   ],
   "notes": [
-    "v2 is the frozen backend/nhpp_v2.py with its frozen calibration; v3 is backend/nhpp.py.",
+    "v2 is the frozen backend/nhpp.py with its frozen calibration; v3 is backend/nhpp_v3.py.",
     "Calibration reuses the v2 calibration seed. The final seed was unopened before this run and is used once.",
     "Displacement assumes every released member seat sells; it is a capacity-risk diagnostic, not financial loss.",
     "The synthetic generator has no weekday or holiday effect; the weekend prior adds conservatism here, it is not validated as a gain."

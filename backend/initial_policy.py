@@ -22,11 +22,11 @@ def flight_scope(flight_id, day=28):
     quote = next((r for r in reversed(history) if r.get('normal_base_fare') is not None), None)
     if quote is None:
         raise ValueError('Selected flight has no observed base-fare quote at or before this release day')
-    from backend.nhpp import forecast
+    from backend.nhpp_v3 import forecast
     prediction = forecast(history, day, seed=117)
-    fare = quote.get('member_initial_base_fare')
-    if fare is None:
-        fare = round(.15 * quote['normal_base_fare'], 2)
+    # Start from the observable normal base fare. Historical synthetic datasets
+    # retain their old 15% member-price column for reproducibility only.
+    fare = round(quote['normal_base_fare'], 2)
     departure = datetime.fromisoformat(str(flight['departure_at']).replace('Z','+00:00'))
     eligible = prediction['releasable_seats'] > 0
     return {'flight_id': flight_id, 'origin': flight['origin'], 'destination': flight['destination'],
@@ -37,7 +37,7 @@ def flight_scope(flight_id, day=28):
             'normal_base_fare': quote['normal_base_fare'], 'mandatory_fees': row.get('mandatory_fees', 250),
             'quote_age_days': quote['days_to_departure']-day,
             'initial_member_fare': fare,
-            'initial_fare_source': 'snapshot.member_initial_base_fare' if quote.get('member_initial_base_fare') is not None else 'legacy_snapshot_15_percent_formula',
+            'initial_fare_source': 'snapshot.normal_base_fare',
             'expected_remaining_demand': prediction['expected_remaining_demand'],
             'releasable_seats': prediction['releasable_seats'],
             'member_supply_exposure': prediction['releasable_seats'],
@@ -64,12 +64,12 @@ def suggest(body=None):
         return {'initial_member_fare': scope['initial_member_fare'],
                 'initial_membership_fee': _number(body, 'initial_membership_fee', 399, 0, 5000),
                 'scope': scope, 'source': {**{k:v for k,v in scope.items() if k != 'history'}, 'kind':'selected_synthetic_flight_snapshot'},
-                'assumptions': ['P0 is the selected snapshot member base fare; legacy snapshots use the same 15% normal-base-fare generation formula.',
+                'assumptions': ['P0 equals the latest observable normal base fare at the selected snapshot, without an initial discount. Historical member-price columns are not used.',
                     'P0 is fixed by the dataset, not a user price entry. V0 is user-selected and held fixed for this flight search.',
                     'One selected flight is evaluated; this is not an annual membership-fee optimum.']}
     customers = _number(body, 'customers', 14, 1, 100)
     setup = _number(body, 'program_cost', DEFAULTS['program_cost'], 0, 10000)
-    fare_max = _number(body, 'fare_max', 500, 0, 2000)
+    fare_max = _number(body, 'fare_max', 2000, 0, 2000)
     fee_max = _number(body, 'fee_max', 1500, 0, 5000)
     fare_min = _number(body, 'fare_min', 0, 0, 2000)
     fee_min = _number(body, 'fee_min', 0, 0, 5000)
@@ -84,7 +84,7 @@ def suggest(body=None):
     if not fares:
         raise ValueError('No observed D28 normal fares are available')
     median = statistics.median(fares)
-    fare = round(min(fare_max, max(fare_min, .15*median)), 2)
+    fare = round(min(fare_max, max(fare_min, median)), 2)
     subscribers = max(1., customers*.5)
     trips = DEFAULTS['occasions_per_customer']
     raw_fee = DEFAULTS['membership_service_cost'] + trips*max(0, DEFAULTS['incremental_passenger_cost']-fare) + setup/subscribers
@@ -94,9 +94,9 @@ def suggest(body=None):
                        'median_normal_base_fare': round(median, 2), 'kind': 'synthetic_observed_quotes'},
             'cost_assumptions': {'passenger_cost': DEFAULTS['incremental_passenger_cost'],
                 'membership_service_cost': DEFAULTS['membership_service_cost'], 'program_cost': setup,
-                'planned_trips': trips, 'assumed_subscribers': subscribers, 'fare_fraction': .15},
+                'planned_trips': trips, 'assumed_subscribers': subscribers, 'fare_fraction': 1.0},
             'fee_capped': raw_fee > fee_max,
-            'assumptions': ['P0 is 15% of the median observed D28 base fare, subject to the search bound; 15% is a starting assumption, not estimated price sensitivity.',
+            'assumptions': ['P0 is the median observed D28 normal base fare without an initial discount, subject to explicit search bounds.',
                 'V0 covers the assumed three-trip marginal fare shortfall, membership service and programme cost at 50% assumed subscription, subject to the search bound.',
                 'No allowance for displacement or failed availability is inferred here. Both are evaluated by the subsequent shared-market search.',
                 'This is an editable starting hypothesis, not a recommended or validated price. No LLM calls were made.']}

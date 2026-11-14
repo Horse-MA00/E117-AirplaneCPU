@@ -10,7 +10,7 @@
   "final_generation_seed_reserved": 20261117,
   "flights": 240,
   "target_coverage": 0.9,
-  "forecast_code_sha256": "fdfedb07e4f35684cf48882b588d939d14cae5bd661ef83b71ff7a262d15843d",
+  "forecast_code_sha256": "67ed568f818c00055d8bab947bc50cfeaa9867f969fd1062393c4ac164cf9201",
   "settings": {
     "window_days": 35,
     "beta_prior_mean": 0.012,

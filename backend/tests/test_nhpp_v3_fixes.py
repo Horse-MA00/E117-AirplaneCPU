@@ -10,8 +10,8 @@ import copy
 import unittest
 from unittest.mock import patch
 
-from backend import nhpp
-from backend.nhpp import forecast, surge_alarm, SETTINGS
+from backend import nhpp_v3 as nhpp
+from backend.nhpp_v3 import forecast, surge_alarm, SETTINGS
 from backend.shared_market import create_market, _automatic, _member_sellable, summarize
 
 WEEK = [1, 1, 1, 1, 1.6, 1.8, .6]

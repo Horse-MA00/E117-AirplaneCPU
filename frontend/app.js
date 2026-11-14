@@ -1,4 +1,5 @@
 import { seatStatus } from './seat-status.js';
+import { demandDescription, matchesDemand, populateDemandFilter } from './demand-filter.js';
 const $ = (id) => document.getElementById(id);
 const RELEASE_DAYS = [28, 14, 7];
 const roundLabel = (days) => days?.length ? days.map((day) => `D${day}`).join(' / ') : 'No future rounds';
@@ -61,11 +62,31 @@ function drawChart(id, observed, future, { maxY, yLabel, width = 720, height = 2
 }
 
 function invalidatePricing() { state.best = null; state.candidates = []; $('apply-policy').disabled = true; $('send-market-candidate').disabled = true; $('pricing-results').hidden = true; $('pricing-empty').hidden = false; }
+function clearFlightSelection() {
+  state.request++; state.forecastRequest++; state.forecast=null; state.loadedFlightId=null; state.flight=null; state.history=[];
+  invalidatePricing();
+  $('flight-main').hidden=true; $('flight-main').setAttribute('aria-busy','false');
+  $('flight-filter-empty').hidden=false; $('go-pricing').disabled=true; $('publish-button').disabled=true;
+  text('flight-date','—'); text('flight-capacity','—'); text('flight-scenario-note','Choose another demand level to find a flight.');
+}
+function fillForecastFlights(preferred=$('flight-select').value) {
+  const matches=state.flights.filter(f=>matchesDemand(f,$('forecast-demand').value));
+  $('flight-select').replaceChildren(...matches.map(f=>new Option(`${f.origin} → ${f.destination} · ${(f.departure_at||f.departure_date||'').slice(0,10)} · ${f.flight_id} · ${demandDescription(f)}`,f.flight_id)));
+  $('flight-select').disabled=!matches.length;
+  text('forecast-demand-status',`${number(matches.length)} of ${number(state.flights.length)} flights match. Demand groups use the fixed D28 forecast.`);
+  if(!matches.length){$('flight-select').append(new Option('No flights match this demand level',''));clearFlightSelection();return false;}
+  const retained=matches.find(f=>f.flight_id===preferred);
+  const demo=matches.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);
+  $('flight-select').value=(retained||demo||matches[0]).flight_id;
+  $('flight-filter-empty').hidden=true;
+  return true;
+}
 async function loadFlight() {
   invalidatePricing();
-  clearError(); const id = $('flight-select').value; if (!id) return;
+  clearError(); const id = $('flight-select').value; if (!id) {clearFlightSelection();return;}
   const request = ++state.request; state.forecastRequest++; state.forecast = null; state.loadedFlightId = null;
-  $('flight-main').classList.add('loading'); $('publish-button').disabled = true;
+  $('flight-main').hidden=false; $('flight-filter-empty').hidden=true;
+  $('flight-main').classList.add('loading'); $('publish-button').disabled = true; $('go-pricing').disabled=true;
   try {
     const data = await api(`/api/flights/${encodeURIComponent(id)}`);
     if (request !== state.request) return;
@@ -74,7 +95,7 @@ async function loadFlight() {
     const flight = state.flight;
     text('flight-date', (flight.departure_at || flight.departure_date || '').slice(0, 10));
     text('flight-capacity', `${number(flight.capacity || flight.sellable_capacity)} seats`);
-    text('flight-scenario-note',flight.demo_priority!=null?`Synthetic ${flight.demo_priority===0?'low-demand':flight.demo_priority===1?'moderate-demand':'normal-demand control'} scenario${flight.demo_d28_releasable!=null?` · audited D28 headroom ${number(flight.demo_d28_releasable)} seats`:''}. ${flight.demo_d28_releasable===0?'D28 has no safe capacity; try another release round.':'Each round recalculates safe capacity.'}`:'Synthetic flight history. Forecast capacity is recalculated at the selected day.');
+    text('flight-scenario-note',`${demandDescription(flight)}. Synthetic flight; each release round recalculates safe capacity.`);
     await loadForecast();
   } catch (e) { if (request === state.request) error(e.message); }
   finally { if (request === state.request) $('flight-main').classList.remove('loading'); }
@@ -184,6 +205,7 @@ let dayTimer;
 $('day-slider').addEventListener('input', () => { clearTimeout(dayTimer); const day = 28 - value('day-slider'); text('day-number', day); dayTimer = setTimeout(() => chooseDay(day), 150); });
 document.querySelectorAll('[data-day]').forEach((button) => button.addEventListener('click', () => { clearTimeout(dayTimer); chooseDay(Number(button.dataset.day)); }));
 $('flight-select').addEventListener('change', () => { state.best = null; $('apply-policy').disabled = true; loadFlight(); });
+$('forecast-demand').addEventListener('change',()=>{if(fillForecastFlights())loadFlight();});
 
 const candidateProfit = (c) => c.incremental_profit ?? c.incremental_contribution ?? c.mean_incremental_profit;
 const fare = (c) => c.member_fare ?? c.base_fare ?? c.P;
@@ -738,10 +760,8 @@ async function init() {
     const configured = summary.llm?.live_configured || summary.llm?.configured || summary.llm?.live_available;
     document.dispatchEvent(new CustomEvent('uoption:provider', { detail: { configured: Boolean(configured) } }));
     if (configured) { $('live-mode-option').disabled = false; $('live-mode-option').textContent = 'Live LLM'; $('market-live-option').disabled = false; $('market-live-option').textContent = 'Live LLM · bounded calls'; }
-    $('flight-select').replaceChildren(...state.flights.map((flight) => { const option = element('option', `${flight.origin} → ${flight.destination} · ${(flight.departure_at || flight.departure_date || '').slice(0, 10)} · ${flight.flight_id}${flight.demo_priority!=null?' · synthetic demo':''}`); option.value = flight.flight_id; return option; }));
-    const demo=state.flights.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0)||state.flights.find(f=>Number(f.demo_d28_releasable)>0);if(demo)$('flight-select').value=demo.flight_id;
-    $('flight-select').disabled = !state.flights.length; initializeOfferSelectors();
-    if (state.flights.length) await loadFlight(); else throw new Error('No flights available. Generate the simulation dataset and restart the backend.');
+    populateDemandFilter($('forecast-demand'),state.flights); initializeOfferSelectors();
+    if(fillForecastFlights())await loadFlight();
     loadPersonas(); loadAgentRuns(); loadPanelRuns(); loadMemberPlan();
 
   } catch (e) { error(`Unable to load the workspace. ${e.message}`); text('dataset-label', 'Dataset unavailable'); }

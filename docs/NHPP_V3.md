@@ -1,6 +1,8 @@
 # NHPP v3：整週對齊、放票顯著性門檻與兩輪之間的突增預警
 
-2026-11-14（Asia/Hong_Kong）。執行中的模型版本為 `nhpp-regime-mixture-v3`（`backend/nhpp.py`），校準檔為 `simulation/generated/calibration_v3.json`。v2 原始碼按原位元組凍結於 `backend/nhpp_v2.py`，與 `calibration_v2.json`、v2 final 及擴大驗證報告的 SHA-256 保持一致；所有 v2 報告未覆寫。
+> 状态：现行 · 对应代码：`nhpp-regime-mixture-v3`、`inter-round-tighten-only-v1`、`backend/nhpp_v3.py`
+
+2026-11-14（Asia/Hong_Kong）。執行中的預測為 `nhpp-regime-mixture-v3`（`backend/nhpp_v3.py`），校準檔為 `simulation/generated/calibration_v3.json`。v2 的 `backend/nhpp.py` 一個位元組都沒改，`calibration_v2.json`、v2 final 及擴大驗證報告照舊以它驗證；所有 v2 報告未覆寫。
 
 ## 1. 修正的三個問題
 
@@ -95,10 +97,14 @@ python -m simulation.evaluate_nhpp_v3 final         # seed 20261117，首次開�
 - SYN-00184（原始資料）在 v3 下 D28 不再釋出；但其最近 3 日計數很少，預警到 D16 才觸發，只比 D14 早 2 日。計數少的航班反應仍有限。
 - 合成生成器沒有週內或假日效應，所以週末先驗在這批資料上只增加保守度（peak 航班 D28 平均釋出 7.09 對非 peak 8.16），不能當作已驗證的改善。
 
-會員示範資料的 `headroom_validation.json` 已用 v3 重新生成：D28 正釋出航班 126 → 112，至少 25 位的航線 70 → 65；D14／D7 不變。四個資料檔逐位元組重現，因此只更新其 manifest 中生成腳本的 hash；`parameters.json` 在本機 numpy 版本下有一個浮點末位差異，與此改動無關，未覆寫。
+需求篩選目錄 `simulation/demand_catalog.json` 已用 v3 依規定以 `python scripts/build_demand_catalog.py` 重建：1,549 班中 Low／Medium／High 由 336／447／766 變為 334／456／759。目錄只讀 D28 觀測欄位，不含 `departure_at`，因此分類不受週末先驗影響。
+
+會員示範資料夾 `simulation/member_demo_generated/`（包括 `headroom_validation.json`）是凍結資料，未改動；其中的 D28 可釋位提示仍是凍結 v2 審計的結果，只作航班預設選擇提示，實際預測、可釋位及發布都由 v3 即時計算。用 v3 重算時，該批 D28 有正釋出的航班由 126 減為 112，至少 25 位的航線由 70 減為 65，D14／D7 不變。
+
+`nhpp_v3_calibration.json`、`nhpp_v3_final.json` 及 `calibration_v3.json` 最初以 v3 程式放在 `backend/nhpp.py` 時產生；為遵守 v2 檔案凍結規則，程式其後原樣移到 `backend/nhpp_v3.py`（只改了說明 v2 位置的 docstring），因此重新產生兩份報告以更新程式 hash。重新產生的 1,440 筆 final 預測紀錄、摘要、預警結果及保護係數與第一次逐項相同，沒有任何參數因看過 final 而調整。
 
 ## 4. 相容性與溯源
 
-- `backend/evidence.py`、`simulation/evaluate_nhpp_v2.py`、`simulation/extended_validation.py`、`simulation/diagnose_nhpp.py` 改為讀取 `backend/nhpp_v2.py`。v2 的 final／擴大驗證仍可驗證，`/api/evaluation/extended` 繼續回傳 91.5%（v2 結果）。
-- 新實驗與最佳化的 hash 清單改為凍結 `calibration_v3.json`；`backend/nhpp.py` 改變後，舊的共用市場或最佳化實驗按設計拒絕續跑，舊報告原樣保留。
+- 執行路徑（`server.py` 的 `forecast_for`、`shared_market.py`、`initial_policy.py`、`evaluate.py`、`demand_catalog.py`）改為匯入 `backend.nhpp_v3`。`backend/evidence.py`、`simulation/evaluate_nhpp_v2.py`、`simulation/extended_validation.py`、會員示範審計仍讀 `backend/nhpp.py`（v2），所以 v2 final／擴大驗證不受影響，`/api/evaluation/extended` 繼續回傳 v2 的 91.5%。
+- 新實驗、最佳化及連續定價的 hash 清單改為凍結 `backend/nhpp_v3.py` 與 `calibration_v3.json`；舊的共用市場或最佳化實驗按設計拒絕以新程式續跑，舊報告原樣保留。
 - `forecast()` 新增選用參數 `peak_departure_override`；輸出新增 `diagnostics.release_significance`、`diagnostics.calendar`、`window_days`、`weekly_block_days`。其餘欄位不變。

@@ -15,9 +15,8 @@ from pathlib import Path
 import numpy as np
 from simulation.generate import simulate_flight
 from simulation.evaluate_nhpp_v2 import _onset, summarize, FORECAST_SEED, DAYS
-from backend.nhpp_v2 import forecast as v2
-from backend import nhpp
-from backend.nhpp import forecast as v3, surge_alarm, SETTINGS, VERSION, CALIBRATION_FILE
+from backend.nhpp import forecast as v2
+from backend.nhpp_v3 import forecast as v3, surge_alarm, SETTINGS, VERSION, CALIBRATION_FILE
 from backend.release_policy import RELEASE_DAYS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +27,7 @@ ALLOWED = ('flight_id', 'days_to_departure', 'capacity', 'booked_seats', 'availa
 
 
 def _model_hash():
-    return hashlib.sha256((ROOT/'backend/nhpp.py').read_bytes()).hexdigest()
+    return hashlib.sha256((ROOT/'backend/nhpp_v3.py').read_bytes()).hexdigest()
 
 
 def evaluate(seed, count, phase):
@@ -101,7 +100,7 @@ def run(phase, count=240):
     report = {'phase': phase, 'model_version': VERSION, 'generation_seed': SEEDS[phase], 'forecast_seed': FORECAST_SEED,
               'flights': count, 'horizons': DAYS, 'model_sha256': model_hash, 'settings': SETTINGS,
               'summary': summarize(rows), 'records': rows,
-              'notes': ['v2 is the frozen backend/nhpp_v2.py with its frozen calibration; v3 is backend/nhpp.py.',
+              'notes': ['v2 is the frozen backend/nhpp.py with its frozen calibration; v3 is backend/nhpp_v3.py.',
                         'Calibration reuses the v2 calibration seed. The final seed was unopened before this run and is used once.',
                         'Displacement assumes every released member seat sells; it is a capacity-risk diagnostic, not financial loss.',
                         'The synthetic generator has no weekday or holiday effect; the weekend prior adds conservatism here, it is not validated as a gain.']}

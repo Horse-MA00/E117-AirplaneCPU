@@ -1,5 +1,7 @@
 # Joint optimisation validation — 14 November 2026
 
+> 状态：记录（2026-11-14），内容不再修改
+
 These are synthetic implementation checks, not observations of real HK Express customers. The original source/prompt/calibration hashes are saved in each report. No existing historical dataset or experiment was overwritten.
 
 ## Six-round mathematical experiment

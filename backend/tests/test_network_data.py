@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from backend import data
-from backend.nhpp import forecast
+from backend.nhpp_v3 import forecast
 from simulation.generate import validate
 from simulation.network_generate import airport_catalog, generate, OUTPUT, DATES
 

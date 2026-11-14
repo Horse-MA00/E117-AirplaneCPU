@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def replay(minimal=False,model='v1'):
-    from backend.nhpp_v2 import forecast as v2
+    from backend.nhpp import forecast as v2
     method=v1 if model=='v1' else v2
     report = json.loads((ROOT/'simulation/generated/nhpp_holdout.json').read_text())
     cases = [f for f in report['flights'] if f['scenario_for_scoring_only']=='surge']

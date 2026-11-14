@@ -1,6 +1,6 @@
 import json
 import unittest
-from backend.nhpp import forecast
+from backend.nhpp_v3 import forecast
 from backend.pricing import optimize, _config, _world, _run, _aggregate
 
 
@@ -72,7 +72,7 @@ class NHPPTests(unittest.TestCase):
 
     def test_right_censored_count_has_more_tail_mass_than_exact_count(self):
         import numpy as np
-        from backend.nhpp import _sample
+        from backend.nhpp_v3 import _sample
         record={'start':-1,'end':0,'count':5,'price_factor':1,'censored':False}
         exact=_sample([record],np.random.default_rng(117))[1]
         censored=_sample([dict(record,censored=True)],np.random.default_rng(117))[1]
@@ -80,8 +80,8 @@ class NHPPTests(unittest.TestCase):
 
     def test_stale_calibration_is_rejected(self):
         from unittest.mock import patch
-        from backend.nhpp import _allowance
-        with patch('backend.nhpp.Path.exists',return_value=True), patch('backend.nhpp.Path.read_text',return_value='{}'):
+        from backend.nhpp_v3 import _allowance
+        with patch('backend.nhpp_v3.Path.exists',return_value=True), patch('backend.nhpp_v3.Path.read_text',return_value='{}'):
             with self.assertRaisesRegex(ValueError,'stale'):
                 _allowance(28,None,50)
 

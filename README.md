@@ -4,6 +4,16 @@
 
 A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for Cathay Hackathon 2026, **Low-cost Travel — Smart Offer & Borderless Booking**. The proposed HK Express membership offers zero or low base fares plus mandatory charges.
 
+## Problem
+
+These are the team's hypotheses, not verified HK Express findings:
+
+- **Travellers** with flexible dates or destinations must search combination by combination; flash sales may not match when they can plan; and a low base fare is not a clear trip cost unless fees and the membership fee are shown together.
+- **The airline** cannot discount today's empty seats safely, because normal-fare passengers may still buy them. Release quantity and member fare are trade-offs: releasing too many displaces normal sales, releasing too few leaves members without usable offers, and a fare that is too low replaces normal revenue.
+- **The membership product** must stay both usable (members find eligible seats) and economically positive after costs and displaced normal sales. Higher load factor alone is not the goal.
+
+This prototype turns a normal-demand forecast into concrete, auditable release and pricing choices for that membership.
+
 ## Joint optimisation and new portals (2026-11-14)
 
 Admin now follows **Forecast seats → Optimize prices → Experiments → Manage offers**,
@@ -12,7 +22,8 @@ the booking forecast and observed ticket prices. The separate Client Portal prov
 flight search, base fares with a separate fees/total line, membership and saved trips.
 
 The primary optimizer now requires a **specific route, flight date and D28/D14/D7 snapshot**.
-P₀ comes from that flight's simulated data and is read-only; the user-selected V₀ stays
+P₀ is that flight's latest observed **normal base fare** at the selected snapshot,
+without the former 15% discount, and is read-only; the user-selected V₀ stays
 fixed during the fare search. Mathematical and live-LLM tracks replay this flight's
 inventory, compare contributions and purchases, and validate the candidate on independent
 worlds. Price/profit plots distinguish maximum contribution, margin and buyer count.
@@ -22,15 +33,21 @@ New member-opportunity examples supply inventory; zero-supply runs are blocked. 
 regular purchasers are counted separately, and each new fare comparison freezes its seat
 profile. See [the inventory and price-evidence corrections](docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md).
 
-Admin also explains each retained candidate with paired revenue/cost tables, the full membership-fee cash view and per-replay service requirements. See the [HK$2,364 contribution audit](docs/CONTRIBUTION_AUDIT_2026-11-14.md).
+Forecast and Optimize both filter flights by **Low / Medium / High demand**, using
+the D28 NHPP forecast of final normal occupancy (below 60%, 60% to below 85%, and at least 85%).
+Unavailable or stale classifications remain Unclassified. See the
+[demand filter and original-fare contract](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
+
+Admin also explains each retained candidate with paired revenue/cost tables, the full membership-fee cash view and per-replay service requirements. The [historical HK$2,364 contribution audit](docs/CONTRIBUTION_AUDIT_2026-11-14.md) includes subsequent sales of the selected flight through departure. Other future member trips and renewal revenue/costs are not modelled, so it does not establish whole-term membership profitability.
 
 SQLite saves rounds, seat-feedback profiles, redacted original LLM outputs and resumable
 market state. Live runs automatically cross internal batches within a selected total
-budget. NO_OFFER remains a valid result. The runtime NHPP is now v3 (see below); the v2 model
-and its reports stay frozen in `backend/nhpp_v2.py`.
+budget. NO_OFFER remains a valid decision for the selected flight, not a rejection
+of the complete membership programme. The runtime forecaster is NHPP v3 (`backend/nhpp_v3.py`);
+the v2 model and its reports stay frozen byte-for-byte in `backend/nhpp.py`.
 
-Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md).
-The [earlier joint engine](docs/OPTIMIZATION_ENGINE.md), whole-term continuous search
+Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md); the latest change record is [demand filter and original fare](docs/DEMAND_FILTER_AND_ORIGINAL_FARE.md).
+The earlier joint P/V engine (test-only), whole-term continuous search
 and historical experiments remain available as explicitly labelled reference tools.
 Use Docker below on Windows; the customer panel retains POSIX `fcntl`.
 
@@ -76,7 +93,7 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - **NHPP v3:** whole-week alignment (35-day window, 7/14/21/28-day change points, weekly-block slope likelihood), an asymptotic significance gate on small releases, a weekend/holiday near-term shock prior, and a weekday-matched surge alarm that only tightens protection between D28/D14/D7. See [NHPP v3](docs/NHPP_V3.md).
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
-- **Flight-specific optimisation:** 1–12 rounds per mathematical/LLM track, dataset-derived P₀, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
+- **Flight-specific optimisation:** 1–12 rounds per mathematical/LLM track, normal-base-fare P₀, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
 - **Separate Admin and member interfaces:** actionable analysis navigation, panel outcome summaries, segment comparisons, searchable/paginated traveller lists, and a member-facing flight search, price review, membership and My trips flow.
 - **Larger background panels:** up to **100 live LLM travellers** or **1,000 rule-based travellers**, with a default of 100. Live batches default to 60 decision attempts (maximum120), checkpoint each traveller, show progress and resume only on explicit request. Sole legal actions need no model call.
@@ -105,7 +122,7 @@ This is a **synthetic-market decision prototype**, not a calibrated production r
 
 On **240 fresh synthetic test flights**, v2's D28 sustained-surge protection coverage is **82.5%**. On the same flights, v1 with its original 16-seat margin scores **30.0%**, while v1 recalibrated using the same procedure scores **80.0%**. The historical 47.62% came from a different cohort. D14/D7 demand MAE improves, but D28 demand MAE worsens and D7 unseen-surges still have only 75% protection coverage. See the [full comparison and limitations](docs/NHPP_V2_REVIEW.md), [frozen final report](simulation/generated/nhpp_v2_final.json) and [calibration](simulation/generated/calibration_v2.json). Raw predictive bands and calibrated operational protection are separate.
 
-**NHPP v3** (runtime) was recalibrated on the v2 calibration seed and compared once on a new 240-flight seed: D28 surge protection coverage **85.0%** vs v2 **82.5%**, D7 surge **95.0%** vs **92.5%**, never lower at any horizon, at the cost of about 0.7–1.1 fewer released seats per flight and slightly worse overall demand MAE. 11 of 12 surges starting between D28 and D14 raised the between-round alarm before D14. See [NHPP v3](docs/NHPP_V3.md); the v2 figures below are unchanged v2 evidence.
+**NHPP v3** (runtime) was recalibrated on the v2 calibration seed and compared once on a new 240-flight seed: D28 surge protection coverage **85.0%** vs v2 **82.5%**, D7 surge **95.0%** vs **92.5%**, never lower at any horizon, at the cost of about 0.7–1.1 fewer released seats per flight and slightly worse overall demand MAE. 11 of 12 surges starting between D28 and D14 raised the between-round alarm before D14. See [NHPP v3](docs/NHPP_V3.md); the other figures in this section are unchanged v2 evidence.
 
 An additional frozen-model evaluation on **1,200 fresh flights** yields **91.5% D28 surge protection coverage** (200 surge flights), versus **89.5%** for equivalently recalibrated v1. D7 unseen-surges remain only **81.48%** covered. [Expanded evidence](docs/EXTENDED_VALIDATION.md) preserves the earlier final result rather than replacing it.
 
@@ -169,21 +186,18 @@ For live experiments, create with `--modes live`, then use a bounded `--max-call
 
 ## Documentation
 
-- [Joint optimisation, seat feedback, database and APIs](docs/OPTIMIZATION_ENGINE.md)
+- [Shared AI-assistant rules for Codex and Claude Code](AGENTS.md) (`CLAUDE.md` imports it; keep it updated)
+- [Flight-specific workflow, seat feedback, database and APIs](docs/FLIGHT_SCOPED_OPTIMIZATION.md)
 - [Six-round math and actual DeepSeek integration evidence](docs/JOINT_OPTIMIZATION_VALIDATION.md)
-- [Portal redesign and differences from the incoming plan](docs/PORTAL_REDESIGN_AND_OPTIMIZATION.md)
 - [Admin and member flows, panel limits and APIs](docs/ADMIN_AND_MEMBER_UX.md)
-- [Current technical architecture](docs/CURRENT_IMPLEMENTATION.md)
+- [Current technical architecture, plan deviations and limitations](docs/CURRENT_IMPLEMENTATION.md)
 - [Three-round release rule and verification](docs/THREE_ROUND_RELEASE.md)
 - [NHPP v3: weekly alignment, release significance gate and between-round surge alarm](docs/NHPP_V3.md)
 - [Latest progress](docs/ITERATION_2_PROGRESS.md)
 - [Shared-market engine and financial rules](docs/SHARED_MARKET.md)
 - [Shared-market agent, auditing and probes](docs/SHARED_MARKET_AGENT.md)
-- [40-seed mathematical market results](docs/SHARED_MARKET_MATH_RESULTS.md)
-- [Live shared-market validation](docs/SHARED_MARKET_VALIDATION.md)
-- [English scenario, budget scope and six-stage walkthrough](docs/LLM_SCENARIO_DESIGN.md)
-- [Actual baseline LLM experiments](docs/LLM_BASELINE_EXPERIMENTS.md)
-- [Review, improvements and deviations from the original plan](docs/OPTIMIZATION_REVIEW.md)
+- [Live shared-market validation and 40-seed mathematical baseline](docs/SHARED_MARKET_VALIDATION.md)
+- [English scenario, six-stage walkthrough and historical baseline LLM experiments](docs/LLM_SCENARIO_DESIGN.md)
 - [Data generation and evaluation](simulation/README.md)
 - [Customer-agent scope](llm_agent/README.md)
 

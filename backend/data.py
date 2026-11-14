@@ -38,7 +38,8 @@ def flights():
             checked={r['flight_id']:r['releasable_seats'] for r in report['records'] if r['days_to_departure']==28}
             for flight in extra:
                 if flight['flight_id'] in checked:flight['demo_d28_releasable']=checked[flight['flight_id']]
-    return original+extra
+    from .demand_catalog import enrich
+    return enrich(original+extra, ROOT)
 def histories():
     global _rows
     with _lock:

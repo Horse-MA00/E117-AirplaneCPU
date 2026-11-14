@@ -226,7 +226,7 @@ def validate_forecast_headroom(output=OUTPUT):
                 'median_releasable_seats': statistics.median(r['releasable_seats'] for r in selected if r['scenario'] == scenario['name']),
             } for scenario in SCENARIOS if any(r['scenario'] == scenario['name'] for r in selected)},
         }
-    source_paths = (Path(__file__), ROOT/'backend/nhpp.py', ROOT/'simulation/generated/calibration_v3.json')
+    source_paths = (Path(__file__), ROOT/'backend/nhpp.py', ROOT/'simulation/generated/calibration_v2.json')
     report = {
         'dataset': 'member_demo_generated', 'forecast_seed': 117, 'checks': len(records),
         'directed_routes': len({(r['origin'], r['destination']) for r in records}),

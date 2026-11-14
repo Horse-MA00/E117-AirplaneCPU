@@ -19,7 +19,7 @@ import uuid
 from . import optimization_store as store
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'flight-policy-feedback-v3'
+VERSION = 'flight-policy-feedback-v4-original-fare'
 CONTROLLED_PRICE_PROTOCOL = 'fixed-seat-profile-local-fare-v1'
 ROOT = Path(__file__).resolve().parents[1]
 _lock = threading.RLock()
@@ -40,6 +40,9 @@ def validate(body):
         from backend.initial_policy import flight_scope
         scope = flight_scope(body['flight_id'], body.get('forecast_day', 28))
         body = {**body, 'initial_member_fare': scope['initial_member_fare'], 'fee_min':0, 'fee_max':5000}
+        # Do not reject a normal fare above the old HK$500 default or silently
+        # discount it to fit. Explicit caller bounds still receive validation.
+        body.setdefault('fare_max', max(500, scope['initial_member_fare']))
     options = {
         'rounds': (5, 1, 12, True), 'customers': (14, 1, 100, True), 'flights': (6, 6, 12, True),
         'replicates': (1, 1, 3, True), 'seed': (117, 0, 2**31-100000, True),
@@ -85,7 +88,7 @@ def _id(run_id):
 
 def provenance():
     files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py', 'backend/data.py', 'backend/contribution_explanation.py',
-             'backend/probabilistic_customer.py', 'backend/nhpp.py', 'backend/release_policy.py', 'backend/seat_feedback.py',
+             'backend/probabilistic_customer.py', 'backend/nhpp_v3.py', 'backend/release_policy.py', 'backend/seat_feedback.py',
              'simulation/generate.py', 'simulation/generated/calibration_v3.json',
              'llm_agent/market_adapter.py', 'llm_agent/population.py', 'llm_agent/output_contract.py',
              'llm_agent/prompts/shared_market_v3_en.txt']
@@ -552,6 +555,12 @@ def read(run_id):
         'Live work automatically crosses internal batches only within the explicitly authorized total decision limit; provider failures and the total cap stop execution.']
     if cfg.get('scope'):
         saved['scope'] = {k:v for k,v in cfg['scope'].items() if k != 'history'}
+        saved['economic_scope'] = {
+            'kind': 'selected_flight_attributed_contribution',
+            'membership_term_evaluated': False,
+            'future_member_trip_contribution': None,
+            'future_renewal_contribution': None,
+            'explanation': 'Only the selected flight is simulated. Later member trips and renewals are not modelled; their contribution is unknown, not zero. OFFER/NO_OFFER is a decision for this flight, not the whole membership programme.'}
         saved['assumptions'] += ['One selected flight/date; V0 remains fixed while P is searched.',
             'Profit is flight-attributed contribution: one third of new annual pass revenue and service cost, full per-flight costs; fees/taxes and aircraft fixed costs excluded.',
             'Normal demand continuation is independently sampled from observed booking pace with random growth/jumps. The forecast does not generate its own evaluation labels.',

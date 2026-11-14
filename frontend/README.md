@@ -17,7 +17,7 @@ Member search accepts a destination country/region and an inclusive departure-da
 
 Visual direction: white surfaces, Helvetica Neue, purple `#6F2C91` and cyan `#24BCDC`, with explicit grids. This replaces the former blue design at the user's request. Admin prioritizes seat composition and iterative price/contribution charts; the member site uses flight cards, fare sorting, full-price breakdowns and a separate checkout. API values use `textContent`, SVG nodes and native controls, not untrusted HTML interpolation.
 
-`optimization.js` uses the SQLite-backed `/api/optimization/runs` endpoints. Configure independent math/LLM tracks, rounds, starting fare/fee, bounds and a live batch budget. Saved experiments retain current and best-tested prices, independent validation and raw decision records. A price draft does not apply a learned seat profile to published inventory; flight-specific base-NHPP allocation remains authoritative.
+`optimization.js` uses the SQLite-backed `/api/optimization/runs` endpoints. Configure independent math/LLM tracks, rounds, the membership fee V₀ (the starting fare P₀ is read-only, set by the server from the selected snapshot's normal base fare), bounds and a live batch budget. Saved experiments retain current and best-tested prices, independent validation and raw decision records. A price draft does not apply a learned seat profile to published inventory; flight-specific base-NHPP allocation remains authoritative.
 
 Accessibility includes labelled native progress, semantic keyboard-scrollable tables, non-colour decision labels, persistent form labels, a native checkout dialog, Escape/focus return and mobile layouts. No focusgroup or experimental animation dependency.
 

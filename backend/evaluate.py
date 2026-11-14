@@ -2,7 +2,7 @@
 import argparse,json
 from pathlib import Path
 from .data import history
-from .nhpp import forecast
+from .nhpp_v3 import forecast
 from .pricing import optimize
 
 def main():

@@ -1,4 +1,4 @@
-"""More synthetic test data, with the v2 model (backend/nhpp_v2.py) and guards kept frozen."""
+"""More synthetic test data, with the v2 model and guards kept frozen."""
 from __future__ import annotations
 import gzip
 import hashlib
@@ -18,7 +18,7 @@ def run():
     if report_path.exists():
         raise ValueError('Frozen extended report already exists; do not overwrite evaluation evidence')
     calibration = json.loads((ROOT / 'simulation/generated/calibration_v2.json').read_text())
-    model_hash = hashlib.sha256((ROOT / 'backend/nhpp_v2.py').read_bytes()).hexdigest()
+    model_hash = hashlib.sha256((ROOT / 'backend/nhpp.py').read_bytes()).hexdigest()
     if model_hash != calibration['forecast_code_sha256']:
         raise ValueError('Model differs from the frozen calibration')
     manifests, records = [], []
