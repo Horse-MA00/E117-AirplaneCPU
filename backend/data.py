@@ -1,3 +1,4 @@
+from .errors import NotFound
 import csv,gzip,json,threading
 from functools import lru_cache
 from pathlib import Path
@@ -40,5 +41,5 @@ def histories():
     return _rows
 
 def history(flight_id):
-    if flight_id not in histories():raise ValueError('Unknown flight')
+    if flight_id not in histories():raise NotFound('Unknown flight')
     return histories()[flight_id]

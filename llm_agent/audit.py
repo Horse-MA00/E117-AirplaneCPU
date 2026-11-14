@@ -1,5 +1,6 @@
 """Private append-only model interaction records with credential redaction."""
 from __future__ import annotations
+from backend.errors import NotFound
 
 from datetime import datetime, timezone
 import json
@@ -85,7 +86,7 @@ def list_runs():
 def read_run(run_id):
     path = _path(run_id)
     if not (path / "metadata.json").is_file():
-        raise ValueError("Run not found")
+        raise NotFound("Run not found")
     records = []
     if (path / "events.jsonl").exists():
         with (path / "events.jsonl").open(encoding="utf-8") as handle:

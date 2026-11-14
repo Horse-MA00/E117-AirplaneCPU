@@ -1,12 +1,13 @@
 """Local same-origin application server. Run: python -m backend.server."""
 import gzip,json,math,mimetypes,os,re,threading,traceback
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
-from urllib.parse import urlparse,unquote,parse_qs
+from urllib.parse import urlparse,unquote,parse_qs,urlsplit
 from pathlib import Path
 from functools import lru_cache
 from . import data,market_jobs,pricing_jobs,member_portal
 from .store import Store
 from .evidence import EvidenceUnavailable,read_evaluation
+from .errors import NotFound
 from .oag import load_env
 from llm_agent import runner,audit
 from llm_agent.population import coverage,population
@@ -26,6 +27,22 @@ def ident(x):
  if not isinstance(x,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,80}',x):raise ValueError('Invalid identifier')
  return x
 
+def query_int(query,names,default):
+ """First present query parameter as an integer; malformed input is a 400, not a 404."""
+ for name in names:
+  if name in query:
+   raw=query[name][0]
+   try:return int(raw)
+   except ValueError:raise ValueError(f'{name} must be an integer') from None
+ return default
+
+def _optimization_get(optimization,parts,query):
+ if len(parts)==4:return optimization.read(ident(parts[3]))
+ if len(parts)==5 and parts[4]=='events':
+  return optimization.events(ident(parts[3]),query_int(query,('limit',),100),query_int(query,('offset',),0))
+ if len(parts)==5 and parts[4]=='export':return optimization.export_run(ident(parts[3]))
+ raise NotFound('Optimization endpoint not found')
+
 @lru_cache(maxsize=96)
 def forecast_for(flight,day):
  from .nhpp import forecast
@@ -42,23 +59,22 @@ def get(path,query=None):
   from .offer_suggestions import suggestions
   query=query or {}
   flight=ident(query.get('flight_id',[''])[0])
-  day=int(query.get('forecast_day',query.get('day',['28']))[0])
+  day=query_int(query,('forecast_day','day'),28)
   return suggestions(flight,day,store(),forecast_for)
  if path.startswith('/api/optimization/runs/'):
   from . import optimization
   parts=path.strip('/').split('/')
-  if len(parts)==4:return optimization.read(ident(parts[3]))
-  if len(parts)==5 and parts[4]=='events':
-   query=query or {}
-   return optimization.events(ident(parts[3]),int(query.get('limit',['100'])[0]),int(query.get('offset',['0'])[0]))
-  if len(parts)==5 and parts[4]=='export':return optimization.export_run(ident(parts[3]))
-  raise KeyError('Optimization endpoint not found')
+  try:return _optimization_get(optimization,parts,query or {})
+  except ValueError as e:
+   # optimization_store is provenance-hashed, so translate its message here.
+   if str(e)=='Optimization run not found':raise NotFound(str(e)) from None
+   raise
  if path.startswith('/api/pricing/runs/'):
   return pricing_jobs.read(ident(path.split('/')[-1]))
  if path in ('/api/member-portal/config','/api/member-portal/plan'):return member_portal.config(store())
  if path=='/api/member-portal/flights':return member_portal.flights(store(),forecast_for)
  if path.startswith('/api/member-portal/accounts/'):
-  if len(path.strip('/').split('/'))!=4:raise KeyError('Account endpoint not found')
+  if len(path.strip('/').split('/'))!=4:raise NotFound('Account endpoint not found')
   return member_portal.account(store(),ident(path.split('/')[-1]))
  if path=='/api/agents/panels':
   from . import panel_jobs
@@ -66,9 +82,14 @@ def get(path,query=None):
  if path.startswith('/api/agents/panels/'):
   from . import panel_jobs
   parts=path.strip('/').split('/')
-  if len(parts)==6 and parts[4]=='people':return panel_jobs.read_person(ident(parts[3]),ident(parts[5]))
-  if len(parts)==4:return panel_jobs.read(ident(parts[3]))
-  raise KeyError('Panel endpoint not found')
+  try:
+   if len(parts)==6 and parts[4]=='people':return panel_jobs.read_person(ident(parts[3]),ident(parts[5]))
+   if len(parts)==4:return panel_jobs.read(ident(parts[3]))
+  except ValueError as e:
+   # panel_jobs is provenance-hashed (unfinished panels must stay resumable), so translate here.
+   if str(e) in ('Panel not found','Panel traveller not found'):raise NotFound(str(e)) from None
+   raise
+  raise NotFound('Panel endpoint not found')
  if path=='/api/summary':return {'dataset':{'rows':data.manifest()['rows'],'catalog_rows':data.manifest().get('catalog_rows',data.manifest()['rows']),'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':runner.status()}
  if path=='/api/evaluation':
   return read_evaluation(ROOT)
@@ -98,8 +119,9 @@ def get(path,query=None):
   parts=path.strip('/').split('/')
   if len(parts)==6 and parts[4]=='cases':return market_jobs.read_case(ident(parts[3]),ident(parts[5]))
   if len(parts)==4:return market_jobs.read(ident(parts[3]))
+  raise NotFound('Market endpoint not found')
  if path=='/api/offers':return {'offers':store().offers()}
- raise KeyError('Not found')
+ raise NotFound('Not found')
 
 _optimizer_lock=threading.Lock()
 def post(path,body):
@@ -113,7 +135,7 @@ def post(path,body):
   from . import optimization
   parts=path.strip('/').split('/')
   if len(parts)==5:return optimization.resume(ident(parts[3]),body)
-  raise KeyError('Optimization endpoint not found')
+  raise NotFound('Optimization endpoint not found')
  if path=='/api/pricing/runs':return pricing_jobs.start(body)
  if path=='/api/member-portal/plan':
   store().plan(number(body.get('membership_fee'),'membership_fee',0,5000))
@@ -132,11 +154,12 @@ def post(path,body):
   from . import panel_jobs
   parts=path.strip('/').split('/')
   if len(parts)==5:return panel_jobs.start(body,ident(parts[3]))
-  raise KeyError('Panel endpoint not found')
+  raise NotFound('Panel endpoint not found')
  if path=='/api/market/runs':return market_jobs.start(body)
  if path.startswith('/api/market/runs/') and path.endswith('/resume'):
   parts=path.strip('/').split('/')
   if len(parts)==5:return market_jobs.start(body,ident(parts[3]))
+  raise NotFound('Market endpoint not found')
  if path in ('/api/forecast','/api/optimize','/api/offers'):
   flight=ident(body.get('flight_id'));day=number(body.get('days_to_departure',28),'day',0,28,True)
   f=forecast_for(flight,day)
@@ -160,18 +183,22 @@ def post(path,body):
   maxq=int(f.get('releasable',f.get('releasable_seats',f.get('max_member_seats',0))))
   if day==0:raise ValueError('Sales are closed')
   from .offer_suggestions import validate_draft
-  suggestion=validate_draft(body,store(),forecast_for)
+  # Bind the optimization check to the already-validated values, never raw body fields.
+  suggestion=validate_draft({**body,'flight_id':flight,'days_to_departure':day,'quantity':quantity,'base_fare':fare},store(),forecast_for)
   return {'offer':store().offer(flight,day,quantity,fare,row['mandatory_fees'] if row['mandatory_fees'] is not None else 250,maxq,expected_plan_fee=suggestion['membership_fee'] if suggestion else None),'simulated':True}
  if path=='/api/agents/run':
   mode=body.get('mode','deterministic')
   return runner.run(mode=mode,count=number(body.get('count',5 if mode=='live' else 14),'count',1,5 if mode=='live' else 100,True),membership_fee=body.get('membership_fee',399),member_fare=body.get('member_fare',70),scenario_mode='journey')
  if path=='/api/members':return {'member':store().join_plan(ident(body.get('customer_id'))),'simulated':True}
  if path=='/api/bookings':
-  offer=store().offer_info(body.get('offer_id'))
+  # Admin/smoke-test booking. It may not move the simulation clock: only an
+  # issued release round advances time, exactly as on the member site.
+  offer=store().offer_info(ident(body.get('offer_id')))
   day=number(body.get('days_to_departure',offer['sim_day']),'day',0,28,True)
-  forecast=forecast_for(offer['flight_id'],day)
-  return store().book(offer['id'],ident(body.get('customer_id')),day,forecast['releasable_seats'])
- raise KeyError('Not found')
+  if day!=offer['sim_day']:raise ValueError(f"Bookings use the current simulation day D{offer['sim_day']}; publish a release round to advance time")
+  expected=number(body['expected_total'],'expected_total',0,10000) if 'expected_total' in body else None
+  return member_portal.book(store(),forecast_for,ident(body.get('customer_id')),offer['id'],expected)
+ raise NotFound('Not found')
 
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,format,*args):pass
@@ -183,8 +210,9 @@ class Handler(BaseHTTPRequestHandler):
  def json(self,status,payload):
   content=json.dumps(payload,ensure_ascii=False,allow_nan=False,default=lambda x:x.item() if hasattr(x,'item') else str(x)).encode();self.send_response_headers(status,'application/json; charset=utf-8',len(content));self.wfile.write(content)
  def allowed_host(self):
-  host=self.headers.get('Host','').split(':')[0]
-  return host in ('127.0.0.1','localhost','[::1]')
+  try:host=urlsplit('//'+self.headers.get('Host','')).hostname
+  except ValueError:return False
+  return host in ('127.0.0.1','localhost','::1')
  def do_GET(self):
   if not self.allowed_host():return self.json(403,{'error':'Local host only'})
   path=unquote(urlparse(self.path).path)
@@ -194,7 +222,7 @@ class Handler(BaseHTTPRequestHandler):
    parts=path.strip('/').split('/')
    if len(parts)==5 and parts[:3]==['api','agents','runs'] and parts[-1]=='export':
     run_id=ident(parts[3]);source=audit.BASE/run_id/'events.jsonl'
-    if not source.is_file():raise KeyError('Audit not found')
+    if not source.is_file():raise NotFound('Audit not found')
     remaining=source.stat().st_size
     self.close_connection=True
     self.send_response_headers(200,'application/gzip',None,filename=run_id+'.jsonl.gz')
@@ -214,7 +242,8 @@ class Handler(BaseHTTPRequestHandler):
    if root not in file.parents or not file.is_file():return self.json(404,{'error':'Not found'})
    payload=file.read_bytes();self.send_response_headers(200,mimetypes.guess_type(file.name)[0] or 'application/octet-stream',len(payload));self.wfile.write(payload)
   except EvidenceUnavailable as e:self.json(503,{'status':'unavailable','code':'evaluation_evidence_unavailable','artifact':e.artifact,'error':str(e)})
-  except (KeyError,ValueError) as e:self.json(404,{'error':str(e)})
+  except NotFound as e:self.json(404,{'error':str(e)})
+  except (ValueError,TypeError) as e:self.json(400,{'error':str(e)})
   except Exception:
    traceback.print_exc();self.json(500,{'error':'Server error; inspect local terminal'})
  def do_POST(self):
@@ -228,13 +257,18 @@ class Handler(BaseHTTPRequestHandler):
    body=json.loads(self.rfile.read(length))
    if not isinstance(body,dict):raise ValueError('JSON object required')
    self.json(200,post(urlparse(self.path).path,body))
-  except KeyError:self.json(404,{'error':'Not found'})
+  except NotFound as e:self.json(404,{'error':str(e)})
   except (ValueError,TypeError) as e:self.json(400,{'error':str(e)})
   except Exception:
    traceback.print_exc();self.json(500,{'error':'Server error; inspect local terminal'})
+
+class Server(ThreadingHTTPServer):
+ # The stdlib default backlog of 5 resets bursts of concurrent requests.
+ request_queue_size=128
+ daemon_threads=True
 
 if __name__=='__main__':
  import argparse
  p=argparse.ArgumentParser();p.add_argument('--port',type=int,default=8000);p.add_argument('--host',choices=('127.0.0.1','0.0.0.0'),default='127.0.0.1');a=p.parse_args();store()
  print(f'UOption Fly Pass: http://127.0.0.1:{a.port}',flush=True)
- ThreadingHTTPServer((a.host,a.port),Handler).serve_forever()
+ Server((a.host,a.port),Handler).serve_forever()

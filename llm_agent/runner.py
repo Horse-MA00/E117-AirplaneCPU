@@ -1,5 +1,5 @@
 """Provider-independent Chat Completions adapter with separately labelled deterministic mode."""
-import json, os, urllib.request, urllib.error, math, hashlib
+import json, os, urllib.request, urllib.error, math, hashlib, http.client, uuid
 from pathlib import Path
 from .population import population,coverage
 from .output_contract import RESPONSE_LANGUAGE, CURRENCY, CONTRACT_VERSION, validate_english_output
@@ -52,8 +52,10 @@ def live(context):
     try:
         with _open(request) as response: raw=json.load(response)
         result=json.loads(raw['choices'][0]['message']['content']);validate_english_output(result);validate(result,context)
-        cache.write_text(json.dumps(result,ensure_ascii=False));return result
-    except (urllib.error.URLError,TimeoutError,IndexError,TypeError,KeyError,json.JSONDecodeError) as e:
+        # Write-then-rename so a concurrent reader never sees a half-written cache entry.
+        temporary=cache.with_name(f'{cache.name}.{uuid.uuid4().hex}.tmp');temporary.write_text(json.dumps(result,ensure_ascii=False));temporary.replace(cache);return result
+    # OSError covers URLError, timeouts and connection resets while reading the body.
+    except (OSError,http.client.HTTPException,IndexError,TypeError,KeyError,json.JSONDecodeError) as e:
         raise ValueError('LLM provider failed or returned invalid JSON; no simulated result was substituted.') from None
 
 def run(mode='deterministic',count=14,seed=117,membership_fee=399,member_fare=70,scenario_mode='legacy'):

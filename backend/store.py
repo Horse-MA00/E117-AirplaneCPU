@@ -1,4 +1,5 @@
 """Transactional three-round demo inventory; no real payments or tickets."""
+from .errors import NotFound
 import math
 import sqlite3
 import time
@@ -110,7 +111,7 @@ class Store:
             row = c.execute('''SELECT o.*, COALESCE(f.day,o.day) AS sim_day FROM offers o
                 LEFT JOIN flight_clocks f ON f.flight_id=o.flight_id WHERE o.id=?''', (offer_id,)).fetchone()
             if row is None:
-                raise ValueError('Offer not found')
+                raise NotFound('Offer not found')
             return dict(row)
 
     def offer(self, flight, day, quantity, fare, fees, max_release, expected_plan_fee=None):

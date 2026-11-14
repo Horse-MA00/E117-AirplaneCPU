@@ -1,5 +1,6 @@
 """Local background batches for shared-market experiments; never auto-extend spend."""
 from __future__ import annotations
+from .errors import NotFound
 import json
 import math
 from pathlib import Path
@@ -76,21 +77,27 @@ def start(body, run_id=None):
         run_id = 'web-' + uuid.uuid4().hex[:16]
     folder = _folder(run_id)
     if resume and not (folder / 'experiment.json').is_file():
-        raise ValueError('Market experiment not found')
+        raise NotFound('Market experiment not found')
     with _lock:
         if _active:
             raise ValueError('A market batch is already running; wait for its checkpoint')
         _active.add(run_id)
-    folder.mkdir(parents=True, exist_ok=True)
-    _save(folder / 'job.json', {'run_id': run_id, 'status': 'queued', 'updated_at': time.time()})
-    threading.Thread(target=_worker, args=(run_id, options, resume), daemon=True).start()
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        _save(folder / 'job.json', {'run_id': run_id, 'status': 'queued', 'updated_at': time.time()})
+        threading.Thread(target=_worker, args=(run_id, options, resume), daemon=True).start()
+    except Exception:
+        # Never leave a phantom "running" batch that blocks every later start.
+        with _lock:
+            _active.discard(run_id)
+        raise
     return {'run_id': run_id, 'status': 'queued'}
 
 
 def read(run_id):
     folder = _folder(run_id)
     if not folder.is_dir():
-        raise ValueError('Market experiment not found')
+        raise NotFound('Market experiment not found')
     status = json.loads((folder / 'job.json').read_text()) if (folder / 'job.json').exists() else {'run_id': run_id, 'status': 'recorded'}
     if status['status'] in ('running', 'queued') and run_id not in _active:
         status['status'] = 'interrupted'
@@ -124,7 +131,7 @@ def read_case(run_id, case_id):
     folder = _folder(run_id)
     spec = json.loads((folder / 'experiment.json').read_text())
     if case_id not in {c['case_id'] for c in spec['cases']}:
-        raise ValueError('Unknown market case')
+        raise NotFound('Unknown market case')
     state = json.loads((folder / f'{case_id}.json').read_text())
     # This is an evaluator view. The customer adapter sees only its observation.
     return {'case_id': case_id, 'source': 'synthetic_evaluator_view', 'state': state,

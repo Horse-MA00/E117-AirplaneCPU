@@ -12,8 +12,9 @@ import numpy as np
 
 
 def _bounded(value, name, low, high, integer=False):
-    if isinstance(value, bool):
-        raise ValueError(f"{name} must be numeric")
+    # Strict JSON numbers only: no silent coercion of "300" and no raw float() errors.
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a number")
     number = float(value)
     if not math.isfinite(number) or not low <= number <= high or (integer and int(number) != number):
         raise ValueError(f"{name} must be in [{low}, {high}]")

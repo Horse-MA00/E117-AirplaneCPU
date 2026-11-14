@@ -1,4 +1,5 @@
 """Bounded, durable local continuous-pricing jobs; never calls an LLM provider."""
+from .errors import NotFound
 import json
 from pathlib import Path
 import re
@@ -62,7 +63,7 @@ def start(body):
 def read(run_id):
     folder = _path(run_id)
     if not (folder/'job.json').is_file():
-        raise ValueError('Pricing run not found')
+        raise NotFound('Pricing run not found')
     job = json.loads((folder/'job.json').read_text(encoding='utf-8'))
     if job['status'] in ('queued','running') and run_id not in _active:
         job['status'] = 'interrupted'
