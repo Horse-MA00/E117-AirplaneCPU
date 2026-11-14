@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UOption Fly Pass demo</title>
+<style>
+  :root { --purple: #6F2C91; --cyan: #24BCDC; --ink: #261C2C; }
+  html, body { margin: 0; background: #1d1024; }
+  #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #1d1024;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  #cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: #F7F7FA; }
+  #screen { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: fill; }
+
+  /* Cursor: hotspot is the element's top-left corner. */
+  #cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; transform-origin: 0 0; opacity: 0; z-index: 5; }
+  #cursor-inner { width: 34px; height: 34px; transform-origin: 4px 3px; filter: drop-shadow(0 3px 5px rgba(20, 10, 30, .35)); }
+  .ripple { position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%;
+    border: 4px solid var(--cyan); background: rgba(36, 188, 220, .18); opacity: 0; z-index: 4; }
+
+  /* Drawn stand-in for a native <select> pop-up. */
+  .dropdown { position: absolute; background: #fff; border: 1px solid #CFC6D6; border-radius: 6px; padding: 6px 0; opacity: 0;
+    box-shadow: 0 14px 36px rgba(38, 28, 44, .22); z-index: 3; overflow: hidden; }
+  .dropdown .row { position: relative; height: 40px; line-height: 40px; padding: 0 16px; font-size: 18px; color: var(--ink); white-space: nowrap; }
+  .dropdown .hl { position: absolute; left: 0; right: 0; height: 40px; background: #EFE4F5; border-left: 4px solid var(--purple); }
+
+  .cap { position: absolute; left: 150px; right: 150px; bottom: 50px; text-align: center; opacity: 0; z-index: 10; }
+  .cap span { background: rgba(29, 16, 36, .84); color: #fff; font-size: 36px; line-height: 1.5; padding: 5px 18px; border-radius: 10px;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  #ff { position: absolute; top: 34px; right: 40px; z-index: 10; opacity: 0; background: var(--purple); color: #fff; font-size: 28px;
+    font-weight: 600; padding: 10px 22px 10px 18px; border-radius: 999px; box-shadow: 0 6px 18px rgba(29, 16, 36, .3); }
+  #ff b { color: var(--cyan); margin-right: 8px; letter-spacing: -4px; }
+  #dip { position: absolute; inset: 0; background: #fff; opacity: 0; z-index: 9; }
+
+  #outro { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+  .wipe { position: absolute; top: -20px; left: 0; height: 1120px; }
+  .wipe i { display: block; width: 100%; height: 100%; transform: skewX(-20deg); }
+  #wipe-purple { width: 2700px; } #wipe-purple i { background: var(--purple); }
+  #wipe-cyan { width: 120px; z-index: 2; } #wipe-cyan i { background: var(--cyan); }
+  #brand { position: absolute; left: 190px; top: 330px; color: #fff; z-index: 3; }
+  #brand .logo { font-size: 168px; font-weight: 700; letter-spacing: -5px; line-height: 1; opacity: 0; }
+  #brand .sub { font-size: 34px; font-weight: 600; letter-spacing: 12px; color: var(--cyan); margin: 18px 0 0 6px; opacity: 0; }
+  #brand .tag { font-size: 46px; line-height: 1.35; margin: 64px 0 0 4px; opacity: 0; max-width: 1300px; }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="root" data-width="1920" data-height="1080" data-start="0" data-duration="{{TOTAL}}">
+    <div id="cam">
+      {{MEDIA}}
+      <div id="cursor"><svg id="cursor-inner" viewBox="0 0 34 34" aria-hidden="true">
+        <path d="M4 3 L4 27 L10.5 21 L15 31 L19.5 29 L15 19.5 L24 19.5 Z" fill="#fff" stroke="#261C2C" stroke-width="2" stroke-linejoin="round"/>
+      </svg></div>
+    </div>
+    <div id="dip"></div>
+    <div id="ff"><b>▶▶</b>Fast-forward</div>
+    <div id="captions"></div>
+    <div id="outro">
+      <div id="wipe-purple" class="wipe"><i></i></div>
+      <div id="wipe-cyan" class="wipe"><i></i></div>
+      <div id="brand"><div class="logo">UOption</div><div class="sub">FLY PASS</div>
+        <div class="tag">Protect first. Release smart.<br>Price with evidence.</div></div>
+    </div>
+  </div>
+  <script src="gsap.min.js"></script>
+  <script>
+  (() => {
+    const T = {{TIMELINE}};
+    const W = 1920, H = 1080;
+    const $ = id => document.getElementById(id);
+    const make = (cls, parent, text) => { const el = document.createElement('div'); el.className = cls; if (text) el.textContent = text; parent.append(el); return el; };
+    const tl = gsap.timeline({ paused: true });
+    const cam = $('cam'), cursor = $('cursor'), inner = $('cursor-inner');
+    const ev = T.events;
+    const ease = 'power2.inOut';
+
+    // Camera: each event frames a 16:9 rectangle of the 1920x1080 page.
+    gsap.set(cam, { x: 0, y: 0, scale: 1 });
+    gsap.set(cursor, { x: W * 0.62, y: H * 0.72, scale: 1, opacity: 0 });
+    const cams = ev.filter(e => e.type === 'camera');
+    const scaleAt = t => {
+      let s = 1;
+      for (const e of cams) {
+        if (e.t > t) break;
+        const target = W / e.rect.w, p = e.dur > 0 ? Math.min(1, (t - e.t) / e.dur) : 1;
+        s += (target - s) * p;
+      }
+      return s;
+    };
+    for (const e of cams) {
+      const s = W / e.rect.w, to = { x: -e.rect.x * s, y: -e.rect.y * s, scale: s };
+      if (e.dur < 0.05) { tl.set(cam, to, e.t); tl.set(cursor, { scale: 1 / s }, e.t); continue; }
+      tl.to(cam, { ...to, duration: e.dur, ease }, e.t);
+      tl.to(cursor, { scale: 1 / s, duration: e.dur, ease }, e.t);
+    }
+
+    // Cursor moves, clicks and cuts between pages.
+    let visible = false;
+    for (const e of ev) {
+      if (e.type === 'cursor') {
+        if (!visible) { tl.set(cursor, { x: e.from.x, y: e.from.y }, e.t); tl.to(cursor, { opacity: 1, duration: 0.2 }, e.t); visible = true; }
+        tl.fromTo(cursor, { x: e.from.x, y: e.from.y }, { x: e.to.x, y: e.to.y, duration: e.dur, ease, immediateRender: false }, e.t);
+      } else if (e.type === 'click') {
+        const r = make('ripple', cam), s = scaleAt(e.t);
+        tl.set(r, { x: e.at.x, y: e.at.y }, 0);
+        tl.fromTo(r, { scale: 0.35 / s, opacity: 0.95 }, { scale: 1.25 / s, opacity: 0, duration: 0.5, ease: 'power1.out', immediateRender: false }, e.t);
+        tl.to(inner, { scale: 0.82, duration: 0.08, yoyo: true, repeat: 1 }, e.t);
+      } else if (e.type === 'cut' && e.t > 0.05) {
+        tl.fromTo($('dip'), { opacity: 0 }, { opacity: 0.85, duration: 0.14, immediateRender: false }, e.t - 0.14);
+        tl.to($('dip'), { opacity: 0, duration: 0.3 }, e.t + 0.04);
+        if (visible) { tl.set(cursor, { opacity: 0 }, e.t); visible = false; }
+      } else if (e.type === 'scroll') {
+        // Nothing to draw: the recorded page scrolls under a still cursor.
+      }
+    }
+
+    // Native drop-downs, drawn from the real option labels.
+    ev.forEach((e, i) => {
+      if (e.type !== 'dropdown-open') return;
+      const close = ev.slice(i).find(x => x.type === 'dropdown-close'), move = ev.slice(i + 1).find(x => x.type === 'cursor');
+      const box = make('dropdown', cam);
+      Object.assign(box.style, { left: `${e.box.x}px`, top: `${e.box.y + e.box.height + 4}px`, width: `${e.box.width}px` });
+      const hl = make('hl', box);
+      e.options.forEach(label => make('row', box, label));
+      tl.set(hl, { y: e.current * e.rowH }, 0);
+      tl.fromTo(box, { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: 0.14, immediateRender: false }, e.t);
+      if (move) tl.to(hl, { y: e.index * e.rowH, duration: move.dur, ease }, move.t);
+      tl.to(box, { opacity: 0, duration: 0.12 }, close ? close.t : e.t + 1.5);
+    });
+
+    // Captions follow the narration lines.
+    for (const e of ev.filter(e => e.type === 'line')) {
+      const cap = make('cap', $('captions')), span = document.createElement('span');
+      span.textContent = T.captions[e.id]; cap.append(span);
+      const end = e.t + T.durations[e.id];
+      tl.fromTo(cap, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.25, immediateRender: false }, e.t);
+      tl.to(cap, { opacity: 0, duration: 0.25 }, end + 0.2);
+    }
+
+    // Fast-forward badge while the optimization runs.
+    ev.forEach((e, i) => {
+      if (e.type !== 'fast-start') return;
+      const stop = ev.slice(i).find(x => x.type === 'fast-end');
+      $('ff').lastChild.textContent = `Fast-forward ×${Math.round(stop.factor)}`;
+      tl.fromTo($('ff'), { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.2, immediateRender: false }, e.t);
+      tl.to($('ff'), { opacity: 0, duration: 0.25 }, stop.t);
+    });
+
+    // Outro: pull back, cyan streak and purple wipe, then the brand.
+    const outro = ev.find(e => e.type === 'outro');
+    if (outro) {
+      const t = outro.t, s = 0.92;
+      tl.to(cam, { x: W * (1 - s) / 2, y: H * (1 - s) / 2, scale: s, duration: 0.7, ease }, t);
+      tl.to(cursor, { opacity: 0, duration: 0.2 }, t);
+      tl.fromTo('#wipe-cyan', { x: -500 }, { x: 1540, duration: 0.85, ease: 'power3.inOut', immediateRender: true }, t + 0.25);
+      tl.fromTo('#wipe-purple', { x: -3100 }, { x: -420, duration: 0.8, ease: 'power3.inOut', immediateRender: true }, t + 0.35);
+      tl.fromTo('#brand .logo', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', immediateRender: false }, t + 0.95);
+      tl.fromTo('#brand .sub', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out', immediateRender: false }, t + 1.1);
+      tl.fromTo('#brand .tag', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out', immediateRender: false }, t + 1.35);
+    }
+    tl.set({}, {}, T.total);
+
+    window.__timelines = window.__timelines || {};
+    window.__timelines.root = tl;
+  })();
+  </script>
+</body>
+</html>
