@@ -1,8 +1,10 @@
 # Admin 與會員購票介面
 
+> 状态：现行 · 对应代码：`customer-panel-v1`、`frontend/index.html`、`frontend/members/index.html`
+
 2026-11-14。這次更新擴大 Customer panel、重新安排 Admin 資訊，並加入獨立會員購票網站。全部介面使用英文，金額使用 HKD；航班及購買仍為 Hackathon 合成示例，沒有實際付款或航空出票。
 
-後續全面重設已完成：主配色改為紫 `#6F2C91`、青 `#24BCDC`、白。Admin 使用 Forecast / Optimize / Experiments / Manage offers；Optimize 已加入可設定輪數的數學／LLM 雙軌價格搜尋與 SQLite 保存，原 Customer panel 和 Shared market 移至 Experiments。Client 加入票價排序、只看可售座位、清楚的完整票價／會員費及三步購票流程。最新畫面及演算法以 [重設紀錄](PORTAL_REDESIGN_AND_OPTIMIZATION.md)、[優化引擎](OPTIMIZATION_ENGINE.md) 為準；下文保留原交易 API 與 panel 規則。
+後續全面重設已完成：主配色改為紫 `#6F2C91`、青 `#24BCDC`、白。Admin 使用 Forecast / Optimize / Experiments / Manage offers；Optimize 已加入可設定輪數的數學／LLM 雙軌價格搜尋與 SQLite 保存，原 Customer panel 和 Shared market 移至 Experiments。Client 加入票價排序、只看可售座位、清楚的完整票價／會員費及三步購票流程。最新畫面及演算法以 [航班優化流程](FLIGHT_SCOPED_OPTIMIZATION.md) 為準；下文保留原交易 API 與 panel 規則。
 
 ## 兩個入口
 

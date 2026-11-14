@@ -1,6 +1,6 @@
 # 每日機票與空座模擬
 
-目前合計600000筆：下文original generated/為200000筆，validation_extended/有兩批各200000筆。新NHPP請使用evaluate_nhpp_v2；文末v1數字保留為歷史。詳見[擴大驗證](../docs/EXTENDED_VALIDATION.md)。
+目前合計680,364筆：下文original generated/為200000筆，validation_extended/有兩批各200000筆；另有 `network_generated/`（`network_generate.py`）與 `member_demo_generated/`（`member_demo_generate.py`）各222班／40,182筆補充航線資料，與 original 合成 1,549 班／280,364 筆的售票目錄。新NHPP請使用evaluate_nhpp_v2；文末v1數字保留為歷史。詳見[擴大驗證](../docs/EXTENDED_VALIDATION.md)。
 
 本模組生成 **200,000 筆**每日快照。1,104 班有完整 D180–D0 的 181 筆；最後一班保留 D175–D0 的 176 筆，合計正好 200,000。最後一班同樣從 D180 開始模擬，只省略最初五筆輸出。所有航班均包含完整 D28–D0 決策期。
 

@@ -1,5 +1,7 @@
 # 共享市場與旅客 Agent
 
+> 状态：现行 · 对应代码：`shared-market-customer-v3.2-en`、`english-hkd-v1`
+
 這一版把「旅客描述合理」與「市場交易正確」分開：Agent 只決定當前旅客想做甚麼；環境負責時間、座位、資格、費用、預算、取消與帳目。所有人使用同一個航班庫存，同一會員在多次旅行之間保留自己的預算和歷史。這仍然是合成市場，不能稱為 HK Express 真實客戶需求模型。
 
 ```mermaid
@@ -23,7 +25,7 @@ flowchart LR
 | 檔案 | 責任 |
 |---|---|
 | `backend/shared_market.py` | `create_market`、`next_observation`、`apply_decision`、`summarize`；環境及金額以整數分計帳 |
-| `llm_agent/market_adapter.py` | 同一公開 observation 交給 deterministic 或 live；合法動作驗證、Provider 呼叫及快取來源 |
+| `llm_agent/market_adapter.py` | 同一公開 observation 交給 deterministic、probabilistic 或 live；合法動作驗證、Provider 呼叫及快取來源 |
 | `llm_agent/market_experiment.py` | 事先固定政策、seed 及開發／驗證分組；有限批次、續跑、成對比較、分享匯出 |
 | `llm_agent/behavior_probes.py` | 不執行交易的獨立價格／重複／選項順序／語言診斷 |
 | `llm_agent/audit.py` | 私有 JSONL 原始紀錄、秘密遮蔽、安全 run ID |
