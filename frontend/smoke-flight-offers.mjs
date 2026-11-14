@@ -16,7 +16,8 @@ await page.route('**/*',async route=>{
  const request=route.request(),path=new URL(request.url()).pathname;
  if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
  if(path==='/adaptive-pricing')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./adaptive-pricing.html',import.meta.url),'utf8')});
- if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
+ if(path==='/members/airports.js')return route.fulfill({contentType:'text/javascript',body:await readFile(new URL('./members/airports.js',import.meta.url),'utf8')});
+  if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
  if(path.startsWith('/api/optimization')){retired.push(path);return route.fulfill({status:404});}
  if(path==='/api/summary')return route.fulfill({json:{dataset:{rows:200000}}});
  if(path==='/api/flights')return route.fulfill({json:{flights}});

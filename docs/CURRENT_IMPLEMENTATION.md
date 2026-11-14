@@ -370,7 +370,7 @@ Client支援出發／目的機場、地區、日期範圍及彈性選擇。展�
 
 `backend/demo_auth.py`提供兩個公開示範帳戶（詳見[登入操作](ADMIN_AND_MEMBER_UX.md#client-portal)）。伺服器產生隨機session token，只存SHA256雜湊，Cookie為HttpOnly、SameSite=Lax、24小時有效；登出撤銷session。會員帳戶僅首次登入初始化會籍；Guest入會後狀態持續保存。HTTP層對保留帳戶核對session，拒絕跨帳戶讀取、入會及購票。現有任意ID開發介面仍只供本機測試。
 
-Admin新版以共用航班欄串連Forecast、Optimize、Publish offers和Results，Member feedback保持只讀。Results從既有優惠計算已售會員位及基本票款，保留暫扣座位分類；後端與Client Portal沿用`55506db`版本。
+Admin新版以共用航班欄串連Forecast、Optimize、Publish offers和Results，Member feedback保持只讀。From／To採用Client完整機場與國家目錄，支持Anywhere；需求分類只篩選Flight，Flight顯示日期及完整合成航班編號。無匹配時保留條件並清除舊航班scope。Results從既有優惠計算已售會員位及基本票款，保留暫扣座位分類；後端與Client Portal沿用`55506db`版本。
 
 目前是本機模擬身份、付款及訂單，沒有航空出票、真實支付或生產登入。密鑰、私有SQLite及OAG原始回應不公開；對外只匯出脫敏合成證據。
 

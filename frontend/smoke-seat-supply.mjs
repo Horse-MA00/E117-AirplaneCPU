@@ -22,6 +22,7 @@ function forecast(day){
 await page.route('**/*',async route=>{
   const u=new URL(route.request().url()),path=u.pathname,reply=json=>route.fulfill({json});
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
+  if(path==='/members/airports.js')return route.fulfill({contentType:'text/javascript',body:await readFile(new URL('./members/airports.js',import.meta.url),'utf8')});
   if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
   if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_months:6,term_label:'6 months',term_days:181}});
@@ -96,8 +97,8 @@ try{
   await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await page.screenshot({path:'test-results/forecast-seat-status-mobile.png',fullPage:true});
   await page.getByRole('link',{name:'Optimize prices',exact:true}).click();
-  await page.locator('#route:not([disabled])').waitFor();
-  await page.locator('#route').selectOption('HKG → ICN');await page.locator('#flight').selectOption(flight.flight_id);
+  await page.locator('#opt-from:not([disabled])').waitFor();
+  await page.locator('#opt-from').selectOption('HKG');await page.locator('#opt-to').selectOption('ICN');await page.locator('#flight').selectOption(flight.flight_id);
   await page.waitForFunction(()=>document.getElementById('scope-message').textContent.includes('No member quota'));
   assert.equal(await page.locator('#start').isDisabled(),true);assert.equal(starts,0);
   scopeSeats=1;await page.locator('#release-day').selectOption('14');

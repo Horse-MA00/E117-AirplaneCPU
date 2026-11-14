@@ -5,7 +5,7 @@ import {readFile,mkdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
 const root=fileURLToPath(new URL('.',import.meta.url));
-const aliases={'/adaptive-pricing':'adaptive-pricing.html','/admin':'index.html','/':'index.html'};
+const aliases={'/adaptive-pricing':'adaptive-pricing.html','/admin':'index.html','/':'index.html','/members/airports.js':'members/airports.js'};
 const server=createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname,file=aliases[path]||(/^\/[a-z0-9-]+\.(js|css)$/.test(path)||/^\/fonts\/inter-\d{3}\.woff2$/.test(path)?path.slice(1):null);try{if(!file)throw Error();const body=await readFile(root+file);res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.woff2')?'font/woff2':'text/html'}).end(body);}catch{res.writeHead(404).end('Not found');}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin=`http://127.0.0.1:${server.address().port}`;
@@ -35,11 +35,11 @@ await page.route('**/api/**',async route=>{
 });
 try{
  await mkdir(root+'test-results',{recursive:true});
- await page.goto(origin+'/adaptive-pricing');await page.locator('#route:not([disabled])').waitFor();
+ await page.goto(origin+'/adaptive-pricing');await page.locator('#opt-from:not([disabled])').waitFor();
  assert.equal(await page.locator('#profile').count(),0);assert.equal(await page.locator('#weights input').count(),8);
  assert.equal(await page.locator('#customers').getAttribute('min'),'8');assert.equal(await page.locator('#start').isDisabled(),true);
  assert.doesNotMatch(await page.locator('body').innerText(),/legacy|Math \+ LLM|Target customer scenario/i);
- await page.selectOption('#route','HKG → KMQ');await page.selectOption('#flight',scope.flight_id);
+ await page.selectOption('#opt-from','HKG');await page.selectOption('#opt-to','KMQ');await page.selectOption('#flight',scope.flight_id);
  await page.waitForFunction(()=>!document.getElementById('start').disabled);
  assert.equal(scopes.at(-1).profile,'flexible_deal_seekers');assert.equal(starts.length,0);
     if(await page.locator('#setup-panel').isHidden())await page.locator('#new-experiment').click(); // a saved result for this flight opens first
@@ -65,11 +65,14 @@ try{
  // Loading a saved low-demand flight from a high-demand filter restores its
  // selectors and navigation together, without silently starting another run.
  await page.selectOption('#opt-demand','high');
- assert.equal(await page.locator('#route option[value="HKG → KMQ"]').count(),0);
+ assert.equal(await page.locator('#flight').isDisabled(),true,'The route and demand combination has no matching flight');
+ assert.equal(await page.locator('#opt-to option[value="KMQ"]').count(),1,'Demand must never remove an airport option');
+ assert.equal(await page.locator('#opt-to').inputValue(),'KMQ','An empty demand result preserves the chosen destination');
  await page.selectOption('#saved-run',report.run_id);await page.locator('#load-run').click();
  await page.waitForFunction(()=>document.getElementById('flight').value==='TEST-HKG-KMQ');
  assert.equal(await page.locator('#opt-demand').inputValue(),'all');
- assert.equal(await page.locator('#route').inputValue(),'HKG → KMQ');
+ assert.equal(await page.locator('#opt-from').inputValue(),'HKG');
+ assert.equal(await page.locator('#opt-to').inputValue(),'KMQ');
  assert.equal(await page.locator('#release-day').inputValue(),'28');
  assert.match(await page.locator('#flight-description').textContent(),/TEST-HKG-KMQ/);
  assert.match(await page.locator('#publish-link').getAttribute('href'),/flight_id=TEST-HKG-KMQ&forecast_day=28#members$/);

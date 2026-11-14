@@ -77,3 +77,11 @@ Admin 与 Optimize 顶部删除 D1 快捷按钮／停用占位，只保留 D28�
 按用户本次要求，一并发布此前未提交的六份现行项目文档修改：AGENTS、README、Client 搜索说明、完整技术速读与 Present 指南、NHPP v3说明及三轮配额职责纠正。技术指南同步当前 main 基准、Admin入口名称和验证数量。旧交接、外部原始PDF、历史发布／数据压缩包及测试输出保留本地。
 
 验证：完整 `scripts/check_container.py` 通过198项后端、24项根目录测试（共222项），发布和冻结证据检查通过。四项浏览器检查 `test:smoke`、`test:adaptive-pricing`、`test:demand-filter`、`test:flight-offers` 全部通过；额外只读检查确认两页按钮均为D28／D14／D7，旧D1 URL回到D28且选中状态正确。原生8001服务已恢复运行。没有LLM／OAG调用、新实验或实际示例库存交易。
+
+## 2026-11-15 · Admin 完整 From／To 与航班编号
+
+Admin 与 Optimize 的 Route 改为 From → To，复用 Client 的完整机场／国家目录及实际航班双端机场。两个选框支持 Anywhere、国家及单个机场，不随Demand缩减；Flight 按三个条件共同筛选，显示日期、完整合成flight_id，宽范围另加航线。保留D28／D14／D7以及现行Client页面，删除不再使用的Route搜索脚本与样式。
+
+空组合保持用户选择并清除旧预测、发布目标和优化scope；显式加载已保存实验恢复该航班，自动加载最新结果保持原地区范围。共享helper统一日期显示，不因浏览器时区改变日期。桌面From／To并排，手机依照键盘顺序排列。
+
+验证：`scripts/check_container.py` 通过198项后端及24项根目录测试，发布及冻结证据检查通过。六组浏览器检查通过：Demand、Adaptive pricing、Flight offers、Seat supply、真实Admin流程和已保存离线实验读取。覆盖完整目录、地区／Anywhere、返程、同日不同编号、空结果及过期请求拦截；最终样式再次通过Demand与真实Admin手机检查。Client、后端、冻结数据没有修改；没有LLM／OAG调用、新实验或库存交易。

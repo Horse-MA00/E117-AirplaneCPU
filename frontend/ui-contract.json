@@ -9,7 +9,7 @@
     "results",
     "customers"
    ],
-   "route_mechanism": "location.hash 选中 section#view-<route>.view；#results 为 2026-11-15 新增；未知或已退役的 hash（#optimization、#pricing、#panel、#market）显示 section#view-unavailable，不跳转。search#context-bar 是 flights/members/results 共用的航班选择栏"
+   "route_mechanism": "location.hash 选中 section#view-<route>.view；#results 为 2026-11-15 新增；未知或已退役的 hash（#optimization、#pricing、#panel、#market）显示 section#view-unavailable，不跳转。search#context-bar 是 flights/members/results 共用的航班选择栏；完整 From/To 机场或国家选单与 Demand 组合筛选 Flight，选项不随筛选缩减。"
   },
   "/adaptive-pricing": {
    "html": "frontend/adaptive-pricing.html",
@@ -291,7 +291,8 @@
    "booking-chart",
    "chart-caption",
    "context-bar",
-   "context-route",
+   "context-from",
+   "context-to",
    "dataset-label",
    "day-description",
    "day-number",
@@ -415,6 +416,8 @@
    "normal-fare",
    "observed-rate",
    "opt-demand",
+   "opt-from",
+   "opt-to",
    "page-error",
    "page-title",
    "progress-bar",
@@ -434,7 +437,6 @@
    "round-section",
    "round-table",
    "rounds",
-   "route",
    "run-cohort",
    "run-counts",
    "run-people",

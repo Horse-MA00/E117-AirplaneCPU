@@ -1,7 +1,7 @@
 import { thompsonUrl } from './thompson-navigation.js';
 import { seatStatus } from './seat-status.js';
 import { demandDescription, matchesDemand, populateDemandFilter } from './demand-filter.js';
-import { attachRouteSearch } from './route-search.js';
+import { populatePlaces, matchesFlightPlaces, setFlightPlaces, flightOptionLabel } from './flight-picker.js';
 const $ = (id) => document.getElementById(id);
 const RELEASE_DAYS = [28, 14, 7];
 const state = { flights: [], flight: null, history: [], forecast: null, day: 28, loadedFlightId: null, request: 0, forecastRequest: 0, summary: null, offers: [], offersLoaded: false, planDraft: false, planFee: null, offerFlightId: null, offerDay: 28, offerForecast: null, offerRequest: 0, offerManual: false, thompsonRuns: null };
@@ -86,32 +86,31 @@ function clearFlightSelection() {
   state.request++; state.forecastRequest++; state.forecast=null; state.loadedFlightId=null; state.flight=null; state.history=[];
   $('flight-main').hidden=true; $('flight-main').setAttribute('aria-busy','false');
   $('flight-filter-empty').hidden=false; $('go-pricing').disabled=true; $('publish-button').disabled=true;
-  text('flight-date','—'); text('flight-capacity','—'); text('flight-scenario-note','Choose another demand level to find a flight.');
+  text('flight-date','—'); text('flight-capacity','—'); text('flight-scenario-note','Choose another departure, destination or demand level to find a flight.');
   selectOffer(null, state.day, false); updateNavLinks(); renderResults(); clearResultsSeatBar();
 }
-// The route box always shows the current flight's route; the flight box lists that route's departures.
+// Airport/country choices stay complete; only departures respond to the filters.
 function fillForecastFlights(preferred=$('flight-select').value) {
-  const inDemand=state.flights.filter(f=>matchesDemand(f,$('forecast-demand').value));
-  text('forecast-demand-status',`${number(inDemand.length)} of ${number(state.flights.length)} flights match. Demand groups use the fixed D28 forecast.`);
-  if(!inDemand.length){
-    $('context-route').replaceChildren(new Option('No routes','')); $('context-route').disabled=true;
-    $('flight-select').replaceChildren(new Option('No flights match these filters','')); $('flight-select').disabled=true;
-    clearFlightSelection(); return false;
+  const from=$('context-from').value, to=$('context-to').value;
+  const matches=state.flights.filter(f=>matchesDemand(f,$('forecast-demand').value) && matchesFlightPlaces(f,from,to))
+    .sort((a,b)=>`${flightDay(a)}${a.flight_id}`.localeCompare(`${flightDay(b)}${b.flight_id}`));
+  text('forecast-demand-status',`${number(matches.length)} of ${number(state.flights.length)} flights match these filters. Demand groups use the fixed D28 forecast.`);
+  for (const id of ['context-from','context-to']) $(id).title=$(id).selectedOptions[0]?.textContent || '';
+  if(!matches.length){
+    $('flight-select').replaceChildren(new Option('No matching flights','')); $('flight-select').disabled=true;
+    $('flight-select').title=''; clearFlightSelection(); return false;
   }
-  const routes=[...new Set(inDemand.map(routeKey))].sort();
-  const wanted=inDemand.find(f=>f.flight_id===preferred), demo=inDemand.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);
-  let route=wanted?routeKey(wanted):$('context-route').value;
-  if(!routes.includes(route))route=demo?routeKey(demo):routes[0];
-  $('context-route').replaceChildren(...routes.map(r=>new Option(r,r))); $('context-route').value=route; $('context-route').disabled=false;
-  const matches=inDemand.filter(f=>routeKey(f)===route).sort((a,b)=>`${flightDay(a)}${a.flight_id}`.localeCompare(`${flightDay(b)}${b.flight_id}`));
-  $('flight-select').replaceChildren(...matches.map(f=>new Option(`${longDate(flightDay(f))} · ${number(f.capacity)} seats`,f.flight_id)));
+  const includeRoute=!from || !to || from.startsWith('region:') || to.startsWith('region:');
+  $('flight-select').replaceChildren(...matches.map(f=>new Option(flightOptionLabel(f,{includeRoute}),f.flight_id)));
   $('flight-select').disabled=false;
-  $('flight-select').value=(matches.find(f=>f.flight_id===preferred)||matches.find(f=>f===demo)||matches[0]).flight_id;
+  const demo=matches.find(f=>f.demo_priority===0&&Number(f.demo_d28_releasable)>0);
+  $('flight-select').value=(matches.find(f=>f.flight_id===preferred)||demo||matches[0]).flight_id;
+  $('flight-select').title=$('flight-select').selectedOptions[0]?.textContent || '';
   $('flight-filter-empty').hidden=true;
   return true;
 }
 async function loadFlight() {
-  clearError(); const id = $('flight-select').value; if (!id) {clearFlightSelection();return;}
+  clearError(); $('flight-select').title=$('flight-select').selectedOptions[0]?.textContent || ''; const id = $('flight-select').value; if (!id) {clearFlightSelection();return;}
   const request = ++state.request; state.forecastRequest++; state.forecast = null; state.loadedFlightId = null; state.flight = null; state.history = [];
   selectOffer(null, state.day, false); updateNavLinks(); renderResults(); clearResultsSeatBar();
   $('flight-main').hidden=false; $('flight-filter-empty').hidden=true;
@@ -226,8 +225,7 @@ $('day-slider').addEventListener('input', () => { clearTimeout(dayTimer); const 
 document.querySelectorAll('[data-day]').forEach((button) => button.addEventListener('click', () => { clearTimeout(dayTimer); chooseDay(Number(button.dataset.day)); }));
 $('flight-select').addEventListener('change', loadFlight);
 $('forecast-demand').addEventListener('change',()=>{if(fillForecastFlights())loadFlight();});
-$('context-route').addEventListener('change',()=>{if(fillForecastFlights(''))loadFlight();});
-attachRouteSearch($('context-route'));
+for (const id of ['context-from','context-to']) $(id).addEventListener('change',()=>{if(fillForecastFlights())loadFlight();});
 
 async function loadOffers() {
   try { const data = await api('/api/offers'); state.offers = data.offers || (Array.isArray(data) ? data : []); state.offersLoaded = true; renderOffers(); renderResults(); } catch (e) { error(e.message); }
@@ -428,8 +426,12 @@ async function init() {
     const llmOn = Boolean(llm.live_configured || llm.configured || llm.live_available);
     text('llm-status', llmOn ? 'LLM configured' : 'LLM not configured'); $('llm-status').dataset.state = llmOn ? 'on' : 'off';
     populateDemandFilter($('forecast-demand'),state.flights);
+    populatePlaces($('context-from'),state.flights,'HKG');
+    populatePlaces($('context-to'),state.flights,'');
+    $('context-from').disabled=false; $('context-to').disabled=false;
     // Optimize and the sidebar pass the current selection back as ?flight_id=&forecast_day=.
     const params = new URL(location.href).searchParams, wanted = state.flights.find(f => f.flight_id === params.get('flight_id'));
+    if(wanted)setFlightPlaces($('context-from'),$('context-to'),wanted);
     const wantedDay = Number(params.get('forecast_day'));
     if (RELEASE_DAYS.includes(wantedDay)) { state.day = wantedDay; $('day-slider').value = 28 - wantedDay; text('day-number', wantedDay); document.querySelectorAll('[data-day]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.day) === wantedDay))); }
     if(fillForecastFlights(wanted?.flight_id) && location.hash !== '#customers')await loadFlight();

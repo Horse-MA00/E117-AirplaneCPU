@@ -36,7 +36,11 @@
   <div class="workspace">
     <search id="context-bar" class="context-bar" aria-label="Filter forecast flights">
       <div class="ctx-field demand"><div class="ctx-head"><label for="forecast-demand">Demand level</label><span class="info"><button type="button" class="info-btn" aria-describedby="tip-demand" aria-label="About demand level">i</button><span class="info-tip" role="tooltip" id="tip-demand"><strong class="info-title">Demand level</strong><span id="forecast-demand-help">Flights are grouped by their fixed D28 forecast occupancy: low below 60%, medium 60–85%, high 85% or more. The groups do not change when you move the timeline.</span><span class="info-label">Now</span><span id="forecast-demand-status" role="status">Loading demand groups…</span></span></span></div><select id="forecast-demand" name="forecast_demand" aria-describedby="forecast-demand-help" disabled><option value="all">All demand</option></select></div>
-      <div class="ctx-field route"><label for="context-route">Route</label><select id="context-route" name="route" disabled><option value="">All routes</option></select></div>
+      <div class="ctx-places">
+        <div class="ctx-field place from"><label for="context-from">From</label><select id="context-from" name="origin" disabled><option value="HKG">Hong Kong (HKG)</option></select></div>
+        <svg class="flight-direction" viewBox="0 0 32 16" aria-hidden="true"><path d="M2 8h26m-6-5 6 5-6 5"/></svg>
+        <div class="ctx-field place to"><label for="context-to">To</label><select id="context-to" name="destination" disabled><option value="">Anywhere</option></select></div>
+      </div>
       <div class="ctx-field flight"><label for="flight-select">Flight</label><select id="flight-select" disabled><option>Loading flights…</option></select></div>
       <div class="ctx-round" role="group" aria-labelledby="round-label"><span id="round-label" class="ctx-label">Release round</span>
         <div class="day-shortcuts">
@@ -63,7 +67,7 @@
           </div>
           <div class="page-actions"><button class="button primary" id="go-pricing" type="button">Optimize member pricing <span aria-hidden="true">→</span></button></div>
         </div>
-        <p id="flight-filter-empty" class="message" role="status" hidden>No flights match this demand level. Choose another level or All demand.</p>
+        <p id="flight-filter-empty" class="message" role="status" hidden>No flights match these filters. Choose another From, To or demand level.</p>
         <div id="flight-main" aria-busy="true">
           <p id="release-decision" class="message error release-decision" role="status" hidden></p>
           <div class="kpi-row forecast-metrics">

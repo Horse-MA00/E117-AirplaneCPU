@@ -2,20 +2,28 @@
 import assert from 'node:assert/strict';
 import {readFile,mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
+import {catalogAirportCodes} from './members/airports.js';
 const origin='http://127.0.0.1:18080';
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
 const page=await browser.newPage({viewport:{width:1440,height:1050}}),errors=[],blocked=[];
 page.on('pageerror',e=>errors.push(e.message));
 const flights=[['HND','low',.42,350],['ICN','medium',.74,560],['TPE','high',.92,830]].map(([destination,demand_band,demand_expected_load_rate,normal_base_fare])=>({flight_id:`DEMO-HKG-${destination}-20270515`,origin:'HKG',destination,departure_at:'2027-05-15T10:00:00+08:00',departure_date:'2027-05-15',capacity:180,demand_band,demand_expected_load_rate,demand_reference_day:28,normal_base_fare}));
-let includeUnknown=false,starts=0,forecastCalls=0;
+const extraFlights=[
+ {...flights[0],flight_id:'SAME-DATE-HKG-HND'},
+ {...flights[0],flight_id:'TEST-HKG-NRT',destination:'NRT'},
+ {...flights[0],flight_id:'RETURN-HND-HKG',origin:'HND',destination:'HKG'},
+ {...flights[0],flight_id:'CATALOG-HKG-ZZZ',destination:'ZZZ'},
+];
+let includeUnknown=false,includeRoutes=false,starts=0,forecastCalls=0;
 const population={profile:'flexible_deal_seekers',segments:Array.from({length:8},(_,i)=>({id:`flexible-${i}`,name:`Flexible travellers ${i+1}`,weight:1/8}))};
 const scopeRequests=[];
-const catalogue=()=>includeUnknown?[...flights,{...flights[0],flight_id:'UNCLASSIFIED-HKG-HND',demand_band:undefined,demand_expected_load_rate:null}]:flights;
+const catalogue=()=>[...flights,...(includeRoutes?extraFlights:[]),...(includeUnknown?[{...flights[0],flight_id:'UNCLASSIFIED-HKG-HND',demand_band:undefined,demand_expected_load_rate:null}]:[])];
 const history=f=>[28,14,7,1,0].map(days_to_departure=>({days_to_departure,capacity:180,booked_seats:70,available_seats:110,normal_base_fare:f.normal_base_fare,normal_total_fare:f.normal_base_fare+250,mandatory_fees:250}));
 await page.route('**/*',async route=>{
   const request=route.request(),path=new URL(request.url()).pathname,reply=json=>route.fulfill({json});
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
   if(/^\/fonts\/inter-\d{3}\.woff2$/.test(path))return route.fulfill({contentType:'font/woff2',body:await readFile(new URL(`.${path}`,import.meta.url))});
+  if(path==='/members/airports.js')return route.fulfill({contentType:'text/javascript',body:await readFile(new URL('./members/airports.js',import.meta.url),'utf8')});
   if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
   if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_months:6,term_label:'6 months',term_days:181}});
@@ -50,9 +58,9 @@ try{
   await page.locator('#forecast-demand').focus();
   assert.notEqual(await page.locator('#forecast-demand').evaluate(n=>getComputedStyle(n).outlineStyle),'none');
   await page.keyboard.press('Tab');
-  assert.equal(await page.locator('#context-route').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order: demand, route, flight');
+  assert.equal(await page.locator('#context-from').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order: demand, From, To, flight');
   await page.keyboard.press('Tab');
-  assert.equal(await page.evaluate(()=>document.activeElement.matches('#context-bar .ctx-search-btn')),true,'The route search button follows the route select');
+  assert.equal(await page.locator('#context-to').evaluate(n=>document.activeElement===n),true,'To follows From without a hidden route-search control');
   await page.keyboard.press('Tab');
   assert.equal(await page.locator('#flight-select').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order');
   await page.locator('#forecast-demand').selectOption('medium');
@@ -98,10 +106,58 @@ try{
   await page.setViewportSize({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Mobile layout must not overflow');
   await page.screenshot({path:'test-results/demand-filter-optimization-mobile.png',fullPage:true});
+  // Full location lists stay independent of both demand and the opposite
+  // endpoint. Flights, not airport choices, are filtered by the intersection.
+  includeRoutes=true;await page.goto(origin+'/admin');
+  await page.waitForFunction(()=>document.getElementById('headroom-value').textContent==='40 seats');
+  const checkFullPlaces=async(from,to)=>{
+    for(const id of [from,to]){
+      const codes=await page.locator(`#${id} option`).evaluateAll(options=>options.map(o=>o.value));
+      for(const code of [...catalogAirportCodes,'ZZZ'])assert.ok(codes.includes(code),`${id} omits ${code}`);
+      assert.ok(codes.includes('region:JP'));assert.ok(codes.includes(''),'Anywhere remains available');
+      assert.equal(await page.locator(`#${id}`).isDisabled(),false);
+    }
+  };
+  await checkFullPlaces('context-from','context-to');
+  await page.selectOption('#context-from','HND');await page.selectOption('#context-to','HKG');
+  await page.waitForFunction(()=>document.getElementById('flight-select').value==='RETURN-HND-HKG');
+  await page.selectOption('#context-from','region:JP');
+  assert.equal(await page.locator('#flight-select').inputValue(),'RETURN-HND-HKG','Country From includes returning flights');
+  await page.selectOption('#context-from','HKG');await page.selectOption('#context-to','region:JP');
+  const japanIds=await page.locator('#flight-select option').evaluateAll(options=>options.map(o=>o.value));
+  assert.deepEqual(japanIds.sort(),[flights[0].flight_id,'SAME-DATE-HKG-HND','TEST-HKG-NRT'].sort());
+  for(const id of japanIds)assert.ok((await page.locator(`#flight-select option[value="${id}"]`).innerText()).includes(id),'Same-day flight labels retain distinct complete synthetic IDs');
+  await page.selectOption('#flight-select','SAME-DATE-HKG-HND');await page.selectOption('#forecast-demand','low');
+  assert.equal(await page.locator('#flight-select').inputValue(),'SAME-DATE-HKG-HND','A matching selected flight survives combined filters');
+  await checkFullPlaces('context-from','context-to');
+  await page.selectOption('#context-from','FUK');await page.selectOption('#context-to','ICN');
+  assert.equal(await page.locator('#context-from').inputValue(),'FUK');assert.equal(await page.locator('#context-to').inputValue(),'ICN');
+  assert.equal(await page.locator('#flight-select').isDisabled(),true);assert.equal(await page.locator('#flight-main').isHidden(),true);
+  assert.equal(await page.locator('#go-pricing').isDisabled(),true);assert.equal(await page.locator('#publish-button').isDisabled(),true);
+  await checkFullPlaces('context-from','context-to');
+  await page.selectOption('#context-from','');await page.selectOption('#context-to','');
+  assert.equal(await page.locator('#flight-select option').count(),5,'Anywhere includes all low-demand directions, including extra catalog airports');
+  await page.goto(origin+'/adaptive-pricing?flight_id=RETURN-HND-HKG&forecast_day=7');
+  await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D7');
+  assert.equal(await page.locator('#opt-from').inputValue(),'HND');assert.equal(await page.locator('#opt-to').inputValue(),'HKG');
+  await checkFullPlaces('opt-from','opt-to');
+  await page.selectOption('#opt-to','PUS');
+  assert.equal(await page.locator('#opt-to').inputValue(),'PUS');assert.equal(await page.locator('#flight').isDisabled(),true);
+  assert.equal(await page.locator('#start').isDisabled(),true);assert.equal(await page.locator('#normal-fare').innerText(),'—');
+  await page.waitForLoadState('networkidle');const emptyScopeCalls=scopeRequests.length;
+  await page.locator('[data-round="14"]').click();await page.waitForLoadState('networkidle');
+  assert.equal(scopeRequests.length,emptyScopeCalls,'An empty From/To combination must not reuse the discarded scope');
+  await checkFullPlaces('opt-from','opt-to');
+  await page.selectOption('#opt-from','region:JP');await page.selectOption('#opt-to','HKG');await page.selectOption('#flight','RETURN-HND-HKG');
+  await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D14');
+  assert.equal(scopeRequests.at(-1).flight_id,'RETURN-HND-HKG');assert.equal(starts,0);
+  await page.setViewportSize({width:390,height:844});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'The expanded location bar fits mobile');
+  includeRoutes=false;
   includeUnknown=true;await page.goto(origin+'/admin');
   await page.waitForFunction(()=>document.querySelector('#forecast-demand option[value="unknown"]').textContent==='Unclassified (1)');
   await page.locator('#forecast-demand').selectOption('unknown');
   assert.equal(await page.locator('#flight-select').inputValue(),'UNCLASSIFIED-HKG-HND','Missing metadata must stay unclassified');
   assert.deepEqual(errors,[]);assert.deepEqual(blocked,[]);
-  console.log(JSON.stringify({status:'passed',checks:['three demand bands and counts','fixed D28 reference','selection preservation','empty state and stale-request prevention','filtered-flight Thompson entry','scope refresh without price overrides','keyboard labels and mobile layout','missing metadata fallback'],optimization_starts:starts}));
+  console.log(JSON.stringify({status:'passed',checks:['three demand bands and counts','fixed D28 reference','selection preservation','empty state and stale-request prevention','filtered-flight Thompson entry','scope refresh without price overrides','keyboard labels and mobile layout','missing metadata fallback','full airport/country choices independent of filters','return routes and country matching','same-day flight identifiers','empty From/To state and scope guard'],optimization_starts:starts}));
 }finally{await browser.close();}
