@@ -257,14 +257,14 @@ $('offer-form').addEventListener('submit',(event)=>{event.preventDefault();busy(
 async function loadMemberPlan() {
   try { const data = await api('/api/member-portal/plan'); const plan = data.membership;
     if (!state.planDraft && document.activeElement !== $('member-fee')) $('member-fee').value = plan.fee;
-    text('membership-status', `Published membership: ${money(plan.fee)} for ${number(plan.term_days)} days. This is the price shown on the member site.`);
+    text('membership-status', `Published membership: ${money(plan.fee)} for ${plan.term_label || '6 months'}. This is the price shown on the member site.`);
   } catch (e) { text('membership-status', `Membership plan unavailable: ${e.message}`); }
 }
 $('member-fee').addEventListener('input', () => { state.planDraft = true; });
 $('member-plan-form').addEventListener('submit', (event) => { event.preventDefault(); busy($('save-plan-button'), async () => {
   const data = await api('/api/member-portal/plan', { membership_fee: value('member-fee') });
   state.planDraft = false;
-  text('membership-status', `Published membership: ${money(data.membership.fee)} for ${number(data.membership.term_days)} days. Existing members are not charged again.`);
+  text('membership-status', `Published membership: ${money(data.membership.fee)} for ${data.membership.term_label || '6 months'}. Existing members are not charged again.`);
   notify('Membership price saved. New members see this price on the member site.');
 }); });
 $('refresh-offers').addEventListener('click', loadOffers);

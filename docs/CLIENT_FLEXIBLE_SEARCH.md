@@ -6,7 +6,9 @@
 
 ## 使用方式
 
-在 `/members` 的 **Find your next flight**：
+先在 `/members/login` 登入示範帳戶，再使用 `/members` 的 **Find your next flight**；帳戶與半年方案見[會員操作](ADMIN_AND_MEMBER_UX.md#client-portal)。
+
+搜尋操作：
 
 1. **From · airport or country** 選出發機場、整個國家（例如 All Japan airports），或保留 Anywhere。
 2. **To · airport or country** 選 All Japan airports；也可在同一選單選單一機場。⇄ 互換起點與目的地。

@@ -23,7 +23,7 @@ await page.route('**/api/**',async route=>{
  const request=route.request(),path=new URL(request.url()).pathname,method=request.method();apiReads++;
  if(path==='/api/flights')return route.fulfill({json:{flights}});
  if(path==='/api/summary')return route.fulfill({json:{dataset:{rows:200000}}});
- if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_days:365}}});
+ if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_days:181,term_months:6,term_label:'6 months'}}});
  if(path==='/api/adaptive-pricing/status')return route.fulfill(setup==='failed'?{status:503,json:{error:'Setup unavailable'}}:{json:{live_configured:true,population:setup==='ready'?population:null,populations:setup==='ready'?[population]:[]}});
  if(path==='/api/adaptive-pricing/scope'){const body=request.postDataJSON();scopes.push(body);return route.fulfill({json:{population,scope:{...scope,flight_id:body.flight_id,as_of_day:body.forecast_day,releasable_seats:body.flight_id.endsWith('ZERO')?0:45}}});}
  if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill(failFeedback?{status:503,json:{error:'Saved feedback unavailable'}}:{json:{runs:empty?[]:[report]}});

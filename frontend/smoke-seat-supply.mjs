@@ -24,7 +24,7 @@ await page.route('**/*',async route=>{
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
   if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
-  if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:365}});
+  if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:181,term_months:6,term_label:'6 months'}});
   if(path==='/api/flights')return reply({flights:[flight]});
   if(path===`/api/flights/${flight.flight_id}`)return reply({flight,history});
   if(path==='/api/forecast')return reply({forecast:forecast(route.request().postDataJSON().days_to_departure)});

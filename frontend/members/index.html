@@ -14,14 +14,15 @@
   <header class="header">
     <a class="brand" href="/members" aria-label="UOption Fly Pass home">UOption<span>Fly Pass</span></a>
     <nav aria-label="Member navigation"><a href="#flights" aria-current="page">Book flights</a><a href="#membership">The pass</a><a href="#trips">My trips <span id="trip-count">0</span></a></nav>
-    <a class="account-link" href="#account" id="header-account">Your demo account</a>
+    <a class="account-link" href="#account" id="header-account">Your account</a>
   </header>
-  <main id="main-content">
+  <p id="session-status" class="session-status" role="status">Checking your account…</p>
+  <main id="main-content" hidden>
     <div id="portal-error" class="notice error" role="alert" hidden></div>
     <div id="portal-notice" class="notice" role="status" hidden></div>
     <section class="hero booking-hero" aria-labelledby="hero-title">
       <div><p class="eyebrow">UOption Fly Pass · Member booking</p><h1 id="hero-title">Where will you fly next?</h1><p class="hero-copy">Choose your flight. Review every fee. Make it your next trip.</p></div>
-      <a class="pass-compact" href="#membership"><span>Your personal pass</span><strong id="hero-fee">Loading…</strong><span><b id="hero-term">365</b> days · flights paid separately</span></a>
+      <a class="pass-compact" href="#membership"><span>Your personal pass</span><strong id="hero-fee">Loading…</strong><span><b id="hero-term">6 months</b> · flights paid separately</span></a>
     </section>
 
     <section id="flights" aria-labelledby="search-title">
@@ -55,7 +56,7 @@
           <div id="flight-results" class="flight-results" aria-busy="true"><div class="empty-state"><h3>Finding member flights</h3><p>Checking the latest released seats and base fares.</p></div></div>
         </section>
         <aside id="membership" class="membership-panel" aria-labelledby="pass-title">
-          <div class="membership-heading"><p class="eyebrow">UOption Fly Pass</p><h2 id="pass-title">Your year.<br> Your next trip.</h2><p class="pass-price" id="pass-price">—</p><p id="pass-term">For one traveller, for one year</p></div>
+          <div class="membership-heading"><p class="eyebrow">UOption Fly Pass</p><h2 id="pass-title">Six months.<br> More possibilities.</h2><p class="pass-price" id="pass-price">—</p><p id="pass-term">For one traveller, for six months</p></div>
           <div class="membership-body"><ul class="benefits"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg><span>Access to released member fares</span></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg><span>One fee for the membership term</span></li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg><span>No automatic renewal</span></li></ul><p class="membership-state" id="membership-state">Checking membership…</p><button class="button primary" type="button" id="join-pass" data-purchase disabled>Review membership</button><p class="fine-print">The pass covers one person. Tickets and mandatory fees are paid separately. Seats and dates are subject to availability.</p></div>
         </aside>
       </div>
@@ -72,8 +73,8 @@
     </section>
 
     <section id="account" class="account-section" aria-labelledby="account-title">
-      <div class="account-overview"><div><h2 id="account-title">Your demo account</h2><p class="subtle">Membership and trips are saved under this ID.</p><p id="current-account" class="account-id">—</p></div><button type="button" id="new-account" class="text-button">Create another test account</button></div>
-      <details class="account-tools"><summary>Use a different test account</summary><form id="account-form" action="/members" method="get" aria-labelledby="account-title"><div class="field"><label for="customer-id">Test account ID</label><input id="customer-id" name="customer_id" type="text" required minlength="1" maxlength="60" pattern="[a-zA-Z0-9_-]+" autocorrect="off" autocapitalize="none" spellcheck="false" autocomplete="username" aria-describedby="account-help"><small id="account-help">Letters, numbers, hyphens and underscores only. Do not enter personal information.</small></div><button type="submit" class="button" id="switch-account">Use this account</button></form><p class="fine-print">This browser remembers a test ID. This prototype does not provide secure customer sign-in.</p></details>
+      <div class="account-overview"><div><h2 id="account-title">Your account</h2><p id="current-account" class="account-id">—</p><p id="account-status" class="subtle">Checking membership…</p></div><div class="account-actions"><a href="/members/login" class="text-link">Switch demo account</a><button type="button" id="sign-out" class="button">Sign out</button></div></div>
+      <p class="fine-print">Demo accounts only. Membership and trips are saved separately for each account. No real payment is collected.</p>
     </section>
   </main>
   <footer><div><strong>UOption Fly Pass</strong><span>Team Airplane CPU · Cathay Hackathon 2026</span></div><p>Independent membership concept.<br>All offers and bookings here are simulated.</p><a href="/admin">Admin portal</a></footer>

@@ -24,7 +24,7 @@ await page.route('**/*',async route=>{
   if(fail&&body.flight_id===b)return route.fulfill({status:503,json:{error:'Temporary forecast outage'}});
   return route.fulfill({json:{forecast:{releasable_seats:10,risk_release_ceiling:40,expected_remaining_demand:15,expected_empty_seats:95,expected_empty_rate:.5,protection_p90:70,forecast_curve:[],release_status:{round_already_issued:false,blocked_reason:null}}}});
  }
- if(path==='/api/member-portal/plan'){if(request.method()==='POST')planFee=request.postDataJSON().membership_fee;return route.fulfill({json:{membership:{fee:planFee,term_days:365}}});}
+ if(path==='/api/member-portal/plan'){if(request.method()==='POST')planFee=request.postDataJSON().membership_fee;return route.fulfill({json:{membership:{fee:planFee,term_days:181,term_months:6,term_label:'6 months'}}});}
  if(path==='/api/offers'){if(request.method()==='POST'){submissions.push(request.postDataJSON());return route.fulfill({json:{offer:{id:'fixture-published'}}});}return route.fulfill({json:{offers:[]}});}
  if(path==='/api/adaptive-pricing/runs')return route.fulfill({json:{runs:[]}});
  if(path==='/api/adaptive-pricing/status')return route.fulfill({json:{population,live_configured:false}});

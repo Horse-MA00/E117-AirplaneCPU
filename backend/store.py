@@ -1,12 +1,33 @@
 """Transactional three-round demo inventory; no real payments or tickets."""
 from .errors import NotFound
+import calendar
 import math
 import sqlite3
 import time
 import uuid
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from .release_policy import RELEASE_DAYS, VERSION as RELEASE_VERSION, release_budget
+
+
+MEMBERSHIP_MONTHS = 6
+MEMBERSHIP_TIMEZONE = ZoneInfo('Asia/Hong_Kong')
+
+
+def membership_expiry(created):
+    """Six Hong Kong calendar months, preserving time and clamping month-end.
+
+    This is a purchase-time calculation; previously stored expiries are never
+    recalculated when a plan is read or an existing member signs in again.
+    """
+    start = datetime.fromtimestamp(created, MEMBERSHIP_TIMEZONE)
+    month_index = start.year * 12 + start.month - 1 + MEMBERSHIP_MONTHS
+    year, month = divmod(month_index, 12)
+    month += 1
+    day = min(start.day, calendar.monthrange(year, month)[1])
+    return start.replace(year=year, month=month, day=day).timestamp()
 
 
 class Store:
@@ -171,11 +192,16 @@ class Store:
         from .fare_policy import integer_price
         if fee is not None:
             fee = integer_price(fee, 'Membership fee', 0, 5000)
+        now = time.time()
         with self.connect() as c:
             if fee is not None:
                 c.execute('UPDATE membership_plan SET fee=? WHERE id=1', (fee,))
             return {'name': 'UOption Fly Pass', 'fee': c.execute('SELECT fee FROM membership_plan WHERE id=1').fetchone()['fee'],
-                    'term_days': 365, 'personal_nontransferable': True}
+                    'term_months': MEMBERSHIP_MONTHS, 'term_label': '6 months',
+                    # Compatibility estimate for older clients; the purchased
+                    # expiry is determined by calendar months, not this count.
+                    'term_days': round((membership_expiry(now) - now) / 86400),
+                    'personal_nontransferable': True}
 
     def join_plan(self, customer_id, expected_fee=None):
         """Member-facing signup takes the price from the stored plan atomically."""
@@ -190,7 +216,7 @@ class Store:
             fee = c.execute('SELECT fee FROM membership_plan WHERE id=1').fetchone()['fee']
             if expected_fee is not None and expected_fee != fee:
                 raise ValueError('The membership price changed. Refresh and review the current fee before joining.')
-            c.execute('INSERT INTO members VALUES(?,?,?,?)', (customer_id, fee, now, now + 365 * 86400))
+            c.execute('INSERT INTO members VALUES(?,?,?,?)', (customer_id, fee, now, membership_expiry(now)))
             return dict(c.execute('SELECT * FROM members WHERE customer_id=?', (customer_id,)).fetchone())
 
     def account(self, customer_id):

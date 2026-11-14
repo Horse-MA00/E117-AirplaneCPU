@@ -23,8 +23,7 @@ $('available-dates').addEventListener('click',()=>{
   setDates(dates[0],dates.at(-1));$('available-only').checked=true;$('flight-search').requestSubmit();
 });
 
-const STORAGE_KEY = 'uoption-member-demo-account';
-const state = { config: null, flights: [], account: null, customerId: '', filters: {}, checkout: null, busy: false, loadVersion: 0, refreshRequired: false };
+const state = { config: null, flights: [], account: null, user: null, customerId: '', filters: {}, checkout: null, busy: false, loadVersion: 0, refreshRequired: false };
 const money = (value) => `HKD ${new Intl.NumberFormat('en-HK', { maximumFractionDigits: 2 }).format(Number(value || 0))}`;
 const airport = (code) => airportNames[code] ? `${airportNames[code]} (${code})` : code;
 const node = (tag, text, className) => { const el = document.createElement(tag); if (text != null) el.textContent = text; if (className) el.className = className; return el; };
@@ -32,26 +31,31 @@ function timestampLabel(value) { return new Intl.DateTimeFormat('en-GB', { day: 
 function activeMember() { return Boolean(state.account?.membership?.active); }
 function membershipExpired() { return Boolean(state.account?.membership && !state.account.membership.active); }
 function alreadyBooked(flightId) { return (state.account?.bookings || []).some((booking) => booking.flight_id === flightId); }
-function newCustomerId() { return `traveller-${crypto.randomUUID().slice(0, 12)}`; }
-function remember(id) { try { localStorage.setItem(STORAGE_KEY, id); } catch { /* The account still works for this tab. */ } }
-function initialCustomerId() {
-  try { const id = localStorage.getItem(STORAGE_KEY); if (/^[A-Za-z0-9_-]{1,60}$/.test(id || '')) return id; } catch { /* Use a temporary local identity. */ }
-  const id = newCustomerId(); remember(id); return id;
+function membershipTerm() { return state.config?.membership?.term_label || `${state.config?.membership?.term_months || 6} months`; }
+function signInRequired() {
+  ++state.loadVersion;
+  state.account = null; state.user = null; state.customerId = ''; state.checkout = null;
+  $('checkout').close(); $('main-content').hidden = true;
+  $('session-status').textContent = 'Sign in to continue.'; $('session-status').hidden = false;
+  location.replace('/members/login');
 }
 function notice(text, error = false) { const target = $(error ? 'portal-error' : 'portal-notice'); target.textContent = text; target.hidden = !text; }
 function clearNotices() { notice(''); notice('', true); }
 async function api(path, body) {
   let response;
-  try { response = await fetch(path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+  try { response = await fetch(path, body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
   catch { throw new Error('The connection could not be confirmed. Refresh your account and trips before retrying a purchase.'); }
   let data;
   try { data = await response.json(); } catch { throw new Error('The server returned an unreadable response. Refresh your trips before retrying a purchase.'); }
-  if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) signInRequired();
+    throw new Error(data.error || `Request failed (${response.status}).`);
+  }
   return data;
 }
 function setBusy(value) {
   state.busy = value;
-  for (const id of ['switch-account', 'new-account', 'refresh-account']) $(id).disabled = value;
+  for (const id of ['sign-out', 'refresh-account']) $(id).disabled = value;
   renderMembership();
   for (const button of document.querySelectorAll('.choose-flight')) button.disabled = value || button.dataset.available !== 'true';
   $('checkout-submit').disabled = value;
@@ -204,16 +208,17 @@ function renderMembership() {
   if (!state.config) return;
   const membership = state.config.membership;
   $('hero-fee').textContent = money(membership.fee);
-  $('hero-term').textContent = membership.term_days;
+  $('hero-term').textContent = membershipTerm();
   $('pass-price').textContent = money(membership.fee);
-  $('pass-term').textContent = `${membership.term_days} days · One personal membership`;
-  $('header-account').textContent = activeMember() ? 'Your membership is active' : 'Your demo account';
+  $('pass-term').textContent = `${membershipTerm()} · One personal membership`;
+  $('header-account').textContent = activeMember() ? 'Member account' : 'Guest account';
   $('join-pass').disabled = state.busy || !state.account || activeMember() || membershipExpired();
   $('join-pass').textContent = activeMember() ? 'Membership active' : membershipExpired() ? 'Membership expired' : 'Review membership';
   $('membership-state').textContent = activeMember() ? `Active until ${timestampLabel(state.account.membership.expires)}. You will not be charged another membership fee when booking.` : membershipExpired() ? 'This membership has expired. Renewal is not available in this prototype.' : 'Find a suitable flight first. Join when you are ready to book.';
 }
 function renderAccount() {
-  $('current-account').textContent = state.customerId; $('customer-id').value = state.customerId;
+  $('current-account').textContent = state.user?.email || state.customerId;
+  $('account-status').textContent = activeMember() ? `Member · Active until ${timestampLabel(state.account.membership.expires)}` : membershipExpired() ? 'Membership expired' : 'Guest · No membership purchased';
   renderMembership(); const bookings = state.account?.bookings || [];
   $('trip-count').textContent = bookings.length;
   if (!bookings.length) { $('trip-results').replaceChildren(emptyState('Your next trip starts here', 'Choose a member flight to start planning. Your confirmed bookings will appear here.', { href: '#flights', text: 'Find a member flight' })); return; }
@@ -293,7 +298,7 @@ function renderCheckout() {
     content.append(node('h3', `${flight.origin} → ${flight.destination}`), node('p', `${dateLabel(flight.departure_date)} · 1 member traveller · One way`, 'checkout-date'));
     const prices = node('dl', undefined, 'price-lines'); addPriceLine(prices, 'Member base fare', flight.base_fare); { const was = wasPrice(flight); if (was) prices.lastElementChild.prepend(was, ' '); } for(const item of feeLines(flight)) addPriceLine(prices,item.label,item.amount); addPriceLine(prices,'Ticket total',flight.total,true); addPriceLine(prices, 'New membership fee', fee); addPriceLine(prices, activeMember() ? 'Ticket total to confirm' : 'Membership + ticket total', Number(flight.total) + fee, true); content.append(prices,feeDetails(flight));
     if (!activeMember()) {
-      const steps = node('ol', undefined, 'checkout-steps'); steps.append(node('li', `First, join the ${state.config.membership.term_days}-day pass for ${money(fee)}.`), node('li', `Then confirm this ticket separately for ${money(flight.total)}. Seats are checked again at booking and are not reserved by joining.`)); content.append(steps);
+      const steps = node('ol', undefined, 'checkout-steps'); steps.append(node('li', `First, join the ${state.config.membership.term_months || 6}-month pass for ${money(fee)}.`), node('li', `Then confirm this ticket separately for ${money(flight.total)}. Seats are checked again at booking and are not reserved by joining.`)); content.append(steps);
     } else content.append(node('p', 'Your membership is active. No new membership fee is due.', 'fine-print'));
     content.append(node('p', 'Personal member fare. Baggage is not sold in this prototype. This screen does not promise a free checked bag.', 'fine-print'));
     if (activeMember()) $('checkout-submit').textContent = `Confirm booking · ${money(flight.total)}`;
@@ -302,7 +307,7 @@ function renderCheckout() {
       $('checkout-submit').replaceChildren(node('span', `Membership + ticket total · ${money(Number(flight.total) + fee)}`, 'submit-main'), node('small', `Step 1 of 2: join the pass for ${money(fee)}, then confirm the ticket for ${money(flight.total)}`, 'submit-note'));
     }
   } else {
-    content.append(node('h3', `${state.config.membership.term_days} days of member access`), node('p', 'A personal membership for published member fares. Each ticket is paid separately, including its mandatory fees.', 'checkout-date'));
+    content.append(node('h3', `${membershipTerm()} of member access`), node('p', 'A personal membership for published member fares. Each ticket is paid separately, including its mandatory fees.', 'checkout-date'));
     const prices = node('dl', undefined, 'price-lines'); addPriceLine(prices, 'Membership fee', fee, true); content.append(prices, node('p', 'Seats and suitable dates are not guaranteed. No automatic renewal. Joining does not reserve a flight.', 'fine-print'));
     $('checkout-submit').textContent = `Join pass · ${money(fee)}`;
   }
@@ -364,11 +369,30 @@ async function submitCheckout(event) {
     if (membershipExpired()) $('checkout-submit').disabled = true;
   }
 }
-async function switchAccount(id) {
-  if (state.busy) return; clearNotices(); state.customerId = id; state.account = null; remember(id); $('checkout').close(); state.checkout = null;
-  $('current-account').textContent = id; $('customer-id').value = id;
-  renderMembership(); $('trip-count').textContent = '0'; $('trip-results').replaceChildren(emptyState('Loading this account', 'Checking membership and saved trips for the selected test ID.'));
-  try { await loadData(); notice('Demo account changed. Membership and trips below belong to this test ID.'); } catch { /* loadData announces its error. */ }
+async function signOut() {
+  if (state.busy) return;
+  setBusy(true); clearNotices();
+  try { await api('/api/member-portal/logout', {}); signInRequired(); }
+  catch (error) { notice(error.message, true); setBusy(false); }
+}
+async function initializeAccount() {
+  try {
+    const session = await api('/api/member-portal/session');
+    if (!session.authenticated || !session.user?.customer_id) { signInRequired(); return; }
+    state.user = session.user; state.customerId = session.user.customer_id; state.account = session.account;
+    await loadData();
+    $('session-status').hidden = true; $('main-content').hidden = false;
+  } catch (error) {
+    if (state.user) {
+      // Keep refresh and sign-out available if initial flight loading fails.
+      $('session-status').hidden = true; $('main-content').hidden = false;
+      return; // loadData already announces its own error.
+    }
+    $('session-status').replaceChildren(document.createTextNode('We could not check your account. '));
+    const retry = node('button', 'Try again', 'text-button'); retry.type = 'button';
+    retry.addEventListener('click', () => { $('session-status').textContent = 'Checking your account…'; initializeAccount(); });
+    $('session-status').append(retry);
+  }
 }
 $('flight-search').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -417,8 +441,15 @@ $('checkout-refresh').addEventListener('click', async () => {
 });
 $('checkout').addEventListener('close', () => { $('checkout').returnValue = ''; });
 $('view-trips').addEventListener('click', () => { $('checkout').close(); location.hash = 'trips'; });
-$('account-form').addEventListener('submit', (event) => { event.preventDefault(); if ($('account-form').reportValidity()) switchAccount($('customer-id').value.trim()); });
-$('new-account').addEventListener('click', () => switchAccount(newCustomerId()));
+$('sign-out').addEventListener('click', signOut);
 function renderNavigation() { const current = ['membership', 'trips'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'flights'; for (const link of document.querySelectorAll('.header nav a')) { if (link.hash === `#${current}`) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current'); } }
 window.addEventListener('hashchange', renderNavigation);
-state.customerId = initialCustomerId(); renderNavigation(); loadData().catch(() => {});
+// A page restored by Back must verify the current cookie rather than display
+// another demo account's previously cached trips.
+window.addEventListener('pageshow', (event) => {
+  if (!event.persisted) return;
+  $('main-content').hidden = true; $('session-status').hidden = false;
+  $('session-status').textContent = 'Checking your account…';
+  location.reload();
+});
+renderNavigation(); initializeAccount();

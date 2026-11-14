@@ -37,7 +37,9 @@ python -m backend.server
 
 - [Admin](http://127.0.0.1:8000/admin): Forecast seats, Optimize prices, Experiments and Manage offers.
 - [Optimize prices](http://127.0.0.1:8000/adaptive-pricing): Thompson setup, saved rounds, revenue curve and independent confirmation.
-- [Member site](http://127.0.0.1:8000/members): flexible destination/date search, membership and simulated booking.
+- [Member sign-in](http://127.0.0.1:8000/members/login): two demo accounts, flexible destination/date search and simulated booking.
+
+The published plan defaults to **HK$399 for six calendar months**. Use `member@uoption.test` (membership already purchased) or `guest@uoption.test` (no membership initially), both with password `FlyPass399!`. These are public demonstration credentials. Account bookings and membership persist separately; buying a pass with the guest account remains saved after sign-out. Existing stored memberships retain their recorded expiry.
 
 The backend serves static HTML/JS and persists inventory, memberships, bookings and experiments in SQLite. The default offline workflow needs no API key. Optional live LLM/OAG credentials belong in the ignored local environment; do not commit keys, private caches or raw OAG responses. A live experiment requires an explicit finite call budget.
 

@@ -47,7 +47,8 @@ await context.route('**/api/**', async route => {
   const path = new URL(request.url()).pathname;
   const reply = data => route.fulfill({ json: data });
   if (request.method() === 'GET') {
-    if (path === '/api/member-portal/config') return reply({ membership: { name: 'UOption Fly Pass', fee: 399, term_days: 365, personal_nontransferable: true }, currency: 'HKD', simulated: true });
+    if (path === '/api/member-portal/session') return reply({ authenticated: true, user: { customer_id: 'search-fixture', email: 'search@uoption.test', name: 'Search fixture' }, account: { customer_id: 'search-fixture', membership: null, bookings: [], simulated: true }, simulated: true });
+    if (path === '/api/member-portal/config') return reply({ membership: { name: 'UOption Fly Pass', fee: 399, term_days: 181, term_months: 6, term_label: '6 months', personal_nontransferable: true }, currency: 'HKD', simulated: true });
     if (path === '/api/member-portal/flights') return reply({ flights: structuredClone(releasedFlights), simulated: true });
     if (path.startsWith('/api/member-portal/accounts/')) return reply({ customer_id: path.split('/').at(-1), membership: null, bookings: [], simulated: true });
   }

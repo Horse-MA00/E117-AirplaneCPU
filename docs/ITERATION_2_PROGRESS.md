@@ -44,3 +44,11 @@ Created feature/member-demo-journey without merging main. Added bookable Japan r
 
 按用户手动测试意见：起点与目的地各为一个「机场或整个国家」选单（起点也可选国家），删除 Flexible dates & destination region 折叠区中的独立国家选单与精确日期，出发日期只用范围（单日即起讫同日）。未入会者结账按钮显示「Membership + ticket total」，并注明第一步只收会费、之后另行确认机票。`test:members`、`test:member-journey`、`test:flexible-search`、`test:route-catalog` 已同步更新并通过。
 会员票卡片与结账明细在会员基本票价旁以删除线显示同航班普通基本票价（读屏读作「Normal base fare」），并标注节省金额与折扣百分比；普通票价取 `normal_base_fare`，缺失时以 `normal_total − mandatory_fees` 推算，不高于会员价时不显示。
+
+## 2026-11-15 · 半年会员与两类示范登入
+
+会员页 booking hero 四角统一16px圆角，桌面及390px手机均保留。默认计划改为HK$399／六个历月；前台、Admin和结账同步显示6 months，后端依香港时间计算新会员到期日，处理月底和闰年；已有会员付款与到期日保持原记录。
+
+新增 `/members/login`，提供已购会员和初始未购会员两个公开示范账号，详情见[操作文档](ADMIN_AND_MEMBER_UX.md#client-portal)。快捷按钮填入账号后仍须明确登录；24小时HttpOnly／SameSite=Lax cookie绑定身份，SQLite只保存session token哈希。刷新、切换、登出及过期均由后端核对，跨账号操作拒绝。Guest入会后不因再次登录而重置；删除会员UI的任意ID输入与localStorage身份选择。仍为本机原型，开发ID接口和Admin不是生产权限系统。
+
+验证：完整 `scripts/check_container.py` 通过198项后端、20项根目录测试，发布与冻结证据检查通过。九组受影响的浏览器fixture检查及新增 `npm run test:member-login` 均通过；后者使用临时SQLite和本机服务验证真实cookie、无效密码、跨账号隔离、登出、会籍保留和手机布局。桌面／手机截图已人工查看。未调用LLM/OAG，未消耗现有演示座位，未改预测／定价算法或冻结数据。原有未提交文档修改保留。

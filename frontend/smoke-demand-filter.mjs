@@ -17,7 +17,7 @@ await page.route('**/*',async route=>{
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
   if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
-  if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:365}});
+  if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:181,term_months:6,term_label:'6 months'}});
   if(path==='/api/flights')return reply({flights:catalogue()});
   if(path.startsWith('/api/flights/')){const f=catalogue().find(f=>f.flight_id===decodeURIComponent(path.split('/').at(-1)));return reply({flight:f,history:history(f)});}
   if(path==='/api/forecast'){forecastCalls++;return reply({forecast:{expected_remaining_demand:20,expected_empty_seats:90,expected_empty_rate:.5,protection_p90:70,releasable_seats:40,risk_release_ceiling:40,beta:.012,rate_now:.7,forecast_curve:[],release_status:{safe_capacity:40,member_sold:0,total_active_unsold:0,currently_bookable:0,new_release_limit:40,round_history:[]}}});}

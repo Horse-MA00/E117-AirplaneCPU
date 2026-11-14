@@ -1,6 +1,6 @@
 # NHPP 與 Thompson 平台技術實作
 
-> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`public-member-response-v1`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`three-round-release-v1`、`member-marketing-fare-v1`
+> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`public-member-response-v1`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`three-round-release-v1`、`member-marketing-fare-v1`、`backend/demo_auth.py`、`backend/store.py`
 
 更新：2026-11-15。目前只保留 NHPP 座位預測、Thompson Sampling 會員基本票價、已保存會員回饋、人工發布及 Client 模擬購票。舊 Math／Math+LLM、聯合會費、共用市場、panel、journey、連續定價程式與資料已移除；不再提供相容入口。現行規格以 [Thompson 流程](FLIGHT_SCOPED_OPTIMIZATION.md) 及 [三輪放票](THREE_ROUND_RELEASE.md) 為準。
 
@@ -26,7 +26,7 @@ flowchart TD
     C --> Q
 ```
 
-Python 標準庫 HTTP 服務直接提供前端靜態資源，無 Node build。數值模型使用 NumPy；SQLite 保存實驗與示例交易。Admin 四入口為 Forecast、Optimize、Experiments、Manage offers；會員端為 `/members`。界面配色為紫 `#6F2C91`、青 `#24BCDC`、白。
+Python 標準庫 HTTP 服務直接提供前端靜態資源，無 Node build。數值模型使用 NumPy；SQLite 保存實驗與示例交易。Admin 四入口為 Forecast、Optimize、Experiments、Manage offers；會員端由 `/members/login` 登入後進入 `/members`。界面配色為紫 `#6F2C91`、青 `#24BCDC`、白。
 
 ## 資料與預測
 
@@ -54,6 +54,12 @@ P₀為正常基本票價80%上限。最終會員價向下取尾數9，低於HK$
 - `.env.local`、`data/private/`及OAG原始快取不公開；目前實驗的公開匯出使用已遮蔽report／audit／manifest。
 - 會員網站庫存與定價實驗的重置世界分開。結果不自動發布；Manage offers須人工輸入並重新檢查。
 
+## 半年會員與示範登入
+
+會員計劃預設HK$399／六個曆月：`backend.store.membership_expiry`依香港時間加六個月（月底夾限），新入會保存確切到期時刻；既有會員保留原紀錄。`plan()`提供`term_months=6`和`term_label="6 months"`，`term_days`僅為查詢當日的相容估算。
+
+`backend/demo_auth.py`提供兩個公開示範帳戶（詳見[登入操作](ADMIN_AND_MEMBER_UX.md#client-portal)）。伺服器產生隨機session token，只存SHA256雜湊，Cookie為HttpOnly、SameSite=Lax、24小時有效；登出撤銷session。會員帳戶僅首次登入初始化會籍；Guest入會後狀態持續保存。HTTP層對保留帳戶核對session，拒絕跨帳戶讀取、入會及購票。現有任意ID開發介面仍只供本機測試。
+
 ## HTTP介面
 
 | 方法及路徑 | 用途 |
@@ -70,8 +76,9 @@ P₀為正常基本票價80%上限。最終會員價向下取尾數9，低於HK$
 | GET／POST `/api/offers` | 查閱／人工發布三輪配額 |
 | GET `/api/member-portal/config`、`/plan`、`/flights`、`/accounts/{id}` | 會員plan、優惠及行程 |
 | POST `/api/member-portal/plan`、`/join`、`/book` | 更新會員plan、模擬入會及購票 |
+| POST `/api/member-portal/login`、`/logout`；GET `/api/member-portal/session` | 公開示範帳戶登入、登出及目前帳戶狀態 |
 
-狀態修改要求JSON、同源Origin及合法數值。示例身份是本機ID，並非生產身份驗證；沒有真實付款或航空出票。舊定價／panel／共用市場API及舊實驗ID返回404，不會映射為新的成功結果；舊頁面hash顯示不可用。舊optimization_run_id／mode優惠綁定欄位會被拒絕。
+狀態修改要求JSON、同源Origin及合法數值。會員頁使用公開示範帳戶及Cookie session，開發任意ID介面仍供本機測試，並非生產身份驗證；沒有真實付款或航空出票。舊定價／panel／共用市場API及舊實驗ID返回404，不會映射為新的成功結果；舊頁面hash顯示不可用。舊optimization_run_id／mode優惠綁定欄位會被拒絕。
 
 ## 與最初構想的差異
 
