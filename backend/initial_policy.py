@@ -3,7 +3,7 @@ import hashlib
 import json
 from datetime import datetime
 
-from backend import data
+from backend import data, data_horizon
 from backend.fare_policy import MEMBER_FARE_CAP_RATIO, member_fare_cap, quoted_base_fare
 
 
@@ -13,6 +13,7 @@ def flight_scope(flight_id, day=28):
     flight = next((f for f in data.flights() if f['flight_id'] == flight_id), None)
     if flight is None:
         raise ValueError('Unknown flight')
+    data_horizon.require_observed(flight_id, day)
     history = [dict(row) for row in data.history(flight_id) if row['days_to_departure'] >= day]
     row = next((r for r in history if r['days_to_departure'] == day), None)
     if row is None:

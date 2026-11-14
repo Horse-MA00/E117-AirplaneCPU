@@ -68,7 +68,7 @@ HTTP检查需先 `python -m backend.server`；`scripts/smoke_api.py`是无付费
 
 ## 模块与维护
 
-- `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal、demo_auth及唯一adaptive价格引擎；published_experiments只读加载公开证据；测试在backend/tests。
+- `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal、demo_auth及唯一adaptive价格引擎；published_experiments只读加载公开证据；data_horizon按航班最新快照拒绝尚未到达的预测／放票／定价轮次（完整历史不受影响，Admin与Optimize同步置灰并提示）；测试在backend/tests。
 - `llm_agent/`：八类客群、最新提示、并行决策、provider transport及脱敏；experiments为现行公开实验。
 - `frontend/`：Admin／Thompson／会员端原生HTML/JS，无需构建；Experiments只读回馈，*.mjs为浏览器检查。
 - `simulation/`：合成航班数据生成、NHPP校准与验证；`scripts/`为当前运行、导出和发布工具；`apply_member_fee_reference.py`为演示票备份并写入有来源的费用明细。

@@ -114,8 +114,21 @@ function updateSetup() {
   $('new-experiment').setAttribute('aria-expanded', String(!folded));
   $('new-experiment').textContent = folded ? 'New experiment' : 'Hide settings';
 }
+// Near-term feeds stop at today: observed_through_day is the flight's days to departure today.
+function asOfDay() { return Number(flights.find(f => f.flight_id === $('flight').value)?.observed_through_day) || 0; }
+function notReachedMessage(day, asOf) {
+  const gap = asOf - day;
+  return `D${day} has not been reached yet for this flight. Booking data runs to D${asOf} (today); D${day} is ${gap} day${gap === 1 ? '' : 's'} away.`;
+}
 function syncRound() {
-  for (const b of document.querySelectorAll('[data-round]')) b.setAttribute('aria-pressed', String(b.dataset.round === $('release-day').value));
+  const asOf = asOfDay();
+  for (const b of document.querySelectorAll('[data-round]')) {
+    b.setAttribute('aria-pressed', String(b.dataset.round === $('release-day').value));
+    const future = Number(b.dataset.round) < asOf;
+    b.classList.toggle('not-reached', future);
+    if (future) { b.setAttribute('aria-disabled', 'true'); b.title = `Not reached yet · booking data runs to D${asOf} (today)`; }
+    else { b.removeAttribute('aria-disabled'); b.removeAttribute('title'); }
+  }
 }
 // The sidebar carries the current flight and round back to Admin (read there from ?flight_id=&forecast_day=).
 function updateNavLinks() {
@@ -138,6 +151,13 @@ function latestSavedFor(flightId, day) {
 async function loadScope() {
   const sequence = ++scopeSequence;
   renderScope(null); error();
+  const asOf = asOfDay(), wanted = Number($('release-day').value);
+  if ($('flight').value && wanted < asOf) {
+    const reached = [28, 14, 7].filter(d => d >= asOf);
+    if (!reached.length) { syncRound(); error(`${notReachedMessage(wanted, asOf)} No release round has been reached yet for this flight.`); return; }
+    $('release-day').value = String(Math.min(...reached)); syncRound();
+    error(`${notReachedMessage(wanted, asOf)} Showing D${$('release-day').value}.`);
+  }
   const flightId = $('flight').value;
   const url = new URL(location.href);
   url.searchParams.delete('day');
@@ -367,8 +387,8 @@ async function loadSaved() {
 }
 for(const id of ['opt-from','opt-to','opt-demand'])$(id).addEventListener('change',()=>{const selected=$('flight').value;clearRun();fillFlights(selected);loadScope();});
 attachPlaceSearch($('opt-from'),{label:'Search departure places'});attachPlaceSearch($('opt-to'),{label:'Search destination places'});
-for(const b of document.querySelectorAll('[data-round]'))b.addEventListener('click',()=>{if($('release-day').value===b.dataset.round)return;$('release-day').value=b.dataset.round;$('release-day').dispatchEvent(new Event('change'));});
-$('flight').addEventListener('change',()=>{clearRun();loadScope();});
+for(const b of document.querySelectorAll('[data-round]'))b.addEventListener('click',()=>{const asOf=asOfDay();if(Number(b.dataset.round)<asOf){error(notReachedMessage(Number(b.dataset.round),asOf));return;}if($('release-day').value===b.dataset.round)return;$('release-day').value=b.dataset.round;$('release-day').dispatchEvent(new Event('change'));});
+$('flight').addEventListener('change',()=>{clearRun();syncRound();loadScope();});
 $('release-day').addEventListener('change',()=>{syncRound();clearRun();loadScope();});
 for(const id of ['mode','rounds','customers','validation-repeats'])$(id).addEventListener('input',updateControls);
 $('max-calls').addEventListener('input',()=>{$('max-calls').removeAttribute('aria-invalid');error();});

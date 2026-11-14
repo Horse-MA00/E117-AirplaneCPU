@@ -121,6 +121,7 @@ async function loadFlight() {
     if (request !== state.request) return;
     state.flight = data.flight || state.flights.find((flight) => flight.flight_id === id);
     state.history = data.history || data.snapshots || []; state.loadedFlightId = id;
+    state.asOf = Number(state.flight?.observed_through_day) || 0; applyDataHorizon();
     selectOffer(id, state.day, false);
     const flight = state.flight;
     text('flight-date', `${routeKey(flight)} · ${longDate(flightDay(flight))}`);
@@ -177,10 +178,11 @@ function renderForecast() {
   const lastQuote=history.findLast(r=>r.normal_base_fare!=null);
   text('price-caption', `Base fares through D${state.day}.${lastQuote?` Last quote D${lastQuote.days_to_departure}: fees ${money(lastQuote.mandatory_fees)} · total payable ${money(lastQuote.normal_total_fare)}.`:' No observed quote is available.'} Future quotes are not shown.`);
   renderSeatComposition(seats);
-  const nextValid=RELEASE_DAYS.includes(seats.nextRound)&&seats.nextRound<state.day;
+  const nextValid=RELEASE_DAYS.includes(seats.nextRound)&&seats.nextRound<state.day&&reachedDay(seats.nextRound);
+  const nextNotReached=!RELEASE_DAYS.includes(state.day)&&RELEASE_DAYS.includes(seats.nextRound)&&!reachedDay(seats.nextRound);
   const blockedRelease=seats.overage>0||seats.historical||seats.salesClosed||seats.releaseState==='round_already_issued';
   $('go-pricing').disabled=blockedRelease||Boolean(noRelease)||(!RELEASE_DAYS.includes(state.day)&&!nextValid);
-  $('go-pricing').textContent=noRelease?'No member seats to price':seats.overage>0?'Resolve inventory conflict first':seats.historical?'Historical view · release unavailable':seats.salesClosed?'Sales are closed':seats.releaseState==='round_already_issued'?'This release round is already published':RELEASE_DAYS.includes(state.day)?'Optimize this release round →':nextValid?`Optimize next release D${seats.nextRound} →`:'No release rounds remain';
+  $('go-pricing').textContent=noRelease?'No member seats to price':seats.overage>0?'Resolve inventory conflict first':seats.historical?'Historical view · release unavailable':seats.salesClosed?'Sales are closed':seats.releaseState==='round_already_issued'?'This release round is already published':RELEASE_DAYS.includes(state.day)?'Optimize this release round →':nextValid?`Optimize next release D${seats.nextRound} →`:nextNotReached?`Next release D${seats.nextRound} not reached yet`:'No release rounds remain';
 
   if (state.offers.length) renderOffers();
   renderResults();
@@ -214,16 +216,47 @@ function canPublish() {
   const f = state.offerForecast;
   return Boolean(f && state.offerFlightId && state.offerFlightId === state.loadedFlightId && state.offerFlightId === $('flight-select').value && state.offerDay === state.day && RELEASE_DAYS.includes(state.offerDay) && f.releasable_seats > 0 && !f.release_status?.round_already_issued && !f.release_status?.blocked_reason);
 }
-function chooseDay(day) {
-  state.day = day; $('day-slider').value = 28 - day; $('day-slider').setAttribute('aria-valuetext', day ? `${day} days before departure` : 'Sales cutoff'); text('day-number', day); text('day-description', day ? 'Days before departure' : 'Sales cutoff · no new offers');
+// Near-term feeds stop at today: observed_through_day is the flight's days to departure
+// today (0 for full simulated histories). Later rounds have no booking data yet.
+function reachedDay(day) { return day >= (state.asOf || 0); }
+function notReachedMessage(day) {
+  const gap = state.asOf - day;
+  return `D${day} has not been reached yet for this flight. Booking data runs to D${state.asOf} (today); D${day} is ${gap} day${gap === 1 ? '' : 's'} away.`;
+}
+function setDayView(day) {
+  state.day = day; $('day-slider').value = 28 - day; $('day-slider').setAttribute('aria-valuetext', day ? `${day} days before departure` : 'Sales cutoff'); text('day-number', day);
+  text('day-description', !day ? 'Sales cutoff · no new offers' : state.asOf && day === state.asOf ? 'Today · days before departure' : 'Days before departure');
   document.querySelectorAll('[data-day]').forEach((button) => button.setAttribute('aria-pressed', String(Number(button.dataset.day) === day)));
+}
+function applyDataHorizon() {
+  const live = state.asOf > 0;
+  // Data that stops at today has no later days to scrub through.
+  document.querySelector('.day-controller').hidden = live;
+  document.querySelectorAll('[data-day]').forEach((button) => {
+    const future = !reachedDay(Number(button.dataset.day));
+    button.classList.toggle('not-reached', future);
+    if (future) { button.setAttribute('aria-disabled', 'true'); button.title = `Not reached yet · booking data runs to D${state.asOf} (today)`; }
+    else { button.removeAttribute('aria-disabled'); button.removeAttribute('title'); }
+  });
+  if (reachedDay(state.day)) { setDayView(state.day); return; }
+  const wanted = state.day, rounds = RELEASE_DAYS.filter(reachedDay);
+  const day = rounds.length ? Math.min(...rounds) : state.asOf;
+  setDayView(day);
+  notify(`${notReachedMessage(wanted)} Showing D${day}${rounds.length ? '' : ' (today); no release round has been reached yet'}.`);
+}
+function chooseDay(day) {
+  setDayView(day);
   updateNavLinks();
   if (state.loadedFlightId) selectOffer(state.loadedFlightId, day, false);
   loadForecast();
 }
 let dayTimer;
 $('day-slider').addEventListener('input', () => { clearTimeout(dayTimer); const day = 28 - value('day-slider'); text('day-number', day); dayTimer = setTimeout(() => chooseDay(day), 150); });
-document.querySelectorAll('[data-day]').forEach((button) => button.addEventListener('click', () => { clearTimeout(dayTimer); chooseDay(Number(button.dataset.day)); }));
+document.querySelectorAll('[data-day]').forEach((button) => button.addEventListener('click', () => {
+  clearTimeout(dayTimer); const day = Number(button.dataset.day);
+  if (state.loadedFlightId && !reachedDay(day)) { notify(notReachedMessage(day)); return; }
+  $('notice').hidden = true; chooseDay(day);
+}));
 $('flight-select').addEventListener('change', loadFlight);
 $('forecast-demand').addEventListener('change',()=>{if(fillForecastFlights())loadFlight();});
 for (const id of ['context-from','context-to']) $(id).addEventListener('change',()=>{if(fillForecastFlights())loadFlight();});

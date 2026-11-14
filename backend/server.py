@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from urllib.parse import urlparse,unquote,parse_qs,urlsplit
 from pathlib import Path
 from functools import lru_cache
-from . import data,member_portal,adaptive_pricing,adaptive_store,demo_auth
+from . import data,data_horizon,member_portal,adaptive_pricing,adaptive_store,demo_auth
 from .store import Store
 from .evidence import EvidenceUnavailable,read_evaluation
 from .errors import NotFound
@@ -85,7 +85,7 @@ def get(path,query=None):
  if path=='/api/flights':return {'flights':data.flights()}
  if path.startswith('/api/flights/'):
   id=ident(path.split('/')[-1]);rows=data.history(id);f=next(f for f in data.flights() if f['flight_id']==id)
-  return {'flight':f,'history':rows}
+  return {'flight':{**f,'observed_through_day':data_horizon.observed_through(id)},'history':rows}
  if path=='/api/offers':return {'offers':store().offers()}
  raise NotFound('Not found')
 
@@ -108,6 +108,7 @@ def post(path,body):
   return member_portal.book(store(),forecast_for,ident(body.get('customer_id')),ident(body.get('offer_id')),expected)
  if path in ('/api/forecast','/api/offers'):
   flight=ident(body.get('flight_id'));day=number(body.get('days_to_departure',28),'day',0,28,True)
+  data_horizon.require_observed(flight,day)
   f=forecast_for(flight,day)
   if path=='/api/forecast':
    current=dict(f); release=store().release_status(flight,day,f['releasable_seats'])

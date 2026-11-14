@@ -98,6 +98,7 @@ main{flex:1;min-width:0;width:100%;max-width:1680px;padding:0 var(--gutter) 64px
 .day-shortcuts button:hover:not(:disabled),.round-buttons button:hover:not(:disabled){background:var(--ground)}
 .day-shortcuts button[aria-pressed=true],.round-buttons button[aria-pressed=true]{background:var(--purple);color:#fff}
 .day-shortcuts button:disabled,.round-buttons button:disabled{color:#C4BCCA;font-weight:500;opacity:1}
+.day-shortcuts button.not-reached,.round-buttons button.not-reached{color:#C4BCCA;font-weight:500;cursor:not-allowed}
 .context-bar .spacer,.context-bar>.data-tag{display:none}
 .data-tag{flex:none;font-size:14px;font-weight:600;border-radius:999px;padding:6px 12px;background:#F1EEF4;color:var(--ink-2)}
 
