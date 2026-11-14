@@ -22,7 +22,7 @@ from .fare_policy import member_fare_cap, final_member_fare, FINAL_MEMBER_FARE_V
 from .initial_policy import flight_scope
 from .member_response import PurchasePosterior, recommend, learner_view, whole_price
 from llm_agent.adaptive_customers import DecisionClient, prompt_metadata
-from llm_agent.weighted_population import population, metadata, DEFAULT_PROFILE, LEGACY_PROFILE
+from llm_agent.weighted_population import population, metadata, DEFAULT_PROFILE
 from llm_agent.file_lock import exclusive_lock
 
 VERSION = 'member-thompson-v5-marketing'
@@ -46,7 +46,7 @@ def status():
         os.environ['LLM_API_KEY_SECONDARY'] = secondary.read_text().strip()
     return {'version':VERSION, 'live_configured':all(os.environ.get(k) for k in ('LLM_API_URL','LLM_API_KEY','LLM_MODEL')),
             'model':os.environ.get('LLM_MODEL'), 'population':metadata(),
-            'populations':[metadata(profile=profile) for profile in (DEFAULT_PROFILE, LEGACY_PROFILE)],
+            'populations':[metadata()],
             'member_fare_cap_ratio':.8, 'simulated':True,
             'scenario':'Flexible bargain travellers who already hold membership; one optional leisure ticket per person, base fares only.'}
 
@@ -99,7 +99,7 @@ def _provenance():
              'simulation/generate.py','simulation/evaluate_nhpp_v3.py','simulation/calibrate_nhpp_v3_robust.py',
              'backend/fare_policy.py','backend/initial_policy.py','backend/release_policy.py',
              'backend/data.py','llm_agent/weighted_population.py','llm_agent/adaptive_customers.py',
-             'llm_agent/population.py']
+             'llm_agent/provider_transport.py','llm_agent/audit.py','llm_agent/output_contract.py']
     paths += [item['path'] for item in prompt_metadata()['prompts'].values()]
     paths += [str(p.relative_to(ROOT)) for p in (ROOT/'simulation').glob('*/manifest.json')]
     from urllib.parse import urlsplit
@@ -508,6 +508,9 @@ def start(body, *, blocking=False):
 
 def read(run_id):
     run = store.read(run_id)
+    if not _current(run):
+        from .errors import NotFound
+        raise NotFound('Thompson experiment not found')
     if run['status'] in ('queued','running'):
         run['elapsed_seconds'] = round(time.time()-run['created_at'],3)
         # Another process can legitimately own the active run. Only declare an
@@ -525,6 +528,19 @@ def read(run_id):
     return run
 
 
-list_runs = store.list_runs
-events = store.events
-export_run = store.export_run
+def _current(run):
+    return run.get('version') == VERSION and run.get('config', {}).get('profile') == DEFAULT_PROFILE
+
+
+def list_runs():
+    return [run for run in store.list_runs(limit=100) if _current(run)]
+
+
+def events(run_id, limit=100, offset=0):
+    read(run_id)
+    return store.events(run_id, limit, offset)
+
+
+def export_run(run_id):
+    read(run_id)
+    return store.export_run(run_id)

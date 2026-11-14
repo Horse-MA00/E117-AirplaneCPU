@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const safeId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(value);
 const money = value => value !== null && value !== undefined && Number.isFinite(Number(value))
   ? `HK$${Number(value).toLocaleString('en-HK', { maximumFractionDigits: 2 })}` : '—';
-const roundNumber = (round, index) => round.round ?? round.round_number ?? index + 1;
+const roundNumber = (round, index) => round.round ?? index + 1;
 let selectedRun = null;
 let requestSequence = 0;
 
@@ -59,7 +59,7 @@ function renderRound() {
   $('feedback-source').textContent = round.reused_analysis
     ? 'Reused summary from an earlier identical price; this is not a new analysis call.'
     : round.analysis_source === 'provider_live' ? 'Saved LLM summary of this round’s recorded decisions.'
-    : round.analysis_source === 'synthetic_analysis' ? 'Rule-based summary of mathematical customer choices.'
+    : round.analysis_source === 'synthetic_analysis' ? 'Saved summary of offline simulated customer choices.'
     : 'Saved analysis; its provenance is included in the experiment export.';
   const scope = selectedRun.scope || {};
   const route = scope.origin && scope.destination ? `${scope.origin} → ${scope.destination}` : selectedRun.config?.flight_id || scope.flight_id;
@@ -90,9 +90,10 @@ function renderRound() {
   rememberSelection();
 }
 function renderRun(run, preferredRound) {
+  if(run.version!=='member-thompson-v5-marketing'||run.config?.profile!=='flexible_deal_seekers')throw new Error('This experiment is no longer available. Choose a current Thompson Sampling experiment.');
   selectedRun = run;
   const rounds = Array.isArray(run.rounds) ? run.rounds : [];
-  $('feedback-status').textContent = `${run.config?.mode === 'live' ? 'Live LLM' : 'Mathematical simulation'} · ${String(run.status || 'saved').replaceAll('_', ' ')} · ${rounds.length} saved price rounds. Viewing feedback makes no new model calls.`;
+  $('feedback-status').textContent = `${run.config?.mode === 'live' ? 'Live LLM' : 'Offline simulated customers'} · ${String(run.status || 'saved').replaceAll('_', ' ')} · ${rounds.length} saved price rounds. Viewing feedback makes no new model calls.`;
   if (!rounds.length) {
     empty('This experiment has no completed price rounds yet. Refresh after a round is saved.');
     rememberSelection();
@@ -136,7 +137,7 @@ async function loadSaved() {
     const data = await get('/api/adaptive-pricing/runs');
     if (sequence !== requestSequence) return;
     const runs = (data.runs || []).filter(run => safeId(run.run_id));
-    $('feedback-run').replaceChildren(...runs.map(run => new Option(`${run.config?.flight_id || run.scope?.flight_id || run.run_id} · ${run.config?.mode === 'live' ? 'Live LLM' : 'Mathematical'} · ${String(run.status || 'saved').replaceAll('_', ' ')} · ${run.run_id.slice(-8)}`, run.run_id)));
+    $('feedback-run').replaceChildren(...runs.map(run => new Option(`${run.config?.flight_id || run.scope?.flight_id || run.run_id} · ${run.config?.mode === 'live' ? 'Live LLM' : 'Offline customers'} · ${String(run.status || 'saved').replaceAll('_', ' ')} · ${run.run_id.slice(-8)}`, run.run_id)));
     if (preferred && !runs.some(run => run.run_id === preferred)) $('feedback-run').prepend(new Option(`Selected experiment · ${preferred}`, preferred));
     const id = preferred || runs[0]?.run_id;
     if (!id) {

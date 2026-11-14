@@ -16,7 +16,7 @@ class ThreeRoundStoreTests(unittest.TestCase):
     def buy(self, offer, start, count):
         for i in range(start, start + count):
             name = f'person-{i}'
-            self.s.member(name, 399)
+            self.s.join_plan(name, 399)
             self.s.book(offer['id'], name)
 
     def test_second_and_third_round_deduct_all_valid_unsold_without_double_counting_sales(self):
@@ -50,7 +50,7 @@ class ThreeRoundStoreTests(unittest.TestCase):
         self.s.offer('f', 14, 10, 30, 250, 40)
         with self.assertRaises(ValueError):
             self.s.offer('f', 28, 1, 30, 250, 100)
-        self.s.member('person', 399)
+        self.s.join_plan('person', 399)
         with self.assertRaises(ValueError):
             self.s.book(first['id'], 'person', day=28, max_release=100)
         with self.assertRaises(ValueError):
@@ -76,7 +76,7 @@ class ThreeRoundStoreTests(unittest.TestCase):
         self.assertEqual(status['new_release_limit'], 0)
         self.assertEqual(status['currently_bookable'], 0)
         self.assertEqual(status['protection_shortfall'], 15)
-        self.s.member('extra', 399)
+        self.s.join_plan('extra', 399)
         with self.assertRaisesRegex(ValueError, 'protection'):
             self.s.book(first['id'], 'extra', day=14, max_release=4)
         self.assertEqual(self.s.offer_info(first['id'])['remaining'], 15)

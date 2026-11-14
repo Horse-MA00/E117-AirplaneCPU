@@ -1,10 +1,8 @@
 """Audience contracts for the optional, deal-triggered member experiment."""
-import hashlib
-import json
 import unittest
 
 from llm_agent.weighted_population import (
-    DEFAULT_PROFILE, DEFAULT_WEIGHTS, LEGACY_PROFILE, LEGACY_WEIGHTS,
+    DEFAULT_PROFILE, DEFAULT_WEIGHTS,
     allocate, metadata, population, validate_weights,
 )
 
@@ -54,19 +52,12 @@ class FlexibleDealPopulationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             allocate(7)
 
-    def test_legacy_generator_retains_exact_v1_people(self):
-        people = population(28, 117, profile=LEGACY_PROFILE)
-        digest = hashlib.sha256(json.dumps(people, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-        self.assertEqual(digest, "796b4a78b642232290c07c6a46175197c86b24647bdd9be66b6f52dde8b4efa5")
-        self.assertEqual(len({p["segment"] for p in people}), 14)
-        self.assertEqual(validate_weights(profile=LEGACY_PROFILE), LEGACY_WEIGHTS)
-        self.assertEqual(metadata(profile=LEGACY_PROFILE)["profile"], LEGACY_PROFILE)
 
     def test_profile_and_weight_mismatch_are_rejected(self):
         for call in (lambda: population(profile="invented"), lambda: metadata(profile="invented"),
                      lambda: allocate(28, profile="invented"),
-                     lambda: population(weights=LEGACY_WEIGHTS),
-                     lambda: population(weights=DEFAULT_WEIGHTS, profile=LEGACY_PROFILE)):
+                     lambda: population(weights={"obsolete":1.}),
+                     lambda: population(weights=DEFAULT_WEIGHTS, profile="broad_coverage")):
             with self.assertRaises(ValueError):
                 call()
 
@@ -74,7 +65,7 @@ class FlexibleDealPopulationTests(unittest.TestCase):
         result = metadata(people=population(20, 73124))
         self.assertEqual(result["profile"], DEFAULT_PROFILE)
         self.assertEqual(sum(row["sample_count"] for row in result["segments"]), 20)
-        self.assertEqual({row["id"] for row in result["available_profiles"]}, {DEFAULT_PROFILE, LEGACY_PROFILE})
+        self.assertEqual({row["id"] for row in result["available_profiles"]}, {DEFAULT_PROFILE})
         text = " ".join(result["limitations"])
         self.assertIn("test assumptions", text)
         self.assertIn("not a representative sample", text)

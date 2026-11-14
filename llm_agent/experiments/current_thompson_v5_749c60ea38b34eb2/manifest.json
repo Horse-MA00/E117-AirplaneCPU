@@ -1,0 +1,44 @@
+{
+  "source": "adaptive_thompson_pricing",
+  "run_id": "adaptive-749c60ea38b34eb2",
+  "version": "member-thompson-v5-marketing",
+  "profile": "flexible_deal_seekers",
+  "synthetic": true,
+  "audit_records": 922,
+  "counts": {
+    "provider_calls": 213,
+    "fresh_responses": 213,
+    "cache_hits": 0,
+    "forced": 245,
+    "failures": 0,
+    "synthetic_choices": 0,
+    "total_tokens": 432964,
+    "peak_parallel_calls": 4,
+    "customer_calls": 203,
+    "analyst_calls": 10,
+    "key_slots": {
+      "primary": 107,
+      "secondary": 106
+    },
+    "max_calls": 600,
+    "remaining_calls": 387,
+    "configured_key_slots": 2,
+    "concurrency": 4,
+    "peak_parallel": 4,
+    "stopped_after_failure": false,
+    "elapsed_seconds": 113.187
+  },
+  "files": {
+    "report.json": {
+      "sha256": "0ddc89b52b175a1ed347d3b840c69dc63983f80f51dc1f3a35bd8dea0d2b4ecb",
+      "bytes": 6300688
+    },
+    "audit.jsonl.gz": {
+      "sha256": "402c049571435991c1c03960c668cef4f540a19f7e9671e77d2cb1fd009f78b1",
+      "bytes": 556951
+    }
+  },
+  "customer_source": "live",
+  "weight_source": "project_test_mixture_not_observed_hkexpress_shares",
+  "holdout_frozen_before_validation": true
+}

@@ -2,7 +2,7 @@
 import json,os,urllib.request,urllib.parse,urllib.error
 from pathlib import Path
 from datetime import datetime,timezone
-from llm_agent.runner import NoRedirect
+from llm_agent.provider_transport import NoRedirect
 ROOT=Path(__file__).resolve().parents[1]
 
 def load_env():

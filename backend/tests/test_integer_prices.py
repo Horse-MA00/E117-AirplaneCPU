@@ -3,11 +3,9 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from backend import server, optimization
-from backend.initial_policy import flight_scope, suggest
-from backend.continuous_pricing import adaptive_search, optimize
+from backend import server
+from backend.initial_policy import flight_scope
 from backend.fare_policy import integer_price, quoted_base_fare, member_fare_cap, final_member_fare
-from backend.pricing import _config as legacy_pricing_config
 from backend.store import Store
 
 
@@ -54,19 +52,6 @@ class IntegerPriceTests(unittest.TestCase):
         self.assertEqual(forecast.call_args.args[0][0]['normal_base_fare'],410.99)
         self.assertEqual(history[0]['normal_base_fare'],410.99)
 
-    def test_submitted_fractional_quotes_rejected_before_simulation(self):
-        for key in ('initial_member_fare','initial_membership_fee','fare_min','fare_max','fee_min','fee_max'):
-            with self.subTest(key=key), self.assertRaisesRegex(ValueError,'whole HKD'):
-                optimization.validate({key:70.5})
-        for key in ('price_min','price_max','membership_fee'):
-            with self.subTest(key=key), self.assertRaises(ValueError):
-                optimize({key:70.5})
-        with self.assertRaises(ValueError):
-            adaptive_search(lambda p: {'search_score':p},0,70.5)
-        with self.assertRaisesRegex(ValueError,'whole HKD'):
-            suggest({'fare_max':500.5})
-        with self.assertRaises(ValueError):
-            legacy_pricing_config({'normal_base_fare':500.5})
 
     def test_http_and_store_reject_fractional_new_quotes(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -83,11 +68,3 @@ class IntegerPriceTests(unittest.TestCase):
             offer=store.offer('INTEGER-TEST',28,1,70,250.25,10)
             self.assertEqual(offer['base_fare'],70)
             self.assertEqual(offer['fees'],250.25)
-        for endpoint in ('/api/agents/run','/api/agents/panels','/api/market/runs','/api/pricing/runs'):
-            with self.subTest(endpoint=endpoint), self.assertRaisesRegex(ValueError,'whole HKD'):
-                server.post(endpoint,{'member_fare':70.5})
-
-    def test_whole_hkd_search_and_decimal_statistics_are_distinct(self):
-        rows=adaptive_search(lambda p: {'price':p,'search_score':-(p-83.61)**2},0,200,31)
-        self.assertTrue(all(type(r['price']) is int for r in rows))
-        self.assertTrue(any(r['search_score'] != round(r['search_score']) for r in rows))

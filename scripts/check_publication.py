@@ -107,6 +107,8 @@ def _experiment_manifests(root: Path, errors: list[str]) -> int:
             continue
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("source") != "adaptive_thompson_pricing":
+                errors.append(f"{label}: only current Thompson experiment evidence may be published")
             files = manifest.get("files")
             if not isinstance(files, dict) or not files:
                 raise ValueError("manifest must list published files")
@@ -122,6 +124,14 @@ def _experiment_manifests(root: Path, errors: list[str]) -> int:
                     errors.append(f"{label}: SHA256 mismatch for {name}")
                 if isinstance(expected, dict) and "bytes" in expected and path.stat().st_size != expected["bytes"]:
                     errors.append(f"{label}: byte count mismatch for {name}")
+            report_path = manifest_path.parent / "report.json"
+            if report_path.is_file() and _inside(root, report_path):
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+                if (report.get("version") != "member-thompson-v5-marketing"
+                        or report.get("config", {}).get("profile") != "flexible_deal_seekers"):
+                    errors.append(f"{label}: retired experiment version or customer profile")
+            else:
+                errors.append(f"{label}: missing current Thompson report.json")
         except (OSError, UnicodeError, ValueError, TypeError, AttributeError) as exc:
             errors.append(f"{label}: cannot verify manifest ({exc})")
     return len(manifests)

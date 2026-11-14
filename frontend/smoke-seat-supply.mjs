@@ -91,7 +91,7 @@ try{
   scopeSeats=1;await page.locator('#release-day').selectOption('14');
   await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D14');
   assert.equal(await page.locator('#member-quota').innerText(),'1');
-  assert.equal(await page.locator('#start').isDisabled(),false,'Thompson uses the scope quota directly, without legacy 50% dilution');
+  assert.equal(await page.locator('#start').isDisabled(),false,'Thompson uses the full current scope quota');
   scopeSeats=2;await page.locator('#release-day').selectOption('7');
   await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D7');
   assert.equal(await page.locator('#member-quota').innerText(),'2');

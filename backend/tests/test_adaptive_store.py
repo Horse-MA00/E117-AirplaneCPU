@@ -25,9 +25,9 @@ class AdaptiveStoreTests(unittest.TestCase):
         self.addCleanup(self.env_patch.stop)
 
     def run_payload(self):
-        return {'run_id': 'adaptive-safe-test', 'status': 'completed', 'created_at': time.time(),
+        return {'run_id': 'adaptive-safe-test', 'version': adaptive_pricing.VERSION, 'status': 'completed', 'created_at': time.time(),
                 'rounds': [{'decision': {'action': 'BUY_MEMBER', 'reason': f'The fare is affordable; key {SECRET}.'}}],
-                'recommendation': {'reason': SECRET}, 'config': {'Authorization': f'Bearer {SECRET}'}}
+                'recommendation': {'reason': SECRET}, 'config': {'profile': 'flexible_deal_seekers', 'Authorization': f'Bearer {SECRET}'}}
 
     def test_valid_provider_reason_is_redacted_in_database_and_api_payload(self):
         run = self.run_payload()
@@ -70,6 +70,37 @@ class AdaptiveStoreTests(unittest.TestCase):
             with self.assertRaises(ValueError): store.events(run['run_id'], limit, offset)
         for limit in (True, 1.5, 0, -1, 101):
             with self.assertRaises(ValueError): store.list_runs(limit)
+
+    def test_only_current_thompson_default_population_is_exposed(self):
+        from backend import server
+        from backend.errors import NotFound
+        current = self.run_payload()
+        store.save(current)
+        store.record(current['run_id'], {'kind': 'current-customer-response'})
+        retired = []
+        for suffix, version, profile in (
+                ('version', 'member-thompson-v4-integer', 'flexible_deal_seekers'),
+                ('profile', adaptive_pricing.VERSION, 'broad_coverage'),
+                ('missing', None, None)):
+            run = {**current, 'run_id': 'adaptive-retired-' + suffix,
+                   'version': version, 'status': 'queued',
+                   'config': {'profile': profile}}
+            store.save(run)
+            store.record(run['run_id'], {'kind': 'retired-customer-response'})
+            retired.append(run['run_id'])
+        self.assertEqual([r['run_id'] for r in adaptive_pricing.list_runs()], [current['run_id']])
+        for run_id in retired:
+            for ending in ('', '/events', '/export'):
+                with self.subTest(run_id=run_id, ending=ending), self.assertRaises(NotFound):
+                    server.get('/api/adaptive-pricing/runs/' + run_id + ending)
+            # Rejected records cannot be revived or changed by the orphan handler.
+            self.assertEqual(store.read(run_id)['status'], 'queued')
+        self.assertEqual(server.get('/api/adaptive-pricing/runs/' + current['run_id'])['version'],
+                         adaptive_pricing.VERSION)
+        self.assertEqual(len(adaptive_pricing.events(current['run_id'])['events']), 1)
+        exported = adaptive_pricing.export_run(current['run_id'])
+        self.assertEqual(exported['report']['run_id'], current['run_id'])
+        self.assertEqual(len(exported['events']), 1)
 
 
 if __name__ == '__main__':

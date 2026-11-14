@@ -16,7 +16,9 @@ def observation(cid="ONE", fare=200., budget=500., eligible=True, quota=20):
     return {"person": {"customer_id": cid, "segment": "flexible_budget", "segment_label": "Flexible budget traveller",
             "base_fare_budget": budget, "flexibility_days": 3, "eligible": eligible,
             "eligibility_reason": "This route and date can be used." if eligible else "The trip date cannot be used.",
-            "population_weight": .9, "latent_wtp": 999},
+            "population_weight": .9, "latent_wtp": 999, "scenario_profile":"flexible_deal_seekers",
+            "trip_interest":"medium", "destination_interest":"medium", "outside_option_strength":"medium",
+            "recent_travel":"one_to_three_months", "price_sensitivity":"high"},
             "flight": {"flight_id": "TEST", "origin": "HKG", "destination": "KMQ", "profit": 123},
             "normal_fare": 410., "member_fare": fare, "quota": quota, "optimizer_goal": "hidden"}
 
@@ -224,10 +226,10 @@ class AdaptiveCustomerTests(unittest.TestCase):
         result = client.choose(eager)
         self.assertEqual(result['synthetic_behavior'], 'assumed_optional_motivation_utility_v2')
 
-    def test_synthetic_legacy_formula_is_unchanged(self):
+    def test_current_optional_motivation_formula_is_unchanged(self):
         import math
         obj = observation(fare=200, budget=500)
-        expected = 1/(1+math.exp(-(2.4 + .04*3 - 4.2*200/500)))
+        expected = 1/(1+math.exp(-(2.0 - .3 + .15*math.log1p(3/7) - 3.8*200/500)))
         self.assertAlmostEqual(adapter.synthetic_probability(obj), expected)
 
     @patch.dict(os.environ, ENV)

@@ -26,9 +26,9 @@ class PublicationTests(unittest.TestCase):
         (self.root / "docs/extra.md").write_text("Evidence details", encoding="utf-8")
         experiment = self.root / "llm_agent/experiments/published"
         experiment.mkdir(parents=True)
-        payload = b'{"complete":true}'
+        payload = b'{"version":"member-thompson-v5-marketing","config":{"profile":"flexible_deal_seekers"}}'
         (experiment / "report.json").write_bytes(payload)
-        (experiment / "manifest.json").write_text(json.dumps({"files": {
+        (experiment / "manifest.json").write_text(json.dumps({"source":"adaptive_thompson_pricing", "files": {
             "report.json": {"sha256": hashlib.sha256(payload).hexdigest(), "bytes": len(payload)}}}))
         # Extended numerical consistency has its own real-data tests. These
         # fixtures exercise publication/link/archive paths without 400k CSV rows.
@@ -78,6 +78,17 @@ class PublicationTests(unittest.TestCase):
         report = check_publication(self.root)
         self.assertEqual(report["status"], "passed", report["errors"])
         self.assertEqual(report["relative_links"], 4)
+
+    def test_valid_hash_cannot_publish_a_retired_thompson_version(self):
+        folder = self.root / "llm_agent/experiments/published"
+        payload = b'{"version":"member-thompson-v4-paired","config":{"profile":"flexible_deal_seekers"}}'
+        (folder / "report.json").write_bytes(payload)
+        manifest = json.loads((folder / "manifest.json").read_text())
+        manifest["files"]["report.json"] = {"sha256": hashlib.sha256(payload).hexdigest(), "bytes": len(payload)}
+        (folder / "manifest.json").write_text(json.dumps(manifest))
+        report = check_publication(self.root)
+        self.assertEqual(report["status"], "failed")
+        self.assertTrue(any("retired experiment" in error for error in report["errors"]))
 
     @unittest.skipUnless(shutil.which("git"), "Git required for committed archive regression")
     def test_untracked_local_file_cannot_hide_missing_committed_evidence(self):

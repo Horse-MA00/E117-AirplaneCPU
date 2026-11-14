@@ -11,7 +11,7 @@ page.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/optimization
 try{
   await mkdir('test-results',{recursive:true});
   const savedId=process.env.OPTIMIZATION_RUN_ID;
-  await page.goto(origin+`/admin${savedId?'?run='+encodeURIComponent(savedId):''}#optimization`);
+  await page.goto(origin+`/adaptive-pricing${savedId?'?run='+encodeURIComponent(savedId):''}`);
   await page.waitForURL('**/adaptive-pricing**');
   await page.locator('#experiment-form').waitFor();
   assert.equal(await page.locator('#optimization-form, #optimization-mode').count(),0);
@@ -43,7 +43,8 @@ try{
   const exported=await response.json(),report=exported.report;
   assert.ok(exported.events.length>0,'Experiment audit events remain exportable');
   assert.equal(report.status,'completed',report.error||'Run did not complete');
-  assert.match(report.version,/member-thompson/);
+  assert.equal(report.version,'member-thompson-v5-marketing');
+  assert.equal(report.config.profile,'flexible_deal_seekers');
   assert.equal(report.counts.provider_calls,0,'Offline smoke must never call a paid LLM');
   assert.equal(report.rounds.length,report.config.rounds);
   assert.ok(report.rounds.every(r=>Number.isInteger(r.price)&&r.price>=0&&r.price<=report.scope.member_fare_cap));

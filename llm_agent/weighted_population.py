@@ -1,8 +1,7 @@
 """Stratified, assumed audiences for a flexible, bargain-led membership offer.
 
-The default is a deliberately targeted product audience, not an estimate of all
-HK Express passengers. The original broad-coverage generator remains available
-for reproducing historical experiments. Weights never mint physical seats.
+The audience is a deliberately targeted product scenario, not an estimate of all
+HK Express passengers. Weights never mint physical seats.
 """
 from __future__ import annotations
 
@@ -10,11 +9,8 @@ from collections import Counter
 import math
 import random
 
-from .population import SEGMENTS as LEGACY_SEGMENTS
-
 VERSION = "weighted-member-panel-v3-motivation"
 DEFAULT_PROFILE = "flexible_deal_seekers"
-LEGACY_PROFILE = "broad_coverage"
 # key, label, assumed share, typical trips, basic-fare budget range, flexible days
 SEGMENTS = [
     ("student", "Flexible university student", .24, 3, (160, 480), (14, 35)),
@@ -27,7 +23,6 @@ SEGMENTS = [
     ("deal_only_occasional", "Deal-triggered occasional traveller", .04, 1, (180, 600), (21, 45)),
 ]
 DEFAULT_WEIGHTS = {row[0]: row[2] for row in SEGMENTS}
-LEGACY_WEIGHTS = {row[0]: row[2] for row in LEGACY_SEGMENTS}
 SCENARIOS = {
     "student": {
         "trigger": "Browsing cheap flights during an open university break; no trip is booked and there is no exam or compulsory journey on the selected date.",
@@ -83,8 +78,6 @@ SOURCES = [
 def _segments(profile):
     if profile == DEFAULT_PROFILE:
         return SEGMENTS
-    if profile == LEGACY_PROFILE:
-        return LEGACY_SEGMENTS
     raise ValueError(f"Unknown customer profile: {profile!r}")
 
 
@@ -115,50 +108,6 @@ def allocate(count, weights=None, profile=DEFAULT_PROFILE):
     for key in ranked[:remaining]:
         counts[key] += 1
     return counts
-
-
-def _legacy_population(count=28, seed=117, weights=None, scope=None):
-    """Keep the v1 generation order and resulting people byte-for-byte reproducible."""
-    weights = validate_weights(weights, LEGACY_PROFILE)
-    counts = allocate(count, weights, LEGACY_PROFILE)
-    scope = {} if scope is None else scope
-    day = scope.get("as_of_day", 28)
-    rng = random.Random(seed)
-    people = []
-    for key, label, _, trips, old_budget, flex in LEGACY_SEGMENTS:
-        for _ in range(counts[key]):
-            # A new, explicit ONE-ticket basic-fare budget; the old value was
-            # a whole-travel budget and is only a scale assumption here.
-            budget = round(old_budget * rng.uniform(.20, .72), 2)
-            date_match = key != "no_match" and (flex > 1 or rng.random() < .85)
-            notice = 21 if key == "access_needs" else 3
-            companions = key not in ("family", "group", "couple") or rng.random() < .85
-            eligible = date_match and companions and day >= notice
-            reasons = []
-            if not date_match:
-                reasons.append("The selected route or departure date does not match this trip.")
-            if not companions:
-                reasons.append("Companions cannot confirm this departure; do not book separately.")
-            if day < notice:
-                reasons.append("The required booking notice for this trip has passed.")
-            people.append({
-                "customer_id": f"MEM-{seed}-{len(people)+1:05d}",
-                "segment": key, "segment_label": label,
-                "membership_active": True, "membership_valid_at_departure": True,
-                "base_fare_budget": budget, "flexibility_days": flex,
-                "expected_trips": trips, "minimum_notice_days": notice,
-                "eligible": bool(eligible), "eligibility_reason": " ".join(reasons) or "This route and departure can be used.",
-                "date_match": date_match, "companions_confirmed": companions,
-                "party_size": 1, "own_ticket_only": True,
-                "travel_party_context": "Companions arrange and fund their own tickets; this decision covers one existing member only.",
-                "population_weight": weights[key] / counts[key],
-                "target_segment_weight": weights[key], "sample_segment_count": counts[key],
-                "source": "assumed_weighted_customer_scenario",
-                "response_language": "en", "currency": "HKD",
-            })
-    # Do not let segment order determine who receives scarce inventory first.
-    rng.shuffle(people)
-    return people
 
 
 def _motivation(rng):
@@ -192,8 +141,6 @@ def _motivation(rng):
 
 
 def population(count=28, seed=117, weights=None, scope=None, profile=DEFAULT_PROFILE):
-    if profile == LEGACY_PROFILE:
-        return _legacy_population(count, seed, weights, scope)
     weights = validate_weights(weights, profile)
     counts = allocate(count, weights, profile)
     day = (scope or {}).get("as_of_day", 28)
@@ -249,11 +196,9 @@ def metadata(weights=None, people=None, profile=DEFAULT_PROFILE):
     return {
         "version": VERSION, "source": "project_test_mixture_not_observed_hkexpress_shares",
         "profile": profile,
-        "profile_name": ("Flexible, price-sensitive deal seekers" if profile == DEFAULT_PROFILE
-                         else "Historical broad customer coverage"),
+        "profile_name": "Flexible, price-sensitive deal seekers",
         "available_profiles": [
             {"id": DEFAULT_PROFILE, "name": "Flexible, price-sensitive deal seekers", "segment_count": len(SEGMENTS)},
-            {"id": LEGACY_PROFILE, "name": "Historical broad customer coverage", "segment_count": len(LEGACY_SEGMENTS)},
         ],
         "segments": [{"id": key, "name": label, "weight": weights[key], "assumed_weight": weights[key],
                       "sample_count": counts.get(key, 0),
@@ -263,8 +208,7 @@ def metadata(weights=None, people=None, profile=DEFAULT_PROFILE):
         "sources": SOURCES,
         "limitations": [
             "The reviewed official reports do not publish these customer distributions; all numerical segment weights and budget distributions remain test assumptions.",
-            ("This is a deliberately targeted audience for flexible bargain travel, not a representative sample of all HK Express passengers. Fixed-date mandatory, urgent and business travel are excluded."
-             if profile == DEFAULT_PROFILE else "The historical broad profile preserves the v1 person generator, including fixed-date and mandatory-travel coverage cases."),
+            "This is a deliberately targeted audience for flexible bargain travel, not a representative sample of all HK Express passengers. Fixed-date mandatory, urgent and business travel are excluded.",
             "All sampled travellers are already valid members; no membership purchase, renewal, taxes, fuel fees or airline costs enter this experiment.",
             "Each sampled member decides about one personal ticket; companions' purchases are outside this experiment.",
             "Optional-trip interest, recent travel, destination appeal and the appeal of skipping are pre-price private scenario traits, not observed preferences or numerical willingness-to-pay labels.",

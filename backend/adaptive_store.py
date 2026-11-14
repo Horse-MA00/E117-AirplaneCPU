@@ -65,7 +65,7 @@ def list_runs(limit=30):
         raise ValueError('Invalid run-list limit')
     with connection() as db:
         rows = db.execute('SELECT payload FROM adaptive_runs ORDER BY created_at DESC LIMIT ?', (limit,)).fetchall()
-    return sanitize([{k: r.get(k) for k in ('run_id','status','created_at','updated_at','config','scope','counts','recommendation','validation')}
+    return sanitize([{k: r.get(k) for k in ('run_id','version','status','created_at','updated_at','config','scope','counts','recommendation','validation')}
             for r in (json.loads(row['payload']) for row in rows)])
 
 

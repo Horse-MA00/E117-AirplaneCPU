@@ -186,10 +186,12 @@ class ExperimentTests(unittest.TestCase):
     def test_profile_is_validated_and_preserved_in_holdout_and_provenance(self):
         with self.assertRaises(ValueError):
             pricing.validate(self.config(profile='invented_profile'))
-        report = pricing.start(self.config(profile='broad_coverage'), blocking=True)
+        with self.assertRaises(ValueError):
+            pricing.validate(self.config(profile='broad_coverage'))
+        report = pricing.start(self.config(profile='flexible_deal_seekers'), blocking=True)
         self.assertEqual(report['status'], 'completed', report.get('error'))
-        self.assertEqual(report['config']['profile'], 'broad_coverage')
-        self.assertEqual(len(report['population']['segments']), 14)
+        self.assertEqual(report['config']['profile'], 'flexible_deal_seekers')
+        self.assertEqual(len(report['population']['segments']), 8)
         self.assertEqual({p['segment'] for p in report['panel']},
                          {r['person']['segment'] for w in report['validation_worlds']
                           for r in w['result']['decisions']})
@@ -208,7 +210,8 @@ class ExperimentTests(unittest.TestCase):
                 self.assertEqual(files[name], hashlib.sha256((pricing.ROOT / name).read_bytes()).hexdigest())
 
     def test_scope_returns_the_selected_profiles_weight_schema(self):
-        self.assertEqual(len(pricing.scope({'profile':'broad_coverage'})['population']['segments']), 14)
+        with self.assertRaises(ValueError):
+            pricing.scope({'profile':'broad_coverage'})
         flexible = pricing.scope({'profile':'flexible_deal_seekers'})['population']
         self.assertEqual(len(flexible['segments']), 8)
         self.assertEqual(flexible['profile'], 'flexible_deal_seekers')

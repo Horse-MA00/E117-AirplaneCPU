@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 from backend import data, server
 from backend.fare_policy import check_member_fare, member_fare_cap
-from backend.pricing import optimize
 from backend.store import Store
 
 
@@ -47,16 +46,6 @@ class PublishingCap(unittest.TestCase):
         self.assertEqual(self.publish(self.cap)['offer']['base_fare'], self.cap)
 
 
-class PricingGridCap(unittest.TestCase):
-    def test_grid_never_tests_a_fare_above_the_cap(self):
-        forecast = {'days_to_departure': 28, 'expected_remaining_demand': 10, 'releasable_seats': 8,
-                    'expected_empty_seats': 20, 'capacity': 180}
-        try:
-            result = optimize(forecast, {'normal_base_fare': 120, 'replicates': 1, 'customers': 20, 'flights': 6})
-        except (KeyError, TypeError):
-            self.skipTest('forecast fixture does not match the pricing world contract')
-        self.assertTrue(result['candidates'])
-        self.assertTrue(all(c['member_fare'] <= 96 for c in result['candidates']))
 
 
 if __name__ == '__main__':

@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 
 from .audit import sanitize
-from .journey_runner import _transport
+from .provider_transport import transport as _transport
 from .output_contract import validate_english_output
 
 VERSION = "adaptive-member-decisions-v4-hypotheses"
@@ -149,20 +149,14 @@ def synthetic_probability(observation):
         return 0.
     # A diverse, monotone random-utility curve creates an interior revenue
     # tradeoff for many budgets. These coefficients are declared assumptions.
-    if p.get("scenario_profile") == "flexible_deal_seekers" and "trip_interest" in p:
-        # Predeclared synthetic coefficients, not fitted customer preferences.
-        # The same person keeps the same latent choice draw across paired fares.
-        utility = (2.0 + {"low": -.8, "medium": 0., "high": .8}[p["trip_interest"]]
-                   + {"low": -.35, "medium": 0., "high": .35}[p["destination_interest"]]
-                   - {"low": 0., "medium": .3, "high": .6}[p["outside_option_strength"]]
-                   + {"within_two_weeks": -.3, "one_to_three_months": 0., "none_in_six_months": .25}[p["recent_travel"]]
-                   + .15*math.log1p(p.get("flexibility_days", 0)/7.)
-                   - (4.6 if p.get("price_sensitivity") == "very_high" else 3.8)*fare/max(1., p["base_fare_budget"]))
-    else:
-        # Preserve the historical broad-coverage oracle exactly.
-        offset = {"urgent_trip": 1., "visiting_friends": .45, "small_business": .6,
-                  "student": -.25, "infrequent": -.25}.get(p.get("segment"), 0.)
-        utility = 2.4 + offset + .04*p.get("flexibility_days", 0) - 4.2*fare/max(1., p["base_fare_budget"])
+    # Predeclared current-population coefficients, not fitted preferences.
+    # Matched counterfactual quotes share the same latent choice draw.
+    utility = (2.0 + {"low": -.8, "medium": 0., "high": .8}[p["trip_interest"]]
+               + {"low": -.35, "medium": 0., "high": .35}[p["destination_interest"]]
+               - {"low": 0., "medium": .3, "high": .6}[p["outside_option_strength"]]
+               + {"within_two_weeks": -.3, "one_to_three_months": 0., "none_in_six_months": .25}[p["recent_travel"]]
+               + .15*math.log1p(p.get("flexibility_days", 0)/7.)
+               - (4.6 if p.get("price_sensitivity") == "very_high" else 3.8)*fare/max(1., p["base_fare_budget"]))
     return 1/(1+math.exp(-max(-40., min(40., utility))))
 
 
@@ -251,8 +245,7 @@ class DecisionClient:
             record = {"decision": clean, "observation": visible, "learning_eligible": learning,
                       "source": "synthetic_random_utility", "provider_call": False, "cache_hit": False,
                       "forced": False, "latency_ms": 0, "synthetic_purchase_probability": probability,
-                      "synthetic_behavior": ("assumed_optional_motivation_utility_v2" if "trip_interest" in visible["person"]
-                                             else "legacy_assumed_utility_v1")}
+                      "synthetic_behavior": "assumed_optional_motivation_utility_v2"}
             self._audit({"event": "customer_synthetic", **record})
             return record
         record = self._call("customer", visible, lambda value: validate_decision(value, visible))

@@ -1,7 +1,6 @@
 import json
 import unittest
 from backend.nhpp import forecast
-from backend.pricing import optimize, _config, _world, _run, _aggregate
 
 
 def history(decreasing=False):
@@ -112,64 +111,6 @@ class NHPPTests(unittest.TestCase):
         self.assertLessEqual(guarded["releasable_seats"], raw["releasable_seats"])
 
 
-class PricingTests(unittest.TestCase):
-    def setUp(self):
-        self.pred = {"available_seats": 100, "releasable_seats": 70,
-                     "protection_p90": 30, "expected_remaining_demand": 20,
-                     "beta": .01, "days_to_departure": 28}
-        self.cfg = _config({"customers": 80, "flights": 6, "replicates": 1})
-
-    def test_financial_identity_and_inventory(self):
-        world = _world(self.pred, self.cfg, 117)
-        result = _run(world, (70, 199, 28, 1), self.cfg, True)
-        self.assertEqual(result["ledger"]["membership_revenue"], result["members"]*199)
-        for f in result["flights"]:
-            self.assertEqual(f["member_bookings"]+f["normal_bookings"]+f["remaining"], f["initial_available"])
-            self.assertGreaterEqual(f["remaining"], 0)
-        self.assertEqual(result, _run(world, (70, 199, 28, 1), self.cfg, True))
-
-    def test_no_supply_no_membership_revenue(self):
-        world = _world(dict(self.pred, releasable_seats=0), self.cfg, 117)
-        result = _run(world, (0, 799, 28, 1), self.cfg)
-        self.assertEqual(result["members"], 0)
-        self.assertEqual(result["incremental_profit"], 0)
-
-    def test_search_holds_best_and_term(self):
-        result = optimize(self.pred, self.cfg)
-        self.assertEqual(len(result["candidates"]), 64)
-        best = [x["best_profit"] for x in result["trace"]]
-        self.assertEqual(best, sorted(best))
-        self.assertEqual(result["config"]["membership_days"], 365)
-        json.dumps(result, allow_nan=False)
-
-    def test_no_decisions_in_the_past(self):
-        prediction = dict(self.pred, days_to_departure=7)
-        result = optimize(prediction, self.cfg)
-        self.assertTrue(all(r["open_day"] <= 7 for r in result["candidates"]))
-        world = _world(prediction, self.cfg, 117)
-        self.assertTrue(all(int(e["days"].max()) <= 7 for e in world["events"] if len(e["days"])))
-        closed = optimize(dict(prediction, days_to_departure=0, expected_remaining_demand=0, releasable_seats=0), self.cfg)
-        self.assertEqual(closed["best"]["decision"], "NO_OFFER")
-        self.assertEqual(closed["candidates"], [])
-
-    def test_short_term_has_one_itinerary_per_customer_day(self):
-        cfg = dict(self.cfg, membership_days=30, flights=24)
-        world = _world(self.pred, cfg, 117)
-        identities = [(int(customer), event["departure_period_day"])
-                      for event in world["events"] for customer in event["ids"]]
-        self.assertEqual(len(identities), len(set(identities)))
-        self.assertTrue(all(value <= 1 for value in world["expected_trips"]))
-        self.assertTrue(all(0 <= event["departure_period_day"] < 30 for event in world["events"]))
-
-    def test_aggregate_reason_matches_all_replicates(self):
-        world = _world(self.pred, self.cfg, 117)
-        result = _run(world, (70, 199, 28, 1), self.cfg)
-        first = dict(result, feasible=True, reason="Within synthetic service constraints")
-        second = dict(result, feasible=False)
-        aggregate = _aggregate([first, second])
-        self.assertFalse(aggregate["feasible"])
-        self.assertEqual(aggregate["decision"], "REJECTED")
-        self.assertIn("fails", aggregate["reason"])
 
 
 if __name__ == "__main__":

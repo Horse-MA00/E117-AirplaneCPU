@@ -1,8 +1,0 @@
-{
-  "source": "superseded_shared_market_development",
-  "synthetic_only": true,
-  "files": {
-    "audit.jsonl.gz": "187f5ed3bcf0a50629f2bf468b91a9ed5deaca22c61d652b6c7be7dbb387a8f4",
-    "report.json": "5b0cac9007d4a8219e8c78758e744a8c7aab8f0e5a9f11a02374b33cba077133"
-  }
-}
