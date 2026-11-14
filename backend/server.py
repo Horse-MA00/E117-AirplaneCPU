@@ -37,6 +37,12 @@ def get(path,query=None):
  if path=='/api/optimization/runs':
   from . import optimization
   return {'runs':optimization.list_runs()}
+ if path=='/api/optimization/suggestions':
+  from .offer_suggestions import suggestions
+  query=query or {}
+  flight=ident(query.get('flight_id',[''])[0])
+  day=int(query.get('forecast_day',query.get('day',['28']))[0])
+  return suggestions(flight,day,store(),forecast_for)
  if path.startswith('/api/optimization/runs/'):
   from . import optimization
   parts=path.strip('/').split('/')
@@ -62,7 +68,7 @@ def get(path,query=None):
   if len(parts)==6 and parts[4]=='people':return panel_jobs.read_person(ident(parts[3]),ident(parts[5]))
   if len(parts)==4:return panel_jobs.read(ident(parts[3]))
   raise KeyError('Panel endpoint not found')
- if path=='/api/summary':return {'dataset':{'rows':data.manifest()['rows'],'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':runner.status()}
+ if path=='/api/summary':return {'dataset':{'rows':data.manifest()['rows'],'catalog_rows':data.manifest().get('catalog_rows',data.manifest()['rows']),'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':runner.status()}
  if path=='/api/evaluation':
   p=ROOT/'simulation/generated/nhpp_v2_final.json'
   return json.loads(p.read_text()) if p.exists() else {'status':'pending'}
@@ -154,7 +160,9 @@ def post(path,body):
   row=next(r for r in data.history(flight) if r['days_to_departure']==day)
   maxq=int(f.get('releasable',f.get('releasable_seats',f.get('max_member_seats',0))))
   if day==0:raise ValueError('Sales are closed')
-  return {'offer':store().offer(flight,day,quantity,fare,row['mandatory_fees'] if row['mandatory_fees'] is not None else 250,maxq),'simulated':True}
+  from .offer_suggestions import validate_draft
+  suggestion=validate_draft(body,store(),forecast_for)
+  return {'offer':store().offer(flight,day,quantity,fare,row['mandatory_fees'] if row['mandatory_fees'] is not None else 250,maxq,expected_plan_fee=suggestion['membership_fee'] if suggestion else None),'simulated':True}
  if path=='/api/agents/run':
   mode=body.get('mode','deterministic')
   return runner.run(mode=mode,count=number(body.get('count',5 if mode=='live' else 14),'count',1,5 if mode=='live' else 100,True),membership_fee=body.get('membership_fee',399),member_fare=body.get('member_fare',70),scenario_mode='journey')

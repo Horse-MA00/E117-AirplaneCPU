@@ -9,20 +9,22 @@ A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for C
 Admin now follows **Forecast seats → Optimize prices → Experiments → Manage offers**,
 using purple, cyan and white. Forecast shows seat allocation, normal-demand protection,
 the booking forecast and observed ticket prices. The separate Client Portal provides
-flight search, full-price comparisons, membership and saved trips.
+flight search, base fares with a separate fees/total line, membership and saved trips.
 
-The primary optimizer adapts **both membership fee and member base fare** over
-configurable rounds. Mathematical and live-LLM tracks replay shared inventory,
-learn from contribution and member use, and validate each frozen candidate on
-independent worlds. SQLite saves rounds, seat-feedback profiles, original redacted
-LLM outputs and resumable market state. Live batches have explicit call limits.
-NO_OFFER remains a valid recommendation; no global optimum or human calibration
-is claimed. The base NHPP remains frozen, with a run-local demand/protection
-correction learned from completed training worlds.
+The primary optimizer now requires a **specific route, flight date and D28/D14/D7 snapshot**.
+P₀ comes from that flight's simulated data and is read-only; the user-selected V₀ stays
+fixed during the fare search. Mathematical and live-LLM tracks replay this flight's
+inventory, compare contributions and purchases, and validate the candidate on independent
+worlds. Price/profit plots distinguish maximum contribution, margin and buyer count.
+Matching validated results become Manage offers suggestions with current quota checks.
 
-Read [the new engine and database](docs/OPTIMIZATION_ENGINE.md) and
-[redesign, incoming Git changes and feedback semantics](docs/PORTAL_REDESIGN_AND_OPTIMIZATION.md).
-The [price–total-contribution curve](docs/CONTINUOUS_PRICING.md) is integrated below the joint optimizer on Optimize prices. It fixes membership fee and release share to isolate fare comparisons. Fixed-tier tools remain under Advanced tools; historical results are retained unchanged.
+SQLite saves rounds, seat-feedback profiles, redacted original LLM outputs and resumable
+market state. Live runs automatically cross internal batches within a selected total
+budget. NO_OFFER remains a valid result. The base NHPP remains frozen.
+
+Read [the current flight-specific workflow](docs/FLIGHT_SCOPED_OPTIMIZATION.md).
+The [earlier joint engine](docs/OPTIMIZATION_ENGINE.md), whole-term continuous search
+and historical experiments remain available as explicitly labelled reference tools.
 Use Docker below on Windows; the customer panel retains POSIX `fcntl`.
 
 ## Quick start with Docker (Mac, Windows and Linux)
@@ -63,10 +65,10 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 
 ## What is implemented
 
-- **600,000 daily snapshots** across **3,315 synthetic flight histories** (200,000 demo rows plus 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
+- **640,182 daily snapshots** across **3,537 synthetic flight histories** (200,000 original demo rows, 40,182 route/date supplement rows and 400,000 additional validation rows), including fares, unsold-seat rates, gross bookings and cancellations; seeded, checksummed and reproducible.
 - NHPP regime mixture with parameter uncertainty, change-point detection, right-censored count likelihood and explicit future-shock scenarios. **No LightGBM**.
 - **Three fixed release rounds: D28, D14 and D7.** Each round subtracts all earlier still-valid unsold allotments before issuing new seats. Purchases consume existing allotments; cancellations do not create a fourth release round.
-- **Joint feedback optimisation:** 1–12 rounds per mathematical/LLM track, editable or data-suggested P₀/V₀, bounded two-dimensional search, paired no-offer baselines, held-out validation and SQLite audit history. Legacy tools retain the 64-policy screen and fare-only continuous search.
+- **Flight-specific optimisation:** 1–12 rounds per mathematical/LLM track, dataset-derived P₀, editable fixed V₀, selected-flight fare search, paired no-offer baselines, held-out validation and SQLite audit history. Supplemental simulations cover 74 directed routes on three dates. Legacy tools retain whole-term searches.
 - **Shared market:** chronological traveller events, 6–12 heterogeneous flights, common inventory, multi-trip membership state, cancellations and an integer-cent contribution ledger. LLM choices directly affect supply and policy rankings.
 - **Separate Admin and member interfaces:** actionable analysis navigation, panel outcome summaries, segment comparisons, searchable/paginated traveller lists, and a member-facing flight search, price review, membership and My trips flow.
 - **Larger background panels:** up to **100 live LLM travellers** or **1,000 rule-based travellers**, with a default of 100. Live batches default to 60 decision attempts (maximum120), checkpoint each traveller, show progress and resume only on explicit request. Sole legal actions need no model call.
@@ -75,7 +77,7 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 
 ## Evidence and limitations
 
-This is a **synthetic-market decision prototype**, not a calibrated production revenue-management system or a representative survey of HK Express customers. OAG Flight Info supplies schedules and capacity estimates, not daily bookings or airfare history. All 600,000 simulation rows remain synthetic even when an OAG connection is available.
+This is a **synthetic-market decision prototype**, not a calibrated production revenue-management system or a representative survey of HK Express customers. OAG Flight Info supplies schedules and capacity estimates, not daily bookings or airfare history. All 640,182 simulation rows remain synthetic even when an OAG connection is available.
 
 On **240 fresh synthetic test flights**, v2's D28 sustained-surge protection coverage is **82.5%**. On the same flights, v1 with its original 16-seat margin scores **30.0%**, while v1 recalibrated using the same procedure scores **80.0%**. The historical 47.62% came from a different cohort. D14/D7 demand MAE improves, but D28 demand MAE worsens and D7 unseen-surges still have only 75% protection coverage. See the [full comparison and limitations](docs/NHPP_V2_REVIEW.md), [frozen final report](simulation/generated/nhpp_v2_final.json) and [calibration](simulation/generated/calibration_v2.json). Raw predictive bands and calibrated operational protection are separate.
 
@@ -93,7 +95,7 @@ The current **shared-market-v3** three-round policy has a separate **40-seed / 1
 | --- | --- |
 | `frontend/` | Admin vanilla HTML/CSS/JS; separate member storefront in `frontend/members/` |
 | `backend/` | NHPP, pricing simulation, local HTTP API, transactional SQLite |
-| `simulation/` | Generator, 600k compressed rows, separate truth and frozen evaluations |
+| `simulation/` | Generator, 640,182 compressed rows, separate truth and frozen evaluations |
 | `llm_agent/` | Journey/market prompts, real provider adapters, audits, experiments and probes |
 | `docs/` | Current architecture, progress, review and plan deviations |
 | `src/`, `configs/` | Preserved earlier standalone simulator and chart exporter |

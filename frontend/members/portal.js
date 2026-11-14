@@ -120,9 +120,9 @@ function routeHeading(flight) {
 function renderFlights() {
   const list = $('flight-results');
   const availableOnly = $('available-only').checked;
-  const flights = state.flights.filter((f) => matchesSearch(f, state.filters) && (!availableOnly || Number(f.bookable_seats) > 0 && !alreadyBooked(f.flight_id))).sort((a, b) => $('flight-sort').value === 'price' ? a.total - b.total || a.departure_date.localeCompare(b.departure_date) : a.departure_date.localeCompare(b.departure_date) || a.total - b.total);
+  const flights = state.flights.filter((f) => matchesSearch(f, state.filters) && (!availableOnly || Number(f.bookable_seats) > 0 && !alreadyBooked(f.flight_id))).sort((a, b) => $('flight-sort').value === 'price' ? a.base_fare - b.base_fare || a.departure_date.localeCompare(b.departure_date) : a.departure_date.localeCompare(b.departure_date) || a.base_fare - b.base_fare);
   $('search-summary').textContent = searchDescription();
-  $('result-count').textContent = `${flights.length} ${flights.length === 1 ? 'flight' : 'flights'} · Prices include mandatory fees`;
+  $('result-count').textContent = `${flights.length} ${flights.length === 1 ? 'flight' : 'flights'} · Base fares shown · fees below`;
   if (!state.flights.length) {
     list.replaceChildren(emptyState('No member flights released yet', 'There are no released member seats to browse right now. Check again later; joining a pass does not guarantee a flight.', { href: '#membership', text: 'How the pass works' }));
     return;
@@ -139,14 +139,14 @@ function renderFlights() {
     const route = node('div'); route.append(routeHeading(flight), node('p', `${airportNames[flight.origin] || flight.origin} to ${airportNames[flight.destination] || flight.destination}`, 'flight-name'));
     route.append(node('p', `One way · 1 traveller`, 'flight-detail'), node('p', flight.flight_id, 'flight-detail'));
     if (flight.normal_total != null) {
-      route.append(node('p', `Current normal fare ${money(flight.normal_total)}`, 'flight-detail'));
+      route.append(node('p', `Normal base fare ${money(flight.normal_base_fare ?? Number(flight.normal_total)-Number(flight.mandatory_fees))}`, 'flight-detail'));
       const saving = Math.round((Number(flight.normal_total) - Number(flight.total)) * 100) / 100;
       if (saving > 0) route.append(node('p', `Ticket saving ${money(saving)} before membership fee`, 'flight-savings'));
     }
     route.append(node('p', booked ? 'Already in your trips' : available ? `${flight.bookable_seats} member ${Number(flight.bookable_seats) === 1 ? 'seat' : 'seats'} available` : 'Currently unavailable', 'availability'));
-    const price = node('div', undefined, 'flight-price'); price.append(node('span', 'Member ticket · total', 'price-label'), node('strong', money(flight.total), 'total'), node('span', `Base ${money(flight.base_fare)} + fees ${money(flight.mandatory_fees)}`, 'breakdown'));
+    const price = node('div', undefined, 'flight-price'); price.append(node('span', 'Member base fare', 'price-label'), node('strong', money(flight.base_fare), 'total'), node('span', `+ fees ${money(flight.mandatory_fees)} · total payable ${money(flight.total)}`, 'breakdown'));
     const choose = node('button', booked ? 'Booked' : available ? 'Select flight' : 'Unavailable', 'button primary choose-flight'); choose.type = 'button'; choose.dataset.purchase = ''; choose.dataset.available = String(available); choose.disabled = !available || state.busy;
-    choose.setAttribute('aria-label', `${choose.textContent}: ${flight.origin} to ${flight.destination}, ${dateLabel(flight.departure_date)}, ${money(flight.total)}`);
+    choose.setAttribute('aria-label', `${choose.textContent}: ${flight.origin} to ${flight.destination}, ${dateLabel(flight.departure_date)}, base fare ${money(flight.base_fare)}, total payable ${money(flight.total)}`);
     choose.addEventListener('click', () => openCheckout('flight', flight)); price.append(choose); card.append(date, route, price); return card;
   }));
 }
@@ -169,7 +169,7 @@ function renderAccount() {
   if (!bookings.length) { $('trip-results').replaceChildren(emptyState('Your next trip starts here', 'Choose a member flight to start planning. Your confirmed bookings will appear here.', { href: '#flights', text: 'Find a member flight' })); return; }
   $('trip-results').replaceChildren(...bookings.map((booking) => {
     const card = node('article', undefined, 'trip-card'); card.dataset.bookingId = booking.id;
-    card.append(node('p', 'Simulated booking confirmed', 'confirmed'), node('h3', `${booking.origin} → ${booking.destination}`), node('p', `${dateLabel(booking.departure_date)} · One way · 1 traveller`), node('p', money(booking.total), 'trip-total'), node('p', `Base ${money(booking.base_fare)} + mandatory fees ${money(booking.mandatory_fees)}`), node('p', `Reference ${booking.id}`, 'booking-id'));
+    card.append(node('p', 'Simulated booking confirmed', 'confirmed'), node('h3', `${booking.origin} → ${booking.destination}`), node('p', `${dateLabel(booking.departure_date)} · One way · 1 traveller`), node('p', `${money(booking.base_fare)} base fare`, 'trip-total'), node('p', `+ fees ${money(booking.mandatory_fees)} · total paid ${money(booking.total)}`, 'fine-print'), node('p', `Reference ${booking.id}`, 'booking-id'));
     return card;
   }));
 }

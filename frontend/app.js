@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const RELEASE_DAYS = [28, 14, 7];
 const roundLabel = (days) => days?.length ? days.map((day) => `D${day}`).join(' / ') : 'No future rounds';
-const state = { flights: [], flight: null, history: [], forecast: null, day: 28, candidates: [], best: null, loadedFlightId: null, request: 0, forecastRequest: 0, summary: null, offers: [], marketRun: null, marketReport: null, marketCases: [], marketRequest: 0, marketTimer: null, marketLoading: false, panelRun: null, panelData: null, panelTimer: null, panelRequest: 0, panelLoading: false, panelPage: 0, panelPerson: null, panelPersonRequest: 0, panelDetailStage: null, planDraft: false };
+const state = { flights: [], flight: null, history: [], forecast: null, day: 28, candidates: [], best: null, loadedFlightId: null, request: 0, forecastRequest: 0, summary: null, offers: [], marketRun: null, marketReport: null, marketCases: [], marketRequest: 0, marketTimer: null, marketLoading: false, panelRun: null, panelData: null, panelTimer: null, panelRequest: 0, panelLoading: false, panelPage: 0, panelPerson: null, panelPersonRequest: 0, panelDetailStage: null, planDraft: false, offerFlightId:null, offerDay:28, offerForecast:null, offerRequest:0, offerManual:false, offerBinding:null, offerRequiredFee:null, publishedFee:null, offerSuggestions:[] };
 const number = (value, digits = 0) => value === null || value === undefined || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-HK', { maximumFractionDigits: digits });
 const money = (value) => value === null || value === undefined ? '—' : `HK$${number(value, Number.isInteger(Number(value)) ? 0 : 2)}`;
 const percent = (value) => value === null || value === undefined ? '—' : `${number(Number(value) * 100, 1)}%`;
@@ -39,7 +39,7 @@ function setView() {
 window.addEventListener('hashchange', setView);
 document.querySelector('.skip').addEventListener('click', (event) => { event.preventDefault(); document.querySelector('.view:not([hidden]) h1')?.focus(); });
 let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (state.forecast) renderForecast(); }, 120); });
-$('go-pricing').addEventListener('click', () => { location.hash = 'optimization'; });
+$('go-pricing').addEventListener('click', () => { location.hash = 'optimization'; window.dispatchEvent(new CustomEvent('uoption:optimize-flight',{detail:{flight_id:state.loadedFlightId,day:state.day}})); });
 
 function svgNode(tag, attrs, content) { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs || {}).forEach(([key, val]) => el.setAttribute(key, val)); if (content !== undefined) el.textContent = content; return el; }
 function linePath(points, x, y) { return points.map((p, i) => `${i ? 'L' : 'M'}${x(p.day).toFixed(2)},${y(p.value).toFixed(2)}`).join(' '); }
@@ -102,15 +102,15 @@ function renderForecast() {
   text('beta-label', `β ${number(f.beta, 4)} / day · ${number(f.rate_now, 2)} requests / day`);
   const context = `${state.flight.origin || '—'} → ${state.flight.destination || '—'} · ${(state.flight.departure_at || '').slice(0, 10)} · D${state.day}`;
   text('pricing-context', `${context} · ${number(f.risk_release_ceiling ?? f.releasable_seats)} forecast risk ceiling · future release rounds: ${roundLabel(RELEASE_DAYS.filter((d) => d <= state.day))}.`);
-  text('offer-flight-context', context);
-  const qty = Math.max(0, Math.floor(Number(f.releasable_seats) || 0)); $('offer-quantity').max = qty; $('offer-quantity').value = Math.min(Math.max(1, value('offer-quantity')), qty) || 1;
+  if(!state.offerManual) selectOffer(state.loadedFlightId,state.day,false);
   $('publish-button').disabled = !canPublish();
   const past = history.filter((r) => r.days_to_departure <= 28).map((r) => ({ day: Number(r.days_to_departure), value: Number(r.booked_seats ?? r.net_booked_seats) }));
   const future = (f.forecast_curve || []).map((r) => ({ day: Number(r.day ?? r.days_to_departure), value: Number(r.expected_booked), low: Number(r.p10), high: Number(r.p90) })).filter((r) => Number.isFinite(r.value) && r.day <= state.day).sort((a, b) => b.day - a.day);
   drawChart('booking-chart', past, future, { maxY: capacity, yLabel: 'Booked seats' });
-  const prices = history.filter((r) => r.days_to_departure <= 180 && (r.normal_total_fare ?? r.total_payable) !== null && (r.normal_total_fare ?? r.total_payable) !== undefined).map((r) => ({ day: Number(r.days_to_departure), value: Number(r.normal_total_fare ?? r.total_payable) }));
+  const prices = history.filter((r) => r.days_to_departure <= 180 && r.normal_base_fare != null).map((r) => ({ day: Number(r.days_to_departure), value: Number(r.normal_base_fare) }));
   drawChart('price-chart', prices, [], { yLabel: 'HKD', width: 620, height: 260, minDay: 180 });
-  text('price-caption', `Quoted totals through D${state.day}; includes mandatory fees. Future quotes are not shown.`);
+  const lastQuote=history.findLast(r=>r.normal_base_fare!=null);
+  text('price-caption', `Base fares through D${state.day}.${lastQuote?` Last quote D${lastQuote.days_to_departure}: fees ${money(lastQuote.mandatory_fees)} · total payable ${money(lastQuote.normal_total_fare)}.`:' No observed quote is available.'} Future quotes are not shown.`);
   renderSeatComposition(f, capacity, booked);
 
   if (state.offers.length) renderOffers();
@@ -147,9 +147,9 @@ function renderSeatComposition(f, capacity, booked) {
   }));
   text('member-allocation-detail', RELEASE_DAYS.includes(state.day) ? `Additional seats at D${state.day}; earlier unsold quota deducted` : `No new release today · ${number(r.currently_bookable || 0)} published seats bookable`);
 }
-function canPublish() {
-  const f = state.forecast;
-  return Boolean(f && state.loadedFlightId && RELEASE_DAYS.includes(state.day) && f.releasable_seats > 0 && !f.release_status?.round_already_issued && !f.release_status?.blocked_reason);
+function canPublish(ignoreFee=false) {
+  const f = state.offerForecast;
+  return Boolean(f && state.offerFlightId && RELEASE_DAYS.includes(state.offerDay) && f.releasable_seats > 0 && !f.release_status?.round_already_issued && !f.release_status?.blocked_reason && (ignoreFee || !state.offerBinding || state.publishedFee===state.offerRequiredFee));
 }
 function releaseExplanation(f) {
   const r = f.release_status || {};
@@ -165,7 +165,7 @@ function renderReleaseStatus(f) {
   text('prior-quota-value', `${number(r.previous_valid_unsold ?? r.prior_valid_unsold ?? 0)} seats`);
   text('active-quota-value', `${number(r.total_active_unsold ?? 0)} seats`);
   const explanation = releaseExplanation(f) + (r.currently_bookable == null ? '' : ` Currently bookable member seats: ${number(r.currently_bookable)}. Valid quota above the current safety capacity: ${number(r.protection_shortfall ?? 0)}.`);
-  text('release-status', explanation); text('offer-release-status', explanation);
+  text('release-status', explanation);
   const rows = r.round_history || [];
   $('demo-round-table').replaceChildren(...rows.map((row) => {
     const tr = element('tr'), th = element('th', `D${row.day}`); th.scope = 'row'; tr.append(th);
@@ -234,29 +234,23 @@ $('optimize-form').addEventListener('submit', (event) => { event.preventDefault(
   if (flightId !== state.loadedFlightId || day !== state.day) throw new Error('The selected flight or date changed. Run a new comparison for the current selection.');
   renderPricing(data); notify(`Compared ${number(state.candidates.length)} candidate policies. Results are conditional on the simulation assumptions.`);
 }); });
-$('apply-policy').addEventListener('click', () => {
-  if (!state.best || !state.forecast) return;
-  const f = state.forecast, r = f.release_status || {};
-  const safe = r.safe_capacity ?? Math.max(0, Number(f.risk_release_ceiling ?? f.releasable_seats) - Number(r.member_sold || 0));
-  const target = Math.floor(safe * Number(state.best.release_fraction ?? 1));
-  const quantity = Math.min(Number(f.releasable_seats), Math.max(0, target - Number(r.total_active_unsold || 0)));
-  if (quantity < 1) { notify('Earlier valid quota already meets this policy target. No additional seats can be prepared.'); return; }
-  $('offer-fare').value = fare(state.best); $('member-fee').value = fee(state.best); state.planDraft = true; $('offer-quantity').value = quantity;
-  location.hash = 'members'; notify('New allocation and candidate prices copied. Publish seats and save the membership price separately when ready.');
+$('apply-policy').addEventListener('click', async () => {
+  if(!state.best||!state.forecast)return;
+  const best=state.best;await selectOffer(state.loadedFlightId,state.day,true);
+  if(!canPublish()){notify('No additional safe quota is available for this round.');return;}
+  const target=Math.floor(Number(state.offerForecast.risk_release_ceiling??state.offerForecast.releasable_seats)*Number(best.release_fraction??1));
+  $('offer-fare').value=fare(best);$('member-fee').value=fee(best);state.planDraft=true;state.offerBinding=null;
+  $('offer-quantity').value=Math.max(1,Math.min(Number(state.offerForecast.releasable_seats),target));location.hash='members';
+  notify('Reference prices copied as a manual draft. Review the current flight allocation before publishing.');
 });
-window.addEventListener('uoption:prepare-policy', (event) => {
-  const policy = event.detail;
-  if (!policy || !Number.isFinite(policy.member_fare) || !Number.isFinite(policy.membership_fee)) return;
-  $('offer-fare').value = policy.member_fare; $('member-fee').value = policy.membership_fee; state.planDraft = true;
-  if (state.forecast) {
-    const r = state.forecast.release_status || {};
-    const safe = r.safe_capacity ?? Math.max(0, Number(state.forecast.risk_release_ceiling ?? state.forecast.releasable_seats) - Number(r.member_sold || 0));
-    const target = Math.floor(safe * Number(policy.release_fraction ?? 0.5));
-    const quantity = Math.min(Number(state.forecast.releasable_seats), Math.max(0, target - Number(r.total_active_unsold || 0)));
-    $('offer-quantity').value = Math.max(1, quantity);
-  }
-  location.hash = 'members';
-  notify('Validated prices copied as a draft. Save the membership price and publish available seats to update the Client Portal.');
+window.addEventListener('uoption:prepare-policy', async (event) => {
+  const policy=event.detail;
+  if(!policy?.flight_id||!policy.run_id||!RELEASE_DAYS.includes(policy.forecast_day))return;
+  location.hash='members';
+  await selectOffer(policy.flight_id,policy.forecast_day,true);
+  const match=state.offerSuggestions.find(s=>s.run_id===policy.run_id&&s.mode===policy.mode);
+  if(!match){notify('This result is no longer eligible for this flight and round. Review the current suggestion.');return;}
+  applyOfferSuggestion(match);
 });
 $('export-candidates').addEventListener('click', () => {
   const keys = ['member_fare','membership_fee','release_days','release_fraction','incremental_profit','members','member_bookings','service_rate','feasible'];
@@ -658,8 +652,8 @@ function renderOffers() {
   $('offers-list').replaceChildren(...state.offers.map((offer) => {
     const card = element('article', undefined, 'offer-card'); card.dataset.offerId = offer.offer_id || offer.id; const knownFlight = state.flights.find((f) => f.flight_id === offer.flight_id) || {};
     const intro = element('div'); intro.append(element('h3', `${offer.origin || knownFlight.origin || '—'} → ${offer.destination || knownFlight.destination || '—'}`)); intro.append(element('p', (offer.departure_at || knownFlight.departure_at || '').slice(0, 10))); intro.append(element('p', offer.flight_id));
-    const price = element('div'); price.append(element('div', money(offer.total_payable ?? (Number(offer.base_fare) + Number(offer.mandatory_fees ?? offer.fees ?? 0))), 'offer-price'));
-    price.append(element('p', `${money(offer.base_fare)} base fare + ${money(offer.mandatory_fees ?? offer.fees ?? 0)} mandatory fees`));
+    const price = element('div'); price.append(element('div', money(offer.base_fare), 'offer-price'));
+    price.append(element('p', `Base fare · fees ${money(offer.mandatory_fees ?? offer.fees ?? 0)} · total payable ${money(offer.total_payable ?? (Number(offer.base_fare)+Number(offer.mandatory_fees??offer.fees??0)))}`, 'small muted'));
     const inventory = element('div'); const remaining = offer.remaining ?? offer.remaining_seats ?? offer.available ?? offer.quantity;
     inventory.append(element('h3', `${number(remaining)} unspent quota`)); inventory.append(element('p', `D${offer.day} allocation · ${offer.release_version === 'three-round-release-v1' ? 'valid until cutoff' : 'historical expiry rule'}`));
     inventory.append(element('p', 'Subject to current protection and physical seats; checked on booking.'));
@@ -668,14 +662,61 @@ function renderOffers() {
   }));
   if (!state.offers.length) $('offers-list').append(element('p', 'No member offers yet. Publish an offer from the selected flight above.', 'empty-state'));
 }
-$('offer-form').addEventListener('submit', (event) => { event.preventDefault(); busy($('publish-button'), async () => {
-  if (!state.loadedFlightId || !state.forecast) throw new Error('Load a valid flight forecast first.');
-  if (!RELEASE_DAYS.includes(state.day) || state.forecast.release_status?.round_already_issued || state.forecast.release_status?.blocked_reason) throw new Error(releaseExplanation(state.forecast));
-  if (value('offer-quantity') > Number(state.forecast.releasable_seats)) throw new Error('Requested seats exceed the current forecast release limit.');
-  const data = await api('/api/offers', { flight_id: state.loadedFlightId, days_to_departure: state.day, quantity: value('offer-quantity'), base_fare: value('offer-fare') }); notify(`Member offer published: ${(data.offer || data).offer_id || (data.offer || data).id || 'saved'}.`); await loadOffers(); await loadForecast();
-}); });
+function offerRouteKey(flight){return `${flight.origin}-${flight.destination}`;}
+function populateOfferFlights(selected=''){
+  const matches=state.flights.filter(f=>offerRouteKey(f)===$('offer-route').value).sort((a,b)=>(a.departure_at||a.departure_date).localeCompare(b.departure_at||b.departure_date));
+  $('offer-flight').replaceChildren(new Option('Choose a departure / flight',''),...matches.map(f=>new Option(`${(f.departure_at||f.departure_date).slice(0,10)} · ${f.flight_id}`,f.flight_id)));
+  if(selected)$('offer-flight').value=selected;
+}
+function initializeOfferSelectors(){
+  $('offer-route').replaceChildren(new Option('Choose a route',''),...[...new Set(state.flights.map(offerRouteKey))].sort().map(route=>new Option(route.replace('-', ' → '),route)));
+}
+async function selectOffer(flightId,day,manual=true){
+  const changed=flightId!==state.offerFlightId||day!==state.offerDay;if(changed){$('offer-fare').value='';$('offer-quantity').value=1;}
+  const token=++state.offerRequest;state.offerManual=manual;state.offerFlightId=flightId;state.offerDay=day;state.offerForecast=null;state.offerBinding=null;state.offerRequiredFee=null;text('offer-binding-status','');state.offerSuggestions=[];$('publish-button').disabled=true;
+  const flight=state.flights.find(f=>f.flight_id===flightId);const box=$('offer-optimization-suggestion');box.replaceChildren(element('p','Loading this flight’s optimization suggestions…'));
+  if(!flight){text('offer-flight-context','Choose a departure / flight.');text('offer-release-status','Select a flight to calculate its current safe release limit.');$('offer-quantity').max=0;box.replaceChildren(element('p','Choose a route, departure and release round.'));return;}
+  $('offer-route').value=offerRouteKey(flight);populateOfferFlights(flightId);$('offer-day').value=String(day);
+  text('offer-flight-context',`${flight.origin} → ${flight.destination} · ${(flight.departure_at||flight.departure_date).slice(0,10)} · ${flightId} · D${day}`);
+  try{
+    const result=await api('/api/forecast',{flight_id:flightId,days_to_departure:day});if(token!==state.offerRequest)return;
+    state.offerForecast=result.forecast;
+    const qty=Math.max(0,Math.floor(state.offerForecast.releasable_seats));$('offer-quantity').max=qty;$('offer-quantity').value=Math.min(Math.max(1,value('offer-quantity')),qty)||1;
+    text('offer-release-status',`${qty} new seats can currently be released. ${state.offerForecast.release_status?.blocked_reason||'Existing valid quotas are deducted before new seats are issued.'}`);
+    $('publish-button').disabled=!canPublish();
+    if(!RELEASE_DAYS.includes(day)){box.replaceChildren(element('p','Select D28, D14 or D7 to load a publishable suggestion.'));return;}
+    const response=await api(`/api/optimization/suggestions?flight_id=${encodeURIComponent(flightId)}&day=${day}`);if(token!==state.offerRequest)return;
+    state.offerSuggestions=response.suggestions||[];box.replaceChildren();
+    if(!state.offerSuggestions.length){box.append(element('p',response.reason||'No completed validated optimization for this exact flight and round. Run Optimize prices first.'));return;}
+    for(const suggestion of state.offerSuggestions){const item=element('div');item.append(element('strong',`${suggestion.mode==='live'?'Live LLM':'Mathematical'} suggestion`),element('p',`${money(suggestion.member_fare)} base fare · ${money(suggestion.membership_fee)} pass fee · ${number(suggestion.suggested_new_seats??suggestion.release_seats)} new seats`),element('p',`${suggestion.run_id} · current release cap ${number(response.current_release_limit)}`, 'small muted'));
+      const button=element('button','Use this suggestion','button');button.type='button';button.disabled=Number(suggestion.suggested_new_seats??suggestion.release_seats)<1;button.addEventListener('click',()=>applyOfferSuggestion(suggestion));item.append(button);box.append(item);}
+  }catch(e){if(token===state.offerRequest)box.replaceChildren(element('p',`Suggestion unavailable: ${e.message}`));}
+  finally{if(token===state.offerRequest)$('publish-button').disabled=!canPublish();}
+}
+function applyOfferSuggestion(suggestion){
+  if(!state.offerSuggestions.includes(suggestion)||!canPublish(true))return;
+  const qty=Math.min(Number(suggestion.suggested_new_seats??suggestion.release_seats),Number(state.offerForecast.releasable_seats));if(qty<1)return;
+  $('offer-fare').value=suggestion.member_fare;$('offer-quantity').value=qty;$('member-fee').value=suggestion.membership_fee;state.planDraft=true;
+  state.offerBinding={optimization_run_id:suggestion.run_id,optimization_mode:suggestion.mode};state.offerRequiredFee=Number(suggestion.membership_fee);
+  updateOfferBinding();
+  notify(state.publishedFee===state.offerRequiredFee?'Matched optimization copied to this flight’s draft. Review the base fare and new seats, then publish.':`Matched draft requires a ${money(state.offerRequiredFee)} pass fee. Save that membership price first, then publish the offer.`);
+}
+function updateOfferBinding(){
+  text('offer-binding-status',state.offerBinding?(state.publishedFee===state.offerRequiredFee?`Linked optimization uses the published ${money(state.offerRequiredFee)} membership fee.`:`Save the ${money(state.offerRequiredFee)} membership price in step 2 before publishing this linked offer. Published fee: ${money(state.publishedFee)}.`):'');
+  $('publish-button').disabled=!canPublish();
+}
+$('offer-route').addEventListener('change',()=>{populateOfferFlights();selectOffer('',Number($('offer-day').value)||28,true);});
+$('offer-flight').addEventListener('change',()=>selectOffer($('offer-flight').value,Number($('offer-day').value)||28,true));
+$('offer-day').addEventListener('change',()=>selectOffer($('offer-flight').value,Number($('offer-day').value),true));
+for(const id of ['offer-fare','offer-quantity'])$(id).addEventListener('input',()=>{state.offerBinding=null;state.offerRequiredFee=null;updateOfferBinding();});
+$('offer-form').addEventListener('submit',(event)=>{event.preventDefault();busy($('publish-button'),async()=>{
+  if(!canPublish())throw new Error('Choose a valid flight and release round with new safe seats.');
+  if(value('offer-quantity')>Number(state.offerForecast.releasable_seats))throw new Error('Requested seats exceed the current forecast release limit.');
+  const data=await api('/api/offers',{flight_id:state.offerFlightId,days_to_departure:state.offerDay,quantity:value('offer-quantity'),base_fare:value('offer-fare'),...(state.offerBinding||{})});
+  notify(`Member offer published: ${(data.offer||data).offer_id||(data.offer||data).id||'saved'}.`);await loadOffers();await selectOffer(state.offerFlightId,state.offerDay,state.offerManual);if(state.loadedFlightId===state.offerFlightId)await loadForecast();
+});});
 async function loadMemberPlan() {
-  try { const data = await api('/api/member-portal/plan'); const plan = data.membership;
+  try { const data = await api('/api/member-portal/plan'); const plan = data.membership;state.publishedFee=Number(plan.fee);updateOfferBinding();
     if (!state.planDraft && document.activeElement !== $('member-fee')) $('member-fee').value = plan.fee;
     text('membership-status', `Published membership: ${money(plan.fee)} for ${number(plan.term_days)} days. This is the price shown on the member site.`);
   } catch (e) { text('membership-status', `Membership plan unavailable: ${e.message}`); }
@@ -683,7 +724,7 @@ async function loadMemberPlan() {
 $('member-fee').addEventListener('input', () => { state.planDraft = true; });
 $('member-plan-form').addEventListener('submit', (event) => { event.preventDefault(); busy($('save-plan-button'), async () => {
   const data = await api('/api/member-portal/plan', { membership_fee: value('member-fee') });
-  state.planDraft = false;
+  state.planDraft = false;state.publishedFee=Number(data.membership.fee);updateOfferBinding();
   text('membership-status', `Published membership: ${money(data.membership.fee)} for ${number(data.membership.term_days)} days. Existing members are not charged again.`);
   notify('Membership price saved. New members see this price on the member site.');
 }); });
@@ -693,12 +734,12 @@ async function init() {
   setView();
   try {
     const [summary, flightData] = await Promise.all([api('/api/summary'), api('/api/flights')]); state.summary = summary; state.flights = flightData.flights || flightData;
-    text('dataset-label', `${number(summary.dataset?.rows ?? summary.rows)} daily snapshots · synthetic`);
+    text('dataset-label', `${number(summary.dataset?.catalog_rows ?? summary.dataset?.rows ?? summary.rows)} daily snapshots · synthetic`);
     const configured = summary.llm?.live_configured || summary.llm?.configured || summary.llm?.live_available;
     document.dispatchEvent(new CustomEvent('uoption:provider', { detail: { configured: Boolean(configured) } }));
     if (configured) { $('live-mode-option').disabled = false; $('live-mode-option').textContent = 'Live LLM'; $('market-live-option').disabled = false; $('market-live-option').textContent = 'Live LLM · bounded calls'; }
     $('flight-select').replaceChildren(...state.flights.map((flight) => { const option = element('option', `${flight.origin} → ${flight.destination} · ${(flight.departure_at || flight.departure_date || '').slice(0, 10)} · ${flight.flight_id}`); option.value = flight.flight_id; return option; }));
-    $('flight-select').disabled = !state.flights.length;
+    $('flight-select').disabled = !state.flights.length; initializeOfferSelectors();
     if (state.flights.length) await loadFlight(); else throw new Error('No flights available. Generate the simulation dataset and restart the backend.');
     loadPersonas(); loadAgentRuns(); loadPanelRuns(); loadMemberPlan();
 

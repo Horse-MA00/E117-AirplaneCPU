@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "flights": 222,
+  "directed_routes": 74,
+  "departure_dates": [
+    "2027-05-15",
+    "2027-05-18",
+    "2027-05-21"
+  ],
+  "forecasts": 666,
+  "days": [
+    28,
+    14,
+    7
+  ],
+  "release_counts": {
+    "zero": 434,
+    "positive": 232
+  },
+  "maximum_expected_remaining_demand": 296.24,
+  "minimum_snapshot_available": 0,
+  "elapsed_seconds": 5.73
+}

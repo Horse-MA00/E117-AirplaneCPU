@@ -6,6 +6,7 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[];page.on('pageerror',error=>errors.push(error.message));
 try {
   await page.goto(origin+'/#optimization');
+  await page.locator('#legacy-price-details > summary').click();
   await page.locator('#continuous-form').waitFor();
   assert.equal(await page.locator('#market-mode').inputValue(),'probabilistic');
   await page.locator('#continuous-evals').fill('3');

@@ -113,7 +113,7 @@ class Store:
                 raise ValueError('Offer not found')
             return dict(row)
 
-    def offer(self, flight, day, quantity, fare, fees, max_release):
+    def offer(self, flight, day, quantity, fare, fees, max_release, expected_plan_fee=None):
         self._day(day)
         if day not in RELEASE_DAYS:
             raise ValueError('New quota is issued only at D28, D14 and D7')
@@ -124,6 +124,8 @@ class Store:
         now = time.time()
         with self.connect() as c:
             c.execute('BEGIN IMMEDIATE')
+            if expected_plan_fee is not None and c.execute('SELECT fee FROM membership_plan WHERE id=1').fetchone()['fee'] != expected_plan_fee:
+                raise ValueError('Membership fee changed; save the suggested fee before publishing this optimized offer')
             status = self._status(c, flight, day, max_release)
             if status['blocked_reason']:
                 raise ValueError(status['blocked_reason'])

@@ -1,5 +1,7 @@
 # Joint price and seat-feedback experiments
 
+**Historical whole-term engine specification.** The primary Admin now uses `flight-policy-feedback-v2`: selected flight/date, dataset P₀, fixed editable V₀, single-flight replay and automatic bounded live batches. See [the current contract](FLIGHT_SCOPED_OPTIMIZATION.md). The v1 behavior below remains available only for legacy experiments and reference tools.
+
 Implemented 2026-11-14. Engine: `joint-policy-feedback-v1`. This supersedes the
 one-dimensional fare-only search as the primary Admin workflow; the earlier
 continuous-search module and its evidence remain available as historical tools.

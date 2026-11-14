@@ -62,7 +62,7 @@ def main():
         pricing = call('/api/pricing/runs', {'evaluations': 3, 'replicates': 1, 'customers': 4})
         pricing = wait('/api/pricing/runs/'+pricing['run_id'])
         assert pricing['report']['validation']['checks_passed']
-        joint = call('/api/optimization/runs/'+args.joint_run) if args.joint_run else call('/api/optimization/runs', {'mode': 'math', 'rounds': 3, 'customers': 4, 'flights': 6, 'replicates': 1, 'max_calls': 0})
+        joint = call('/api/optimization/runs/'+args.joint_run) if args.joint_run else call('/api/optimization/runs', {'flight_id':flight['flight_id'], 'forecast_day':28, 'mode': 'math', 'rounds': 3, 'customers': 4, 'replicates': 1, 'max_calls': 0})
         joint = wait('/api/optimization/runs/'+joint['run_id'])
         assert joint['counts']['provider_calls'] == 0
         assert joint['config']['mode'] == 'math'

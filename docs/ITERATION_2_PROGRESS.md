@@ -132,3 +132,15 @@ Docker integration follow-up: also incorporated main 1b4e98f flexible country/da
 - 完成所有作業後重建 app，再以 `--verify-only` 確認會員、訂單及實驗均由命名卷保留。宿主機既有私有資料沒有導入，Docker 使用獨立資料卷；詳細命令與證據見 DOCKER.md 的 Apple Silicon 本機實際運行章節。
 
 Docker refresh: integrated main 6ee01e5 (airport/date choices independent of released inventory) on feature/docker-containerization. Rebuilt the full application image, passed 170 Python tests and frozen artifact verification, route-catalog browser regression, native/fallback Temporal search, and real simulated member checkout. Existing membership, booking, panel, fare-search and joint-optimization records survived recreation. Main remains untouched by this integration.
+
+### 航班專屬 Admin 修復：實作里程碑（2026-11-14）
+
+- 已增加74方向航線／222班／40,182筆D180–D0資料；原模型、校準和原60萬筆凍結資料保持原樣。666個D28／D14／D7預測檢查均通過容量及有限需求檢查。
+- Optimize改為選定航班／日期／輪次，P₀從快照讀取，V₀可設並固定；兩種旅客都重播該航班。增加價格／貢獻／購買者／利潤率圖；買後取消仍計入購買者，實際乘搭另列。
+- Live可在總額度內自動跨內部批次，修正零批次空轉及執行中resume改額度問題。原始回覆、失敗、快取及強制動作仍分開保存。
+- Manage offers按精確航班／輪次讀取已驗證建議；配額套用候選保護profile並扣已售／舊有效未售。發布時核對實際會員費與測試V₀一致。切換航班清空舊草稿。Client主價改base，完整付款核價保留。
+- 第一輪Docker回歸165＋19項通過；獨立審查後追加座位profile、會費交易核對及買後取消計數回歸，最終結果待下方記錄。技術合約見FLIGHT_SCOPED_OPTIMIZATION.md。
+
+本輪最終驗證：168 backend＋19 simulator測試通過，22組資料／實驗artifact校驗通過；五套Chrome桌面／手機流程通過。兩個不同方向／日期HTTP數學實驗各3輪8市場通過；實際DeepSeek 1人1輪6市場共21次新呼叫、0快取／失敗、27強制動作，2決策內部批次自動續跑10次，64總額度內完成。三次實驗均正確保留NO_OFFER。報告及redacted raw保存在flight_hnd_*_20261114，詳細限制與引用見FLIGHT_SCOPED_OPTIMIZATION.md。
+
+最後確認原8000端口已空出後，Docker恢復使用使用者原連結 `127.0.0.1:8000`；重建後health、兩個入口、222班資料及21次live實驗均保留。`.env`僅本機APP_PORT設定，仍不提交。

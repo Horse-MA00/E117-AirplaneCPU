@@ -56,7 +56,7 @@ class OptimizationTests(unittest.TestCase):
         self.assertNotEqual(engine.propose(config, rows),engine.propose(config,bad))
 
     def test_real_math_run_is_durable_paired_and_holdout_profile_frozen(self):
-        started = engine.start({'rounds':3, 'customers':2, 'seed':20261802})
+        started = engine.start({'legacy_market':True, 'rounds':3, 'customers':2, 'seed':20261802})
         report = self.finish(started['run_id'])
         self.assertEqual(report['status'],'completed',report['error'])
         track = report['tracks'][0]
@@ -90,7 +90,7 @@ class OptimizationTests(unittest.TestCase):
             return {'decision':decision,'source':record['source'],'provider_call':not forced,'cache_hit':False,'forced':forced}
         with patch.dict(os.environ,{'LLM_API_URL':'https://example.invalid/chat','LLM_API_KEY':'test-secret-only','LLM_MODEL':'fake-test'}), \
              patch('llm_agent.market_adapter.choose',side_effect=fake_provider):
-            started=engine.start({'mode':'live','rounds':1,'customers':1,'max_calls':0,'seed':20261812})
+            started=engine.start({'legacy_market':True, 'mode':'live','rounds':1,'customers':1,'max_calls':0,'seed':20261812})
             first=self.finish(started['run_id'])
             self.assertEqual(first['status'],'paused')
             self.assertEqual(first['counts']['provider_calls'],0)
@@ -118,7 +118,7 @@ class OptimizationTests(unittest.TestCase):
             raise ValueError('Provider rejected; no fallback')
         with patch.dict(os.environ,{'LLM_API_URL':'https://example.invalid/chat','LLM_API_KEY':'test-key','LLM_MODEL':'fake-test'}), \
              patch('llm_agent.market_adapter.choose',side_effect=failed):
-            started=engine.start({'mode':'live','rounds':1,'customers':1,'max_calls':1})
+            started=engine.start({'legacy_market':True, 'mode':'live','rounds':1,'customers':1,'max_calls':1})
             result=self.finish(started['run_id'])
         self.assertEqual(result['status'],'failed')
         self.assertEqual(result['counts']['provider_calls'],1)
@@ -128,7 +128,7 @@ class OptimizationTests(unittest.TestCase):
 
     def test_provenance_change_refuses_resume(self):
         with patch.dict(os.environ,{'LLM_API_URL':'https://example.invalid/chat','LLM_API_KEY':'test-key','LLM_MODEL':'fake-test'}):
-            started=engine.start({'mode':'live','rounds':1,'customers':1,'max_calls':0})
+            started=engine.start({'legacy_market':True, 'mode':'live','rounds':1,'customers':1,'max_calls':0})
             self.finish(started['run_id'])
             with patch.object(engine,'provenance',return_value={'version':'modified'}):
                 engine.resume(started['run_id'],{'max_calls':0})

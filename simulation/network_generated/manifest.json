@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.1",
+  "generator_version": "network-nhpp-supplement-v1",
+  "seed": 11720261114,
+  "rows": 40182,
+  "flights": 222,
+  "directed_routes": 74,
+  "remote_airports": 37,
+  "departure_dates": [
+    "2027-05-15",
+    "2027-05-18",
+    "2027-05-21"
+  ],
+  "history_lengths": {
+    "181": 222
+  },
+  "source_kind": "assumed_network_demo",
+  "currency": "HKD",
+  "timezone": "Asia/Hong_Kong",
+  "catalog_checked_at": "2026-11-14",
+  "catalog_sources": [
+    "https://www.hkexpress.com/en/destinations",
+    "https://www.hkexpress.com/zh/sitemap/flights-from-cities/page-1"
+  ],
+  "member_initial_base_fare_formula": "round(0.15 * observed normal_base_fare, 2); null when no open quote",
+  "source_files": {
+    "simulation/network_generate.py": "a40e60fbb669c6146f74b8c61ead948790b16426003e88f163d2fdd11b7d5327",
+    "simulation/generate.py": "ff95386b68b6d3a210c9d7d5257f4c17b2923819dd64755095b9a48f65d429fc",
+    "frontend/members/airports.js": "38e282743daebc8ddbf28d9df1c4b6b338d52a799dab01a7cb6e1b67770754a1"
+  },
+  "assumptions": [
+    "All dates, departure times, seat capacities, price paths, occupancy and fees are simulated, not airline observations.",
+    "Every selected airport receives an HKG outbound and inbound scenario on each sample date; this does not assert actual route or seasonal availability.",
+    "CTS is retained as a user-requested, schedule-unconfirmed scenario; HFE retains its announced status.",
+    "Independent route/direction/date seeds use the existing NHPP generator; no empirical route-specific elasticity or willingness-to-pay is claimed.",
+    "All timestamps use a common Hong Kong simulation clock, including inbound scenarios; this is not an actual local-airport timetable.",
+    "P0 is an initial synthetic member-base-fare hypothesis (15% of that snapshot normal base), not an optimized target or ground truth.",
+    "Gross bookings and cancellations describe the previous completed interval; prices apply after the snapshot. Future truth is not a predictor feature.",
+    "Original generated and validation datasets and NHPP calibration remain unchanged."
+  ],
+  "files": {
+    "snapshots.csv.gz": {
+      "bytes": 564121,
+      "sha256": "f333d081de932f57af41daf9a9519cdbe6cab00a2dcb34e4d251069d730de947"
+    },
+    "truth.csv.gz": {
+      "bytes": 509549,
+      "sha256": "91bea6cb48c9659c52f59e8eb9123d47efed61646aa7b1cde4f14d1457402cd4"
+    },
+    "flights.json": {
+      "bytes": 162711,
+      "sha256": "efbe4498117e809cc047788012d5d2c3a193d609d65b4c4e38c5518a599b23fd"
+    },
+    "catalog.json": {
+      "bytes": 3754,
+      "sha256": "88eca6cd70f76f346312094182c62e52727067cfd946ca42d4ffe0ffac195149"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "source": "joint_optimization",
+  "run_id": "opt-e13aaf6837c74650",
+  "synthetic": true,
+  "completed_worlds": 8,
+  "audit_records": 516,
+  "counts": {
+    "provider_calls": 0,
+    "cache_hits": 0,
+    "forced": 110,
+    "math_choices": 146,
+    "failures": 0,
+    "live_attempts": 0
+  },
+  "files": {
+    "report.json": {
+      "sha256": "4c458fcf87d1a83cdfef4859a0d3c5201cba6296b0a2e896783fcf42f331b3b6",
+      "bytes": 261033
+    },
+    "audit.jsonl.gz": {
+      "sha256": "dbe3fb355ed323f6e39be26d9370fe97284f0b7b4ae075b9e0d3a7d3d5d20f1d",
+      "bytes": 83929
+    }
+  }
+}

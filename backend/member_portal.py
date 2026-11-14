@@ -28,6 +28,7 @@ def flights(store, forecast_for):
                'total': offer['base_fare'] + offer['fees'],
                'bookable_seats': min(offer['remaining'], status['currently_bookable']),
                'normal_total': snapshot['normal_total_fare'] if snapshot else None,
+               'normal_base_fare': snapshot.get('normal_base_fare') if snapshot else None,
                'expires': offer['expires'], 'source': 'synthetic'}
         # One result per flight: choose the cheapest actually bookable cohort.
         # Cohorts share a risk ceiling; adding their counts would overstate supply.

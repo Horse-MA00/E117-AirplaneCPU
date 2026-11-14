@@ -46,12 +46,13 @@ el('continuous-form').addEventListener('submit',async event=>{
 // Opening a saved result only reads it; it never creates a new experiment.
 const savedRun=new URLSearchParams(location.search).get('pricing_run');
 if (savedRun && /^price-[a-f0-9]{16}$/.test(savedRun)) {
+  el('legacy-price-details').open=true;
   if(location.hash!=='#optimization')location.hash='optimization';
   current=savedRun;el('continuous-start').disabled=true;
   el('continuous-report').href=`/api/pricing/runs/${encodeURIComponent(current)}`;poll(current);
 }
 
 el('show-price-curve').addEventListener('click',event=>{
-  event.preventDefault();el('fare-curve-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  event.preventDefault();el('legacy-price-details').open=true;el('fare-curve-panel').scrollIntoView({behavior:'smooth',block:'start'});
   el('continuous-min').focus({preventScroll:true});
 });

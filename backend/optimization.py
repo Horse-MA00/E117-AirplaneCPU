@@ -19,9 +19,9 @@ import uuid
 from . import optimization_store as store
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'joint-policy-feedback-v1'
+VERSION = 'flight-policy-feedback-v2'
 ROOT = Path(__file__).resolve().parents[1]
-_lock = threading.Lock()
+_lock = threading.RLock()
 _active = set()
 
 
@@ -34,6 +34,11 @@ def _number(value, name, low, high, integer=False):
 def validate(body):
     if not isinstance(body, dict):
         raise ValueError('JSON object required')
+    scope = None
+    if body.get('flight_id'):
+        from backend.initial_policy import flight_scope
+        scope = flight_scope(body['flight_id'], body.get('forecast_day', 28))
+        body = {**body, 'initial_member_fare': scope['initial_member_fare'], 'fee_min':0, 'fee_max':5000}
     options = {
         'rounds': (5, 1, 12, True), 'customers': (14, 1, 100, True), 'flights': (6, 6, 12, True),
         'replicates': (1, 1, 3, True), 'seed': (117, 0, 2**31-100000, True),
@@ -55,6 +60,14 @@ def validate(body):
             raise ValueError(f'{axis} interval must span at least one cent')
     for key in ('initial_member_fare', 'initial_membership_fee', 'fare_min', 'fare_max', 'fee_min', 'fee_max'):
         cfg[key] = round(cfg[key], 2)
+    if scope:
+        cfg.update(scope=scope, flight_id=scope['flight_id'], forecast_day=scope['as_of_day'], flights=1,
+                   membership_fee_fixed=True, annual_fee_allocation=1/3)
+    total = body.get('total_live_budget', 1500 if scope and cfg['mode'] != 'math' else None)
+    if total is not None:
+        cfg['total_live_budget'] = _number(total,'total_live_budget',0,10000,True)
+        if total > 0 and cfg['mode'] != 'math' and cfg['max_calls'] == 0:
+            raise ValueError('max_calls must be at least 1 for automatic live batches')
     return cfg
 
 
@@ -69,11 +82,13 @@ def _id(run_id):
 
 
 def provenance():
-    files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py',
+    files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py',
              'backend/probabilistic_customer.py', 'backend/nhpp.py', 'backend/release_policy.py', 'backend/seat_feedback.py',
              'simulation/generate.py', 'simulation/generated/calibration_v2.json',
              'llm_agent/market_adapter.py', 'llm_agent/population.py', 'llm_agent/output_contract.py',
              'llm_agent/prompts/shared_market_v3_en.txt']
+    if (ROOT/'simulation/network_generated/manifest.json').exists():
+        files.append('simulation/network_generated/manifest.json')
     return {'version': VERSION, 'files': {name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in files},
             'provider_model': os.environ.get('LLM_MODEL'),
             'provider_endpoint_sha256': hashlib.sha256(os.environ.get('LLM_API_URL', '').encode()).hexdigest()}
@@ -94,6 +109,8 @@ def propose(config, rows):
     best = best_candidate(rows)
     seen = {(round(row['member_fare'] * 100), round(row['membership_fee'] * 100)) for row in rows}
     directions = [(-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]
+    if config.get('membership_fee_fixed'):
+        directions = [(-1, 0), (1, 0)]
     phase = (len(rows)-1) // len(directions)
     offset = (len(rows)-1) % len(directions)
     bounds = [(round(config['fare_min']*100), round(config['fare_max']*100)),
@@ -112,7 +129,8 @@ def propose(config, rows):
             if point not in seen:
                 return {'member_fare': point[0]/100, 'membership_fee': point[1]/100}
     for left in range(bounds[0][0], min(bounds[0][1]+1, bounds[0][0]+13)):
-        for right in range(bounds[1][0], min(bounds[1][1]+1, bounds[1][0]+13)):
+        fees = [round(config['initial_membership_fee']*100)] if config.get('membership_fee_fixed') else range(bounds[1][0], min(bounds[1][1]+1,bounds[1][0]+13))
+        for right in fees:
             if (left, right) not in seen:
                 return {'member_fare': left/100, 'membership_fee': right/100}
     # A tiny complete domain may have fewer unique points than the requested budget.
@@ -157,8 +175,13 @@ def _world(run_id, mode, phase, round_number, seed, prices, enabled, budget):
     else:
         policy = {'name': 'OPTIMIZATION' if enabled else 'NO_OFFER', 'enabled': enabled,
                   **prices, 'release_fraction': cfg['release_fraction'], 'open_day': 28}
-        state = create_market({'customer_count': cfg['customers'], 'flight_count': cfg['flights'],
-                               'occasions_per_customer': 3, 'program_cost': cfg['program_cost']}, seed, policy)
+        market_config = {'customer_count': cfg['customers'], 'flight_count': cfg['flights'],
+                         'occasions_per_customer': 3, 'program_cost': cfg['program_cost']}
+        if cfg.get('scope'):
+            from backend.scoped_market import create_scoped_market
+            state = create_scoped_market(cfg['scope'], market_config, seed, policy)
+        else:
+            state = create_market(market_config, seed, policy)
         with store.connection() as db:
             db.execute('INSERT INTO optimization_worlds VALUES (?,?,?,?,?,?,?,?,?,?,?)',
                        (world_id, run_id, mode, phase, round_number, seed, store.encode(policy),
@@ -173,7 +196,7 @@ def _world(run_id, mode, phase, round_number, seed, prices, enabled, budget):
             # transport so a crash cannot silently exceed a user-approved batch.
             if budget['used'] >= budget['max']:
                 store.checkpoint(world_id, state)
-                raise Paused('Live decision budget exhausted; resume explicitly to continue.')
+                raise Paused('Internal live batch completed.')
             budget['used'] += 1
             _counts(run_id, live_attempts=1)
             store.checkpoint(world_id, state)
@@ -197,6 +220,9 @@ def _world(run_id, mode, phase, round_number, seed, prices, enabled, budget):
     from backend.seat_feedback import collect_samples, diagnostics
     result['seat_feedback_samples'] = collect_samples(state)
     result['forecast_feedback'] = diagnostics(result['seat_feedback_samples'])
+    if cfg.get('scope'):
+        from backend.scoped_market import attribute_result
+        result = attribute_result(result, state)
     store.checkpoint(world_id, state, result)
     _progress(run_id)
     return result
@@ -207,7 +233,15 @@ def aggregate(prices, reports, baselines, config):
         if actual['exogenous_sha256'] != baseline['exogenous_sha256']:
             raise ValueError('Policy and no-offer worlds are not matched')
     deltas = [r['contribution']-b['contribution'] for r, b in zip(reports, baselines)]
+    revenue = statistics.mean(r.get('attributed_revenue',r.get('ledger',{}).get('revenue_excluding_mandatory_fees',0)) for r in reports)
+    cost = statistics.mean(r.get('attributed_cost',r.get('ledger',{}).get('total_cost',0)) for r in reports)
+    contribution = round(statistics.mean(r['contribution'] for r in reports),2)
     return {**prices, 'incremental_contribution': round(statistics.mean(deltas), 2),
+            'total_contribution': contribution, 'profit':contribution,
+            'attributed_revenue':round(revenue,2),'attributed_cost':round(cost,2),
+            'profit_margin': contribution/revenue if revenue > 0 else None,
+            'mean_buyers':statistics.mean(r.get('buyers',r.get('agent_completed_trips',0)) for r in reports),
+            'mean_tickets':statistics.mean(r.get('tickets',r.get('passengers_flown',0)) for r in reports),
             'paired_differences': [round(x, 2) for x in deltas],
             'standard_error': statistics.stdev(deltas)/math.sqrt(len(deltas)) if len(deltas)>1 else None,
             'service_rate': statistics.mean(r['service_rate'] for r in reports),
@@ -215,7 +249,8 @@ def aggregate(prices, reports, baselines, config):
             'mean_member_trips': statistics.mean(r['member_flown'] for r in reports),
             'mean_normal_trips': statistics.mean(r['normal_seats_flown'] for r in reports),
             'contribution': round(statistics.mean(r['contribution'] for r in reports), 2),
-            'feasible': all(r['new_members'] > 0 and r['service_rate'] >= config['min_service_rate'] for r in reports),
+            'feasible': all((r['member_flown'] > 0 and (r['new_members'] == 0 or r['service_rate'] >= config['min_service_rate']))
+                            if config.get('scope') else (r['new_members'] > 0 and r['service_rate'] >= config['min_service_rate']) for r in reports),
             'checks_passed': all(all(r['checks'].values()) for r in reports),
             'seeds': [r['seed'] for r in reports]}
 
@@ -267,7 +302,23 @@ def run_batch(run_id, max_calls=60):
 def _worker(run_id, max_calls, process_lock):
     try:
         store.update(run_id, status='running', error=None)
-        run_batch(run_id, max_calls)
+        while True:
+            saved = store.run(run_id)
+            total = saved['config'].get('total_live_budget')
+            if total is not None and total > saved['counts']['live_attempts'] and max_calls == 0 and saved['config']['mode'] != 'math':
+                raise ValueError('max_calls must be at least 1 for automatic live batches')
+            limit = max_calls if total is None else min(max_calls,max(0,total-saved['counts']['live_attempts']))
+            try:
+                run_batch(run_id, limit)
+                break
+            except Paused:
+                saved = store.run(run_id)
+                remaining = None if total is None else max(0,total-saved['counts']['live_attempts'])
+                _progress(run_id,live_budget_remaining=remaining,
+                          automatic_batches=saved['progress'].get('automatic_batches',0)+1)
+                if total is None or remaining <= 0:
+                    raise Paused('Authorized live decision limit reached. Add decision budget to continue this saved run.')
+                store.record(run_id,None,{'event':'optimization_automatic_batch','remaining_authorized_decisions':remaining})
     except Paused as error:
         store.update(run_id, status='paused', error=str(error))
     except Exception as error:
@@ -297,6 +348,8 @@ def _launch(run_id, max_calls):
 
 
 def start(body):
+    if not isinstance(body, dict) or not body.get('flight_id') and body.get('legacy_market') is not True:
+        raise ValueError('Select a flight_id and forecast_day before starting optimization')
     cfg = validate(body)
     from llm_agent.experiment import load_local_env
     load_local_env()
@@ -323,12 +376,31 @@ def resume(run_id, body=None):
     run_id = _id(run_id)
     if body is not None and not isinstance(body, dict):
         raise ValueError('JSON object required')
-    saved = store.run(run_id)
-    if saved['status'] == 'completed':
-        raise ValueError('Run already completed')
     from llm_agent.experiment import load_local_env
     load_local_env()
-    return _launch(run_id, _number((body or {}).get('max_calls', 60), 'max_calls', 0, 120, True))
+    batch = _number((body or {}).get('max_calls',60),'max_calls',0,120,True)
+    with _lock:
+        if _active:
+            raise ValueError('An optimization batch is already running')
+        saved = store.run(run_id)
+        if saved['status'] == 'completed':
+            raise ValueError('Run already completed')
+        cfg = saved['config']
+        if cfg.get('total_live_budget') is not None:
+            additional = _number((body or {}).get('additional_live_budget',0),'additional_live_budget',0,10000,True)
+            total = cfg['total_live_budget']+additional
+            if total > 10000:
+                raise ValueError('Cumulative authorized live limit cannot exceed 10000')
+            if total <= saved['counts']['live_attempts']:
+                raise ValueError('Add additional_live_budget to continue after the authorized limit')
+            if batch == 0 and cfg['mode'] != 'math':
+                raise ValueError('max_calls must be at least 1 for automatic live batches')
+            store.update(run_id,config={**cfg,'total_live_budget':total})
+        try:
+            return _launch(run_id,batch)
+        except Exception:
+            store.update(run_id,config=cfg)
+            raise
 
 
 def read(run_id):
@@ -358,12 +430,23 @@ def read(run_id):
     saved['version'] = VERSION
     saved['search_seeds'] = _seeds(cfg)
     saved['validation_seeds'] = _seeds(cfg, True)
+    if cfg.get('total_live_budget') is not None:
+        saved['progress']['live_budget_remaining'] = max(0,cfg['total_live_budget']-saved['counts']['live_attempts'])
+    if cfg.get('scope'):
+        stages = 2*sum(d<=cfg['forecast_day'] for d in (28,14,7))+2
+        saved['estimated_live_decisions_upper_bound'] = (cfg['replicates']*(cfg['rounds']+1)+4)*cfg['customers']*stages
     saved['assumptions'] = ['Synthetic feedback, not observed HK Express customer behavior.',
         'Best tested feasible price pair, not a certified global optimum. Each round evaluates one candidate per track.',
         'LLM and mathematical tracks have independent best prices; holdout only accepts or rejects each frozen candidate.',
         'Contribution excludes mandatory pass-through fees and aircraft fixed costs.',
         'Base NHPP parameters remain frozen. A run-local seat calibration layer learns only from completed training markets; holdout freezes the selected candidate profile.',
-        'Each live batch is bounded by non-forced attempts including cached responses; resume is manual.']
+        'Live work automatically crosses internal batches only within the explicitly authorized total decision limit; provider failures and the total cap stop execution.']
+    if cfg.get('scope'):
+        saved['scope'] = {k:v for k,v in cfg['scope'].items() if k != 'history'}
+        saved['assumptions'] += ['One selected flight/date; V0 remains fixed while P is searched.',
+            'Profit is flight-attributed contribution: one third of new annual pass revenue and service cost, full per-flight costs; fees/taxes and aircraft fixed costs excluded.',
+            'Normal demand continuation is independently sampled from observed booking pace with random growth/jumps. The forecast does not generate its own evaluation labels.',
+            'Highest profit, highest margin and most buyers may be different tested prices; these are separate objectives.']
     return saved
 
 

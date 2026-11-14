@@ -6,13 +6,13 @@
 
 Admin 已改為紫／青／白配色，四個主入口是 Forecast seats、Optimize prices、Experiments、Manage offers。Forecast 直接顯示預計未售座位、可新增會員配額、正常需求保護、座位分配圖、訂位預測及截至所選日的正常票價走勢。使用者指定移除的長篇假設、驗證及每日快照表已從該頁移除；資料及評估 API 保留。
 
-`backend/optimization.py` 是新的主要定價入口：從可編輯或由 D28 合成報價建議的 P₀、V₀ 開始，分別用機率式數學旅客及真實 LLM 旅客，在相同起始市場上逐輪搜尋兩個價格。每輪執行共用庫存、預算、購票、取消與財務帳本，再按服務限制及相對 NO_OFFER 的增量貢獻提出下一組。不是以虛構最優價格作 supervised label，也不更新 LLM 權重。
+`backend/optimization.py` 的最新主流程為 `flight-policy-feedback-v2`：必須選擇航線、日期／航班及 D28／D14／D7，P₀ 由該快照讀取且不能手動覆寫；V₀ 可填寫並在該次搜尋固定。數學及 Live LLM 都在同一指定航班的獨立反事實世界內運行，使用該班已訂位、空位、正常基本票價及歷史；不再以一般多航班市場代替所選航班。價格圖同時顯示貢獻、利潤率及購買者，三項最大值分開標示。
 
-`backend/seat_feedback.py` 只在訓練市場完成後使用正常請求誤差，產生下一輪的需求均值校正及額外保護量。已取消的正常訂位仍屬 gross 請求；會員座位及 LLM 理由不作正常需求標籤。原 NHPP／空座 Monte Carlo／凍結校準檔保持不變。每個被評估候選保存其完整價格和座位 profile，最後用兩個未參與搜尋的種子驗證所選方案，驗證結果只接受或拒絕該方案。
+NHPP 本體及凍結校準保持不變；run-local seat feedback 只用已完成訓練市場的正常需求誤差。候選保留自己的價格及座位 profile，最後用兩個獨立種子驗證。單航班收入分攤三分之一新年費／會員服務成本，實際現金仍收全額一次，因此不宣稱是最佳全年會費。詳見 [目前航班專屬規格](FLIGHT_SCOPED_OPTIMIZATION.md)。
 
-`data/private/optimization/experiments.sqlite3` 保存 run、world、round、event 四類記錄；接受的動作和市場狀態以同一交易保存。UI 可設定每軌 1–12 輪、旅客數及每批 LLM 上限，並查看每輪價格、收益、使用率、原始輸出及續跑狀態。數學和 LLM 各有自己的最佳候選，沒有足夠證據把兩者平均成單一真實市場最優價。
+SQLite 保存 run、world、round、event。Scoped Live 現在可在指定總額度內自動跨越內部小批次；總額度耗盡或 provider 失敗仍停止，UI 可追加額度。Manage offers 自行選航班／輪次，只建議同航班同輪次、版本符合且獨立驗證接受的結果，發布時再扣除已售會員位及前輪有效未售配額。Client 主要金額顯示 base fare，下方小字顯示費用及總付款；結帳核價不變。
 
-Client 的 `/members` 專注搜尋、票價排序、會員確認、購票及 My trips。從實驗「Use these prices」只複製價格到發布草稿；選定航班仍用 Forecast 的 base-NHPP 配額，沒有將實驗座位 profile 自動部署到會員庫存。完整規格見 [優化引擎](OPTIMIZATION_ENGINE.md) 與 [本輪更改](PORTAL_REDESIGN_AND_OPTIMIZATION.md)。下文固定網格、舊單維搜尋及已發表實驗屬保留的參考工具／歷史證據。
+以下快速網格、多航班會員期搜尋和既有實驗仍保留為參考及歷史證據。[舊聯合優化引擎](OPTIMIZATION_ENGINE.md) 的兩維 P/V 搜尋不再是主要 Admin 的行為。
 
 ## 架構
 
@@ -38,6 +38,8 @@ flowchart TD
 OAG回應與200000列合成資料沒有混成「真實訂位」。本地 HTTP 使用 Python 標準庫，前端不需要 Node build；模型使用 NumPy。SQLite交易確保一次扣位、同人同航班去重。這是本機展示應用，不是已部署的航空生產系統。
 
 ## 資料與時間
+
+新增 `simulation/network_generated/`：222 班、40,182 筆，37 個外站雙向共 74 條航線，每條三個日期。主目錄共 1,327 班／240,182 筆；原 CSV 下載仍為 200,000 筆，另 400,000 驗證資料不加入售票目錄，總數 640,182 筆。CTS／HFE 狀態仍保留，模擬日期不代表真實班表。
 
 `simulation/generated/snapshots.csv.gz` 正好200000列：1104條D180–D0，以及1條D175–D0（其生成仍由D180暖機，只省略最早5個快照）。1105條都完整涵蓋D28至停售。D0定義為起飛前2小時，因此最後區間22小時。
 
@@ -87,6 +89,7 @@ OAG回應與200000列合成資料沒有混成「真實訂位」。本地 HTTP �
 
 | 方法及路徑 | 用途 |
 | --- | --- |
+| GET /api/optimization/suggestions | 指定 flight_id／forecast_day 的已驗證價格及即時可發布配額建議 |
 | GET /api/summary | 列數、航班數、模型與LLM配置狀態 |
 | GET /api/flights | 航班目錄 |
 | GET /api/flights/{id} | 航班與歷史快照 |

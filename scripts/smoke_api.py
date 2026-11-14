@@ -5,7 +5,7 @@ def call(path,body=None):
  req=urllib.request.Request(BASE+path,data=None if body is None else json.dumps(body).encode(),headers={'Content-Type':'application/json'})
  with urllib.request.urlopen(req,timeout=30) as response:return json.load(response)
 summary=call('/api/summary');assert summary['dataset']['rows']==200000
-flights=call('/api/flights')['flights'];assert len(flights)==1105
+flights=call('/api/flights')['flights'];assert len(flights)==summary['dataset']['flights'] and len(flights)>=1105
 found=None
 for f in flights:
  r=call('/api/forecast',{'flight_id':f['flight_id'],'days_to_departure':28})['forecast']

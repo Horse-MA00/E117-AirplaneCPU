@@ -299,7 +299,7 @@ def _automatic(state, event):
             return  # Replayed round events cannot issue or reset another batch.
         f["active"] = d > 0
         f["base_fare"] = event["base_fare"]
-        if d < 28:
+        if d < f.get('history_as_of_day', 28):
             f["history"].append({"flight_id": f["flight_id"], "days_to_departure": d, "capacity": f["capacity"],
                                   "booked_seats": f["occupied"], "available_seats": f["capacity"] - f["occupied"],
                                   "empty_rate": (f["capacity"] - f["occupied"]) / f["capacity"],
@@ -309,7 +309,8 @@ def _automatic(state, event):
                                   "interval_days": 22 / 24 if d == 0 else 1.})
         f["normal_since_snapshot"] = f["cancel_since_snapshot"] = 0
         if d in RELEASE_DAYS and not any(c["round_day"] == d for c in f["quota_cohorts"]):
-            prediction = forecast(f["history"], d, state["seed"] + int(f["flight_id"][-3:]))
+            seed_offset = int(f['flight_id'][-3:]) if f['flight_id'][-3:].isdigit() else int(hashlib.sha256(f['flight_id'].encode()).hexdigest()[:6],16)
+            prediction = forecast(f["history"], d, state["seed"] + seed_offset)
             if state["policy"].get("seat_calibration") is not None:
                 from backend.seat_feedback import apply_profile
                 prediction = apply_profile(prediction, state["policy"]["seat_calibration"], d)

@@ -171,3 +171,7 @@ Desktop 中完成原生 Linux **arm64** 构建和完整运行验证，不依赖 
 未自动迁入本机原有的会员、订单或私有实验。已提交的合成数据和历史实验随镜像提供。
 API 配置仅由 `.env.local` 在运行时注入；镜像内确认不存在 `.env`、`.env.local`、
 `.git`、虚拟环境、node_modules 或浏览器截图。本次无需修改容器化源码。
+
+### Current local port after flight-specific Admin fixes
+
+The 14 November Admin update moved the local Docker service from the temporary `18080` port back to the now-free `8000` port used by the team. The same named volume retained memberships, offers and experiments. `/api/health`, `/admin`, `/members`, all 222 supplemental route simulations and the completed 21-call live experiment were checked after recreation. This supersedes the earlier local-port note; Compose still supports `APP_PORT` overrides.

@@ -56,6 +56,8 @@ try {
   await page.locator('#search-button').click();
   assert.equal(await page.locator('.flight-card').count(), 1);
   assert.match(await page.locator('.flight-card').innerText(), /HKD 320\.75/);
+  assert.equal(await page.locator('.flight-price .total').innerText(),'HKD 70.25');
+  assert.match(await page.locator('.flight-price .breakdown').innerText(), /fees HKD 250\.5.*total payable HKD 320\.75/);
   await page.locator('#departure-date').fill('2027-05-31'); await page.locator('#search-button').click();
   assert.match(await page.locator('#flight-results').innerText(), /No matching flights/);
   await page.locator('#departure-date').fill(''); await page.locator('#search-button').click();

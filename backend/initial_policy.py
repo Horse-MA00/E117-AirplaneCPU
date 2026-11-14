@@ -1,9 +1,46 @@
 """Transparent data-based starting hypothesis, before market-feedback search."""
 import math
 import statistics
+import hashlib
+import json
+from datetime import datetime
 
 from backend import data
 from backend.shared_market import DEFAULTS
+
+
+def flight_scope(flight_id, day=28):
+    if day not in (28, 14, 7) or isinstance(day, bool):
+        raise ValueError('forecast_day must be 28, 14 or 7')
+    flight = next((f for f in data.flights() if f['flight_id'] == flight_id), None)
+    if flight is None:
+        raise ValueError('Unknown flight')
+    history = [dict(row) for row in data.history(flight_id) if row['days_to_departure'] >= day]
+    row = next((r for r in history if r['days_to_departure'] == day), None)
+    if row is None:
+        raise ValueError('Selected flight has no snapshot at this release day')
+    quote = next((r for r in reversed(history) if r.get('normal_base_fare') is not None), None)
+    if quote is None:
+        raise ValueError('Selected flight has no observed base-fare quote at or before this release day')
+    from backend.nhpp import forecast
+    prediction = forecast(history, day, seed=117)
+    fare = quote.get('member_initial_base_fare')
+    if fare is None:
+        fare = round(.15 * quote['normal_base_fare'], 2)
+    departure = datetime.fromisoformat(str(flight['departure_at']).replace('Z','+00:00'))
+    return {'flight_id': flight_id, 'origin': flight['origin'], 'destination': flight['destination'],
+            'departure_date': flight.get('departure_date', str(flight.get('departure_at',''))[:10]), 'as_of_day': day,
+            'departure_at': flight['departure_at'], 'departure_time':departure.strftime('%H:%M'),
+            'capacity': row['capacity'], 'booked_seats': row['booked_seats'],
+            'available_seats': row['available_seats'], 'empty_rate': row['empty_rate'],
+            'normal_base_fare': quote['normal_base_fare'], 'mandatory_fees': row.get('mandatory_fees', 250),
+            'quote_age_days': quote['days_to_departure']-day,
+            'initial_member_fare': fare,
+            'initial_fare_source': 'snapshot.member_initial_base_fare' if quote.get('member_initial_base_fare') is not None else 'legacy_snapshot_15_percent_formula',
+            'expected_remaining_demand': prediction['expected_remaining_demand'],
+            'releasable_seats': prediction['releasable_seats'],
+            'history_sha256': hashlib.sha256(json.dumps(history, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
+            'history': history}
 
 
 def _number(body, key, default, low, high):
@@ -17,6 +54,14 @@ def suggest(body=None):
     body = {} if body is None else body
     if not isinstance(body, dict):
         raise ValueError('JSON object required')
+    if body.get('flight_id'):
+        scope = flight_scope(body['flight_id'], body.get('forecast_day', 28))
+        return {'initial_member_fare': scope['initial_member_fare'],
+                'initial_membership_fee': _number(body, 'initial_membership_fee', 399, 0, 5000),
+                'scope': scope, 'source': {**{k:v for k,v in scope.items() if k != 'history'}, 'kind':'selected_synthetic_flight_snapshot'},
+                'assumptions': ['P0 is the selected snapshot member base fare; legacy snapshots use the same 15% normal-base-fare generation formula.',
+                    'P0 is fixed by the dataset, not a user price entry. V0 is user-selected and held fixed for this flight search.',
+                    'One selected flight is evaluated; this is not an annual membership-fee optimum.']}
     customers = _number(body, 'customers', 14, 1, 100)
     setup = _number(body, 'program_cost', DEFAULTS['program_cost'], 0, 10000)
     fare_max = _number(body, 'fare_max', 500, 0, 2000)
