@@ -33,9 +33,9 @@ class ScopedOptimizationTests(unittest.TestCase):
         self.assertNotEqual(first['scope']['history_sha256'],second['scope']['history_sha256'])
         cfg=engine.validate({'flight_id':'NET-HKG-FUK-20270515','initial_member_fare':1999})
         self.assertEqual(cfg['initial_member_fare'],first['initial_member_fare'])
-        self.assertEqual(cfg['scope']['initial_fare_source'],'snapshot.normal_base_fare')
-        self.assertEqual(cfg['initial_member_fare'], cfg['scope']['normal_base_fare'])
-        self.assertGreaterEqual(cfg['fare_max'], cfg['initial_member_fare'])
+        self.assertEqual(cfg['scope']['initial_fare_source'],'snapshot.normal_base_fare_x_member_cap')
+        self.assertAlmostEqual(cfg['initial_member_fare'], cfg['scope']['normal_base_fare']/2, places=2)
+        self.assertEqual(cfg['fare_max'], cfg['scope']['member_fare_cap'])
         self.assertEqual(len(cfg['scope']['history']),153)
         self.assertEqual(cfg['scope']['departure_time'],'08:00')
 
@@ -54,6 +54,7 @@ class ScopedOptimizationTests(unittest.TestCase):
             stored = store.world(world['world_id'])
             self.assertEqual(stored['state']['flights'][scope['flight_id']]['departure_time'],'09:00')
         self.assertEqual({r['membership_fee'] for r in report['tracks'][0]['rounds']},{49})
+        self.assertTrue(all(r['member_fare']<=scope['normal_base_fare']*.5 for r in report['tracks'][0]['rounds']))
         self.assertTrue(all(r['seat_calibration']['generation']==0 for r in report['tracks'][0]['rounds']))
         self.assertTrue(all(r['next_seat_calibration']['generation']==1 for r in report['tracks'][0]['rounds']))
         self.assertEqual(report['tracks'][0]['seat_feedback_application'],'proposed_only_fixed_during_price_comparison')
@@ -84,17 +85,27 @@ class ScopedOptimizationTests(unittest.TestCase):
                 row['normal_base_fare'] = 1999
         with patch('backend.initial_policy.data.history', return_value=rows):
             scope = suggest({'flight_id': flight_id, 'forecast_day': 14})['scope']
-        self.assertEqual(scope['initial_member_fare'], 740)
+        self.assertEqual(scope['initial_member_fare'], 370)
+        self.assertEqual(scope['member_fare_cap'], 370)
         self.assertEqual(scope['quote_age_days'], 1)
-        self.assertEqual(scope['initial_fare_source'], 'snapshot.normal_base_fare')
+        self.assertEqual(scope['initial_fare_source'], 'snapshot.normal_base_fare_x_member_cap')
 
-    def test_normal_fare_above_old_default_is_not_discounted_or_clipped(self):
+    def test_member_fare_search_is_capped_at_half_the_normal_fare(self):
         body = {'flight_id':'DEMO-HKG-TPE-20270515','forecast_day':28}
         config = engine.validate(body)
-        self.assertEqual(config['initial_member_fare'], 830)
-        self.assertEqual(config['fare_max'], 830)
+        self.assertEqual(config['scope']['normal_base_fare'], 830)
+        self.assertEqual(config['initial_member_fare'], 415)
+        self.assertEqual(config['fare_max'], 415)
+        # A wider requested bound is narrowed to the cap, never honoured above it.
+        self.assertEqual(engine.validate({**body, 'fare_max':2000})['fare_max'], 415)
         with self.assertRaisesRegex(ValueError, 'fare bounds'):
-            engine.validate({**body, 'fare_max':500})
+            engine.validate({**body, 'fare_max':300})
+        rows = []
+        for _ in range(12):
+            proposal = engine.propose(config, rows)
+            if proposal is None:break
+            self.assertLessEqual(proposal['member_fare'], 415)
+            rows.append({**proposal, 'feasible':True, 'incremental_contribution':0, 'total_contribution':0})
 
     def test_auto_batches_remain_inside_total_cap_then_explicit_extension(self):
         from backend.probabilistic_customer import choose as probability

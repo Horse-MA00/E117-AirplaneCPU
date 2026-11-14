@@ -4,6 +4,9 @@ const $ = id => document.getElementById(id);
 const state = { runId:null, data:null, timer:null, request:0, loading:false, configured:false, listed:false, flights:[], scope:null, scopeRequest:0 };
 const num = (v, digits=0) => v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toLocaleString('en-HK',{maximumFractionDigits:digits});
 const money = v => v == null ? '—' : `HK$${num(v,2)}`;
+const signed = v => v == null || !Number.isFinite(Number(v)) ? '—' : `${Number(v)>=0?'+':'−'}HK$${num(Math.abs(Number(v)),2)}`;
+// Contribution of the matched no-offer market; older runs only stored total and incremental.
+const baselineOf = r => Number.isFinite(r?.baseline_contribution) ? r.baseline_contribution : Number.isFinite(r?.total_contribution) && Number.isFinite(r?.incremental_contribution) ? Math.round((r.total_contribution-r.incremental_contribution)*100)/100 : null;
 const pct = v => v == null ? '—' : `${num(Number(v)*100,1)}%`;
 const name = mode => mode === 'live' ? 'Live LLM' : 'Mathematical';
 const running = status => ['queued','running'].includes(status);
@@ -94,17 +97,25 @@ function priceProfit(tracks){
   const margins=rows.filter(r=>Number.isFinite(r.profit_margin));
   const margin=margins.length?margins.reduce((a,b)=>b.profit_margin>a.profit_margin?b:a):null;
   for(const [label,row,metric] of [['Highest tested contribution',highest,money(highest.total_contribution)],['Most member buyers',buyers,`${num(buyers.mean_member_buyers,1)} member buyers`],['Highest tested margin',margin,margin?pct(margin.profit_margin):'—']]){
-    const card=node('div');card.append(node('span',label),node('strong',row?money(row.member_fare):'—'),node('small',row?`${name(row.mode)} · ${metric}${row.feasible?'':' · service unmet'}`:'No revenue to calculate a margin'));cards.append(card);
+    const card=node('div');card.append(node('span',label),node('strong',row?money(row.member_fare):'—'),node('small',row?`${name(row.mode)} · ${metric}${label==='Highest tested contribution'?` · ${signed(row.incremental_contribution)} vs no offer`:''}${row.feasible?'':' · service unmet'}`:'No revenue to calculate a margin'));cards.append(card);
   }
   const left=66,right=20,top=28,bottom=52;
   const xmin=Math.min(...rows.map(r=>r.member_fare)),xmax=Math.max(...rows.map(r=>r.member_fare)),xspan=Math.max(1,xmax-xmin);
-  const low=Math.min(...rows.map(r=>r.total_contribution)),high=Math.max(...rows.map(r=>r.total_contribution));
+  const baselines=tracks.map(t=>({mode:t.mode,value:baselineOf(rows.find(r=>r.mode===t.mode))})).filter(b=>Number.isFinite(b.value));
+  const levels=[...rows.map(r=>r.total_contribution),...baselines.map(b=>b.value)];
+  const low=Math.min(...levels),high=Math.max(...levels);
   const span=Math.max(1,high-low,Math.abs(high)*.005),ymin=low-span*.15,ymax=high+span*.15;
   const x=p=>left+(p-xmin)/xspan*(width-left-right),y=v=>top+(ymax-v)/(ymax-ymin)*(height-top-bottom);
   for(let i=0;i<=4;i++){const v=ymin+(ymax-ymin)*i/4;svg.append(svgNode('line',{x1:left,x2:width-right,y1:y(v),y2:y(v),class:'chart-grid'}),svgNode('text',{x:left-8,y:y(v)+4,'text-anchor':'end',class:'chart-tick'},num(v)));}
   for(let i=0;i<=(width<500?2:4);i++){const value=xmin+xspan*i/(width<500?2:4);svg.append(svgNode('text',{x:x(value),y:height-25,'text-anchor':'middle',class:'chart-tick'},num(value,2)));}
   svg.append(svgNode('text',{x:left,y:14,class:'chart-tick'},'Flight contribution · HK$'),svgNode('text',{x:width/2,y:height-5,'text-anchor':'middle',class:'chart-tick'},'Member base fare · HK$'));
-  const describe=r=>text('optimization-price-detail',`${name(r.mode)} · fare ${money(r.member_fare)} · pass ${money(r.membership_fee)} · contribution ${money(r.total_contribution)} · contribution margin ${pct(r.profit_margin)} · ${num(r.mean_member_buyers,1)} member buyers / ${num(r.mean_regular_buyers,1)} regular buyers · ${num(r.mean_new_members,1)} joins · ${num(r.member_supply_exposure,1)} seats issued / ${num(r.mean_member_offer_customers,1)} travellers saw offers · ${num(r.mean_member_tickets,1)} member / ${num(r.mean_regular_tickets,1)} regular tickets · ${r.feasible?'service target met':'service target unmet'}.`);
+  // Dashed line: the same flight without the membership offer. Each stem shows the gain or loss against it.
+  for(const b of baselines){const color=b.mode==='live'?'#087D96':'#6F2C91';
+    svg.append(svgNode('line',{x1:left,x2:width-right,y1:y(b.value),y2:y(b.value),stroke:color,'stroke-width':1.5,'stroke-dasharray':'7 5',opacity:.75,class:'baseline-line','data-baseline':b.value}));
+    svg.append(svgNode('text',{x:width-right,y:y(b.value)-6,'text-anchor':'end',class:'chart-tick baseline-label',fill:color},`Without member offer${baselines.length>1?` · ${name(b.mode)}`:''} · ${money(b.value)}`));
+    for(const r of rows.filter(r=>r.mode===b.mode))svg.append(svgNode('line',{x1:x(r.member_fare),x2:x(r.member_fare),y1:y(b.value),y2:y(r.total_contribution),stroke:r.total_contribution>=b.value?'#1C8A5A':'#B22946','stroke-width':2,opacity:.55,class:'gain-stem'}));
+  }
+  const describe=r=>text('optimization-price-detail',`${name(r.mode)} · fare ${money(r.member_fare)} · contribution ${money(r.total_contribution)} · without member offer ${money(baselineOf(r))} · difference ${signed(r.incremental_contribution)} · contribution margin ${pct(r.profit_margin)} · ${num(r.mean_member_buyers,1)} member buyers / ${num(r.mean_regular_buyers,1)} regular buyers · ${num(r.mean_new_members,1)} joins · ${num(r.member_supply_exposure,1)} seats issued / ${num(r.mean_member_offer_customers,1)} travellers saw offers · ${num(r.mean_member_tickets,1)} member / ${num(r.mean_regular_tickets,1)} regular tickets · ${r.feasible?'service target met':'service target unmet'}.`);
   for(const track of tracks){
     const color=track.mode==='live'?'#087D96':'#6F2C91',points=rows.filter(r=>r.mode===track.mode).sort((a,b)=>a.member_fare-b.member_fare);
     // A true price curve only joins evaluations with the same membership fee.
@@ -121,7 +132,7 @@ function renderCards(tracks) {
     const card=node('section',undefined,`optimizer-track ${track.mode}`),heading=node('h2',name(track.mode));
     heading.append(node('span',latest?`Round ${latest.round} · latest tested`:'Initial prices'));
     const prices=node('div',undefined,'track-prices');
-    for(const [label,amount]of [['Member base fare',latest?.member_fare??state.data.config.initial_member_fare],['Membership fee',latest?.membership_fee??state.data.config.initial_membership_fee]]){
+    for(const [label,amount]of [['Member base fare',latest?.member_fare??state.data.config.initial_member_fare]]){
       const item=node('div');item.append(node('span',label),node('strong',money(amount)));prices.append(item);
     }
     const profit=node('p',undefined,'track-profit');
@@ -129,7 +140,7 @@ function renderCards(tracks) {
     else profit.textContent='Waiting for the first market replay to finish.';
     card.append(heading,prices,profit);
     if(latest)card.append(node('p',`${evidenceLabel(latest)} · ${num(latest.mean_member_buyers,1)} member buyers · ${num(latest.mean_regular_buyers,1)} regular buyers · ${num(latest.member_supply_exposure,1)} member seats issued.`,'small muted'));
-    if(best){const retained=node('p',undefined,'small muted');retained.append(node('strong','Retained test candidate: '),document.createTextNode(`${money(best.member_fare)} fare + ${money(best.membership_fee)} pass.${best.feasible?'':' Service target unmet.'}`));card.append(retained);}
+    if(best){const retained=node('p',undefined,'small muted');retained.append(node('strong','Retained test candidate: '),document.createTextNode(`${money(best.member_fare)} member fare.${best.feasible?'':' Service target unmet.'}`));card.append(retained);}
     return card;
   }));
 }
@@ -137,7 +148,7 @@ function renderTable(tracks) {
   const rows=tracks.flatMap(track=>track.rounds.map(round=>({...round,mode:track.mode}))).sort((a,b)=>a.round-b.round||a.mode.localeCompare(b.mode));
   $('optimization-rounds-table').replaceChildren(...rows.map(row=>{
     const tr=node('tr'),th=node('th',`${name(row.mode)} / ${row.round}`);th.scope='row';tr.append(th);
-    for(const item of [money(row.member_fare),money(row.membership_fee),money(row.total_contribution),num(row.mean_member_buyers,1),num(row.mean_regular_buyers,1),num(row.mean_new_members,1),`${num(row.mean_member_tickets,1)} / ${num(row.mean_regular_tickets,1)}`,`${num(row.member_supply_exposure,1)} seats / ${num(row.mean_member_offer_customers,1)} viewers`,pct(row.profit_margin),money(row.incremental_contribution)])tr.append(node('td',item));
+    for(const item of [money(row.member_fare),money(row.total_contribution),num(row.mean_member_buyers,1),num(row.mean_regular_buyers,1),num(row.mean_new_members,1),`${num(row.mean_member_tickets,1)} / ${num(row.mean_regular_tickets,1)}`,`${num(row.member_supply_exposure,1)} seats / ${num(row.mean_member_offer_customers,1)} viewers`,pct(row.profit_margin),money(baselineOf(row)),signed(row.incremental_contribution)])tr.append(node('td',item));
     const result=node('td');result.append(node('span',row.price_evidence_qualified===false?evidenceLabel(row):row.accepted?'Retained test':row.feasible?'Tested':'Service unmet',row.accepted?'round-kept':'round-rejected'));tr.append(result);return tr;
   }));
   if(!rows.length){const tr=node('tr'),td=node('td','No completed rounds yet.');td.colSpan=12;tr.append(td);$('optimization-rounds-table').append(tr);}
@@ -148,7 +159,7 @@ function renderFinal(tracks) {
     const item=node('div',undefined,'final-option'),body=node('div'),heading=node('strong',name(track.mode));
     const decision=track.decision||'PENDING';heading.append(node('span',decision==='OFFER'?'Validated offer':decision==='NO_OFFER'?(state.data.config.scope?'No offer for this flight':'No member offer'):'Validation pending','decision-chip'));body.append(heading);
     if(decision==='OFFER' && track.best && track.validation){
-      body.append(node('p',`${money(track.best.member_fare)} member base fare · ${money(track.best.membership_fee)} membership fee`),node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} mean new-member use.`,'small muted'));
+      body.append(node('p',`${money(track.best.member_fare)} member base fare`),node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} mean new-member use.`,'small muted'));
       body.append(node('p','Prepare a draft for this exact flight and release round. Current inventory is checked again.','small muted'));
       const button=node('button','Use these prices','button primary');button.type='button';button.disabled=state.data.status!=='completed'||!state.data.config.scope;button.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('uoption:prepare-policy',{detail:{...track.best,run_id:state.data.run_id,mode:track.mode,flight_id:state.data.config.scope.flight_id,forecast_day:state.data.config.scope.as_of_day,release_fraction:state.data.config.release_fraction}})));item.append(body,button);
     }else if(decision==='NO_OFFER'){
@@ -179,7 +190,7 @@ function render(data){
   $('optimization-empty').hidden=true;$('optimization-progress').hidden=false;$('optimization-results').hidden=false;
   const progress=data.progress||{},counts=data.counts||{},tracks=data.tracks||[];
   text('optimization-status',statusLabel(data.status));
-  const scope=data.config.scope; text('optimization-result-scope',scope?`${scope.origin} → ${scope.destination} · ${scope.departure_date} · ${scope.flight_id} · D${scope.as_of_day} · fixed V₀ ${money(data.config.initial_membership_fee)}`:'Historical unscoped experiment · unavailable for flight-specific publishing');
+  const scope=data.config.scope; text('optimization-result-scope',scope?`${scope.origin} → ${scope.destination} · ${scope.departure_date} · ${scope.flight_id} · D${scope.as_of_day}`:'Historical unscoped experiment · unavailable for flight-specific publishing');
   $('optimization-horizon-note').hidden=!scope;
   text('optimization-round-count',`${num(progress.completed_rounds||0)} / ${num(progress.total_rounds??data.config.rounds*tracks.length)} rounds`);
   $('optimization-progress-bar').max=Math.max(1,progress.total_rounds??data.config.rounds*tracks.length);$('optimization-progress-bar').value=progress.completed_rounds||0;
@@ -191,7 +202,7 @@ function render(data){
   $('optimization-events').href=`/api/optimization/runs/${encodeURIComponent(data.run_id)}/events`;
   renderCards(tracks);renderTable(tracks);renderFinal(tracks);renderContributionExplanation($('optimization-contribution-content'),tracks);renderFeedback(tracks);draw();controls();
 }
-function draw(){if(!state.data)return;const tracks=state.data.tracks||[];chart('optimization-fare-chart',tracks,'member_fare',{initialKey:'initial_member_fare',caption:'Evaluated member fare by round'});chart('optimization-fee-chart',tracks,'membership_fee',{initialKey:'initial_membership_fee',caption:'Evaluated membership fee by round'});chart('optimization-profit-chart',tracks,'incremental_contribution',{caption:'Evaluated incremental contribution compared with no offer'}); priceProfit(tracks);}
+function draw(){if(!state.data)return;const tracks=state.data.tracks||[];chart('optimization-fare-chart',tracks,'member_fare',{initialKey:'initial_member_fare',caption:'Evaluated member fare by round'});chart('optimization-profit-chart',tracks,'incremental_contribution',{caption:'Evaluated incremental contribution compared with no offer'}); priceProfit(tracks);}
 async function poll(id){
   const token=++state.request;clearTimeout(state.timer);
   try{const data=await api(`/api/optimization/runs/${encodeURIComponent(id)}`);if(id!==state.runId||token!==state.request)return;render(data);if(running(data.status))state.timer=setTimeout(()=>poll(id),1500);else listRuns(false);}
@@ -223,19 +234,21 @@ function fillFlights(selected=''){
 async function loadScope(){
   const token=++state.scopeRequest;state.scope=null;$('optimization-fare').value='';$('optimization-load-demo').hidden=true;showError('');controls();
   const flightId=$('optimization-flight').value;
-  if(!flightId){text('optimization-scope',filteredFlights().length?'Choose a route and departure to load this flight.':'No flight selected. Change the demand filter to continue.');text('optimization-initial-source','P₀ equals the selected flight’s normal base fare, before taxes and fees.');return;}
+  if(!flightId){text('optimization-scope',filteredFlights().length?'Choose a route and departure to load this flight.':'No flight selected. Change the demand filter to continue.');text('optimization-initial-source','P₀ is the member fare cap: 50% of the selected flight’s normal base fare, before taxes and fees.');return;}
   text('optimization-scope','Loading the observed flight snapshot…');
   try{
     const result=await api('/api/optimization/initial-policy',{flight_id:flightId,forecast_day:val('optimization-day'),customers:val('optimization-customers'),program_cost:val('optimization-cost')});
     if(token!==state.scopeRequest)return;
     if(!result.scope)throw new Error('This backend does not support flight-scoped optimization. Refresh after updating the server.');
     state.scope=result.scope;$('optimization-fare').value=result.initial_member_fare;
-    // Starting at the original fare must not fail the old HK$500 search bound.
-    if(Number(result.initial_member_fare)>val('optimization-fare-max'))$('optimization-fare-max').value=result.initial_member_fare;
+    // Member fares never exceed 50% of the normal base fare; the server enforces the same cap.
+    const cap=Number(result.scope.member_fare_cap??result.initial_member_fare);
+    $('optimization-fare-max').max=String(cap);$('optimization-fare-max').value=String(cap);
+    if(val('optimization-fare-min')>=cap)$('optimization-fare-min').value='0';
     const scope=result.scope;
     text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${num(scope.available_seats)} physical empty seats / ${num(scope.capacity)} capacity; ${num(scope.releasable_seats)} forecast member seats.`);
     $('optimization-load-demo').hidden=scopeEligible(scope);
-    text('optimization-initial-source',`P₀ ${money(result.initial_member_fare)} equals this flight’s normal base fare, before taxes and fees${scope.quote_age_days?` (last available quote ${scope.quote_age_days} days earlier)`:''}. V₀ stays fixed during this run.`);
+    text('optimization-initial-source',`P₀ ${money(result.initial_member_fare)} is the member fare cap: 50% of this flight’s ${money(scope.normal_base_fare)} normal base fare, before taxes and fees${scope.quote_age_days?` (last available quote ${scope.quote_age_days} days earlier)`:''}. Tested member fares never go above it.`);
     showError('');
   }catch(error){if(token===state.scopeRequest)showError(error.message);}finally{if(token===state.scopeRequest)controls();}
 }

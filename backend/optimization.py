@@ -19,7 +19,7 @@ import uuid
 from . import optimization_store as store
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'flight-policy-feedback-v4-original-fare'
+VERSION = 'flight-policy-feedback-v5-member-fare-cap'
 CONTROLLED_PRICE_PROTOCOL = 'fixed-seat-profile-local-fare-v1'
 ROOT = Path(__file__).resolve().parents[1]
 _lock = threading.RLock()
@@ -40,9 +40,11 @@ def validate(body):
         from backend.initial_policy import flight_scope
         scope = flight_scope(body['flight_id'], body.get('forecast_day', 28))
         body = {**body, 'initial_member_fare': scope['initial_member_fare'], 'fee_min':0, 'fee_max':5000}
-        # Do not reject a normal fare above the old HK$500 default or silently
-        # discount it to fit. Explicit caller bounds still receive validation.
-        body.setdefault('fare_max', max(500, scope['initial_member_fare']))
+        # Member fares never exceed 50% of the normal base fare; a wider requested
+        # upper bound is narrowed to the cap so no candidate can be proposed above it.
+        cap = scope['member_fare_cap']
+        requested = body.get('fare_max', cap)
+        body['fare_max'] = min(requested, cap) if isinstance(requested, (int, float)) and not isinstance(requested, bool) else requested
     options = {
         'rounds': (5, 1, 12, True), 'customers': (14, 1, 100, True), 'flights': (6, 6, 12, True),
         'replicates': (1, 1, 3, True), 'seed': (117, 0, 2**31-100000, True),
@@ -287,6 +289,8 @@ def aggregate(prices, reports, baselines, config):
     contribution = round(statistics.mean(r['contribution'] for r in reports),2)
     result = {**prices, 'incremental_contribution': round(statistics.mean(deltas), 2),
             'total_contribution': contribution, 'profit':contribution,
+            # Matched no-offer world: what this flight earns without the membership offer.
+            'baseline_contribution': round(statistics.mean(b['contribution'] for b in baselines), 2),
             'attributed_revenue':round(revenue,2),'attributed_cost':round(cost,2),
             'profit_margin': contribution/revenue if revenue > 0 else None,
             'mean_buyers':statistics.mean(r.get('buyers',r.get('agent_completed_trips',0)) for r in reports),

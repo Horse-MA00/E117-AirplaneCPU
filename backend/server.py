@@ -182,6 +182,11 @@ def post(path,body):
    finally:_optimizer_lock.release()
   quantity=number(body.get('quantity'),'quantity',1,400,True);fare=number(body.get('base_fare'),'base_fare',0,3000)
   row=next(r for r in data.history(flight) if r['days_to_departure']==day)
+  # Member fares may never exceed 50% of the normal base fare visible at this release day.
+  quote=next((r for r in sorted(data.history(flight),key=lambda r:r['days_to_departure']) if r['days_to_departure']>=day and r.get('normal_base_fare') is not None),None)
+  if quote is None:raise ValueError('No observable normal base fare to cap the member fare')
+  from .fare_policy import check_member_fare
+  check_member_fare(fare,quote['normal_base_fare'])
   maxq=int(f.get('releasable',f.get('releasable_seats',f.get('max_member_seats',0))))
   if day==0:raise ValueError('Sales are closed')
   from .offer_suggestions import validate_draft

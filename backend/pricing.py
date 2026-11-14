@@ -274,7 +274,10 @@ def optimize(forecast_result: dict, config: dict | None = None) -> dict:
     decision_day = max(1, int(forecast_result.get("days_to_departure", 28)))
     release_days = [d for d in RELEASE_DAYS if d <= decision_day]
     openings = [release_days[0]]
-    for index, candidate in enumerate(product([0, 30, 70, 100], [199, 399, 599, 799], openings, [.25, .5, .75, 1.])):
+    from .fare_policy import member_fare_cap
+    cap = member_fare_cap(cfg["normal_base_fare"])
+    fares = [fare for fare in (0, 30, 70, 100) if fare <= cap]
+    for index, candidate in enumerate(product(fares, [199, 399, 599, 799], openings, [.25, .5, .75, 1.])):
         result = _aggregate([_run(w, candidate, cfg) for w in worlds])
         result["candidate_id"] = index
         candidates.append(result)
@@ -297,7 +300,7 @@ def optimize(forecast_result: dict, config: dict | None = None) -> dict:
             stress.append(result)
     else:
         holdout = {**baseline, "purpose": "No offer is retained; no pass fees or incremental costs incurred."}
-    fixed = _aggregate([_run(w, (70, 399, release_days[0], .5), cfg) for w in worlds])
+    fixed = _aggregate([_run(w, (min(70, cap), 399, release_days[0], .5), cfg) for w in worlds])
     return {"config": cfg, "release_policy_version": RELEASE_VERSION, "release_days": release_days, "baseline": baseline, "fixed_offer": fixed, "best": best,
             "candidates": candidates, "trace": trace, "holdout": holdout, "stress": stress,
             "example_events": detail["events"] if detail else [],

@@ -7,6 +7,7 @@ from datetime import datetime
 
 from backend import data
 from backend.shared_market import DEFAULTS
+from backend.fare_policy import MEMBER_FARE_CAP_RATIO, member_fare_cap
 
 
 def flight_scope(flight_id, day=28):
@@ -24,9 +25,10 @@ def flight_scope(flight_id, day=28):
         raise ValueError('Selected flight has no observed base-fare quote at or before this release day')
     from backend.nhpp import forecast
     prediction = forecast(history, day, seed=117)
-    # Start from the observable normal base fare. Historical synthetic datasets
-    # retain their old 15% member-price column for reproducibility only.
-    fare = round(quote['normal_base_fare'], 2)
+    # Start at the highest permitted member fare: 50% of the observable normal
+    # base fare. Historical 15% member-price columns are kept for reproducibility only.
+    cap = member_fare_cap(quote['normal_base_fare'])
+    fare = cap
     departure = datetime.fromisoformat(str(flight['departure_at']).replace('Z','+00:00'))
     eligible = prediction['releasable_seats'] > 0
     return {'flight_id': flight_id, 'origin': flight['origin'], 'destination': flight['destination'],
@@ -37,7 +39,8 @@ def flight_scope(flight_id, day=28):
             'normal_base_fare': quote['normal_base_fare'], 'mandatory_fees': row.get('mandatory_fees', 250),
             'quote_age_days': quote['days_to_departure']-day,
             'initial_member_fare': fare,
-            'initial_fare_source': 'snapshot.normal_base_fare',
+            'initial_fare_source': 'snapshot.normal_base_fare_x_member_cap',
+            'member_fare_cap': cap, 'member_fare_cap_ratio': MEMBER_FARE_CAP_RATIO,
             'expected_remaining_demand': prediction['expected_remaining_demand'],
             'releasable_seats': prediction['releasable_seats'],
             'member_supply_exposure': prediction['releasable_seats'],
@@ -64,7 +67,7 @@ def suggest(body=None):
         return {'initial_member_fare': scope['initial_member_fare'],
                 'initial_membership_fee': _number(body, 'initial_membership_fee', 399, 0, 5000),
                 'scope': scope, 'source': {**{k:v for k,v in scope.items() if k != 'history'}, 'kind':'selected_synthetic_flight_snapshot'},
-                'assumptions': ['P0 equals the latest observable normal base fare at the selected snapshot, without an initial discount. Historical member-price columns are not used.',
+                'assumptions': ['P0 is the member fare cap: 50% of the latest observable normal base fare at the selected snapshot. Member fares are never searched above it. Historical member-price columns are not used.',
                     'P0 is fixed by the dataset, not a user price entry. V0 is user-selected and held fixed for this flight search.',
                     'One selected flight is evaluated; this is not an annual membership-fee optimum.']}
     customers = _number(body, 'customers', 14, 1, 100)
