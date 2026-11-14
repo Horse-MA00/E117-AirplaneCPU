@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from urllib.parse import urlparse,unquote
 from pathlib import Path
 from functools import lru_cache
-from . import data,market_jobs,member_portal
+from . import data,market_jobs,pricing_jobs,member_portal
 from .store import Store
 from .oag import load_env
 from llm_agent import runner,audit
@@ -31,6 +31,8 @@ def forecast_for(flight,day):
  return forecast(data.history(flight),days_to_departure=day,seed=117)
 
 def get(path):
+ if path.startswith('/api/pricing/runs/'):
+  return pricing_jobs.read(ident(path.split('/')[-1]))
  if path in ('/api/member-portal/config','/api/member-portal/plan'):return member_portal.config(store())
  if path=='/api/member-portal/flights':return member_portal.flights(store(),forecast_for)
  if path.startswith('/api/member-portal/accounts/'):
@@ -81,6 +83,7 @@ def get(path):
 
 _optimizer_lock=threading.Lock()
 def post(path,body):
+ if path=='/api/pricing/runs':return pricing_jobs.start(body)
  if path=='/api/member-portal/plan':
   store().plan(number(body.get('membership_fee'),'membership_fee',0,5000))
   return member_portal.config(store())

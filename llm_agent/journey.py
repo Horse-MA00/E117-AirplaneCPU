@@ -299,7 +299,7 @@ def export_suite(output: Path | str, pilot=True, seed=117):
              "system_prompt_sha256": hashlib.sha256(PROMPT.read_bytes()).hexdigest(),
              "seed": seed, "counterfactual_design": {"persons": 14, "offers": offers, "same_person_across_offers": True}, "worlds": worlds}
     _save(output / "state.json", suite)
-    (output / "system_prompt.txt").write_text(PROMPT.read_text(), encoding="utf-8")
+    (output / "system_prompt.txt").write_bytes(PROMPT.read_bytes())
     export_pending(output)
     return {"suite_id": suite["suite_id"], "worlds": len(worlds), "packets": str(output / "pending.jsonl")}
 
@@ -318,7 +318,7 @@ def require_current_suite(output, suite):
 
 def export_pending(output):
     output = Path(output)
-    suite = json.loads((output / "state.json").read_text())
+    suite = json.loads((output / "state.json").read_text(encoding="utf-8"))
     require_current_suite(output, suite)
     pending = [packet_for(w) for w in suite["worlds"] if w["stage_index"] < len(STAGES)]
     batch = max((p["stage_index"] for p in pending), default=len(STAGES))
@@ -335,12 +335,12 @@ def import_responses(output, responses):
     from .audit import Audit
     from .output_contract import validate_english_output
     output = Path(output)
-    suite = json.loads((output / "state.json").read_text())
+    suite = json.loads((output / "state.json").read_text(encoding="utf-8"))
     require_current_suite(output, suite)
     audit = Audit("codex_subagent_pilot", {"prompt_version": suite["prompt_version"], "suite_path": str(output),
                                            "worlds": len(suite["worlds"])}, run_id=suite["suite_id"], resume=True)
-    pending = {p["packet_id"]: p for p in (json.loads(line) for line in (output / "pending.jsonl").read_text().splitlines() if line)}
-    raw_batch = Path(responses).read_text()
+    pending = {p["packet_id"]: p for p in (json.loads(line) for line in (output / "pending.jsonl").read_text(encoding="utf-8").splitlines() if line)}
+    raw_batch = Path(responses).read_text(encoding="utf-8")
     batch_id = uuid.uuid4().hex[:12]
     audit.append({"event": "external_response_batch_received", "source": "codex_subagent_pilot", "batch_id": batch_id,
                   "raw_response_text": raw_batch, "model": "codex_session_model_not_exposed", "usage": None,

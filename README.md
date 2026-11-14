@@ -4,6 +4,21 @@
 
 A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for Cathay Hackathon 2026, **Low-cost Travel — Smart Offer & Borderless Booking**. The proposed HK Express membership offers zero or low base fares plus mandatory charges.
 
+## Continuous-price branch update (2026-11-14)
+
+Fast screening now includes a separate continuous-price panel backed by the
+shared market and stable probabilistic rule users. Set a fare interval, fixed
+membership fee and release share; adaptive search evaluates arbitrary cent-level
+fares, then independent worlds and price-sensitivity stresses test the selected
+hypothesis. NO_OFFER remains available. No LLM calls, human ground truth,
+automatic live repricing or global-optimum guarantee are claimed.
+
+Read [the updated method](docs/CONTINUOUS_PRICING.md). Historical tier-screening
+and LLM validation below remain labelled baselines, not new-method evidence.
+Windows users: `py -3.11 -m venv .venv`, then
+`.\.venv\Scripts\python.exe -m pip install -r requirements.txt` and
+`.\.venv\Scripts\python.exe -m backend.server`.
+
 ## Quick start
 
 Python 3.11+ is required. No Node build or external service is needed for the default demo.

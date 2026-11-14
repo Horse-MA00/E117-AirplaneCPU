@@ -66,6 +66,10 @@
 - 真實DeepSeek五人六階段：30新回覆、0快取、0失敗、73,625 tokens，全部英文HKD；原始audit及結果已匯出`english_journey_20261114`。加入比較資訊會影響決策，不能把新舊差異當作語言因果或真人購買率。
 - 完整backend回歸最終105項全部通過（包括新增外部Agent英文匯入檢查）；14人84階段Chromium測試通過，390px無溢出，保留歷史原文。詳見LLM_SCENARIO_DESIGN.md與PROGRESS_FRONTEND.md。
 
+
+## Continuous pricing implementation — 2026-11-14
+
+The new continuous-price and probabilistic-user path is documented in [CONTINUOUS_PRICING.md](CONTINUOUS_PRICING.md). It uses the existing shared engine, a fixed membership fee/release share, bounded cent-resolution search, paired NO_OFFER, independent validation and sensitivity stresses. Historical fixed-tier and LLM reports remain unchanged. No online human learning or autonomous live repricing is implemented. Windows locks and frozen prompt byte copies are portable; checkout rules preserve frozen NHPP source bytes.
 ### 大型Panel及Admin／會員網站分離（2026-11-14）
 
 - 新`backend/panel_jobs.py`支援預設100人、live最多100／rules最多1,000人。背景批次、三工作者、逐人checkpoint、部分結果分母、model／prompt／impl凍結及明確續跑；每批live預設60、最多120次有選擇的決策嘗試。唯一合法動作與provider／cache分開，不自動延長付費額度。

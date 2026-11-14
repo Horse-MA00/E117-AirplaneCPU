@@ -54,7 +54,7 @@ def validate_decision(decision, observation):
 
 def choose(observation, mode, audit, language="en", use_cache=True):
     """Choose once. Illegal/failed provider outputs never become rule decisions."""
-    if mode not in ("deterministic", "live") or language not in PROMPTS:
+    if mode not in ("deterministic", "probabilistic", "live") or language not in PROMPTS:
         raise ValueError("Invalid market choice mode or prompt language")
     visible = public_observation(observation)
     # Traveller language remains scenario background, never an output-language
@@ -80,8 +80,19 @@ def choose(observation, mode, audit, language="en", use_cache=True):
                       "validation": "passed", "model": None, "usage": None, "cache_hit": False})
         return {"decision": decision, "source": "deterministic_assumption", "forced": False, "cache_hit": False, "provider_call": False}
 
+    if mode == "probabilistic":
+        from backend.probabilistic_customer import choose as probabilistic_choose
+        result = probabilistic_choose(visible)
+        decision = validate_decision(result["decision"], visible)
+        audit.append({"event": "market_choice", "source": "probabilistic_assumption",
+                      "observation": visible, "context_sha256": context_hash, "decision": decision,
+                      "customer_model": result["version"], "choice_probabilities": result["probabilities"],
+                      "validation": "passed", "cache_hit": False, "provider_call": False})
+        return {"decision": decision, "source": "probabilistic_assumption", "forced": False,
+                "cache_hit": False, "provider_call": False}
+
     endpoint, key, model = (os.environ.get(k, "") for k in ("LLM_API_URL", "LLM_API_KEY", "LLM_MODEL"))
-    body = {"model": model, "messages": [{"role": "system", "content": PROMPTS[language].read_text()},
+    body = {"model": model, "messages": [{"role": "system", "content": PROMPTS[language].read_text(encoding="utf-8")},
             {"role": "user", "content": canonical(visible)}], "temperature": 0, "max_tokens": 700,
             "response_format": {"type": "json_object"}}
     parsed = urllib.parse.urlsplit(endpoint)
@@ -103,7 +114,7 @@ def choose(observation, mode, audit, language="en", use_cache=True):
         cache_dir.mkdir(parents=True, exist_ok=True)
         cache = cache_dir / (hashlib.sha256((endpoint + canonical(body)).encode()).hexdigest() + ".json")
         if use_cache and cache.exists():
-            raw_text = json.loads(cache.read_text())["raw_response_text"]
+            raw_text = json.loads(cache.read_text(encoding="utf-8"))["raw_response_text"]
             record["cache_hit"] = True
             record["cache_original_source"] = "provider_live"
         else:

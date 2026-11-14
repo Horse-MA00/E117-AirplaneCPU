@@ -1,0 +1,371 @@
+{
+  "version": "continuous-shared-pricing-v1",
+  "customer_model": "probabilistic-customer-v1",
+  "config": {
+    "price_min": 0.0,
+    "price_max": 500.0,
+    "membership_fee": 399.0,
+    "release_fraction": 0.5,
+    "evaluations": 11,
+    "replicates": 2,
+    "seed": 20261411,
+    "customers": 14,
+    "flights": 6,
+    "min_service_rate": 0.6,
+    "program_cost": 1500.0
+  },
+  "search_seeds": [
+    20261411,
+    20261512
+  ],
+  "validation_seeds": [
+    20311414,
+    20311515
+  ],
+  "implementation_hashes": {
+    "backend/continuous_pricing.py": "1a67c7a05b2651cfa5bf84be423c9f41050e318310b030d2d7e442a59515f897",
+    "backend/probabilistic_customer.py": "4af6fb113b325eb0e7eed94b72330c1c41f9186e595793df2b6efdaef2c5192b",
+    "backend/shared_market.py": "b0baf6295e29bed16c2cd95e1c54e5500cd0694ece6fbbc424f771ec1f153761",
+    "backend/nhpp.py": "2c5739a40c7ca6143f820e9a7ca6daad1c93b3ad1355a337a7517c0e7de7732b",
+    "simulation/generate.py": "ff95386b68b6d3a210c9d7d5257f4c17b2923819dd64755095b9a48f65d429fc",
+    "simulation/generated/calibration_v2.json": "44b0b5e264508a893292f84319f053afeec7fed4f1c76c79842b56bceda63f40",
+    "backend/release_policy.py": "318e3b94bef6afdee7dde11248130506a98258a24cdac7361b86e759bd0b5f36",
+    "llm_agent/population.py": "d7e629b6b86afa7122f3035a0fc868548d144b72f3d68a0cdabec939d90113ff",
+    "llm_agent/output_contract.py": "2da55415aff98b248bb34483fbeb545b0ebb03dce58cd5e04a60dd337c67a15a"
+  },
+  "trace": [
+    {
+      "member_fare": 0.0,
+      "membership_fee": 399.0,
+      "incremental_contribution": -2321.0,
+      "paired_differences": [
+        -1016.0,
+        -3626.0
+      ],
+      "feasible": true,
+      "search_score": -2321.0,
+      "mean_members": 6,
+      "mean_member_trips": 8,
+      "mean_service_rate": 0.8333333333333333,
+      "standard_error": 1304.9999999999998,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 500.0,
+      "membership_fee": 399.0,
+      "incremental_contribution": -561.0,
+      "paired_differences": [
+        378.0,
+        -1500.0
+      ],
+      "feasible": false,
+      "search_score": -10561.0,
+      "mean_members": 1,
+      "mean_member_trips": 1.5,
+      "mean_service_rate": 0.5,
+      "standard_error": 939.0,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 250.0,
+      "membership_fee": 399.0,
+      "incremental_contribution": -809.5,
+      "paired_differences": [
+        -334.0,
+        -1285.0
+      ],
+      "feasible": false,
+      "search_score": -10809.5,
+      "mean_members": 4.5,
+      "mean_member_trips": 3.5,
+      "mean_service_rate": 0.575,
+      "standard_error": 475.49999999999994,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 125.0,
+      "membership_fee": 399.0,
+      "incremental_contribution": -1182.5,
+      "paired_differences": [
+        -829.0,
+        -1536.0
+      ],
+      "feasible": false,
+      "search_score": -11182.5,
+      "mean_members": 5,
+      "mean_member_trips": 4.5,
+      "mean_service_rate": 0.625,
+      "standard_error": 353.5,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 62.5,
+      "membership_fee": 399.0,
+      "incremental_contribution": -1624.25,
+      "paired_differences": [
+        -1030.0,
+        -2218.5
+      ],
+      "feasible": false,
+      "search_score": -11624.25,
+      "mean_members": 5.5,
+      "mean_member_trips": 5.5,
+      "mean_service_rate": 0.55,
+      "standard_error": 594.25,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 31.25,
+      "membership_fee": 399.0,
+      "incremental_contribution": -1885.5,
+      "paired_differences": [
+        -1197.5,
+        -2573.5
+      ],
+      "feasible": true,
+      "search_score": -1885.5,
+      "mean_members": 5.5,
+      "mean_member_trips": 7,
+      "mean_service_rate": 0.7166666666666667,
+      "standard_error": 688.0,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 15.62,
+      "membership_fee": 399.0,
+      "incremental_contribution": -2187.73,
+      "paired_differences": [
+        -1291.2799999999988,
+        -3084.179999999993
+      ],
+      "feasible": true,
+      "search_score": -2187.729999999996,
+      "mean_members": 5.5,
+      "mean_member_trips": 7.5,
+      "mean_service_rate": 0.7166666666666667,
+      "standard_error": 896.4499999999971,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 46.87,
+      "membership_fee": 399.0,
+      "incremental_contribution": -1729.91,
+      "paired_differences": [
+        -1123.7799999999988,
+        -2336.0399999999936
+      ],
+      "feasible": true,
+      "search_score": -1729.9099999999962,
+      "mean_members": 5.5,
+      "mean_member_trips": 6,
+      "mean_service_rate": 0.6333333333333333,
+      "standard_error": 606.1299999999974,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 375.0,
+      "membership_fee": 399.0,
+      "incremental_contribution": -46.0,
+      "paired_differences": [
+        -203.0,
+        111.0
+      ],
+      "feasible": false,
+      "search_score": -10046.0,
+      "mean_members": 3.5,
+      "mean_member_trips": 3.5,
+      "mean_service_rate": 0.75,
+      "standard_error": 157.0,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 54.68,
+      "membership_fee": 399.0,
+      "incremental_contribution": -1675.08,
+      "paired_differences": [
+        -1076.9200000000128,
+        -2273.2400000000052
+      ],
+      "feasible": false,
+      "search_score": -11675.080000000009,
+      "mean_members": 5.5,
+      "mean_member_trips": 5.5,
+      "mean_service_rate": 0.55,
+      "standard_error": 598.1599999999962,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 39.06,
+      "membership_fee": 399.0,
+      "incremental_contribution": -1792.55,
+      "paired_differences": [
+        -1170.640000000014,
+        -2414.4600000000064
+      ],
+      "feasible": true,
+      "search_score": -1792.5500000000102,
+      "mean_members": 5.5,
+      "mean_member_trips": 6.5,
+      "mean_service_rate": 0.7166666666666667,
+      "standard_error": 621.9099999999961,
+      "scenario": "base",
+      "seeds": [
+        20261411,
+        20261512
+      ],
+      "checks_passed": true
+    }
+  ],
+  "selected_candidate": {
+    "member_fare": 46.87,
+    "membership_fee": 399.0,
+    "incremental_contribution": -1729.91,
+    "paired_differences": [
+      -1123.7799999999988,
+      -2336.0399999999936
+    ],
+    "feasible": true,
+    "search_score": -1729.9099999999962,
+    "mean_members": 5.5,
+    "mean_member_trips": 6,
+    "mean_service_rate": 0.6333333333333333,
+    "standard_error": 606.1299999999974,
+    "scenario": "base",
+    "seeds": [
+      20261411,
+      20261512
+    ],
+    "checks_passed": true
+  },
+  "best": {
+    "decision": "NO_OFFER",
+    "incremental_contribution": 0,
+    "member_fare": null
+  },
+  "stress": [
+    {
+      "member_fare": 46.87,
+      "membership_fee": 399.0,
+      "incremental_contribution": 651.92,
+      "paired_differences": [
+        -955.5200000000041,
+        2259.350000000006
+      ],
+      "feasible": false,
+      "search_score": -10000,
+      "mean_members": 4,
+      "mean_member_trips": 3.5,
+      "mean_service_rate": 0.4666666666666667,
+      "standard_error": 1607.435000000005,
+      "scenario": "price_sensitive",
+      "seeds": [
+        20311414,
+        20311515
+      ],
+      "checks_passed": true
+    },
+    {
+      "member_fare": 46.87,
+      "membership_fee": 399.0,
+      "incremental_contribution": 333.79,
+      "paired_differences": [
+        -586.7799999999988,
+        1254.3500000000058
+      ],
+      "feasible": false,
+      "search_score": -10000,
+      "mean_members": 9,
+      "mean_member_trips": 5,
+      "mean_service_rate": 0.4,
+      "standard_error": 920.5650000000023,
+      "scenario": "less_sensitive",
+      "seeds": [
+        20311414,
+        20311515
+      ],
+      "checks_passed": true
+    }
+  ],
+  "ready_for_review": false,
+  "assumptions": [
+    "Synthetic probabilistic feedback; not observed human willingness to pay.",
+    "Adaptive bounded search at HKD cent resolution; best evaluated feasible price, not a certified global optimum.",
+    "Membership fee and release share remain fixed. D28/D14/D7 quotas use the same shared-market engine.",
+    "A constant fare policy is evaluated over the full finite catalogue. Re-running updates the recommendation; no autonomous live repricing or parameter training is claimed.",
+    "Validation seeds never select another price. Stress results do not retune the frozen user law.",
+    "Contribution excludes pass-through fees and aircraft fixed costs. NO_OFFER is the paired reference.",
+    "New user assumptions invalidate earlier behavioural evidence; preserved historical reports are not overwritten."
+  ],
+  "validation": {
+    "member_fare": 46.87,
+    "membership_fee": 399.0,
+    "incremental_contribution": 718.22,
+    "paired_differences": [
+      -918.9100000000035,
+      2355.350000000006
+    ],
+    "feasible": false,
+    "search_score": -10000,
+    "mean_members": 8,
+    "mean_member_trips": 5,
+    "mean_service_rate": 0.45238095238095233,
+    "standard_error": 1637.1300000000047,
+    "scenario": "base",
+    "seeds": [
+      20311414,
+      20311515
+    ],
+    "checks_passed": true
+  },
+  "experiment_scope": "Development example with disjoint holdout and stresses; not human validation or evidence of global optimality."
+}

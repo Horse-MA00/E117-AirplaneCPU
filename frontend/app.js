@@ -470,7 +470,7 @@ function renderMarketReport(report, runId) {
   text('market-event-detail', `${number(report.completed_cases)}/${number(report.cases)} policy worlds completed`);
   text('market-call-count', number(runtime.provider_calls));
   text('market-call-detail', `${number(runtime.cache_hits)} cache hits · ${number(runtime.failures)} failures`);
-  text('market-source-counts', `Run-wide provenance: ${number(runtime.deterministic_choices)} deterministic choices · ${number(runtime.validated_live_choices)} validated live choices (including ${number(runtime.cache_hits)} cached responses) · ${number(runtime.environment_forced)} environment-forced actions. Forced actions are not model choices.`);
+  text('market-source-counts', `Run-wide provenance: ${number(runtime.probabilistic_choices)} probabilistic choices · ${number(runtime.deterministic_choices)} deterministic choices · ${number(runtime.validated_live_choices)} validated live choices (including ${number(runtime.cache_hits)} cached responses) · ${number(runtime.environment_forced)} environment-forced actions. Forced actions are not model choices.`);
   const cases = report.case_results || [];
   const currentRule = cases.length && cases.every((row) => row.policy?.release_days?.join(',') === RELEASE_DAYS.join(','));
   text('market-rule-note', currentRule ? 'Current rule: D28 / D14 / D7. Each round adds only the shortfall after all prior valid unsold quota.' : 'Historical or unversioned experiment: its original release rules are preserved. These results are not evidence for the current three-round rule.');

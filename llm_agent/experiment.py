@@ -5,7 +5,7 @@ import argparse
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import gzip
-import fcntl
+from .file_lock import exclusive_lock
 import hashlib
 import json
 import os
@@ -20,7 +20,7 @@ def load_local_env():
     """Read local literal settings without shell evaluation or credential output."""
     path = Path(__file__).resolve().parents[1] / ".env.local"
     if path.is_file():
-        for line in path.read_text().splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             if not line.strip() or line.lstrip().startswith("#") or "=" not in line:
                 continue
             key, value = line.split("=", 1)
@@ -32,7 +32,7 @@ def load_local_env():
 def create(output, full=False, seed=117):
     output = Path(output)
     result = export_suite(output, pilot=not full, seed=seed)
-    suite = json.loads((output / "state.json").read_text())
+    suite = json.loads((output / "state.json").read_text(encoding="utf-8"))
     suite["source"] = "provider_live"
     suite["provider_model"] = os.environ.get("LLM_MODEL")
     _save(output / "state.json", suite)
@@ -42,15 +42,8 @@ def create(output, full=False, seed=117):
 def run_batch(output, max_decisions=30, workers=3):
     """One writer per suite; the OS releases the lock even after interruption."""
     output = Path(output)
-    with (output / ".run.lock").open("a") as lock:
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise ValueError("This experiment already has a running batch") from None
-        try:
-            return _run_batch(output, max_decisions, workers)
-        finally:
-            fcntl.flock(lock, fcntl.LOCK_UN)
+    with exclusive_lock(output / ".run.lock"):
+        return _run_batch(output, max_decisions, workers)
 
 
 def _run_batch(output, max_decisions=30, workers=3):
@@ -59,7 +52,7 @@ def _run_batch(output, max_decisions=30, workers=3):
     if not isinstance(workers, int) or not 1 <= workers <= 5:
         raise ValueError("workers must be 1..5")
     output = Path(output)
-    suite = json.loads((output / "state.json").read_text())
+    suite = json.loads((output / "state.json").read_text(encoding="utf-8"))
     if suite["source"] != "provider_live":
         raise ValueError("Do not run provider calls on a Codex pilot suite")
     require_current_suite(output, suite)
@@ -106,7 +99,7 @@ def _run_batch(output, max_decisions=30, workers=3):
 
 def report(output):
     output = Path(output)
-    suite = json.loads((output / "state.json").read_text())
+    suite = json.loads((output / "state.json").read_text(encoding="utf-8"))
     data = read_run(suite["suite_id"])
     conditions = defaultdict(list)
     for world in suite["worlds"]:
@@ -136,7 +129,7 @@ def report(output):
 def export_public(output, destination):
     """Export only synthetic, redacted artifacts for an explicitly requested share."""
     output, destination = Path(output), Path(destination)
-    suite = json.loads((output / "state.json").read_text())
+    suite = json.loads((output / "state.json").read_text(encoding="utf-8"))
     data = read_run(suite["suite_id"])
     destination.mkdir(parents=True, exist_ok=True)
     public_report = sanitize(report(output))

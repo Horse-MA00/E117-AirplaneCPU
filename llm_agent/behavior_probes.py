@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import copy
-import fcntl
+from .file_lock import exclusive_lock
 import hashlib
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -83,7 +83,7 @@ def create(output, seed=117):
 
 
 def report(output):
-    spec = json.loads((Path(output)/"probes.json").read_text())
+    spec = json.loads((Path(output)/"probes.json").read_text(encoding="utf-8"))
     complete = [p for p in spec["probes"] if p["completed"]]
     groups = {}
     for p in complete:
@@ -120,15 +120,12 @@ def run_batch(output,max_calls=60,workers=3):
     if not isinstance(max_calls,int) or not 0<=max_calls<=60 or not 1<=workers<=5:
         raise ValueError("max_calls must be0..60; workers1..5")
     output=Path(output)
-    with (output/".run.lock").open("a") as lock:
-        try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        except BlockingIOError:raise ValueError("A behavior probe batch is already running") from None
-        try:return _run_batch(output,max_calls,workers)
-        finally:fcntl.flock(lock,fcntl.LOCK_UN)
+    with exclusive_lock(output / ".run.lock"):
+        return _run_batch(output,max_calls,workers)
 
 
 def _run_batch(output,max_calls,workers):
-    spec=json.loads((output/"probes.json").read_text())
+    spec=json.loads((output/"probes.json").read_text(encoding="utf-8"))
     if spec["prompt_hashes"] != {lang:hashlib.sha256(path.read_bytes()).hexdigest() for lang,path in PROMPTS.items()}:
         raise ValueError("Prompt changed; create another probe experiment")
     audit=Audit("shared_market_behavior_probes",{"prompt_version":VERSION,"design":spec["design"]},run_id=spec["run_id"],resume=True)
@@ -168,7 +165,7 @@ def export_public(output,destination):
     import gzip
     output,destination=Path(output),Path(destination)
     destination.mkdir(parents=True,exist_ok=True)
-    spec=json.loads((output/"probes.json").read_text())
+    spec=json.loads((output/"probes.json").read_text(encoding="utf-8"))
     _save(destination/"probes.json",sanitize(spec))
     _save(destination/"report.json",sanitize(report(output)))
     count=0

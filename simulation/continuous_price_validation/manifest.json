@@ -1,0 +1,7 @@
+{
+  "source": "continuous_price_synthetic_example",
+  "files": {
+    "feedback.json.gz": "b62b4e0d8767a545ae4abc21ae4ce2c36f91fe7aa29ec46ac7f94484f09ac7cf",
+    "report.json": "4a1b264a4f12e8ef14b3fa16c10bed5fb949fec1c0f9adf38025b4ad10df1521"
+  }
+}

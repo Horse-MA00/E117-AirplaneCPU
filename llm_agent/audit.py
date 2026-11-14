@@ -41,7 +41,7 @@ class Audit:
         self.path.mkdir(parents=True, exist_ok=resume)
         existing = self.path / "metadata.json"
         if resume and existing.exists():
-            self.metadata = json.loads(existing.read_text())
+            self.metadata = json.loads(existing.read_text(encoding="utf-8"))
         else:
             self.metadata = {"run_id": self.run_id, "source": source, "created_at": datetime.now(timezone.utc).isoformat(),
                              "status": "running", **(metadata or {})}
@@ -70,7 +70,7 @@ def list_runs():
     for directory in BASE.iterdir():
         if directory.is_dir() and (directory / "metadata.json").is_file():
             try:
-                metadata = json.loads((directory / "metadata.json").read_text())
+                metadata = json.loads((directory / "metadata.json").read_text(encoding="utf-8"))
                 if (directory / "events.jsonl").exists():
                     with (directory / "events.jsonl").open(encoding="utf-8") as handle:
                         metadata["event_records"] = sum(1 for _ in handle)
@@ -93,7 +93,7 @@ def read_run(run_id):
                 if index >= 5000:
                     raise ValueError("Run exceeds inline audit limit; inspect the local JSONL file")
                 records.append(json.loads(line))
-    result = {"metadata": json.loads((path / "metadata.json").read_text()), "records": records}
+    result = {"metadata": json.loads((path / "metadata.json").read_text(encoding="utf-8")), "records": records}
     if (path / "result.json").exists():
-        result["result"] = json.loads((path / "result.json").read_text())
+        result["result"] = json.loads((path / "result.json").read_text(encoding="utf-8"))
     return sanitize(result)
