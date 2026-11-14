@@ -167,3 +167,45 @@ python -m llm_agent.journey import \
 原始輸入、原始輸出、狀態變化、完整畫面結果與SHA-256保存在 [english_journey_20261114](../llm_agent/experiments/english_journey_20261114/)，私有run為 `journey-7aefaac1284f4f99`。既有多語言實驗未翻譯或覆寫。新程式以prompt與context雜湊隔離快取；舊suite不可套用新版prompt續跑，但仍可讀取歷史報告。
 
 驗證涵蓋中日文與JPY拒絕、失敗原文留存、不更新狀態、不存有效快取、快取再驗證、英文標點、同seed數值保持、外部Agent匯入、舊suite續跑拒絕。前端另以14人84階段檢查英文卡片、預算／會員標示、鍵盤操作、歷史原文保留與390px佈局。
+
+## 歷史 v2.1 基線實驗（原 LLM_BASELINE_EXPERIMENTS：Codex與DeepSeek旅程基線實驗）
+
+原文搬移，數字未改；這是舊 prompt v2.1 的證據，不代表現行 v2.2-en。證據目錄：[`codex_pilot_20261114/`](../llm_agent/experiments/codex_pilot_20261114/)、[`deepseek_factorial_20261114/`](../llm_agent/experiments/deepseek_factorial_20261114/)。
+
+2026-11-14。全部人物與行程是假想設定；API回應是真正呼叫得到的模型輸出，並非真人觀測。此批保留獨立單人庫存，新的共用市場另作實驗。
+
+### 實際執行
+
+- Codex子代理：28世界、6階段，共168份親自生成的JSON決策；原始回答、輸入packet及雜湊已保留。使用同一Codex子代理會話分階段處理，不是168名獨立真人或獨立模型樣本。
+- DeepSeek：官方/models確認deepseek-flash；使用非thinking模式、temperature=0、JSON輸出和每次600token上限。完整112世界×6階段=672份有效決策，0快取命中。
+- 中途1次DNS失敗保存於audit後暫停，從檢查點重新請求該步；沒有填入離線答案。成功回應的provider報告用量為1,515,811tokens（input1,456,225、output59,586），不包含另一次6呼叫連線smoke。
+- 輸出公開於llm_agent/experiments/，包含壓縮完整audit、worlds、report和checksum；授權header與金鑰不在資料中。
+
+### DeepSeek完整價費矩陣
+
+|會員基本票價P|年費V|新入會／12名未入會者|已購票世界／14|取消|續會意向|
+|---:|---:|---:|---:|---:|---:|
+|0|199|7|13|2|6|
+|0|599|2|13|2|2|
+|30|199|6|13|2|7|
+|30|599|2|13|2|2|
+|70|199|8|13|2|7|
+|70|599|4|13|2|2|
+|100|199|7|13|2|8|
+|100|599|4|13|2|1|
+
+每組另有2名既有會員，沒有在本次重收會員費。已購票數包括後來取消者；續會只是未扣費意向。每個世界獨立庫存，因此不能把104次買票視為同一航班售出104位。
+
+### 實驗促成的修正
+
+1. Codex試跑發現早期context含future change_scenario，以及未入會者也顯示剩餘120日。v2.1開始移除未來事件資訊，未入會者期限為null；舊packet保持原樣並記錄限制。
+2. Codex指出date_uncertain沒有概率／影響人數，以及下期預算沒有定義。共享市場將以明確事件與當期會員期帳本承載後果，未來續會仍只作附條件意向。
+3. 單人旅程的後期多為唯一合法行動；共享市場會直接執行並標為environment_forced，避免浪費LLM呼叫或冒充新偏好證據。
+4. 各價費組均13/14買到票，無法測出多人競爭；新增共用庫存、多人同時期查詢、多次出行與完整會員期財務帳本。
+5. 提高票價後入會人數有時反而增加。相鄰價位有 4 個同人同會費由DECLINE轉JOIN的情境；保存於paired_cost_anomalies.json，會以新呼叫重複／選項順序／語言探測，不將這批回應直接擬合成真實需求彈性。
+
+### 可重播而非真人ground truth
+
+模型理由能指出日期、同行、費用和庫存的考量，但不證明其心理偏好正確。14類角色只是需求情境覆蓋，無真實HK Express客群比例；v2旅程的航班均由HKG出發，入境客情境的真正跨境路線仍需共享市場擴展。只有真實曝光及購買、或同題真人試驗能校準市場反應。
+
+官方接口參考：[Chat Completions](https://api-docs.deepseek.com/api/create-chat-completion/)、[Models](https://api-docs.deepseek.com/api/list-models/)。共享市場請參考後續SHARED_MARKET文件；這份報告不把單人旅程結果當成收益排名。

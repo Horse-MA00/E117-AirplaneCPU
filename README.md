@@ -4,6 +4,16 @@
 
 A runnable **NHPP-based hackathon prototype** by Team Airplane CPU · E117 for Cathay Hackathon 2026, **Low-cost Travel — Smart Offer & Borderless Booking**. The proposed HK Express membership offers zero or low base fares plus mandatory charges.
 
+## Problem
+
+These are the team's hypotheses, not verified HK Express findings:
+
+- **Travellers** with flexible dates or destinations must search combination by combination; flash sales may not match when they can plan; and a low base fare is not a clear trip cost unless fees and the membership fee are shown together.
+- **The airline** cannot discount today's empty seats safely, because normal-fare passengers may still buy them. Release quantity and member fare are trade-offs: releasing too many displaces normal sales, releasing too few leaves members without usable offers, and a fare that is too low replaces normal revenue.
+- **The membership product** must stay both usable (members find eligible seats) and economically positive after costs and displaced normal sales. Higher load factor alone is not the goal.
+
+This prototype turns a normal-demand forecast into concrete, auditable release and pricing choices for that membership.
+
 ## Joint optimisation and new portals (2026-11-14)
 
 Admin now follows **Forecast seats → Optimize prices → Experiments → Manage offers**,
