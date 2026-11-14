@@ -1,3 +1,4 @@
+import { renderContributionExplanation } from './contribution-explanation.js';
 const $ = id => document.getElementById(id);
 const state = { runId:null, data:null, timer:null, request:0, loading:false, configured:false, listed:false, flights:[], scope:null, scopeRequest:0 };
 const num = (v, digits=0) => v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toLocaleString('en-HK',{maximumFractionDigits:digits});
@@ -91,7 +92,7 @@ function priceProfit(tracks){
   const buyers=rows.reduce((a,b)=>(b.mean_member_buyers??0)>(a.mean_member_buyers??0)?b:a);
   const margins=rows.filter(r=>Number.isFinite(r.profit_margin));
   const margin=margins.length?margins.reduce((a,b)=>b.profit_margin>a.profit_margin?b:a):null;
-  for(const [label,row,metric] of [['Highest tested profit',highest,money(highest.total_contribution)],['Most member buyers',buyers,`${num(buyers.mean_member_buyers,1)} member buyers`],['Highest tested margin',margin,margin?pct(margin.profit_margin):'—']]){
+  for(const [label,row,metric] of [['Highest tested contribution',highest,money(highest.total_contribution)],['Most member buyers',buyers,`${num(buyers.mean_member_buyers,1)} member buyers`],['Highest tested margin',margin,margin?pct(margin.profit_margin):'—']]){
     const card=node('div');card.append(node('span',label),node('strong',row?money(row.member_fare):'—'),node('small',row?`${name(row.mode)} · ${metric}${row.feasible?'':' · service unmet'}`:'No revenue to calculate a margin'));cards.append(card);
   }
   const left=66,right=20,top=28,bottom=52;
@@ -102,12 +103,12 @@ function priceProfit(tracks){
   for(let i=0;i<=4;i++){const v=ymin+(ymax-ymin)*i/4;svg.append(svgNode('line',{x1:left,x2:width-right,y1:y(v),y2:y(v),class:'chart-grid'}),svgNode('text',{x:left-8,y:y(v)+4,'text-anchor':'end',class:'chart-tick'},num(v)));}
   for(let i=0;i<=(width<500?2:4);i++){const value=xmin+xspan*i/(width<500?2:4);svg.append(svgNode('text',{x:x(value),y:height-25,'text-anchor':'middle',class:'chart-tick'},num(value,2)));}
   svg.append(svgNode('text',{x:left,y:14,class:'chart-tick'},'Flight contribution · HK$'),svgNode('text',{x:width/2,y:height-5,'text-anchor':'middle',class:'chart-tick'},'Member base fare · HK$'));
-  const describe=r=>text('optimization-price-detail',`${name(r.mode)} · fare ${money(r.member_fare)} · pass ${money(r.membership_fee)} · profit ${money(r.total_contribution)} · margin ${pct(r.profit_margin)} · ${num(r.mean_member_buyers,1)} member buyers / ${num(r.mean_regular_buyers,1)} regular buyers · ${num(r.mean_new_members,1)} joins · ${num(r.member_supply_exposure,1)} seats issued / ${num(r.mean_member_offer_customers,1)} travellers saw offers · ${num(r.mean_member_tickets,1)} member / ${num(r.mean_regular_tickets,1)} regular tickets · ${r.feasible?'service target met':'service target unmet'}.`);
+  const describe=r=>text('optimization-price-detail',`${name(r.mode)} · fare ${money(r.member_fare)} · pass ${money(r.membership_fee)} · contribution ${money(r.total_contribution)} · contribution margin ${pct(r.profit_margin)} · ${num(r.mean_member_buyers,1)} member buyers / ${num(r.mean_regular_buyers,1)} regular buyers · ${num(r.mean_new_members,1)} joins · ${num(r.member_supply_exposure,1)} seats issued / ${num(r.mean_member_offer_customers,1)} travellers saw offers · ${num(r.mean_member_tickets,1)} member / ${num(r.mean_regular_tickets,1)} regular tickets · ${r.feasible?'service target met':'service target unmet'}.`);
   for(const track of tracks){
     const color=track.mode==='live'?'#087D96':'#6F2C91',points=rows.filter(r=>r.mode===track.mode).sort((a,b)=>a.member_fare-b.member_fare);
     // A true price curve only joins evaluations with the same membership fee.
     for(const fee of new Set(points.map(r=>r.membership_fee))){const fixed=points.filter(r=>r.membership_fee===fee);svg.append(svgNode('polyline',{points:fixed.map(r=>`${x(r.member_fare)},${y(r.total_contribution)}`).join(' '),fill:'none',stroke:color,'stroke-width':2,...(track.mode==='live'?{'stroke-dasharray':'5 4'}:{})}));}
-    for(const row of points){const point=svgNode('circle',{cx:x(row.member_fare),cy:y(row.total_contribution),r:4+Math.min(7,Math.sqrt(Math.max(0,row.mean_member_buyers||0))),fill:color,stroke:row===highest?'#24BCDC':'white','stroke-width':row===highest?4:1.5,tabindex:0,role:'button','data-price':row.member_fare,'data-profit':row.total_contribution,'aria-label':`${name(row.mode)} fare ${money(row.member_fare)}, profit ${money(row.total_contribution)}, ${num(row.mean_member_buyers,1)} member buyers`});
+    for(const row of points){const point=svgNode('circle',{cx:x(row.member_fare),cy:y(row.total_contribution),r:4+Math.min(7,Math.sqrt(Math.max(0,row.mean_member_buyers||0))),fill:color,stroke:row===highest?'#24BCDC':'white','stroke-width':row===highest?4:1.5,tabindex:0,role:'button','data-price':row.member_fare,'data-profit':row.total_contribution,'aria-label':`${name(row.mode)} fare ${money(row.member_fare)}, contribution ${money(row.total_contribution)}, ${num(row.mean_member_buyers,1)} member buyers`});
       point.append(svgNode('title',{},point.getAttribute('aria-label')));for(const event of ['focus','mouseenter','click'])point.addEventListener(event,()=>describe(row));point.addEventListener('keydown',event=>{if(event.key==='Enter')describe(row);if(event.key===' ')event.preventDefault();});point.addEventListener('keyup',event=>{if(event.key===' '){event.preventDefault();describe(row);}});svg.append(point);
     }
   }
@@ -123,7 +124,7 @@ function renderCards(tracks) {
       const item=node('div');item.append(node('span',label),node('strong',money(amount)));prices.append(item);
     }
     const profit=node('p',undefined,'track-profit');
-    if(latest){profit.append(node('strong',`${money(latest.incremental_contribution)} incremental`),document.createTextNode(` · ${pct(latest.service_rate)} member use`));}
+    if(latest){profit.append(node('strong',`${money(latest.incremental_contribution)} incremental`),document.createTextNode(` · ${pct(latest.service_rate)} mean new-member use`));}
     else profit.textContent='Waiting for the first market replay to finish.';
     card.append(heading,prices,profit);
     if(latest)card.append(node('p',`${evidenceLabel(latest)} · ${num(latest.mean_member_buyers,1)} member buyers · ${num(latest.mean_regular_buyers,1)} regular buyers · ${num(latest.member_supply_exposure,1)} member seats issued.`,'small muted'));
@@ -146,12 +147,14 @@ function renderFinal(tracks) {
     const item=node('div',undefined,'final-option'),body=node('div'),heading=node('strong',name(track.mode));
     const decision=track.decision||'PENDING';heading.append(node('span',decision==='OFFER'?'Validated offer':decision==='NO_OFFER'?'Keep normal sales':'Validation pending','decision-chip'));body.append(heading);
     if(decision==='OFFER' && track.best && track.validation){
-      body.append(node('p',`${money(track.best.member_fare)} member base fare · ${money(track.best.membership_fee)} membership fee`),node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} member use.`,'small muted'));
+      body.append(node('p',`${money(track.best.member_fare)} member base fare · ${money(track.best.membership_fee)} membership fee`),node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} mean new-member use.`,'small muted'));
       body.append(node('p','Prepare a draft for this exact flight and release round. Current inventory is checked again.','small muted'));
       const button=node('button','Use these prices','button primary');button.type='button';button.disabled=state.data.status!=='completed'||!state.data.config.scope;button.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('uoption:prepare-policy',{detail:{...track.best,run_id:state.data.run_id,mode:track.mode,flight_id:state.data.config.scope.flight_id,forecast_day:state.data.config.scope.as_of_day,release_fraction:state.data.config.release_fraction}})));item.append(body,button);
     }else if(decision==='NO_OFFER'){
       body.append(node('p','The tested member offer did not pass both the search and independent validation requirements.'));
-      if(track.validation)body.append(node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} member use.`,'small muted'));
+      const reasons=track.contribution_explanation?.no_offer_reasons;
+      if(reasons?.length){const list=node('ul',undefined,'decision-reasons');for(const reason of reasons)list.append(node('li',reason));body.append(list);}
+      if(track.validation)body.append(node('p',`Independent market: ${money(track.validation.incremental_contribution)} incremental contribution · ${pct(track.validation.service_rate)} mean new-member use.`,'small muted'));
       item.append(body);
     }else{
       body.append(node('p',track.rounds.length?'The current best candidate still needs a completed independent validation.':'Complete the market rounds to compare prices.'));item.append(body);
@@ -184,7 +187,7 @@ function render(data){
   if(data.error && !['paused','paused_at_budget'].includes(data.status))showError(data.error);else showError('');
   $('optimization-export').href=`/api/optimization/runs/${encodeURIComponent(data.run_id)}/export`;
   $('optimization-events').href=`/api/optimization/runs/${encodeURIComponent(data.run_id)}/events`;
-  renderCards(tracks);renderTable(tracks);renderFinal(tracks);renderFeedback(tracks);draw();controls();
+  renderCards(tracks);renderTable(tracks);renderFinal(tracks);renderContributionExplanation($('optimization-contribution-content'),tracks);renderFeedback(tracks);draw();controls();
 }
 function draw(){if(!state.data)return;const tracks=state.data.tracks||[];chart('optimization-fare-chart',tracks,'member_fare',{initialKey:'initial_member_fare',caption:'Evaluated member fare by round'});chart('optimization-fee-chart',tracks,'membership_fee',{initialKey:'initial_membership_fee',caption:'Evaluated membership fee by round'});chart('optimization-profit-chart',tracks,'incremental_contribution',{caption:'Evaluated incremental contribution compared with no offer'}); priceProfit(tracks);}
 async function poll(id){

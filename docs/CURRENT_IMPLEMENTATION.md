@@ -16,6 +16,12 @@ SQLite 保存 run、world、round、event。Scoped Live 現在可在指定總額
 
 以下快速網格、多航班會員期搜尋和既有實驗仍保留為參考及歷史證據。[舊聯合優化引擎](OPTIMIZATION_ENGINE.md) 的兩維 P/V 搜尋不再是主要 Admin 的行為。
 
+## 收入成本與 NO_OFFER 解釋
+
+每條 optimization track 額外返回唯讀 `contribution_explanation`（`paired-contribution-explanation-v1`）：分開保留候選的搜尋及獨立驗證，按相同 seed／外生世界 SHA 配對。內容包括無優惠／有優惠的收入成本橋接、會費分攤及完整現金口徑、買家淨差、完成乘搭戶數和每次重播的服務門檻。資料缺失或配對身分不符時顯示 unavailable，不用 0 代替缺值。讀取不建立實驗、不修改舊結果或呼叫 LLM。
+
+實例 P84／V399 的6戶會員買家是原本會買普通票的同6戶，增量−2364計算正確；全額新會費現金口徑仍−1380。平均75%會員使用不代表每次都過60%，兩次驗證為100%／50%。詳見[逐筆審計](CONTRIBUTION_AUDIT_2026-11-14.md)。
+
 ## 架構
 
 ```mermaid

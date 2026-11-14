@@ -84,7 +84,7 @@ def _id(run_id):
 
 
 def provenance():
-    files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py', 'backend/data.py',
+    files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py', 'backend/data.py', 'backend/contribution_explanation.py',
              'backend/probabilistic_customer.py', 'backend/nhpp.py', 'backend/release_policy.py', 'backend/seat_feedback.py',
              'simulation/generate.py', 'simulation/generated/calibration_v2.json',
              'llm_agent/market_adapter.py', 'llm_agent/population.py', 'llm_agent/output_contract.py',
@@ -512,9 +512,10 @@ def read(run_id):
         rows = store.rounds(run_id, mode)
         best = best_candidate(rows)
         with store.connection() as db:
-            worlds = db.execute("SELECT phase,result FROM optimization_worlds WHERE run_id=? AND mode=? AND phase IN ('holdout','holdout_baseline') AND status='completed' ORDER BY seed", (run_id, mode)).fetchall()
-        actual = [json.loads(row['result']) for row in worlds if row['phase']=='holdout']
-        baseline = [json.loads(row['result']) for row in worlds if row['phase']=='holdout_baseline']
+            world_rows = db.execute("SELECT mode,phase,round_number,seed,result,status FROM optimization_worlds WHERE run_id=? AND mode=? AND status='completed' AND (phase IN ('baseline','holdout','holdout_baseline') OR (phase='search' AND round_number=?)) ORDER BY seed", (run_id, mode, best['round'] if best else -1)).fetchall()
+        worlds = [{**dict(row), 'result':json.loads(row['result'])} for row in world_rows]
+        actual = [row['result'] for row in worlds if row['phase']=='holdout']
+        baseline = [row['result'] for row in worlds if row['phase']=='holdout_baseline']
         validation = None
         if best and len(actual) == len(baseline) == 2:
             validation = aggregate({key: best[key] for key in ('member_fare', 'membership_fee', 'seat_calibration')}, actual, baseline, cfg)
@@ -531,6 +532,8 @@ def read(run_id):
                 proposed_next_seat_calibration=rows[-1].get('next_seat_calibration') if rows else None,
                 seat_feedback_application='proposed_only_fixed_during_price_comparison',
                 decision_reason='No informative member offer exposure; no price recommendation retained.' if rows and best is None else None)
+        from .contribution_explanation import describe_track
+        track['contribution_explanation'] = describe_track(cfg, track, worlds)
         tracks.append(track)
     saved['tracks'] = tracks
     saved['version'] = saved['provenance'].get('version',VERSION)

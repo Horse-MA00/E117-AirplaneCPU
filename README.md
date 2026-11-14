@@ -22,6 +22,8 @@ New member-opportunity examples supply inventory; zero-supply runs are blocked. 
 regular purchasers are counted separately, and each new fare comparison freezes its seat
 profile. See [the inventory and price-evidence corrections](docs/MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md).
 
+Admin also explains each retained candidate with paired revenue/cost tables, the full membership-fee cash view and per-replay service requirements. See the [HK$2,364 contribution audit](docs/CONTRIBUTION_AUDIT_2026-11-14.md).
+
 SQLite saves rounds, seat-feedback profiles, redacted original LLM outputs and resumable
 market state. Live runs automatically cross internal batches within a selected total
 budget. NO_OFFER remains a valid result. The base NHPP remains frozen.
