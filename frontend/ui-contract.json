@@ -1,0 +1,535 @@
+{
+ "_说明": "前端 UI 重构的冻结约定，规则见 docs/FRONTEND_UI.md。改布局可以移动这些元素，但不能删除或改名；确需改动时，在同一个提交里同步修改 JS、smoke 测试和本文件。tests/test_frontend_contract.py 会检查。 解释文字可以收进 ⓘ 提示（.info-tip），只要元素和 id 仍在页面里。",
+ "pages": {
+  "/admin": {
+   "html": "frontend/index.html",
+   "routes": [
+    "flights",
+    "members",
+    "results",
+    "customers"
+   ],
+   "route_mechanism": "location.hash 选中 section#view-<route>.view；#results 为 2026-11-15 新增；未知或已退役的 hash（#optimization、#pricing、#panel、#market）显示 section#view-unavailable，不跳转。search#context-bar 是 flights/members/results 共用的航班选择栏"
+  },
+  "/adaptive-pricing": {
+   "html": "frontend/adaptive-pricing.html",
+   "routes": [],
+   "route_mechanism": "独立页面（Optimize）。网址参数 flight_id、forecast_day、run、round 恢复航班、轮次和已保存实验；没有 run 时自动打开该航班和轮次最近一次已完成的实验"
+  },
+  "/members": {
+   "html": "frontend/members/index.html",
+   "routes": [
+    "flights",
+    "membership",
+    "trips",
+    "account"
+   ],
+   "route_mechanism": "登入後同一長頁面內的錨點；GET /api/member-portal/session 確認身份，未登入轉 /members/login；dialog#checkout 是訂票彈窗"
+  },
+  "/members/login": {
+   "html": "frontend/members/login.html",
+   "routes": [],
+   "route_mechanism": "公開示範帳戶登入；快捷按鈕只填帳密，明確 Sign in 後建立 Cookie session 並進入 /members"
+  }
+ },
+ "api": [
+  {
+   "method": "GET",
+   "path": "/api/summary",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/flights",
+   "used_by": [
+    "app.js",
+    "adaptive-pricing.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/flights/{flight_id}",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/forecast",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "flight_id",
+    "days_to_departure"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/offers",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/offers",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "flight_id",
+    "days_to_departure",
+    "quantity",
+    "base_fare"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/plan",
+   "used_by": [
+    "app.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/plan",
+   "used_by": [
+    "app.js"
+   ],
+   "body": [
+    "membership_fee"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/adaptive-pricing/status",
+   "used_by": [
+    "adaptive-pricing.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/adaptive-pricing/scope",
+   "used_by": [
+    "adaptive-pricing.js"
+   ],
+   "body": [
+    "flight_id",
+    "forecast_day",
+    "profile"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/adaptive-pricing/runs",
+   "used_by": [
+    "adaptive-pricing.js",
+    "experiments.js",
+    "app.js（Publish 页的 Thompson 参考，只读）"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/adaptive-pricing/runs",
+   "used_by": [
+    "adaptive-pricing.js"
+   ],
+   "body": [
+    "flight_id",
+    "forecast_day",
+    "mode",
+    "profile",
+    "weights",
+    "rounds",
+    "customers",
+    "concurrency",
+    "max_calls",
+    "seed",
+    "validation_repeats"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/adaptive-pricing/runs/{run_id}",
+   "used_by": [
+    "adaptive-pricing.js",
+    "experiments.js"
+   ]
+  },
+  {
+   "method": "LINK",
+   "path": "/api/adaptive-pricing/runs/{run_id}/export",
+   "used_by": [
+    "adaptive-pricing.js",
+    "experiments.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/config",
+   "used_by": [
+    "members/portal.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/flights",
+   "used_by": [
+    "members/portal.js"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/accounts/{customer_id}",
+   "used_by": [
+    "members/portal.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/join",
+   "used_by": [
+    "members/portal.js"
+   ],
+   "body": [
+    "customer_id",
+    "expected_fee"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/book",
+   "used_by": [
+    "members/portal.js"
+   ],
+   "body": [
+    "customer_id",
+    "offer_id",
+    "expected_total"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/login",
+   "used_by": [
+    "members/login.js"
+   ],
+   "body": [
+    "email",
+    "password"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/session",
+   "used_by": [
+    "members/login.js",
+    "members/portal.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/logout",
+   "used_by": [
+    "members/portal.js"
+   ],
+   "body": []
+  }
+ ],
+ "events": {
+  "uoption:view": "app.js 切换页面后发出，experiments.js 据此在 #customers 读取已保存实验"
+ },
+ "url_and_storage": {
+  "/adaptive-pricing?flight_id=&forecast_day=": "Forecast 和 Manage offers 打开 Optimize 时带入航班和放票轮次（thompson-navigation.js）",
+  "/adaptive-pricing?run=&round=": "恢复已保存的 Thompson 实验和轮次",
+  "/admin?run=&round=#customers": "Experiments 分享指定实验和轮次的会员回馈",
+  "/admin?flight_id=&forecast_day=#<route>": "Optimize 的侧边栏和 \"Publish at HK$…\" 按钮把当前航班和轮次带回 Admin（app.js 在 init 中读取）",
+  "Cookie uoption_demo_session": "HttpOnly、SameSite=Lax、24小時伺服器session；會員身份由 /api/member-portal/session 提供，不讀取本機任意ID；登出撤銷session",
+  "/members/login": "兩類公開示範帳戶：首次帶有半年會籍的 member、首次未入會的 guest；已購會籍及訂位持續保存"
+ },
+ "js_selectors": {
+  "admin": [
+   ".view",
+   ".view:not([hidden]) h1",
+   ".primary-nav a",
+   ".skip",
+   "[data-day]"
+  ],
+  "admin_classes_toggled_by_js": [
+   "loading"
+  ],
+  "optimize": [
+   ".results",
+   "option[value=…]",
+   "input（#weights 内）",
+   "[data-round]",
+   "[data-admin-view]"
+  ],
+  "optimize_classes_toggled_by_js": [
+   "error"
+  ],
+  "members": [
+   ".header nav a",
+   ".choose-flight"
+  ],
+  "member_login": [
+   "#login-form",
+   "#login-fields",
+   "#login-email",
+   "#login-password"
+  ]
+ },
+ "dom_ids": {
+  "admin": [
+   "bookable-detail",
+   "bookable-value",
+   "booked-detail",
+   "booked-value",
+   "booking-chart",
+   "chart-caption",
+   "context-bar",
+   "context-route",
+   "dataset-label",
+   "day-description",
+   "day-number",
+   "day-slider",
+   "demand-value",
+   "empty-detail",
+   "empty-value",
+   "error",
+   "feedback-content",
+   "feedback-context",
+   "feedback-empty",
+   "feedback-empty-message",
+   "feedback-error",
+   "feedback-export",
+   "feedback-hypothesis",
+   "feedback-list",
+   "feedback-note",
+   "feedback-pricing-link",
+   "feedback-refresh",
+   "feedback-round",
+   "feedback-run",
+   "feedback-source",
+   "feedback-status",
+   "feedback-summary",
+   "flight-capacity",
+   "flight-date",
+   "flight-filter-empty",
+   "flight-main",
+   "flight-scenario-note",
+   "flight-select",
+   "forecast-demand",
+   "forecast-demand-status",
+   "go-pricing",
+   "headroom-detail",
+   "headroom-value",
+   "llm-status",
+   "member-allocation-detail",
+   "member-fee",
+   "member-plan-form",
+   "membership-status",
+   "nav-optimize",
+   "nhpp-release-detail",
+   "nhpp-release-value",
+   "notice",
+   "offer-fare",
+   "offer-flight-context",
+   "offer-form",
+   "offer-guidance",
+   "offer-preview",
+   "offer-quantity",
+   "offer-release-status",
+   "offers-list",
+   "page-title",
+   "price-caption",
+   "price-chart",
+   "protection-value",
+   "publish-button",
+   "publish-next",
+   "refresh-offers",
+   "refresh-results",
+   "release-decision",
+   "release-value",
+   "results-all-offers",
+   "results-composition",
+   "results-context",
+   "results-empty",
+   "results-fees",
+   "results-fees-detail",
+   "results-fees-label",
+   "results-flight-offers",
+   "results-legend",
+   "results-protected",
+   "results-remaining",
+   "results-revenue",
+   "results-sold",
+   "results-sold-detail",
+   "results-updated",
+   "save-plan-button",
+   "seat-composition",
+   "seat-composition-legend",
+   "seat-inventory-warning",
+   "view-customers",
+   "view-flights",
+   "view-members",
+   "view-results",
+   "view-unavailable"
+  ],
+  "optimize": [
+   "break-even-note",
+   "break-even-panel",
+   "break-even-rate",
+   "call-estimate",
+   "candidate-tradeoff",
+   "comparison-bars",
+   "concurrency",
+   "curve-caption",
+   "curve-chart",
+   "curve-section",
+   "curve-table",
+   "curve-table-caption",
+   "customers",
+   "delta-initial",
+   "delta-label-initial",
+   "delta-label-no-offer",
+   "delta-no-offer",
+   "elapsed",
+   "empty-state",
+   "experiment-form",
+   "experiments-nav-link",
+   "export-run",
+   "flight",
+   "flight-description",
+   "flight-title",
+   "load-run",
+   "marketing-fare-note",
+   "max-calls",
+   "member-feedback-link",
+   "member-quota",
+   "mode",
+   "new-experiment",
+   "normal-fare",
+   "observed-rate",
+   "opt-demand",
+   "page-error",
+   "page-title",
+   "progress-bar",
+   "provider-note",
+   "publish-link",
+   "recommendation",
+   "recommendation-reason",
+   "recommendation-stage",
+   "recommendation-title",
+   "recommended-price",
+   "refresh-run",
+   "release-day",
+   "reset-weights",
+   "retained-price-note",
+   "round-caption",
+   "round-progress",
+   "round-section",
+   "round-table",
+   "rounds",
+   "route",
+   "run-cohort",
+   "run-counts",
+   "run-people",
+   "run-progress",
+   "run-source",
+   "run-status",
+   "saved-run",
+   "scope-day",
+   "scope-fields",
+   "scope-message",
+   "seed",
+   "setup-fields",
+   "setup-panel",
+   "start",
+   "starting-fare",
+   "validation-basis",
+   "validation-detail",
+   "validation-intro",
+   "validation-repeats",
+   "validation-section",
+   "validation-table",
+   "validation-verdict",
+   "weight-total",
+   "weights"
+  ],
+  "members": [
+   "account",
+   "account-status",
+   "any-dates",
+   "available-dates",
+   "available-only",
+   "checkout",
+   "checkout-content",
+   "checkout-error",
+   "checkout-form",
+   "checkout-refresh",
+   "checkout-status",
+   "checkout-step",
+   "checkout-submit",
+   "checkout-title",
+   "clear-search",
+   "current-account",
+   "date-fares",
+   "date-options",
+   "departure-from",
+   "departure-to",
+   "destination",
+   "destination-note",
+   "edit-search",
+   "flight-results",
+   "flight-search",
+   "flight-sort",
+   "flights",
+   "header-account",
+   "hero-fee",
+   "hero-term",
+   "join-pass",
+   "main-content",
+   "membership",
+   "membership-state",
+   "next-month",
+   "origin",
+   "origin-note",
+   "pass-price",
+   "pass-term",
+   "portal-error",
+   "portal-notice",
+   "refresh-account",
+   "refresh-flights",
+   "result-count",
+   "results-title",
+   "search-button",
+   "search-date-error",
+   "search-summary",
+   "session-status",
+   "sign-out",
+   "swap-airports",
+   "trip-count",
+   "trip-results",
+   "trips",
+   "view-trips"
+  ],
+  "member_login": [
+   "current-session",
+   "current-session-name",
+   "demo-guest",
+   "demo-member",
+   "login-email",
+   "login-error",
+   "login-fields",
+   "login-form",
+   "login-password",
+   "login-status",
+   "login-submit",
+   "toggle-password"
+  ]
+ }
+}

@@ -15,10 +15,10 @@ export function seatStatus(forecast, capacity, normalBooked, day) {
       releaseState:inventory.release_state,historical:forecast.release_status?.historical_view||inventory.release_state==='historical_view',
       salesClosed:forecast.release_status?.sales_cutoff_passed||inventory.release_state==='sales_closed'};
     result.parts=[
-      {key:'occupied',label:'Booked · normal + member',value:result.occupied},
+      {key:'occupied',label:'Booked (normal + member)',value:result.occupied},
       {key:'protected',label:'Protected for normal demand',value:result.protection},
-      {key:'published',label:'Published and bookable',value:result.published},
-      {key:'available',label:'Unpublished forecast headroom',value:result.unpublished},
+      {key:'published',label:'Published, bookable now',value:result.published},
+      {key:'available',label:'Safe for members, not yet published',value:result.unpublished},
       {key:'published-held',label:'Published quota on hold',value:Math.min(result.heldPublished,result.held)},
       {key:'held',label:'Held by other safety limits',value:Math.max(0,result.held-result.heldPublished)},
     ];
@@ -47,10 +47,10 @@ export function seatStatus(forecast, capacity, normalBooked, day) {
   else reason='The current quota and safety checks allow no additional release.';
   if(day>0&&published>0)reason+=` ${published} already-published seats remain bookable.`;
   const parts=[
-    {key:'occupied',label:'Booked · normal + member',value:occupied},
+    {key:'occupied',label:'Booked (normal + member)',value:occupied},
     {key:'protected',label:'Protected for normal demand',value:protection},
-    {key:'published',label:'Published and bookable',value:published},
-    {key:'available',label:'Unpublished forecast headroom',value:unpublished},
+    {key:'published',label:'Published, bookable now',value:published},
+    {key:'available',label:'Safe for members, not yet published',value:unpublished},
     {key:'held',label:'Held by other safety limits',value:held},
   ];
   return {capacity:c,normal,sold,occupied,physicalRemaining,protection,headroom,published,unpublished,newSeats,held,nextRound,reason,parts,

@@ -35,7 +35,7 @@ python -m pip install -r requirements.txt
 python -m backend.server
 ```
 
-- [Admin](http://127.0.0.1:8000/admin): Forecast seats, Optimize prices, Experiments and Manage offers.
+- [Admin](http://127.0.0.1:8000/admin): Forecast seats, Optimize prices, Publish offers, Results and Member feedback.
 - [Optimize prices](http://127.0.0.1:8000/adaptive-pricing): Thompson setup, saved rounds, revenue curve and independent confirmation.
 - [Member sign-in](http://127.0.0.1:8000/members/login): two demo accounts, flexible destination/date search and simulated booking.
 

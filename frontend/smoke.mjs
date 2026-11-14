@@ -51,11 +51,13 @@ try {
       const {flights} = await (await fetch('/api/flights')).json();
       for (const flight of flights.slice(0, 80)) {
         const {forecast} = await (await fetch('/api/forecast', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({flight_id:flight.flight_id,days_to_departure:28})})).json();
-        if (forecast.releasable_seats >= 2 && !forecast.release_status?.blocked_reason) return flight.flight_id;
+        if (forecast.releasable_seats >= 2 && !forecast.release_status?.blocked_reason) return { id: flight.flight_id, route: `${flight.origin} → ${flight.destination}` };
       }
     });
     assert.ok(availableFlight, 'Need an unused release round for transactional QA.');
-    await page.locator('#flight-select').selectOption(availableFlight); await waitForecast();
+    // The flight box lists one route at a time; choose the route first.
+    await page.locator('#context-route').selectOption(availableFlight.route);
+    await page.locator('#flight-select').selectOption(availableFlight.id); await waitForecast();
     await navigate('members');
     assert.equal(await page.locator('#publish-button').isDisabled(), false, 'Selected flight needs available member inventory for this optional test.');
     await page.locator('#offer-quantity').fill('2');

@@ -19,14 +19,14 @@ flowchart TD
     T --> W
     T --> V[宣傳票價與獨立確認]
     V --> E[SQLite 結果 票款曲線與回饋]
-    E -. 人工審閱及輸入 .-> A[Manage offers 價格與庫存核驗]
+    E -. 人工審閱及輸入 .-> A[Publish offers 價格與庫存核驗]
     R --> A
     A --> Q[已發布優惠]
     Q --> C[Client 入會與模擬購票]
     C --> Q
 ```
 
-Python 標準庫 HTTP 服務直接提供前端靜態資源，無 Node build。數值模型使用 NumPy；SQLite 保存實驗與示例交易。Admin 四入口為 Forecast、Optimize、Experiments、Manage offers；會員端由 `/members/login` 登入後進入 `/members`。界面配色為紫 `#6F2C91`、青 `#24BCDC`、白。
+Python 標準庫 HTTP 服務直接提供前端靜態資源，無 Node build。數值模型使用 NumPy；SQLite 保存實驗與示例交易。Admin流程為 Forecast、Optimize、Publish offers及Results，另有只讀的Member feedback；會員端由 `/members/login` 登入後進入 `/members`。界面配色為紫 `#6F2C91`、青 `#24BCDC`、白。
 
 ## 資料與預測
 
@@ -52,13 +52,19 @@ P₀為正常基本票價80%上限。最終會員價向下取尾數9，低於HK$
 - `store.py`保存優惠、示例會員及訂位；發布與結帳以SQLite交易處理，防止重發、超賣及重複購買。
 - `llm_agent/adaptive_customers.py`與provider適配層進行有限並行呼叫；新呼叫、快取、強制動作及失敗分開計數。provider失敗不以合成成功回覆替代。
 - `.env.local`、`data/private/`及OAG原始快取不公開；目前實驗的公開匯出使用已遮蔽report／audit／manifest。
-- 會員網站庫存與定價實驗的重置世界分開。結果不自動發布；Manage offers須人工輸入並重新檢查。
+- 會員網站庫存與定價實驗的重置世界分開。結果不自動發布；Publish offers須人工輸入並重新檢查。
 
 ## 半年會員與示範登入
 
 會員計劃預設HK$399／六個曆月：`backend.store.membership_expiry`依香港時間加六個月（月底夾限），新入會保存確切到期時刻；既有會員保留原紀錄。`plan()`提供`term_months=6`和`term_label="6 months"`，`term_days`僅為查詢當日的相容估算。
 
 `backend/demo_auth.py`提供兩個公開示範帳戶（詳見[登入操作](ADMIN_AND_MEMBER_UX.md#client-portal)）。伺服器產生隨機session token，只存SHA256雜湊，Cookie為HttpOnly、SameSite=Lax、24小時有效；登出撤銷session。會員帳戶僅首次登入初始化會籍；Guest入會後狀態持續保存。HTTP層對保留帳戶核對session，拒絕跨帳戶讀取、入會及購票。現有任意ID開發介面仍只供本機測試。
+
+## Admin UI 整合
+
+Admin界面選擇性引入 `claude/frontend-fixes` 的 `5699a99`，沿用 main `55506db` 的後端與完整Client Portal。`frontend/admin-shell.css` 提供共用側欄和Inter字體；航班欄連接Forecast、Optimize、Publish offers和Results。Publish仍由管理員人工輸入；會費及預覽使用現行六個曆月方案。
+
+Results從既有優惠計算已售會員位和基本票款，不含會員費。未消耗配額不等同即時可訂座位，座位分配條保留暫扣分類。已保存實驗載入時同步需求篩選、航班及輪次；讀取結果不啟動新實驗。規格見[前端設計](FRONTEND_UI.md)，整合驗證見[維護紀錄](ITERATION_2_PROGRESS.md)。
 
 ## HTTP介面
 

@@ -6,8 +6,9 @@ The Python backend directly serves the committed HTML/CSS/JavaScript; no fronten
 |---|---|
 | `/admin#flights` | NHPP seat forecast, demand filter and observed normal fares |
 | `/adaptive-pricing` | The only optimizer: Thompson Sampling on one dated flight |
-| `/admin#customers` | Saved current-v5 member feedback and per-round reasons |
-| `/admin#members` | Manual offer publication and separate membership-plan settings |
+| `/admin#customers` | Member feedback: saved current-v5 choices and reasons |
+| `/admin#members` | Publish offers: manual release, Thompson reference and member-card preview |
+| `/admin#results` | Sold member seats, unused quota and base-fare receipts after publication |
 | `/members/login` | Two public demo logins: prepaid member and initially nonmember |
 | `/members` | Signed-in flexible search, six-month membership, checkout and saved trips |
 
@@ -21,7 +22,7 @@ Member search supports a destination country/region and inclusive date range. `N
 
 `members/search.js` uses native Temporal where available and otherwise imports the committed local fallback. After changing its pinned dependency, use `npm ci && npm run build:calendar`; ordinary startup needs neither npm nor a CDN.
 
-Visuals use white surfaces, Helvetica Neue, purple `#6F2C91` and cyan `#24BCDC`. Controls have persistent labels, native keyboard behavior and explicit current-page navigation. API and LLM text is rendered as text, not untrusted HTML. Mobile layouts and checkout focus handling are covered by browser checks.
+Admin and Optimize share a sidebar, flight selector and locally served Inter fonts in `admin-shell.css`; the member portal keeps its current Helvetica design. Colours remain purple `#6F2C91`, cyan `#24BCDC` and white. See [Admin UI specification and contract](../docs/FRONTEND_UI.md). Controls have persistent labels, native keyboard behavior and explicit current-page navigation. API and LLM text is rendered as text, not untrusted HTML. Mobile layouts and checkout focus handling are covered by browser checks.
 
 ## Browser checks
 

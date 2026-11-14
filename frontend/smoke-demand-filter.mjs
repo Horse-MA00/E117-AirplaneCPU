@@ -15,9 +15,10 @@ const history=f=>[28,14,7,1,0].map(days_to_departure=>({days_to_departure,capaci
 await page.route('**/*',async route=>{
   const request=route.request(),path=new URL(request.url()).pathname,reply=json=>route.fulfill({json});
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
+  if(/^\/fonts\/inter-\d{3}\.woff2$/.test(path))return route.fulfill({contentType:'font/woff2',body:await readFile(new URL(`.${path}`,import.meta.url))});
   if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
-  if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:181,term_months:6,term_label:'6 months'}});
+  if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_months:6,term_label:'6 months',term_days:181}});
   if(path==='/api/flights')return reply({flights:catalogue()});
   if(path.startsWith('/api/flights/')){const f=catalogue().find(f=>f.flight_id===decodeURIComponent(path.split('/').at(-1)));return reply({flight:f,history:history(f)});}
   if(path==='/api/forecast'){forecastCalls++;return reply({forecast:{expected_remaining_demand:20,expected_empty_seats:90,expected_empty_rate:.5,protection_p90:70,releasable_seats:40,risk_release_ceiling:40,beta:.012,rate_now:.7,forecast_curve:[],release_status:{safe_capacity:40,member_sold:0,total_active_unsold:0,currently_bookable:0,new_release_limit:40,round_history:[]}}});}
@@ -49,6 +50,10 @@ try{
   await page.locator('#forecast-demand').focus();
   assert.notEqual(await page.locator('#forecast-demand').evaluate(n=>getComputedStyle(n).outlineStyle),'none');
   await page.keyboard.press('Tab');
+  assert.equal(await page.locator('#context-route').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order: demand, route, flight');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(()=>document.activeElement.matches('#context-bar .ctx-search-btn')),true,'The route search button follows the route select');
+  await page.keyboard.press('Tab');
   assert.equal(await page.locator('#flight-select').evaluate(n=>document.activeElement===n),true,'Keyboard focus follows the DOM order');
   await page.locator('#forecast-demand').selectOption('medium');
   await page.waitForFunction(()=>document.getElementById('flight-select').value.includes('ICN'));
@@ -60,6 +65,10 @@ try{
   // D14 also refreshes the offer suggestion; settle both reads before counting
   // requests caused by the later empty selection.
   await page.waitForLoadState('networkidle');
+  // A day change can send more than one forecast request (Forecast view and offer form).
+  // Let them all land before taking the baseline, so a late reply is not counted as a stale request.
+  const settleForecasts=async()=>{for(let previous=-1;previous!==forecastCalls;){previous=forecastCalls;await page.waitForTimeout(300);}};
+  await settleForecasts();
   const calls=forecastCalls;
   await page.locator('#forecast-demand').selectOption('unknown');
   assert.equal(await page.locator('#flight-select').isDisabled(),true);
@@ -67,6 +76,7 @@ try{
   assert.equal(await page.locator('#flight-filter-empty').isVisible(),true);
   assert.equal(await page.locator('#go-pricing').isDisabled(),true);
   await page.locator('[data-day="7"]').click();
+  await settleForecasts();
   assert.equal(forecastCalls,calls,'Empty selection must not request a stale flight');
   await page.locator('#forecast-demand').selectOption('low');
   await page.waitForFunction(()=>!document.getElementById('flight-main').hidden&&document.getElementById('headroom-value').textContent==='40 seats');

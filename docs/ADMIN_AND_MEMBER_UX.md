@@ -1,8 +1,10 @@
 # Admin 與會員購票介面
 
-> 状态：现行 · 对应代码：`frontend/index.html`、`frontend/adaptive-pricing.html`、`frontend/experiments.js`、`frontend/members/index.html`、`frontend/members/login.html`、`backend/demo_auth.py`、`backend/store.py`、`member-thompson-v5-marketing`
+> 状态：现行 · 对应代码：`frontend/index.html`、`frontend/adaptive-pricing.html`、`frontend/experiments.js`、`frontend/app.js`、`frontend/admin-shell.css`、`frontend/members/index.html`、`frontend/members/login.html`、`backend/demo_auth.py`、`backend/store.py`、`member-thompson-v5-marketing`
 
 更新：2026-11-15。所有介面使用英文及HKD；紫 `#6F2C91`、青 `#24BCDC`、白為主配色。Admin只保留目前Thompson流程，舊定價、panel、journey和共用市場頁面已刪除。所有付款及出票都是模擬。
+
+2026-11-15 介面重構（版面與視覺規則見 [FRONTEND_UI](FRONTEND_UI.md)）：Admin 與 Optimize 共用左側導航，流程為 Forecast seats → Optimize prices → Publish offers（原 Manage offers，路由仍為 `#members`）→ Results（新增 `#results`），證據頁 Member feedback（原 Experiments，路由仍為 `#customers`）。四個流程頁共用頂部航班選擇欄（需求分類、航線、航班、放票輪次），在頁面之間保留選擇，並以 `?flight_id=&forecast_day=` 在 Admin 與 `/adaptive-pricing` 之間傳遞。
 
 ## Forecast seats
 
@@ -19,7 +21,7 @@
 
 ## Optimize prices
 
-`/adaptive-pricing`是唯一票價實驗頁，Admin導航直接進入此頁。Forecast與Manage offers會帶入航班及有效放票日。舊`#optimization`／`#pricing`／`#panel`／`#market`顯示頁面已不可用，不讀取舊資料，也不轉成另一個流程。
+`/adaptive-pricing`是唯一票價實驗頁，Admin導航直接進入此頁。沒有指定實驗時，自動開啟該航班及輪次最近一次已完成的實驗；有保留票價時顯示「Publish at HK$…」，帶同一航班及輪次到 Publish offers（不自動填價）。Forecast與Manage offers會帶入航班及有效放票日。舊`#optimization`／`#pricing`／`#panel`／`#market`顯示頁面已不可用，不讀取舊資料，也不轉成另一個流程。
 
 設定航線、航班／日期、放票輪次、價格輪數及每輪新會員數。所有實驗固定八類彈性優惠旅客；沒有Target customer scenario或Legacy選項，八類權重仍可調整。進階設定包括種子、獨立驗證批數、並行呼叫及明確的總呼叫上限。
 
@@ -40,9 +42,9 @@
 
 `/admin#customers`只顯示目前v5實驗的已保存回饋：選擇實驗和輪次，閱讀分析摘要與個別會員的購買／拒絕理由。可用`/admin?run=<run_id>&round=<round>#customers`分享。輸出以純文字呈現，並標示來源；它是合成角色回答，並非真人研究。
 
-## Manage offers
+## Publish offers（`#members`，原 Manage offers）
 
-管理員選擇航線、日期／航班、放票日，查看當前配額，再人工輸入會員基本票價及新增位數。沒有舊optimizer建議或自動套用功能；可開啟同航班Thompson實驗供參考。
+管理員在頂部航班選擇欄選擇航線、日期／航班、放票日，查看當前配額，再人工輸入會員基本票價及新增位數。沒有自動套用功能：頁面只顯示同航班、同輪次最近一次已完成 Thompson 實驗的保留票價作參考，並可開啟該航班的 Thompson 實驗。右側即時預覽會員網站上的航班卡片（與會員端相同：劃掉的正常票價、節省金額、Ticket total、含會員費的首次購買價），只用於顯示。已發布優惠如有 `fee_breakdown`（`scripts/apply_member_fee_reference.py` 寫入的有來源費用估算），費用旁的 ⓘ 顯示各項費用、核對日期及來源；Results 的費用卡同樣顯示。
 
 發布會核對80%票價上限、整數價格、合法放票日、正常需求保護、前輪未售及已售會員位。每班每輪只能發行一次，不能倒退模擬時間。實驗完成不等於發布，會員網站只顯示正式儲存的優惠。
 
@@ -73,3 +75,7 @@
 會員plan、優惠批次、訂位及session共用SQLite；Thompson實驗則使用隔離的合成世界。帳本核對含必要費用，只有票價實驗的收入指標排除稅費與成本。
 
 瀏覽器檢查涵蓋導航、當前v5回饋、空狀態、手機版、價格格式、表單和購票核價；實際檢查紀錄見[維護紀錄](ITERATION_2_PROGRESS.md)。API清單見[技術實作](CURRENT_IMPLEMENTATION.md#http介面)。
+
+## Results（`#results`）
+
+所選航班的已售會員位、未使用配額、會員基本票款及必付費用分開顯示。`quantity − remaining`為已售量，乘各批次`base_fare`得到會員基本票款；會費不計入這個指標。未使用配額不等於即時可訂座位，實際可訂量仍由最新Forecast和停售狀態核對。座位圖保留正常／會員已售、正常需求保護、已發布、未發布及暫扣座位，總和對齊容量。從會員網站返回或切換到Results會重新讀取資料。

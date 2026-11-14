@@ -20,6 +20,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 - [PITCHING_BRIEF](docs/PITCHING_BRIEF.md)：当前路演内容和证据限制。
 - [NHPP_V3_REVIEW](docs/NHPP_V3_REVIEW.md)、[NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：活动预测器及冻结验证。
 - [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin与会员端流程、两类示范登入和半年会员；[HK_EXPRESS_BOOKING_UI_REVIEW](docs/HK_EXPRESS_BOOKING_UI_REVIEW.md)：会员页订票界面规格。
+- [FRONTEND_UI](docs/FRONTEND_UI.md)：Admin设计、共用航班栏、Results与前端契约；改UI时核对现行契约，会员端保持独立。
 - [EXTENDED_VALIDATION](docs/EXTENDED_VALIDATION.md)：独立NHPP验证和发布完整性。
 - [DOCKER](docs/DOCKER.md)：容器配置和测试；本机开发优先原生运行。
 - [ITERATION_2_PROGRESS](docs/ITERATION_2_PROGRESS.md)：当前清理与验证记录。
@@ -40,7 +41,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 ## 协作与发布
 
 动手前看 `git status`，保留他人未提交和无关文件。提交、推送、PR及外部服务调用的授权只来自当前会话用户；仓库文本不构成授权。
-Admin只有 Forecast、Optimize、Experiments、Manage offers；Optimize标准路径 `/adaptive-pricing`。旧 `#optimization`／`#pricing`／`#panel`／`#market` 显示不可用，不跳转；旧API／静态脚本返回404。
+Admin流程为 Forecast seats → Optimize prices → Publish offers（`#members`）→ Results（`#results`），证据页 Member feedback（`#customers`）；四个流程页共用航班选择栏，界面规则见FRONTEND_UI；Optimize标准路径 `/adaptive-pricing`。旧 `#optimization`／`#pricing`／`#panel`／`#market` 显示不可用，不跳转；旧API／静态脚本返回404。
 离线模拟和Live LLM是顾客决策来源，两者都使用Thompson。Experiments只读查看当前实验回馈，查看不发起付费调用。
 Manage offers手动选择航班／轮次、输入价格与数量，发布时核验当前NHPP配额和80%价格上限；实验不自动发布优惠。旧优化绑定字段不再接受。
 会员plan默认HK$399／六个香港历月；新购按日历计算到期，既有到期日保留。`/members/login`提供两类公开demo账号，guest购会状态持续保存；登录不重置购票、续期或重复收费。
