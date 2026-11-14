@@ -24,7 +24,12 @@
     "trips",
     "account"
    ],
-   "route_mechanism": "同一长页面内的锚点；dialog#checkout 是订票弹窗"
+   "route_mechanism": "登入後同一長頁面內的錨點；GET /api/member-portal/session 確認身份，未登入轉 /members/login；dialog#checkout 是訂票彈窗"
+  },
+  "/members/login": {
+   "html": "frontend/members/login.html",
+   "routes": [],
+   "route_mechanism": "公開示範帳戶登入；快捷按鈕只填帳密，明確 Sign in 後建立 Cookie session 並進入 /members"
   }
  },
  "api": [
@@ -205,6 +210,33 @@
     "offer_id",
     "expected_total"
    ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/login",
+   "used_by": [
+    "members/login.js"
+   ],
+   "body": [
+    "email",
+    "password"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/member-portal/session",
+   "used_by": [
+    "members/login.js",
+    "members/portal.js"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/member-portal/logout",
+   "used_by": [
+    "members/portal.js"
+   ],
+   "body": []
   }
  ],
  "events": {
@@ -214,8 +246,9 @@
   "/adaptive-pricing?flight_id=&forecast_day=": "Forecast 和 Manage offers 打开 Optimize 时带入航班和放票轮次（thompson-navigation.js）",
   "/adaptive-pricing?run=&round=": "恢复已保存的 Thompson 实验和轮次",
   "/admin?run=&round=#customers": "Experiments 分享指定实验和轮次的会员回馈",
-  "localStorage['uoption-member-demo-account']": "会员端的演示账号 ID",
-  "/admin?flight_id=&forecast_day=#<route>": "Optimize 的侧边栏和 \"Publish at HK$…\" 按钮把当前航班和轮次带回 Admin（app.js 在 init 中读取）"
+  "/admin?flight_id=&forecast_day=#<route>": "Optimize 的侧边栏和 \"Publish at HK$…\" 按钮把当前航班和轮次带回 Admin（app.js 在 init 中读取）",
+  "Cookie uoption_demo_session": "HttpOnly、SameSite=Lax、24小時伺服器session；會員身份由 /api/member-portal/session 提供，不讀取本機任意ID；登出撤銷session",
+  "/members/login": "兩類公開示範帳戶：首次帶有半年會籍的 member、首次未入會的 guest；已購會籍及訂位持續保存"
  },
  "js_selectors": {
   "admin": [
@@ -241,6 +274,12 @@
   "members": [
    ".header nav a",
    ".choose-flight"
+  ],
+  "member_login": [
+   "#login-form",
+   "#login-fields",
+   "#login-email",
+   "#login-password"
   ]
  },
  "dom_ids": {
@@ -423,7 +462,7 @@
   ],
   "members": [
    "account",
-   "account-form",
+   "account-status",
    "any-dates",
    "available-dates",
    "available-only",
@@ -438,7 +477,6 @@
    "checkout-title",
    "clear-search",
    "current-account",
-   "customer-id",
    "date-fares",
    "date-options",
    "departure-from",
@@ -457,7 +495,6 @@
    "main-content",
    "membership",
    "membership-state",
-   "new-account",
    "next-month",
    "origin",
    "origin-note",
@@ -472,12 +509,27 @@
    "search-button",
    "search-date-error",
    "search-summary",
+   "session-status",
+   "sign-out",
    "swap-airports",
-   "switch-account",
    "trip-count",
    "trip-results",
    "trips",
    "view-trips"
+  ],
+  "member_login": [
+   "current-session",
+   "current-session-name",
+   "demo-guest",
+   "demo-member",
+   "login-email",
+   "login-error",
+   "login-fields",
+   "login-form",
+   "login-password",
+   "login-status",
+   "login-submit",
+   "toggle-password"
   ]
  }
 }

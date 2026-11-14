@@ -44,3 +44,36 @@ Created feature/member-demo-journey without merging main. Added bookable Japan r
 
 按用户手动测试意见：起点与目的地各为一个「机场或整个国家」选单（起点也可选国家），删除 Flexible dates & destination region 折叠区中的独立国家选单与精确日期，出发日期只用范围（单日即起讫同日）。未入会者结账按钮显示「Membership + ticket total」，并注明第一步只收会费、之后另行确认机票。`test:members`、`test:member-journey`、`test:flexible-search`、`test:route-catalog` 已同步更新并通过。
 会员票卡片与结账明细在会员基本票价旁以删除线显示同航班普通基本票价（读屏读作「Normal base fare」），并标注节省金额与折扣百分比；普通票价取 `normal_base_fare`，缺失时以 `normal_total − mandatory_fees` 推算，不高于会员价时不显示。
+
+## 2026-11-15 · 半年会员与两类示范登入
+
+会员页 booking hero 四角统一16px圆角，桌面及390px手机均保留。默认计划改为HK$399／六个历月；前台、Admin和结账同步显示6 months，后端依香港时间计算新会员到期日，处理月底和闰年；已有会员付款与到期日保持原记录。
+
+新增 `/members/login`，提供已购会员和初始未购会员两个公开示范账号，详情见[操作文档](ADMIN_AND_MEMBER_UX.md#client-portal)。快捷按钮填入账号后仍须明确登录；24小时HttpOnly／SameSite=Lax cookie绑定身份，SQLite只保存session token哈希。刷新、切换、登出及过期均由后端核对，跨账号操作拒绝。Guest入会后不因再次登录而重置；删除会员UI的任意ID输入与localStorage身份选择。仍为本机原型，开发ID接口和Admin不是生产权限系统。
+
+验证：完整 `scripts/check_container.py` 通过198项后端、20项根目录测试，发布与冻结证据检查通过。九组受影响的浏览器fixture检查及新增 `npm run test:member-login` 均通过；后者使用临时SQLite和本机服务验证真实cookie、无效密码、跨账号隔离、登出、会籍保留和手机布局。桌面／手机截图已人工查看。未调用LLM/OAG，未消耗现有演示座位，未改预测／定价算法或冻结数据。原有未提交文档修改保留。
+
+## 2026-11-15 · 新版 Admin UI 整合至 main
+
+选择性引入 `claude/frontend-fixes` 的 `5699a99`，基于 main 的 `55506db`。该分支自共同基点 `f57e37c` 以来没有修改后端；main 已增加示范登录与六个历月会员，因此保留 main 的全部后端、`llm_agent/`、`simulation/` 和整个 `frontend/members/`，逐文件比对无差异。不合并分支中的旧后端状态。
+
+Admin 采用 Inter、侧栏、共用需求／航线／航班／轮次选择栏，保留 Forecast 和 Thompson 优化；发布页增加会员卡预览，Results 汇总已发布优惠、已售会员位及基本票款，Member feedback 保持只读。无新后端接口或模型改动。
+
+整合修复：
+
+- 分支中的年度文案与测试 fixture 对齐现行六个月方案；修改会费后预览即时刷新。
+- 空需求筛选或更换航班时清除旧发布目标、预测及待返回请求，防止在旧航班发布；恢复已保存实验时对齐需求筛选、航线、航班与轮次按钮。
+- Results 将未消耗的配额明确标成 Unspent member quota，不能视作实时可订量；座位条保留暂扣类别，处理需求保护超过当前容量的状态。
+- 移除重复嵌套的实验表单；前端契约对齐现行 Cookie 登录接口，不恢复旧任意 ID 会员 UI。
+
+验证：`scripts/check_container.py` 通过 **198 项后端 + 24 项根目录测试（共 222 项）**，发布及冻结证据校验通过。12 个浏览器测试脚本及 1 个强制 Temporal fallback 变体全部通过，涵盖 Admin、Optimize、发布、Results、需求筛选、座位保护，以及保留的 Client 搜索、购票旅程和登录。已查看 1920×1080 桌面与 390px 手机版截图，无横向溢出或页面脚本错误。
+
+浏览器优化检查只读取既有离线结果；登录检查使用临时数据库。未发起 LLM／OAG 调用，未建立新价格实验或消耗现有演示库存。用户原有未提交的技术文档及其他文件保持在工作区，本次提交只包含 Admin 整合及其对应文档、测试。
+
+## 2026-11-15 · 移除 D1，发布现行文档修改
+
+Admin 与 Optimize 顶部删除 D1 快捷按钮／停用占位，只保留 D28／D14／D7。删除 D1 专用的视图禁用逻辑，Admin URL 的 `forecast_day=1` 不再选中 D1，使用默认 D28。逐日预测、观察滑杆及冻结数据保持原样；Client Portal和后端代码未改。
+
+按用户本次要求，一并发布此前未提交的六份现行项目文档修改：AGENTS、README、Client 搜索说明、完整技术速读与 Present 指南、NHPP v3说明及三轮配额职责纠正。技术指南同步当前 main 基准、Admin入口名称和验证数量。旧交接、外部原始PDF、历史发布／数据压缩包及测试输出保留本地。
+
+验证：完整 `scripts/check_container.py` 通过198项后端、24项根目录测试（共222项），发布和冻结证据检查通过。四项浏览器检查 `test:smoke`、`test:adaptive-pricing`、`test:demand-filter`、`test:flight-offers` 全部通过；额外只读检查确认两页按钮均为D28／D14／D7，旧D1 URL回到D28且选中状态正确。原生8001服务已恢复运行。没有LLM／OAG调用、新实验或实际示例库存交易。

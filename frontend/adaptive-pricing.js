@@ -321,7 +321,16 @@ async function showRun(id) {
   if(sequence!==runSequence)return;
   if(!currentRun(value))throw new Error('This experiment is no longer available. Choose a current Thompson Sampling experiment.');
   const url=new URL(location.href);if(url.searchParams.get('run')!==id)url.searchParams.delete('round');url.searchParams.set('run',id);history.replaceState(null,'',url);if([...$('saved-run').options].some(o=>o.value===id)){$('saved-run').value=id;$('load-run').disabled=false;}
-  if(value.scope){scopeSequence++;renderScope(value.scope);$('route').value=routeKey(value.scope);fillFlights(value.scope.flight_id);$('release-day').value=String(value.scope.as_of_day);syncRound();updateNavLinks();}
+  if(value.scope){
+    scopeSequence++;
+    const savedFlight=flights.find(f=>f.flight_id===value.scope.flight_id);
+    // Opening a saved result must restore its actual flight, even when the
+    // current demand filter excludes it. A matching filter remains intact.
+    if(savedFlight&&!inDemand(savedFlight)){$('opt-demand').value='all';fillRoutes();}
+    $('release-day').value=String(value.scope.as_of_day);
+    renderScope(value.scope);$('route').value=routeKey(value.scope);fillFlights(value.scope.flight_id);
+    syncRound();updateNavLinks();
+  }
   restoreNewExperimentWeights(value);
   for(const[id,key]of [['rounds','rounds'],['customers','customers'],['concurrency','concurrency'],['max-calls','max_calls'],['seed','seed'],['validation-repeats','validation_repeats']])if(value.config?.[key]!==undefined)$(id).value=String(value.config[key]);
   if(['synthetic','live'].includes(value.config?.mode))$('mode').value=value.config.mode;

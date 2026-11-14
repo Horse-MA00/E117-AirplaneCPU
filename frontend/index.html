@@ -43,7 +43,6 @@
           <button type="button" data-day="28" aria-pressed="true">D28</button>
           <button type="button" data-day="14" aria-pressed="false">D14</button>
           <button type="button" data-day="7" aria-pressed="false">D7</button>
-          <button type="button" data-day="1" aria-pressed="false">D1</button>
         </div>
       </div>
       <span class="spacer"></span>
@@ -137,7 +136,7 @@
         <section class="card plan-panel" aria-labelledby="plan-title">
           <div class="title-line"><h2 id="plan-title">Membership Price</h2><span class="info"><button type="button" class="info-btn" aria-describedby="tip-plan" aria-label="About the membership price">i</button><span class="info-tip" role="tooltip" id="tip-plan"><strong class="info-title">Membership price</strong><p>The price applies to new memberships. Existing members keep their recorded payment. Thompson experiments price tickets for existing members and do not change this fee.</p></span></span></div>
           <form id="member-plan-form" class="stack-form">
-            <div class="field"><label for="member-fee">365-day membership fee (HK$)</label><input id="member-fee" type="number" step="1" min="0" max="5000" value="399" required></div>
+            <div class="field"><label for="member-fee">6-month membership fee (HK$)</label><input id="member-fee" type="number" step="1" min="0" max="5000" value="399" required></div>
             <button id="save-plan-button" class="button" type="submit">Save membership price</button>
           </form>
           <p id="membership-status" class="hint">Loading the currently published membership plan…</p>
@@ -156,7 +155,7 @@
         </div>
         <div class="kpi-row">
           <article class="stat-card featured"><span>Member seats sold</span><strong id="results-sold">—</strong><small id="results-sold-detail">For the selected flight</small></article>
-          <article class="stat-card"><span>Remaining member quota</span><strong id="results-remaining">—</strong><small>Still bookable on the member site</small></article>
+          <article class="stat-card"><span>Unspent member quota</span><strong id="results-remaining">—</strong><small>Subject to current availability checks</small></article>
           <article class="stat-card"><span>Member ticket revenue</span><strong id="results-revenue">—</strong><small id="results-revenue-detail">Excludes membership fees</small></article>
           <article class="stat-card"><span class="stat-label" id="results-fees-label">Mandatory fees collected</span><strong id="results-fees">—</strong><small id="results-fees-detail">Shown separately</small></article>
         </div>

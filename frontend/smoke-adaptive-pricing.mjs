@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
 const root=fileURLToPath(new URL('.',import.meta.url));
 const aliases={'/adaptive-pricing':'adaptive-pricing.html','/admin':'index.html','/':'index.html'};
-const server=createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname,file=aliases[path]||(/^\/[a-z0-9-]+\.(js|css)$/.test(path)?path.slice(1):null);try{if(!file)throw Error();const body=await readFile(root+file);res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html'}).end(body);}catch{res.writeHead(404).end('Not found');}});
+const server=createServer(async(req,res)=>{const path=new URL(req.url,'http://localhost').pathname,file=aliases[path]||(/^\/[a-z0-9-]+\.(js|css)$/.test(path)||/^\/fonts\/inter-\d{3}\.woff2$/.test(path)?path.slice(1):null);try{if(!file)throw Error();const body=await readFile(root+file);res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.woff2')?'font/woff2':'text/html'}).end(body);}catch{res.writeHead(404).end('Not found');}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin=`http://127.0.0.1:${server.address().port}`;
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH});
@@ -14,7 +14,9 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
 page.on('pageerror',e=>errors.push(e.message));
 const population={profile:'flexible_deal_seekers',segments:['Students','Spontaneous solo travellers','Destination-flexible explorers','Frequent bargain travellers','Flexible weekday travellers','Flexible friends','Flexible couples','Deal-only occasional travellers'].map((name,i)=>({id:`flexible-${i}`,name,weight:[.20,.15,.15,.15,.1,.1,.08,.07][i]}))};
 const scope={flight_id:'TEST-HKG-KMQ',origin:'HKG',destination:'KMQ',departure_date:'2027-05-18',departure_time:'10:30',as_of_day:28,normal_base_fare:410,initial_member_fare:328,member_fare_cap:328,releasable_seats:45};
-const flights=[{...scope,capacity:180,departure_at:'2027-05-18T10:30:00+08:00'},{...scope,flight_id:'TEST-HKG-KMQ-ZERO'}];
+const flights=[{...scope,capacity:180,departure_at:'2027-05-18T10:30:00+08:00',demand_band:'low'},
+ {...scope,flight_id:'TEST-HKG-KMQ-ZERO',demand_band:'low'},
+ {...scope,flight_id:'TEST-HKG-HND-HIGH',destination:'HND',demand_band:'high'}];
 const curve=[{price:0,expected_buyers:25,expected_member_revenue:0},{price:100,expected_buyers:20,expected_member_revenue:2000},{price:255,expected_buyers:16,expected_member_revenue:4080},{price:328,expected_buyers:8,expected_member_revenue:2624}];
 const rounds=[1,2,3].map(round=>({round,price:round===1?328:255,unique_customers:16,learning_updates:round*16,member_buyers:16,member_revenue:4080,weighted_conversion:.6,paired_delta_vs_initial:1456,curve,analysis_source:'provider_live',analysis:{summary:'Members liked the lower fare. <img src=x onerror=alert(1)>'},hypothesis_test:{source_round:round===1?null:round-1,direction:'lower',status:'supported',summary:'Fresh paired customers bought more.'},decisions:[{person:{segment_label:'Flexible budget traveller',customer_id:`TEST-${round}`},decision:{action:'BUY_MEMBER',reason:'This affordable fare fits my flexible trip. <img src=x onerror=alert(1)>'},source:'provider_live'}]}));
 let report={version:'member-thompson-v5-marketing',run_id:'adaptive-test-current',status:'completed',scope,population,config:{profile:'flexible_deal_seekers',final_member_fare_policy:'member-marketing-fare-v1',flight_id:scope.flight_id,forecast_day:28,mode:'synthetic',rounds:3,customers:16,concurrency:4,max_calls:600,seed:117,validation_repeats:3},rounds,counts:{provider_calls:20,cache_hits:2,forced:4,failures:0,peak_parallel:4},progress:{completed_rounds:3,total_rounds:3,cumulative_unique_customers:48},recommendation:{raw_price:255,price:249,revenue_max_price:255,volume_max_price:0,revenue_fraction:.95,model_curve:curve,marketing_adjustment:{policy:'member-marketing-fare-v1',initial_price_before_marketing:328,initial_price:319}},validation:{adoption_result:'ADOPT_CANDIDATE',retained_price:249,break_even_conversion:.82,observed_conversion:.6,initial_price_before_marketing:328,initial_price:319,selected_price_before_marketing:255,selected_price:249,delta_vs_initial:1432,delta_vs_no_offer:704,comparisons:[{policy:'initial',price:319,mean_buyers:8,mean_revenue:2552},{policy:'selected',price:249,mean_buyers:16,mean_revenue:3984},{policy:'no_offer',price:null,mean_buyers:8,mean_revenue:3280}]},elapsed_seconds:70};
@@ -23,7 +25,7 @@ await page.route('**/api/**',async route=>{
  const request=route.request(),path=new URL(request.url()).pathname,method=request.method();apiReads++;
  if(path==='/api/flights')return route.fulfill({json:{flights}});
  if(path==='/api/summary')return route.fulfill({json:{dataset:{rows:200000}}});
- if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_days:365}}});
+ if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_months:6,term_label:'6 months',term_days:181}}});
  if(path==='/api/adaptive-pricing/status')return route.fulfill(setup==='failed'?{status:503,json:{error:'Setup unavailable'}}:{json:{live_configured:true,population:setup==='ready'?population:null,populations:setup==='ready'?[population]:[]}});
  if(path==='/api/adaptive-pricing/scope'){const body=request.postDataJSON();scopes.push(body);return route.fulfill({json:{population,scope:{...scope,flight_id:body.flight_id,as_of_day:body.forecast_day,releasable_seats:body.flight_id.endsWith('ZERO')?0:45}}});}
  if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill(failFeedback?{status:503,json:{error:'Saved feedback unavailable'}}:{json:{runs:empty?[]:[report]}});
@@ -60,6 +62,39 @@ try{
   assert.equal(await page.locator('#round-table tr').nth(1).locator('td').first().innerText(),'HK$255','Final quote formatting never rewrites search evidence');
  }
  report=completed;await page.locator('#refresh-run').click();await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$249');
+ // Loading a saved low-demand flight from a high-demand filter restores its
+ // selectors and navigation together, without silently starting another run.
+ await page.selectOption('#opt-demand','high');
+ assert.equal(await page.locator('#route option[value="HKG → KMQ"]').count(),0);
+ await page.selectOption('#saved-run',report.run_id);await page.locator('#load-run').click();
+ await page.waitForFunction(()=>document.getElementById('flight').value==='TEST-HKG-KMQ');
+ assert.equal(await page.locator('#opt-demand').inputValue(),'all');
+ assert.equal(await page.locator('#route').inputValue(),'HKG → KMQ');
+ assert.equal(await page.locator('#release-day').inputValue(),'28');
+ assert.match(await page.locator('#flight-description').textContent(),/TEST-HKG-KMQ/);
+ assert.match(await page.locator('#publish-link').getAttribute('href'),/flight_id=TEST-HKG-KMQ&forecast_day=28#members$/);
+ assert.equal(starts.length,1,'Restoring a saved experiment must remain read-only');
+ await page.selectOption('#opt-demand','low');
+ await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$249'&&!document.getElementById('recommendation').hidden);
+ assert.equal(await page.locator('#opt-demand').inputValue(),'low','A filter that includes the saved flight remains selected');
+ // A direct saved D7 URL starts from the HTML's D28 defaults. Restore the
+ // native value, visible round buttons and scoped result as one selection.
+ report={...completed,scope:{...completed.scope,as_of_day:7},config:{...completed.config,forecast_day:7}};
+ await page.goto(origin+`/adaptive-pricing?run=${report.run_id}`);
+ await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D7');
+ assert.equal(await page.locator('#release-day').inputValue(),'7');
+ assert.equal(await page.locator('[data-round="7"]').getAttribute('aria-pressed'),'true');
+ assert.equal(await page.locator('[data-round="28"]').getAttribute('aria-pressed'),'false');
+ // Normal-motion browsers transition the background for 150ms after aria
+ // changes. Wait for the visible state, not just the synchronous scope text.
+ await page.waitForFunction(()=>getComputedStyle(document.querySelector('[data-round="7"]')).backgroundColor==='rgb(111, 44, 145)');
+ assert.equal(await page.locator('[data-round="7"]').evaluate(b=>getComputedStyle(b).backgroundColor),'rgb(111, 44, 145)');
+ assert.equal(await page.locator('[data-round][aria-pressed="true"]').count(),1);
+ assert.equal(starts.length,1);
+ report=completed;await page.goto(origin+`/adaptive-pricing?run=${report.run_id}`);
+ await page.waitForFunction(()=>document.getElementById('scope-day').textContent==='D28');
+ assert.equal(await page.locator('[data-round="28"]').getAttribute('aria-pressed'),'true');
+ assert.equal(await page.locator('[data-round="7"]').getAttribute('aria-pressed'),'false');
  await page.screenshot({path:root+'test-results/adaptive-pricing-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
  await page.screenshot({path:root+'test-results/adaptive-pricing-mobile.png',fullPage:true});

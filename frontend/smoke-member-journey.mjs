@@ -5,6 +5,7 @@ import {chromium} from 'playwright';
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH}:{})});
 const page=await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const origin=process.env.APP_URL || 'http://127.0.0.1:8000';
 const root=new URL('./members/',import.meta.url);
 await page.route('**/members/**',async route=>{
  const path=new URL(route.request().url()).pathname.slice('/members/'.length)||'index.html';
@@ -18,10 +19,11 @@ flights[0].fee_breakdown={checked_on:'2026-11-14',terminal_assumption:'Hong Kong
 flights[1].base_fare=50;flights[1].mandatory_fees=959.67;flights[1].total=1009.67;
 flights[1].fee_breakdown={checked_on:'2026-11-14',terminal_assumption:'Terminal 2',note:'Demo estimate',components:[],lines:[{label:'YR · Fuel surcharge',amount:617.88},{label:'Government & airport charges',amount:302.07},{label:'E-payment fee',amount:39.72}]};
 for (const flight of flights) { flight.normal_base_fare=500; flight.normal_total=500+Number(flight.mandatory_fees || 250); }
-const account={membership:null,bookings:[]};let joins=0,books=0;
+const account={customer_id:'journey-fixture',membership:null,bookings:[]};let joins=0,books=0;
 await page.route('**/api/member-portal/**',async route=>{
  const path=new URL(route.request().url()).pathname;
- if(path.endsWith('/config'))return route.fulfill({json:{membership:{fee:399,term_days:365}}});
+ if(path.endsWith('/session'))return route.fulfill({json:{authenticated:true,user:{customer_id:account.customer_id,email:account.customer_id+'@uoption.test',name:'Journey fixture'},account,simulated:true}});
+ if(path.endsWith('/config'))return route.fulfill({json:{membership:{fee:399,term_days:181,term_months:6,term_label:'6 months'}}});
  if(path.endsWith('/flights'))return route.fulfill({json:{flights}});
  if(path.includes('/accounts/'))return route.fulfill({json:account});
  const body=route.request().postDataJSON();
@@ -30,7 +32,7 @@ await page.route('**/api/member-portal/**',async route=>{
  await route.abort();
 });
 try {
- await page.goto('http://127.0.0.1:8000/members/');
+ await page.goto(`${origin}/members/`);
  await page.locator('.flight-card').first().waitFor();
  // Route draft, date shortcut and sorting share the same applied-filter model.
  assert.equal(await page.locator('.date-fare').count(),2);
@@ -83,7 +85,7 @@ try {
  assert.equal(joins,1);assert.equal(books,2);
  await page.keyboard.press('Escape');
  // Fresh identity fixture to inspect offers at both sizes.
- account.membership=null;account.bookings=[];
+ account.customer_id='journey-fresh';account.membership=null;account.bookings=[];
  await page.reload();await page.locator('.flight-card').first().waitFor();
  await mkdir(new URL('./test-results/',import.meta.url),{recursive:true});
  await page.screenshot({path:fileURLToPath(new URL('./test-results/member-journey-desktop.png',import.meta.url)),fullPage:true});

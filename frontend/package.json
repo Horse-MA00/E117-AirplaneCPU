@@ -14,7 +14,8 @@
     "test:members": "node smoke-member-portal.mjs",
     "test:demand-filter": "node smoke-demand-filter.mjs",
     "test:adaptive-pricing": "node smoke-adaptive-pricing.mjs",
-    "test:member-journey": "node smoke-member-journey.mjs"
+    "test:member-journey": "node smoke-member-journey.mjs",
+    "test:member-login": "node smoke-member-login.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

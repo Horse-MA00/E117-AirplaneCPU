@@ -4,7 +4,7 @@ from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from urllib.parse import urlparse,unquote,parse_qs,urlsplit
 from pathlib import Path
 from functools import lru_cache
-from . import data,member_portal,adaptive_pricing
+from . import data,member_portal,adaptive_pricing,demo_auth
 from .store import Store
 from .evidence import EvidenceUnavailable,read_evaluation
 from .errors import NotFound
@@ -130,13 +130,14 @@ def post(path,body):
 
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,format,*args):pass
- def send_response_headers(self,status,ctype,length,filename='snapshots.csv.gz'):
+ def send_response_headers(self,status,ctype,length,filename='snapshots.csv.gz',extra_headers=None):
   self.send_response(status)
+  for key,value in (extra_headers or {}).items():self.send_header(key,value)
   if ctype=='application/gzip':self.send_header('Content-Disposition',f'attachment; filename="{filename}"')
   if length is not None:self.send_header('Content-Length',str(length))
   self.send_header('Content-Type',ctype);self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Referrer-Policy','no-referrer');self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'");self.end_headers()
- def json(self,status,payload):
-  content=json.dumps(payload,ensure_ascii=False,allow_nan=False,default=lambda x:x.item() if hasattr(x,'item') else str(x)).encode();self.send_response_headers(status,'application/json; charset=utf-8',len(content));self.wfile.write(content)
+ def json(self,status,payload,extra_headers=None):
+  content=json.dumps(payload,ensure_ascii=False,allow_nan=False,default=lambda x:x.item() if hasattr(x,'item') else str(x)).encode();self.send_response_headers(status,'application/json; charset=utf-8',len(content),extra_headers=extra_headers);self.wfile.write(content)
  def allowed_host(self):
   try:host=urlsplit('//'+self.headers.get('Host','')).hostname
   except ValueError:return False
@@ -145,15 +146,20 @@ class Handler(BaseHTTPRequestHandler):
   if not self.allowed_host():return self.json(403,{'error':'Local host only'})
   path=unquote(urlparse(self.path).path)
   try:
+   if path=='/api/member-portal/session':return self.json(200,demo_auth.current(store(),self.headers.get('Cookie')))
+   if path.startswith('/api/member-portal/accounts/'):
+    demo_auth.authorize_account(store(),self.headers.get('Cookie'),ident(path.split('/')[-1]))
    if path=='/api/export/snapshots':
     payload=(data.DATA/'snapshots.csv.gz').read_bytes();self.send_response_headers(200,'application/gzip',len(payload));self.wfile.write(payload);return
    if path.startswith('/api/'):return self.json(200,get(path,parse_qs(urlparse(self.path).query)))
    aliases={'/admin':'index.html','/admin/':'index.html','/members':'members/index.html','/members/':'members/index.html',
+            '/members/login':'members/login.html','/members/login/':'members/login.html',
             '/adaptive-pricing':'adaptive-pricing.html','/adaptive-pricing/':'adaptive-pricing.html'}
    root=(ROOT/'frontend').resolve();file=(root/aliases.get(path,path.lstrip('/') or 'index.html')).resolve()
    if root not in file.parents or not file.is_file():return self.json(404,{'error':'Not found'})
    payload=file.read_bytes();self.send_response_headers(200,mimetypes.guess_type(file.name)[0] or 'application/octet-stream',len(payload));self.wfile.write(payload)
   except EvidenceUnavailable as e:self.json(503,{'status':'unavailable','code':'evaluation_evidence_unavailable','artifact':e.artifact,'error':str(e)})
+  except demo_auth.AuthError as e:self.json(e.status,{'error':str(e)})
   except NotFound as e:self.json(404,{'error':str(e)})
   except (ValueError,TypeError) as e:self.json(400,{'error':str(e)})
   except Exception:
@@ -168,7 +174,15 @@ class Handler(BaseHTTPRequestHandler):
    if not 0<length<=65536:raise ValueError('Invalid request size')
    body=json.loads(self.rfile.read(length))
    if not isinstance(body,dict):raise ValueError('JSON object required')
-   self.json(200,post(urlparse(self.path).path,body))
+   path=urlparse(self.path).path
+   if path=='/api/member-portal/login':
+    result,cookie=demo_auth.login(store(),body,self.headers.get('Cookie'));return self.json(200,result,{'Set-Cookie':cookie})
+   if path=='/api/member-portal/logout':
+    result,cookie=demo_auth.logout(store(),self.headers.get('Cookie'));return self.json(200,result,{'Set-Cookie':cookie})
+   if path in ('/api/member-portal/join','/api/member-portal/book'):
+    demo_auth.authorize_account(store(),self.headers.get('Cookie'),ident(body.get('customer_id')))
+   self.json(200,post(path,body))
+  except demo_auth.AuthError as e:self.json(e.status,{'error':str(e)})
   except NotFound as e:self.json(404,{'error':str(e)})
   except (ValueError,TypeError) as e:self.json(400,{'error':str(e)})
   except Exception:

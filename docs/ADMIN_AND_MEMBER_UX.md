@@ -1,6 +1,6 @@
 # Admin 與會員購票介面
 
-> 状态：现行 · 对应代码：`frontend/index.html`、`frontend/adaptive-pricing.html`、`frontend/experiments.js`、`frontend/app.js`、`frontend/members/index.html`、`member-thompson-v5-marketing`
+> 状态：现行 · 对应代码：`frontend/index.html`、`frontend/adaptive-pricing.html`、`frontend/experiments.js`、`frontend/app.js`、`frontend/admin-shell.css`、`frontend/members/index.html`、`frontend/members/login.html`、`backend/demo_auth.py`、`backend/store.py`、`member-thompson-v5-marketing`
 
 更新：2026-11-15。所有介面使用英文及HKD；紫 `#6F2C91`、青 `#24BCDC`、白為主配色。Admin只保留目前Thompson流程，舊定價、panel、journey和共用市場頁面已刪除。所有付款及出票都是模擬。
 
@@ -48,25 +48,34 @@
 
 發布會核對80%票價上限、整數價格、合法放票日、正常需求保護、前輪未售及已售會員位。每班每輪只能發行一次，不能倒退模擬時間。實驗完成不等於發布，會員網站只顯示正式儲存的優惠。
 
-會員plan在此獨立管理。保存會費改變之後的新入會報價，不會向舊會員再收費，也不是Thompson的待優化參數。
+會員plan在此獨立管理，預設 **HK$399／六個曆月**。保存會費改變之後的新入會報價，不會向舊會員再收費，也不是Thompson的待優化參數。有效期由入會時刻起按香港時間加六個月，保留時分秒，月底日期不足時取該月底；既有紀錄保留原到期日，不因新版計劃或登入而改寫。
 
 ## Client Portal
 
-`/members`可設定起點、目的地或國家／地區，以及單日或彈性日期範圍；細節見[彈性搜尋](CLIENT_FLEXIBLE_SEARCH.md)。查詢只讀取已發布優惠，不會自動創造庫存。
+`/members/login`提供兩個公開示範登入帳戶，密碼同為 `FlyPass399!`：
+
+| 帳戶 | 初始狀態 | 展示流程 |
+|---|---|---|
+| `member@uoption.test` | 已購買半年會員 | 直接選票、核對完整票款、確認模擬購買 |
+| `guest@uoption.test` | 尚未購買會員 | 先確認半年會費，再獨立確認機票 |
+
+快捷按鈕只填入帳密，使用者仍需按 Sign in。登入後用 Cookie session 識別帳戶，帳戶區可登出；重新登入保留購票與入會紀錄。Guest 購買會員後會維持已入會狀態，登入不重置；已到期帳戶也不會因登入自動續期。
+
+`/members`未登入會轉到登入頁；登入後可設定起點、目的地或國家／地區，以及單日或彈性日期範圍；細節見[彈性搜尋](CLIENT_FLEXIBLE_SEARCH.md)。查詢只讀取已發布優惠，不會自動創造庫存。
 
 1. 每張卡片大字顯示基本票價，下方列必付費用及完整付款。
 2. 未入會者先確認當前會員費，再模擬入會；有效會員不再付一次會費。
 3. 確認會員票，伺服器重新核對價格、會員狀態及可售庫存；瀏覽不保留座位。
-4. 成功後在My trips查看SQLite保存行程；同一個本機demo ID可重新載入。
+4. 成功後在My trips查看SQLite保存行程；同一登入帳戶可重新載入，切換帳戶不會帶走另一帳戶的行程。
 
-每次購買一名持卡人的一張會員票。未提供真實支付、航空出票、退款或取消操作。優惠售罄不會自動退會費。示例身份沒有生產環境的登入與權限隔離。
+每次購買一名持卡人的一張會員票。未提供真實支付、航空出票、退款或取消操作。優惠售罄不會自動退會費。這是公開帳密的本機示範登入，並非生產身份系統。兩個保留帳戶由24小時HttpOnly、SameSite=Lax session隔離，伺服器拒絕跨帳戶讀取或購買；開發用任意ID介面及Admin仍屬本機模擬工具。
 
 ## 資料與檢查
 
-會員plan、優惠批次及訂位共用SQLite；Thompson實驗則使用隔離的合成世界。帳本核對含必要費用，只有票價實驗的收入指標排除稅費與成本。
+會員plan、優惠批次、訂位及session共用SQLite；Thompson實驗則使用隔離的合成世界。帳本核對含必要費用，只有票價實驗的收入指標排除稅費與成本。
 
 瀏覽器檢查涵蓋導航、當前v5回饋、空狀態、手機版、價格格式、表單和購票核價；實際檢查紀錄見[維護紀錄](ITERATION_2_PROGRESS.md)。API清單見[技術實作](CURRENT_IMPLEMENTATION.md#http介面)。
 
-## Results（`#results`，2026-11-15 新增）
+## Results（`#results`）
 
-顯示所選航班的會員已售座位、剩餘配額、會員機票收入（已售座位 × 會員基本票價，不含會員費）及另列的強制費用，並以與 Forecast 相同的座位口徑顯示更新後的座位分配。數字只由 `/api/offers` 的 `quantity`、`remaining`、`base_fare`、`fees` 計算，沒有新增接口。從會員網站以瀏覽器「上一頁」返回時（包括頁面快取恢復）會重新讀取配額和預測。
+所選航班的已售會員位、未使用配額、會員基本票款及必付費用分開顯示。`quantity − remaining`為已售量，乘各批次`base_fare`得到會員基本票款；會費不計入這個指標。未使用配額不等於即時可訂座位，實際可訂量仍由最新Forecast和停售狀態核對。座位圖保留正常／會員已售、正常需求保護、已發布、未發布及暫扣座位，總和對齊容量。從會員網站返回或切換到Results會重新讀取資料。

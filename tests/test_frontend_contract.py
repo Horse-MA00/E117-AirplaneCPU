@@ -18,7 +18,10 @@ SITES = {
     "admin": ("/admin", FRONTEND / "index.html", [FRONTEND / name for name in ADMIN_SCRIPTS]),
     "optimize": ("/adaptive-pricing", FRONTEND / "adaptive-pricing.html",
                  [FRONTEND / name for name in ("adaptive-pricing.js", "thompson-navigation.js", "demand-filter.js")]),
-    "members": ("/members", FRONTEND / "members" / "index.html", sorted((FRONTEND / "members").glob("*.js"))),
+    "members": ("/members", FRONTEND / "members" / "index.html",
+                [FRONTEND / "members" / name for name in ("portal.js", "search.js", "airports.js")]),
+    "member_login": ("/members/login", FRONTEND / "members" / "login.html",
+                     [FRONTEND / "members" / "login.js"]),
 }
 ALL_JS = [p for p in FRONTEND.glob("*.js")] + [p for p in (FRONTEND / "members").glob("*.js")]
 SMOKE = "".join(p.read_text(encoding="utf-8") for p in FRONTEND.glob("*.mjs"))

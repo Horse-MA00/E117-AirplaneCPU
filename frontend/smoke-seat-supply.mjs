@@ -24,7 +24,7 @@ await page.route('**/*',async route=>{
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
   if(/^\/[a-z0-9-]+\.(js|css)$/.test(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
-  if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:365}});
+  if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_months:6,term_label:'6 months',term_days:181}});
   if(path==='/api/flights')return reply({flights:[flight]});
   if(path===`/api/flights/${flight.flight_id}`)return reply({flight,history});
   if(path==='/api/forecast')return reply({forecast:forecast(route.request().postDataJSON().days_to_departure)});
@@ -70,6 +70,13 @@ try{
   assert.equal(await sum(),180);assert.equal(await page.locator('#go-pricing').isDisabled(),true);
   assert.doesNotMatch(await page.locator('#go-pricing').innerText(),/null|undefined/);
   assert.equal(await page.locator('#seat-composition [data-part="published-held"]').getAttribute('data-seats'),'4');
+  await page.getByRole('link',{name:'Results',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#results-composition [data-part="published-held"]')?.dataset.seats==='4');
+  assert.equal(await page.locator('#results-composition span').evaluateAll(parts=>parts.reduce((sum,p)=>sum+Number(p.dataset.seats),0)),180,'Results retains all held seats in its capacity bar');
+  assert.match(await page.locator('#results-legend').innerText(),/Published quota on hold/);
+  assert.match(await page.locator('#view-results').innerText(),/Unspent member quota/);
+  assert.doesNotMatch(await page.locator('#view-results').innerText(),/Still bookable on the member site/);
+  await page.getByRole('link',{name:'Forecast seats',exact:true}).click();
   scenario='overage';await page.locator('[data-day="7"]').click();
   await page.waitForFunction(()=>document.getElementById('booked-value').textContent==='183');
   assert.match(await page.locator('#booked-detail').innerText(),/178 normal \+ 5 member/);
@@ -78,6 +85,11 @@ try{
   assert.match(await page.locator('#seat-inventory-warning').innerText(),/3 over capacity/);
   assert.equal(await page.locator('#seat-inventory-warning').isVisible(),true);assert.equal(await sum(),180);
   assert.equal(await page.locator('#go-pricing').isDisabled(),true);
+  await page.getByRole('link',{name:'Results',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#results-composition [data-part="occupied"]')?.dataset.seats==='178');
+  assert.equal(await page.locator('#results-composition [data-part="member-sold"]').getAttribute('data-seats'),'2','Results caps member occupancy while preserving normal-booked seats on overcapacity');
+  assert.equal(await page.locator('#results-composition span').evaluateAll(parts=>parts.reduce((sum,p)=>sum+Number(p.dataset.seats),0)),180);
+  await page.getByRole('link',{name:'Forecast seats',exact:true}).click();
   assert.match(await page.locator('#chart-caption').innerText(),/Normal-demand baseline only/);
   assert.match(await page.locator('#chart-caption').innerText(),/Member demo bookings are excluded/);
   assert.match(await page.locator('#empty-detail').innerText(),/member bookings excluded/);
@@ -100,5 +112,5 @@ try{
   assert.equal(await page.locator('#start').isDisabled(),true);assert.equal(starts,0);
   assert.equal(await page.locator('#optimization-price-profit, #optimization-rounds-table').count(),0);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-  assert.deepEqual(errors,[]);console.log('Seat-supply UI passed: 7 headroom/0 new, carried bookable quota, sold once, reserve clamp, reason states, Thompson zero/positive quota guard and round refresh, held quota, historical action guard, raw overcapacity warning, normal-only baseline labels, mobile.');
+  assert.deepEqual(errors,[]);console.log('Seat-supply UI passed: 7 headroom/0 new, carried bookable quota, sold once, reserve clamp, reason states, Thompson zero/positive quota guard and round refresh, held quota + Results capacity reconciliation, historical action guard, raw overcapacity warning, normal-only baseline labels, mobile.');
 }catch(error){console.error(JSON.stringify({pageErrors:errors,url:page.url()}));throw error;}finally{await browser.close();}

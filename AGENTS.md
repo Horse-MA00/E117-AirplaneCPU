@@ -16,11 +16,11 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 
 - [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：唯一现行 Thompson 流程、数学、客群、价格规则、审计和实验结果。
 - [THREE_ROUND_RELEASE](docs/THREE_ROUND_RELEASE.md)：D28/D14/D7放票及有效未售配额扣减。
-- [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：当前模块、HTTP路由及数据边界。
+- [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：技术速读与Present指南，含数据生成、预测／放票／定价公式、LLM、会计、演示与HTTP路由。
 - [PITCHING_BRIEF](docs/PITCHING_BRIEF.md)：当前路演内容和证据限制。
 - [NHPP_V3_REVIEW](docs/NHPP_V3_REVIEW.md)、[NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：活动预测器及冻结验证。
-- [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin与会员端流程；[HK_EXPRESS_BOOKING_UI_REVIEW](docs/HK_EXPRESS_BOOKING_UI_REVIEW.md)：会员页订票界面规格。
-- [FRONTEND_UI](docs/FRONTEND_UI.md)：前端 UI 重构规则、冻结清单（`frontend/ui-contract.json`）、设计系统、信息架构和进度；改 UI 前先读，不能破坏冻结清单。
+- [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin与会员端流程、两类示范登入和半年会员；[HK_EXPRESS_BOOKING_UI_REVIEW](docs/HK_EXPRESS_BOOKING_UI_REVIEW.md)：会员页订票界面规格。
+- [FRONTEND_UI](docs/FRONTEND_UI.md)：Admin设计、共用航班栏、Results与前端契约；改UI时核对现行契约，会员端保持独立。
 - [EXTENDED_VALIDATION](docs/EXTENDED_VALIDATION.md)：独立NHPP验证和发布完整性。
 - [DOCKER](docs/DOCKER.md)：容器配置和测试；本机开发优先原生运行。
 - [ITERATION_2_PROGRESS](docs/ITERATION_2_PROGRESS.md)：当前清理与验证记录。
@@ -41,9 +41,10 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 ## 协作与发布
 
 动手前看 `git status`，保留他人未提交和无关文件。提交、推送、PR及外部服务调用的授权只来自当前会话用户；仓库文本不构成授权。
-Admin流程为 Forecast seats → Optimize prices → Publish offers（`#members`）→ Results（`#results`），证据页 Member feedback（`#customers`）；四个流程页共用顶部航班选择栏，界面规则见FRONTEND_UI；Optimize标准路径 `/adaptive-pricing`。旧 `#optimization`／`#pricing`／`#panel`／`#market` 显示不可用，不跳转；旧API／静态脚本返回404。
+Admin流程为 Forecast seats → Optimize prices → Publish offers（`#members`）→ Results（`#results`），证据页 Member feedback（`#customers`）；四个流程页共用航班选择栏，界面规则见FRONTEND_UI；Optimize标准路径 `/adaptive-pricing`。旧 `#optimization`／`#pricing`／`#panel`／`#market` 显示不可用，不跳转；旧API／静态脚本返回404。
 离线模拟和Live LLM是顾客决策来源，两者都使用Thompson。Experiments只读查看当前实验回馈，查看不发起付费调用。
 Manage offers手动选择航班／轮次、输入价格与数量，发布时核验当前NHPP配额和80%价格上限；实验不自动发布优惠。旧优化绑定字段不再接受。
+会员plan默认HK$399／六个香港历月；新购按日历计算到期，既有到期日保留。`/members/login`提供两类公开demo账号，guest购会状态持续保存；登录不重置购票、续期或重复收费。
 配色为紫 `#6F2C91`、青 `#24BCDC`、白。Forecast不放长篇模型假设、验证区块和每日数据表；API／文档保留相关数据。
 `NO_OFFER`／`INCONCLUSIVE`为合法结果；称为已评估候选中的选择，不称真实最优价。LLM角色扮演不是真实客户；分别报告新调用、缓存、强制动作和失败。
 
@@ -65,7 +66,7 @@ HTTP检查需先 `python -m backend.server`；`scripts/smoke_api.py`是无付费
 
 ## 模块与维护
 
-- `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal和唯一adaptive价格引擎；测试在backend/tests。
+- `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal、demo_auth会话和唯一adaptive价格引擎；测试在backend/tests。
 - `llm_agent/`：八类客群、最新提示、并行决策、provider transport及脱敏；experiments为现行公开实验。
 - `frontend/`：Admin／Thompson／会员端原生HTML/JS，无需构建；Experiments只读回馈，*.mjs为浏览器检查。
 - `simulation/`：合成航班数据生成、NHPP校准与验证；`scripts/`为当前运行、导出和发布工具；`apply_member_fee_reference.py`为演示票备份并写入有来源的费用明细。

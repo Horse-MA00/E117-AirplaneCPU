@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Sign in — UOption Fly Pass</title>
+  <link rel="stylesheet" href="/members/portal.css">
+  <link rel="stylesheet" href="/members/login.css">
+  <script type="module" src="/members/login.js"></script>
+</head>
+<body class="login-page">
+  <a class="skip" href="#login-email">Skip to sign in</a>
+  <div class="prototype-note"><span>Team E117 · Cathay Hackathon</span><span>Booking prototype · No real payment or ticket</span></div>
+  <header class="header login-header"><a class="brand" href="/members" aria-label="UOption Fly Pass home">UOption<span>Fly Pass</span></a><a class="text-link" href="/admin">Admin portal</a></header>
+  <main class="login-layout">
+    <section class="login-form-section" aria-labelledby="login-title">
+      <p class="eyebrow">Your next trip starts here</p>
+      <h1 id="login-title">Welcome back.</h1>
+      <p class="login-intro">Sign in to explore member fares and keep your trips in one place.</p>
+      <div id="current-session" class="session-banner" hidden><p>Currently signed in as <strong id="current-session-name"></strong>.</p><a id="continue-session" class="text-link" href="/members">Continue to my account</a><p class="fine-print">Or sign in below to switch demo accounts.</p></div>
+      <form id="login-form" action="/api/member-portal/login" method="post" aria-labelledby="login-title">
+        <fieldset id="login-fields" disabled><legend class="sr-only">Account credentials</legend>
+          <div class="field"><label for="login-email">Email address <span class="required-label">(required)</span></label><input id="login-email" name="email" type="email" autocomplete="username" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="next" aria-describedby="login-error" required></div>
+          <div class="field"><label for="login-password">Password <span class="required-label">(required)</span></label><div class="password-input"><input id="login-password" name="password" type="password" autocomplete="current-password" enterkeyhint="go" aria-describedby="login-error" required><button id="toggle-password" type="button" aria-pressed="false" aria-controls="login-password">Show</button></div></div>
+          <p id="login-error" class="notice error" role="alert" hidden></p>
+          <button id="login-submit" class="button primary" type="submit">Sign in</button>
+        </fieldset>
+        <p id="login-status" class="fine-print" role="status"></p>
+      </form>
+      <noscript><p class="notice">JavaScript is required to sign in and use this booking prototype. No credentials are submitted without it.</p></noscript>
+    </section>
+    <aside class="demo-access" aria-labelledby="demo-title">
+      <p class="eyebrow">Try both experiences</p><h2 id="demo-title">One pass.<br>Two ways to explore.</h2>
+      <p class="demo-intro">Choose a demo account to fill the form, then select Sign in.</p>
+      <button id="demo-member" class="demo-account" type="button"><span class="demo-account-top"><strong>Member account</strong><span class="demo-badge">Pass included</span></span><span class="demo-email">member@uoption.test</span><span class="demo-description">Starts with an active six-month pass. Book member flights without paying for the pass again.</span><span class="demo-action">Use member account <span aria-hidden="true">↗</span></span></button>
+      <button id="demo-guest" class="demo-account" type="button"><span class="demo-account-top"><strong>Guest account</strong><span class="demo-badge guest-badge">Explore first</span></span><span class="demo-email">guest@uoption.test</span><span class="demo-description">Starts without a pass. Explore fares, then join before confirming a member ticket.</span><span class="demo-action">Use guest account <span aria-hidden="true">↗</span></span></button>
+      <div class="demo-password"><span>Password for both accounts</span><code>FlyPass399!</code></div>
+      <p class="fine-print">These are shared demo accounts. A purchased pass and saved trips remain on that account when you sign in again.</p>
+    </aside>
+  </main>
+  <footer><div><strong>UOption Fly Pass</strong><span>Team Airplane CPU · Cathay Hackathon 2026</span></div><p>Independent membership concept.<br>All offers and bookings here are simulated.</p></footer>
+</body>
+</html>

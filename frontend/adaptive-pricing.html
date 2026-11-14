@@ -42,7 +42,6 @@
             <button type="button" data-round="28" aria-pressed="true">D28</button>
             <button type="button" data-round="14" aria-pressed="false">D14</button>
             <button type="button" data-round="7" aria-pressed="false">D7</button>
-            <button type="button" disabled aria-pressed="false" title="D1 is a forecast view only; prices are set at D28, D14 and D7">D1</button>
           </div>
           <select id="release-day" class="sr-only" tabindex="-1" aria-hidden="true"><option value="28">D28 · 28 days before departure</option><option value="14">D14 · 14 days before departure</option><option value="7">D7 · 7 days before departure</option></select>
         </div>
@@ -61,10 +60,10 @@
         <div class="page-actions"><div class="saved-runs"><label for="saved-run" class="sr-only">Saved experiments</label><select id="saved-run"><option value="">Choose a saved experiment</option></select><button id="load-run" type="button" class="button secondary" disabled>View experiment</button></div><button id="new-experiment" type="button" class="button" aria-controls="setup-panel" aria-expanded="false" hidden>New experiment</button><a id="publish-link" class="button primary" href="/admin#members" hidden>Publish this fare <span aria-hidden="true">→</span></a></div>
       </div>
       <div id="page-error" class="message error" role="alert" hidden></div>
-      
+
       <div class="results" id="results">
           <section id="setup-panel" class="setup-panel" aria-label="New experiment">
-            <form id="experiment-form"><form id="experiment-form">
+            <form id="experiment-form">
 <fieldset id="setup-fields"><legend>New Experiment</legend><p id="scope-message" class="hint">Choose a flight to load its observed normal fare and member seat quota.</p>
 
 

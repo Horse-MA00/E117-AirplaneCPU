@@ -5,7 +5,7 @@
 这份文档管前端**长什么样、怎么搭**：重构规则、冻结的功能与接口、设计系统、信息架构和设计决定。
 前端**做什么**（交互流程、产品取舍、面板上限）以 [ADMIN_AND_MEMBER_UX](ADMIN_AND_MEMBER_UX.md) 和 [CLIENT_FLEXIBLE_SEARCH](CLIENT_FLEXIBLE_SEARCH.md) 为准；接口返回的字段以 [CURRENT_IMPLEMENTATION](CURRENT_IMPLEMENTATION.md) 的路由表为准。
 
-2026-11-14 起，前端在 `claude/frontend-fixes` 分支上重构，范围包括视觉、排版、字体，以及信息架构和布局。功能不变。
+Admin UI源于`claude/frontend-fixes`的`5699a99`。2026-11-15整合到main时，只引入Admin界面和相关测试／设计资料；后端与Client Portal保留`55506db`（含登录和六个历月会员）。下方旧截图和早期决策是历史记录；现行接口、DOM和存储以更新后的`ui-contract.json`为准。
 
 ---
 
@@ -68,11 +68,11 @@ Claude 模型不能直接生成视频或语音，但可以写程序把真实界�
 | 冻结内容 | 说明 | 检查方式 |
 |---|---|---|
 | 功能 | 每个页面现有的操作、状态和结果都要保留；可以换位置、换形式，不能删 | smoke 测试 + 截图对比 |
-| 接口 | 浏览器调用的 19 个 API 端点、方法和请求字段（见 §2.2 和 `ui-contract.json`） | 契约测试：JS 里出现的 `/api/...` 必须和清单一致 |
+| 接口 | 浏览器调用的 API 端点、方法和请求字段（见 §2.2 和 `ui-contract.json`） | 契约测试：JS 里出现的 `/api/...` 必须和清单一致 |
 | 数据含义 | 页面上每个数字的口径和文案含义（如"Protected for normal demand"） | 人工审查 |
 | 跨模块事件 | `uoption:view` | 契约测试 |
-| URL 与存储 | Admin 的 hash 路由、Optimize 的网址参数、会员端 `localStorage['uoption-member-demo-account']`（见 §2.3） | smoke 测试 |
-| DOM 钩子 | JS 或 smoke 测试引用的 id：Admin 74 个、Optimize 74 个、会员端 53 个；以及 JS 用到的选择器和 class（见 `ui-contract.json` 的 `js_selectors`） | 契约测试：id 必须仍在 HTML 中 |
+| URL 与存储 | Admin 的 hash 路由、Optimize 的网址参数、会员端HttpOnly Cookie session（见 §2.3） | smoke 测试 |
+| DOM 钩子 | JS 或 smoke 测试引用的各页面 id（以现行清单为准）；以及 JS 用到的选择器和 class（见 `ui-contract.json` 的 `js_selectors`） | 契约测试：id 必须仍在 HTML 中 |
 
 DOM 钩子可以**移动**到新的位置、换外层结构，但不能删除或改名。确实要改时，在**同一个提交**里同步修改 JS、smoke 测试和 `ui-contract.json`，并在 §6 记录原因。
 
@@ -96,7 +96,7 @@ DOM 钩子可以**移动**到新的位置、换外层结构，但不能删除或
 ### 1.4 每次改动的验收
 
 1. `python -m unittest tests.test_frontend_contract tests.test_docs_index` 通过。
-2. 启动后端后，§3.3 列出的 10 个 smoke 测试全部通过，`scripts/check_container.py` 通过。
+2. 启动后端后，运行 `frontend/package.json` 中现行浏览器检查及 `scripts/check_container.py`；整合验证见 §7.3 和维护记录，历史测试数量不作为当前要求。
 3. 与 `docs/frontend-ui/baseline-2026-11-15/` 截图对比，确认没有丢失功能入口。
 4. 改了设计系统或信息架构，就同步更新本文档 §4、§5，并在 §6 记一条。
 5. **以用户身份走一遍**（用户 2026-11-15 要求，每次改 UI 都要做）：在 1920×1080 和 390px 下打开每个改动过的页面，像管理员一样实际操作（切换航班、搜索、悬停 ⓘ、发布、返回），看有没有被截断的文字、空白过多的区域、重复的信息、跑出首屏的关键内容。发现的小问题直接修好，再在汇报里说明改了什么。
@@ -111,16 +111,17 @@ DOM 钩子可以**移动**到新的位置、换外层结构，但不能删除或
 
 | 页面 | 文件 | 路由 | 机制 |
 |---|---|---|---|
-| Admin `/admin`（`/` 相同） | `index.html`；脚本 `app.js`、`experiments.js`，依赖 `seat-status.js`、`demand-filter.js`、`thompson-navigation.js` | `#flights` Forecast seats、`#customers` Experiments（What members said）、`#members` Manage offers | `location.hash` 选中 `section#view-<route>.view`。退役的 `#optimization`、`#pricing`、`#panel`、`#market` 显示 `#view-unavailable`，不跳转 |
-| Optimize `/adaptive-pricing` | `adaptive-pricing.html`、`adaptive-pricing.js`、`adaptive-pricing.css` | 无 hash；网址参数 `flight_id`、`forecast_day`、`run`、`round` | 独立页面，有自己的页头和导航 |
-| 会员端 `/members` | `members/` | `#flights`、`#membership`、`#trips`、`#account` | 长页面锚点；`dialog#checkout` 订票弹窗。**本次不改** |
+| Admin `/admin`（`/` 相同） | `index.html`；脚本 `app.js`、`experiments.js`，依赖 `seat-status.js`、`demand-filter.js`、`thompson-navigation.js` | `#flights` Forecast seats、`#customers` Member feedback、`#members` Publish offers、`#results` Results | `location.hash` 选中 `section#view-<route>.view`。退役的 `#optimization`、`#pricing`、`#panel`、`#market` 显示 `#view-unavailable`，不跳转 |
+| Optimize `/adaptive-pricing` | `adaptive-pricing.html`、`adaptive-pricing.js`、`adaptive-pricing.css` | 无 hash；网址参数 `flight_id`、`forecast_day`、`run`、`round` | 独立页面，与Admin共用侧栏与航班选择栏 |
+| 登录 `/members/login` | `members/login.html`、`members/login.js` | 无hash | 公开示范登录；保持main版本 |
+| 会员端 `/members` | `members/` | `#flights`、`#membership`、`#trips`、`#account` | 先核对session，再显示长页面锚点与`dialog#checkout`订票弹窗。**本次不改** |
 
 ### 2.2 每个页面的功能与接口
 
 | 页面 | 功能 | 接口 |
 |---|---|---|
 | 公共 | 数据集标签、LLM 是否已配置 | `GET /api/summary`、`GET /api/flights` |
-| Forecast | 需求档位筛选、航班选择、D28/D14/D7/D1、四个座位指标、座位分配条、正常预订与票价图、去 Optimize（带航班和轮次） | `GET /api/flights/{id}`、`POST /api/forecast` |
+| Forecast | 需求档位筛选、航班选择、D28/D14/D7、四个座位指标、座位分配条、正常预订与票价图、去 Optimize（带航班和轮次） | `GET /api/flights/{id}`、`POST /api/forecast` |
 | Optimize | 航线、航班、放票轮次；顾客决策来源（离线模拟 / Live LLM）；轮数、每轮人数；折叠的客群权重、并行数、调用上限、种子、验证批数；开始实验；已保存实验选择；进度；建议票价（含尾数 9 的最终宣传价）；逐轮表；价格与预期收入曲线；独立验证（对比初始价和不放票）；导出；去 Experiments 看会员回馈 | `GET /api/adaptive-pricing/status`、`POST /api/adaptive-pricing/scope`、`GET/POST /api/adaptive-pricing/runs`、`GET /api/adaptive-pricing/runs/{id}`、链接 `…/{id}/export` |
 | Experiments | 选择已保存实验和轮次，阅读该轮摘要和每位会员的购买 / 拒绝理由；只读，不发起调用 | `GET /api/adaptive-pricing/runs`、`GET /api/adaptive-pricing/runs/{id}`、链接 `…/{id}/export` |
 | Manage offers | 手动选择航线、航班、轮次，输入座位数和会员票价并发布（后端核对当前配额和 80% 上限）；去 Optimize 优化这班航班；设置会费；已发布优惠列表 | `POST /api/forecast`、`GET/POST /api/offers`、`GET/POST /api/member-portal/plan` |
@@ -133,9 +134,9 @@ DOM 钩子可以**移动**到新的位置、换外层结构，但不能删除或
 | `/adaptive-pricing?flight_id=&forecast_day=` | Forecast 和 Manage offers 打开 Optimize 时带入航班和轮次（`thompson-navigation.js`） |
 | `/adaptive-pricing?run=&round=` | 恢复已保存的实验和轮次 |
 | `/admin?run=&round=#customers` | 分享指定实验和轮次的会员回馈 |
-| `localStorage['uoption-member-demo-account']` | 会员端演示账号 |
+| `uoption_demo_session` HttpOnly Cookie | 服务端保存的公开示范账号会话；登录、登出和session接口详见会员文档 |
 
-DOM 钩子：Admin 74 个、Optimize 74 个、会员端 53 个 id，见 `ui-contract.json`。
+各页面DOM钩子（含现行登录页）见 `ui-contract.json`，数量由契约测试核对。
 
 ---
 
@@ -175,7 +176,10 @@ main 删除了 `smoke-continuous`、`smoke-contribution`、`smoke-english-journe
 
 重构的标准：每次改动后全部浏览器测试（现为 11 个）和 `check_container.py` 保持全部通过。
 
----|---|---|
+以下为2026-11-14旧流程历史记录，已删除的测试不属于现行运行要求。
+
+| 当时测试 | 当时结果 | 备注 |
+|---|---|---|
 | `smoke.mjs`（含 `--transactions`） | 通过 | |
 | `smoke-continuous.mjs` | 通过 | 默认端口写成了 8765，要设 `APP_URL=http://127.0.0.1:8000` |
 | `smoke-contribution.mjs` | 通过 | |
@@ -190,7 +194,7 @@ main 删除了 `smoke-continuous`、`smoke-contribution`、`smoke-english-journe
 | `smoke-seat-supply.mjs` | 通过 | |
 | `test-seat-status.mjs` | 通过 | |
 
-修复后 13 个测试全部通过，每个修过的测试连续跑 8 次都通过。重构的标准是：每次改动后 13 个保持全部通过。
+历史修复后13个当时的测试全部通过；现行测试以package.json和最近整合记录为准。
 
 ---
 
@@ -268,7 +272,7 @@ Admin（`index.html`）和 Optimize（`adaptive-pricing.html`）使用**同一�
 
 ### 5.2 共用的航班选择器
 
-页面顶部一条"当前航班"栏，在 4 个流程页面共用：需求档位 → 航线 → 航班 → 轮次（D28 / D14 / D7；Forecast 另可看 D1）。Member feedback 页面不显示这条栏。
+页面顶部一条"当前航班"栏，在 4 个流程页面共用：需求档位 → 航线 → 航班 → 轮次（D28 / D14 / D7）。Member feedback 页面不显示这条栏。
 
 - 在 Admin 的三个 hash 页面之间切换时，选择保存在页面状态里。
 - 去 Optimize 和从 Optimize 回来时，用已有的网址参数 `flight_id`、`forecast_day` 传递（`thompson-navigation.js` 已支持）。
@@ -370,3 +374,11 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-14 | 基线截图（2.5MB）提交在仓库里，并会被打进 Docker 镜像 | 用户决定保留（2026-11-14） |
 | 2026-11-14 | 演示主线需要一个能得出"建议放票"（`OFFER`）的航班。实测 HKG→HND（`DEMO-HKG-HND-20270515`）和 HKG→ICN（`NET-HKG-ICN-20270521`）D28 数学轨都是 `NO_OFFER`，否则第 3、4 步无内容可演示 | 2026-11-15 更新：旧数学轨已删除。Thompson 结果总有一个"保留票价"（例如 HKG→KMQ 保留初始价 HK$319），除非结论是不放票，所以第 3、4 步通常有内容可演示；演示航班仍需挑选 |
 | 2026-11-14 | 现有接口不能列出所有会员订单（只能按单个账号查），Results 页因此只显示每条优惠的放出、已售、剩余和收入 | 已按此设计样稿 |
+
+### 7.3 2026-11-15 main整合
+
+导入Admin UI时保留main后端和整个`frontend/members/`原始字节，包括半年方案、两类登录账号及圆角。旧分支的年度方案文案改为6 months，前端契约同步当前登录接口，不恢复任意ID账号。修复空筛选遗留发布航班、会费修改后预览过期、已保存实验与需求筛选不一致，以及Results把未使用配额称为可订和漏掉暂扣座位的问题。验证结果追加到[维护记录](ITERATION_2_PROGRESS.md)。
+
+### 7.4 2026-11-15 移除 D1 快捷入口
+
+按用户要求，Admin 与 Optimize 顶部只保留 D28／D14／D7；删除 D1 按钮及停用占位。Admin 不再从 `forecast_day=1` URL 选中 D1，改用默认 D28。Forecast 日线图与逐日观察滑杆、后端逐日预测和冻结数据保留；D1从来不是新增配额的发布轮次。

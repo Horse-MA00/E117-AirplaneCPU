@@ -160,11 +160,6 @@ input, select { border: 1px solid #aaa2b1; border-radius: 4px; background: white
 .account-section h2 { font-size: 1rem; letter-spacing: -.02em; }
 .account-section .subtle { font-size: .73rem; margin: 7px 0; }
 .account-id { font-size: .7rem; color: var(--purple); overflow-wrap: anywhere; margin: 7px 0; }
-.account-tools { margin-top: 14px; }
-.account-tools summary { cursor: pointer; font-size: .73rem; color: var(--muted); padding-block: 10px; }
-#account-form { display: flex; gap: 15px; align-items: start; margin-top: 15px; max-width: 600px; }
-#account-form .field { flex: 1; }
-#account-form .button { margin-top: 22px; }
 small { font-size: .68rem; color: var(--muted); line-height: 1.6; }
 footer { max-width: 1280px; margin: auto; padding: 25px 28px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 30px; font-size: .68rem; color: var(--muted); line-height: 1.6; }
 footer strong { font-size: 1rem; font-weight: 600; color: var(--purple); display: block; }
@@ -193,7 +188,6 @@ dialog::backdrop { background: #21102e99; }
 #checkout-form { margin: 0; }
 .booking-complete { font-size: 2rem; line-height: 1.2; letter-spacing: -.04em; color: var(--purple); margin: 0 0 20px; }
 .flight-results[aria-busy=true] { opacity: .6; }
-#account-form input:user-invalid { border-color: #a32e4f; outline: 2px solid #a32e4f; }
 @container (max-width: 680px) {
   .flight-card { grid-template-columns: 60px minmax(0, 1fr) 155px; gap: 14px; padding: 20px 16px; }
   .flight-route { font-size: 1.35rem; gap: 8px; }
@@ -285,9 +279,6 @@ dialog::backdrop { background: #21102e99; }
   .section-heading .eyebrow { font-size: .7rem; }
   .account-overview { align-items: start; }
   .account-overview .text-button { max-width: 110px; text-align: right; font-size: .7rem; padding-top: 0; }
-  #account-form { flex-direction: column; gap: 12px; }
-  #account-form .field { width: 100%; }
-  #account-form .button { margin-top: 0; }
   footer { padding-inline: 5%; flex-wrap: wrap; gap: 15px 30px; }
   footer p { width: 100%; margin: 0; }
   dialog { padding: 22px; }
@@ -314,7 +305,7 @@ dialog::backdrop { background: #21102e99; }
 .fee-reference p { margin:8px 0; }
 
 /* Booking-first layout, informed by the HK Express search interaction review. */
-.booking-hero { grid-template-columns:1fr auto; padding:30px 32px 48px; gap:24px; border-radius:16px 16px 0 0; }
+.booking-hero { grid-template-columns:1fr auto; padding:30px 32px 48px; gap:24px; border-radius:16px; }
 .booking-hero::after { display:none; }
 .booking-hero h1 { font-size:clamp(1.8rem,3vw,2.65rem); letter-spacing:-.04em; line-height:1.15; }
 .booking-hero .hero-copy { margin:10px 0 0; font-size:.85rem; }
@@ -395,3 +386,9 @@ dialog::backdrop { background: #21102e99; }
 .fare-saving { display:inline-block; background:#fdeef1; color:#a32339; font-size:.68rem; font-weight:600; padding:3px 8px; border-radius:4px; }
 .price-lines .was-price { font-size:.8rem; margin-right:4px; }
 @media(max-width:1000px){ .fare-compare { justify-content:flex-start; } }
+
+/* Signed-in member identity replaces editable browser account IDs. */
+.session-status { max-width:1280px; margin:28px auto; padding-inline:28px; color:var(--muted); font-size:.875rem; }
+.account-actions { display:flex; align-items:center; gap:24px; flex-wrap:wrap; }
+.account-actions .text-link { display:inline-flex; align-items:center; min-height:48px; }
+@media(max-width:760px) { .booking-hero { margin-inline:0; } .account-overview { align-items:start; flex-direction:column; } .account-actions { gap:20px; } }

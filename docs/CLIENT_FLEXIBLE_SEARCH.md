@@ -6,13 +6,15 @@
 
 ## 使用方式
 
-在 `/members` 的 **Find your next flight**：
+先在 `/members/login` 登入示範帳戶，再使用 `/members` 的 **Find your next flight**；帳戶與半年方案見[會員操作](ADMIN_AND_MEMBER_UX.md#client-portal)。
+
+搜尋操作：
 
 1. **From · airport or country** 選出發機場、整個國家（例如 All Japan airports），或保留 Anywhere。
 2. **To · airport or country** 選 All Japan airports；也可在同一選單選單一機場。⇄ 互換起點與目的地。
 3. 按 **Next month**，自動填入香港日曆中下個月的第一天及最後一天；或自行輸入 **Departing from** 與 **Departing until**。
 4. 按 **Search flights**。結果同時搜尋目前目錄中所有屬於日本的目的地機場，旅客不必逐日、逐機場搜尋。
-5. 可在結果的 **Sort by → Lowest ticket price** 找區間內最便宜的已發布會員票。
+5. 可在結果的 **Sort by → Lowest base fare** 找區間內最便宜的已發布會員票。
 
 例如範圍設為 2027-05-01 至 2027-05-31，5 月 1 日的福岡與 5 月 31 日的大阪均符合；4 月 30 日及 6 月 1 日則不符合。這只是搜尋條件示例，頁面結果仍以當時已發布的航班為準。
 
