@@ -233,6 +233,53 @@ Merged main at `a178b08` (documentation cleanup) into `feature/formula-grid-pric
 - Docker 完整檢查：260 個後端測試通過；31 個根測試中 30 通過、1 個需 Git 的測試在容器略過；凍結資料與實驗雜湊驗證通過。最初本機 sandbox 的 HTTP 測試因禁止 bind 失敗，改由隔離 Docker 測試容器完成。
 - 瀏覽器通過 Optimize、Manage offers、座位供應、需求篩選及 Client Portal 測試。實際數學 run `opt-b731d943cc604d36` 完成 9 個票價、24 個市場，會費全為 HK$399，provider calls = 0；結論 NO_OFFER 原樣保留，未因介面簡化改動服務門檻或結果。此 run 保存在本機私有 SQLite，未發布新會員優惠。
 
+
+## 2026-11-14 — Weighted member-only Thompson pricing
+
+Implemented on local `experiment/thompson-member-pricing`: an 80% member fare cap, existing-member base-fare scenario, 14 weighted test segments, a cluster-tempered Logistic posterior, joint-draw Thompson exploration, parallel customer calls with a shared budget, integer seat clearing, private SQLite and raw-output audit, cached replay deduplication, independent validation and a new Admin page. Frozen NHPP and historical evidence remain unchanged.
+
+Full technical design and results are in [the current specification](FLIGHT_SCOPED_OPTIMIZATION.md#adaptive-member-only-pricing). The 80-case offline benchmark found mean TS member receipts 4.55% above equal-round greedy MAP: 37 wins, 25 ties and 18 losses. Live v1 and v2 candidates increased buyers but lost weighted revenue by 6.96% and 10.59% respectively; both negative outcomes are saved. The two runs used 409 fresh calls, four peak concurrent requests, two authorized key slots and zero failures.
+
+Final native checks: 290 backend and 31 publication/data/documentation tests, with artifact hashes passing. Chrome mock and real read-only desktop/mobile checks passed. Five pre-existing local research documents received only a record-status line and AGENTS index entries so the existing documentation checks pass; their content was preserved. No PR, merge or paid calls beyond the bounded experiments.
+
+
+## 2026-11-14 — Flexible bargain-member scenarios and validation
+
+- Added `weighted-member-panel-v2-flexible`: eight explicit target groups, optional bargain-triggered travel, broad date/destination flexibility; retained the exact `broad_coverage` generator and historical prompts/data.
+- Added versioned customer prompts v2/v3 and `adaptive-member-decisions-v3-fallback-contract`. The first 49-call attempt exposed two unaffordable normal-ticket fallbacks; it is preserved as failed evidence. The computed fallback allowlist remains strictly validated without retries or substituted choices.
+- `member-thompson-v3-flexible` persists profile across API, search, holdout and export; hashes the actual active prompt. Admin can switch target and legacy populations and restore old run weights. The old mathematical benchmark explicitly pins legacy people.
+- Completed run `adaptive-6f1c300f719e47f7`: seven rounds, 32 search members, three independent 32-person holdouts; 299 fresh calls, 104 cache replays, 144 forced decisions, zero failures, four-way parallelism, 125.42 s. Combined calls including failed attempt: 348/600.
+- Selected HK$269.54 versus initial HK$328: weighted holdout purchase rate 84.17% versus75.37%; basic receipts HK$7,259.47 versus HK$7,910.99 (−8.24%). It exceeds NO_OFFER but does not improve on the initial price. All228 affordable member choices still bought; no claims of calibrated human demand or successful optimization were made.
+- Saved new experiments under `thompson_flexible_failed_20261114_v3` and `thompson_flexible_live_20261114_v3`. Details and caveats are in [current pricing specification](FLIGHT_SCOPED_OPTIMIZATION.md#flexible-bargain-travellers--14-november-2026).
+- Validation: 305 backend and31 root tests, full native regression, publication/frozen checks, mocked and actual browser checks passed. Existing NHPP, datasets and historical experiment folders unchanged. No main merge or PR.
+
+
+## 2026-11-14 — Public-feature paired pricing and whole-HKD quotes
+
+- Added `member-thompson-v4-paired` with new `public-member-response-v1`. Exact budgets/private motives stay in customer/environment state. The learner sees only identity, segment, declared flexibility and weight; new people per round compare candidate and initial quote in independent reset worlds. Independent prediction support and final confirmation never become search labels.
+- Added pre-price motivation diversity, customer prompt v4 and analyst v2; every third round can test a cited bounded direction, with results compared to the paired initial price. Reasons never become invented willingness-to-pay labels.
+- All new executable ticket/fee proposals and submissions use whole HKD. Legacy optimizer v8, formula grid and continuous reference search are integer-valued; API/store enforce this and preserve observed raw prices separately. Historical datasets, prompts and reports unchanged.
+- Live `adaptive-1afc5c96d92f465d`: 96 fresh search people, 48 held-out people, two distinct whole-HKD prices across six rounds. HK$255 versus HK$328 raised weighted confirmation conversion40.11%→61.33% and receipts HK$2,105.03→HK$2,502.40 (+18.88%). 40/146 affordable member exposures declined, without a prescribed rejection rate. This is a synthetic scenario result, not real-customer calibration.
+- Live cost:174 fresh calls,0cache,88forced,0failures,4parallel,88.86s; below342run/600task callcaps. Offline12prespecifiedseeds:6adopt,5keepinitial,1inconclusive; zero provider calls. No extra calls sought a better result.
+- Added private blank human pilot and strict response-import/summary utility; zero real responses collected. Source authenticity remains self-reported and unverified; no automatic training or publication of participant text.
+- Post-experiment boundary fixes align fractional raw-source caps and quota-feasible confirmation; recorded integer/ample-quota results unaffected. Both new evidence directories and original hashes preserved.
+- Fullnativecheck passed349backend+31root tests; mocked and real read-only desktop/mobile checks passed. Main branch unchanged; no PR. Full results and caveats: [current specification](FLIGHT_SCOPED_OPTIMIZATION.md#executed-paired-public-feature-v4-results--14-november-2026).
+
+
+## 2026-11-14 · Experiments 會員回饋入口
+
+- 將自適應定價的 What members said 移到 `/admin#customers`，頁面只保留已保存實驗、輪次、摘要及會員理由；查閱只發 GET，不新增 LLM 呼叫。
+- 自適應定價頁移除 How the price changes 折線圖，保留輪次表、收入曲線及驗證結果，並提供帶 run ID 的回饋連結。舊六階段工具保留在 `#panel`、共享市場在 `#market`。
+- 原始模型輸出以純文字呈現；歷史資料、prompt 和凍結模型不改寫。原分支完整回歸通過：349 個後端及 31 個根目錄測試、文檔／凍結證據檢查。合併 main 後的驗證另記如下。
+
+
+### 整合 main 及最後驗證
+
+- 整合 `cdb84a4` 的兩筆更新：保留活動 NHPP 入口（D28 的 v2 分布／新 guard、D14/D7 的平滑 v3）、簡化 Optimize 與 HK$399 固定會費、Manage offers 的結果刷新。保留實驗分支的 80% 上限、整數報價及 Thompson 配對測試。
+- 新 adaptive run provenance 增加活動預測器及校準／獨立驗證來源雜湊；舊實驗維持原始 v2 配額和證據，歷史收益不當作合併後流程的驗證。
+- 合併後原生完整檢查通過 374 個後端及 31 個根測試，文檔／凍結制品驗證通過。瀏覽器驗證覆蓋 Experiments 回饋讀取、切換輪次、錯誤恢復、空狀態、純文字安全顯示、手機及整數價格。
+- 實際已保存的 `adaptive-1afc5c96d92f465d` 可讀到第六輪 16 個決策；查看頁面零 POST、零新 LLM 呼叫、零瀏覽器錯誤，切回 Forecast 正常載入。移除背景預測初始化，避免只看回饋時執行其他頁面的計算。
+
 ### 2026-11-14 — HK Express network catalogue (`hkx-network-2`) becomes the default
 
 The app's default catalogue is now `simulation/hkx_generated/`: 1,558 flights / 281,998 snapshots covering all 40 HK Express destinations in both directions (80 directed routes) and all four fleet types (A320 180, A320neo 188, A321 230, A321neo 236, one 239-seat A321neo). The legacy 8-route catalogue and its supplements are unchanged and available with `UOPTION_DATASET=legacy`; tests pinned to legacy flights switch with `data.use_dataset('legacy')`.

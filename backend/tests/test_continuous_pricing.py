@@ -52,12 +52,12 @@ class ProbabilisticCustomerTests(unittest.TestCase):
 
 
 class ContinuousSearchTests(unittest.TestCase):
-    def test_search_is_bounded_cent_resolved_and_finds_interior_price(self):
+    def test_search_is_bounded_whole_hkd_and_finds_interior_price(self):
         def evaluate(p):return {'member_fare':p,'search_score':-(p-83.61)**2}
         rows=adaptive_search(evaluate,0,200,31)
         self.assertLessEqual(len(rows),31)
         self.assertLess(abs(max(rows,key=lambda r:r['search_score'])['member_fare']-83.61),3)
-        self.assertTrue(all(0<=r['member_fare']<=200 and round(r['member_fare'],2)==r['member_fare'] for r in rows))
+        self.assertTrue(all(0<=r['member_fare']<=200 and isinstance(r['member_fare'],int) for r in rows))
         self.assertEqual(rows,adaptive_search(evaluate,0,200,31))
 
     def test_bad_input_rejected_before_simulation(self):

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Adaptive member pricing — UOption Fly Pass</title>
+<link rel="stylesheet" href="/adaptive-pricing.css">
+<script type="module" src="/adaptive-pricing.js"></script>
+</head>
+<body>
+<a class="skip" href="#page-title">Skip to content</a>
+<header class="masthead"><a class="brand" href="/admin#optimization">UOption<span>Fly Pass · Admin</span></a><nav aria-label="Workspace"><a href="/admin#optimization">Back to Optimize prices</a><a href="/members">Client Portal</a></nav></header>
+<main>
+<div class="page-head"><div><p class="eyebrow">Adaptive member pricing</p><h1 id="page-title" tabindex="-1">Test a price.<br>Learn what changes.</h1></div><p class="intro">Existing members decide whether to buy. Each round compares two whole-HKD fares with new members. Thompson Sampling learns from their choices, then separate panels check the selected fare.</p></div>
+<ol class="workflow"><li><span>01</span><div><strong>Offer a base fare</strong><small>At least 20% below the normal fare</small></div></li><li><span>02</span><div><strong>Hear from members</strong><small>Fresh, paired customer scenarios</small></div></li><li><span>03</span><div><strong>Learn and explore</strong><small>Update the purchase-rate model</small></div></li><li><span>04</span><div><strong>Check the result</strong><small>Fresh panels and a no-offer comparison</small></div></li></ol>
+<div id="page-error" class="message error" role="alert" hidden></div>
+<div class="workspace">
+<aside class="setup">
+<form id="experiment-form">
+<fieldset id="setup-fields"><legend>Set up the experiment</legend>
+<div class="field"><label for="route">Route</label><select id="route" required disabled><option value="">Loading routes…</option></select></div>
+<div class="field"><label for="flight">Departure / flight</label><select id="flight" required disabled><option value="">Choose a route first</option></select></div>
+<div class="field"><label for="release-day">Release round</label><select id="release-day"><option value="28">D28 · 28 days before departure</option><option value="14">D14 · 14 days before departure</option><option value="7">D7 · 7 days before departure</option></select></div>
+<p id="scope-message" class="hint">Choose a flight to load its observed normal fare and NHPP member quota.</p>
+<div class="field"><label for="profile">Target customer scenario</label><select id="profile" name="profile" aria-describedby="profile-note" disabled><option value="flexible_deal_seekers">Flexible bargain travellers</option><option value="broad_coverage">Broad customer coverage (legacy)</option></select><small id="profile-note">Students, spontaneous trips and destination-flexible bargain seekers. Assumed target audience, not measured HK Express customer shares.</small></div>
+<div class="field"><label for="mode">Customer decisions</label><select id="mode"><option value="synthetic">Mathematical simulation</option><option value="live" disabled>Live LLM · checking connection</option></select><small id="provider-note">Checking the configured provider…</small></div>
+<div class="field-pair"><div class="field"><label for="rounds">Price rounds</label><input id="rounds" type="number" min="2" max="30" step="1" value="10" required></div><div class="field"><label for="customers">New members per round</label><input id="customers" type="number" min="8" max="200" step="1" value="16" required></div></div>
+<details class="settings"><summary>Customer mix and run settings</summary>
+<p class="hint">These are test-population weights, not measured HK Express market shares. Positive groups receive at least one test member; reporting corrects for their sampling proportions.</p>
+<div id="weights" class="weights"></div>
+<div class="weight-total"><span id="weight-total">Total: —</span><button id="reset-weights" class="text-button" type="button">Reset weights</button></div>
+<div class="field-pair"><div class="field"><label for="concurrency">Parallel calls</label><input id="concurrency" type="number" min="1" max="8" step="1" value="4" required></div><div class="field"><label for="max-calls">LLM call limit</label><input id="max-calls" type="number" min="1" max="10000" step="1" value="600" required></div></div>
+<div class="field-pair"><div class="field"><label for="seed">Experiment seed</label><input id="seed" type="number" min="0" max="100000000" step="1" value="117" required></div><div class="field"><label for="validation-repeats">Validation panels</label><input id="validation-repeats" type="number" min="3" max="8" step="1" value="3" required></div></div>
+<p class="hint">Parallel calls collect purchase intentions. The market then clears the shared inventory in a fixed order.</p>
+</details>
+<p id="call-estimate" class="hint"></p><p class="hint">New fares use whole HKD. Each round compares the candidate and initial fare using the same new people in separate scenarios. Personal budgets are hidden from the price learner.</p>
+<button id="start" class="button primary" type="submit" disabled>Start mathematical simulation</button>
+<p id="start-note" class="hint">No membership charge is included. Taxes, fuel surcharges and operating costs are outside this experiment.</p>
+</fieldset>
+</form>
+<div class="saved-runs"><label for="saved-run">Saved experiments</label><select id="saved-run"><option value="">Choose a saved experiment</option></select><button id="load-run" type="button" class="button secondary" disabled>View experiment</button></div>
+</aside>
+<div class="results">
+<section class="flight-summary" aria-labelledby="flight-title"><div class="section-line"><h2 id="flight-title">Your selected flight</h2><span id="scope-day" class="badge">Choose a flight</span></div><p id="flight-description" class="hint">A separate experiment is created for each flight and release round.</p><div class="metrics"><div><span>Normal base fare</span><strong id="normal-fare">—</strong></div><div class="highlight"><span>Starting fare / 80% cap</span><strong id="starting-fare">—</strong></div><div><span>NHPP member quota</span><strong id="member-quota">—</strong></div></div></section>
+<section id="run-progress" class="run-progress" hidden aria-labelledby="progress-title"><div class="section-line"><h2 id="progress-title">Experiment progress</h2><span id="run-source" class="badge"></span></div><p id="run-cohort" class="hint"></p><div class="progress-line"><strong id="round-progress">0 / 0 rounds</strong><span id="elapsed">—</span></div><progress id="progress-bar" value="0" max="1" aria-label="Completed price rounds"></progress><p id="run-status" role="status"></p><p id="run-counts" class="hint"></p><p id="run-people" class="hint"></p><div class="run-links"><a id="member-feedback-link" href="/admin#customers" hidden>Read member feedback in Experiments</a><a id="export-run" href="#" hidden>Download experiment</a><button id="refresh-run" class="text-button" type="button">Refresh saved progress</button></div></section>
+<div id="empty-state" class="empty-state"><span class="empty-number">P<span>0</span></span><h2>Start with the flight’s own price.</h2><p>Each completed round will appear here: the offered fare, member purchases, base-fare revenue and what the model learned.</p></div>
+<section id="recommendation" class="recommendation" hidden aria-labelledby="recommendation-title"><div><p class="eyebrow" id="recommendation-stage">Selected for validation</p><h2 id="recommendation-title">Selected test fare</h2><strong id="recommended-price">—</strong></div><div><p id="recommendation-reason"></p><p id="candidate-tradeoff" class="hint"></p><p id="validation-verdict" class="verdict"></p><p id="retained-price-note"></p></div></section>
+<section id="round-section" hidden aria-labelledby="round-title"><div class="section-line"><h2 id="round-title">Round results</h2><span id="round-caption" class="hint"></span></div><div class="table-wrapper" tabindex="0" role="region" aria-labelledby="round-table-caption"><table><caption id="round-table-caption">Round results and paired initial-price comparison</caption><thead><tr><th scope="col">Round</th><th scope="col">Base fare</th><th scope="col">Member buyers</th><th scope="col">Weighted purchase rate</th><th scope="col">Member revenue</th><th scope="col">New people / observations</th><th scope="col">Paired revenue change</th><th scope="col">Feedback test</th></tr></thead><tbody id="round-table"></tbody></table></div></section>
+<section id="curve-section" hidden aria-labelledby="curve-title"><div class="section-line"><div><h2 id="curve-title">Price versus expected revenue</h2><p class="hint">Purchase-model estimate for the weighted customer mix, with the member quota applied.</p></div></div><figure class="chart"><svg id="curve-chart" role="img" aria-label="Estimated member base-fare revenue by price" viewBox="0 0 760 280"></svg><figcaption id="curve-caption"></figcaption></figure><details><summary>View estimated curve values</summary><div class="table-wrapper" tabindex="0" role="region" aria-labelledby="curve-table-caption"><table><caption id="curve-table-caption">Model estimates, not observed sales</caption><thead><tr><th scope="col">Base fare</th><th scope="col">Expected member buyers</th><th scope="col">Expected member revenue</th></tr></thead><tbody id="curve-table"></tbody></table></div></details></section>
+<section id="validation-section" hidden aria-labelledby="validation-title"><div class="section-line"><div><h2 id="validation-title">Does it improve the result?</h2><p class="hint">Independent validation panels compare the initial fare, the selected fare and no member offer.</p></div></div><div class="validation-headline"><div><span id="delta-label-initial">Revenue change vs initial</span><strong id="delta-initial">—</strong></div><div><span id="delta-label-no-offer">Revenue change vs no offer</span><strong id="delta-no-offer">—</strong></div></div><div id="break-even-panel" class="break-even-panel" hidden><div><span>Required member purchase rate</span><strong id="break-even-rate">—</strong></div><div><span>Observed member purchase rate</span><strong id="observed-rate">—</strong></div><p id="break-even-note"></p></div><p id="validation-basis" class="hint"></p><div id="comparison-bars" class="comparison-bars"></div><p id="validation-detail" class="hint"></p><div class="table-wrapper" tabindex="0" role="region" aria-labelledby="validation-table-caption"><table><caption id="validation-table-caption">Mean results on independent validation panels</caption><thead><tr><th scope="col">Policy</th><th scope="col">Base fare</th><th scope="col">Panel buyers</th><th scope="col">Panel revenue</th><th scope="col">Target-weighted revenue</th></tr></thead><tbody id="validation-table"></tbody></table></div></section>
+
+</div>
+</div>
+</main>
+<footer><strong>UOption Fly Pass · E117</strong><p>Synthetic customers · Assumed segment weights · Base-fare revenue, not airline profit</p><p>Membership is already active. This experiment does not publish offers or modify customer bookings.</p></footer>
+</body>
+</html>

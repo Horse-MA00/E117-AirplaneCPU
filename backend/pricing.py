@@ -25,7 +25,7 @@ def _config(config):
     src = config or {}
     specs = {"seed": (117, 0, 2**31-1, True), "membership_days": (365, 30, 730, True),
              "customers": (300, 20, 1200, True), "flights": (24, 6, 100, True),
-             "normal_base_fare": (500, 100, 3000, False), "mandatory_fees": (250, 0, 1000, False),
+             "normal_base_fare": (500, 100, 3000, True), "mandatory_fees": (250, 0, 1000, False),
              "incremental_cost": (90, 0, 1000, False), "ancillary_margin": (45, 0, 500, False),
              "member_service_cost": (30, 0, 500, False), "program_cost": (1500, 0, 100000, False),
              "interest_multiplier": (1, .1, 3, False), "min_service_rate": (.6, 0, 1, False),

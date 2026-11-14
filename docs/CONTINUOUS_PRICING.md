@@ -1,6 +1,6 @@
 # Continuous member-fare optimisation
 
-> 状态：现行 · 对应代码：`continuous-shared-pricing-v1.1`
+> 状态：现行 · 对应代码：`continuous-shared-pricing-v1.2-whole-hkd`
 
 New branch method, 2026-11-14. Earlier fixed-tier results are historical evidence;
 they do not validate the new behavioural assumptions. NHPP parameters, calibration
@@ -9,7 +9,7 @@ and frozen reports have not been retuned.
 ## Method
 
 1. Fix membership fee, release share, and the existing additive D28/D14/D7 quota
-   rules. Search the allowed member base-fare interval at HKD-cent resolution.
+   rules. Search the allowed member base-fare interval at whole-HKD resolution.
 2. Replay each fare in the **same shared market engine** and the same exogenous
    worlds: membership, companions, availability, full prices, cancellations,
    party acceptance and budgets use the existing environment and cent ledger.

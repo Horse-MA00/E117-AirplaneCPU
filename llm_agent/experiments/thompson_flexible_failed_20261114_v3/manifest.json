@@ -1,0 +1,41 @@
+{
+  "source": "adaptive_thompson_failed_attempt",
+  "run_id": "adaptive-70f6996ca79e4b21",
+  "status": "failed",
+  "synthetic": true,
+  "files": {
+    "report.json": {
+      "sha256": "f174c732dffa726ef54d781e3dd22fe908f618b81810327c24686c4f90b7497b",
+      "bytes": 547961
+    },
+    "audit.jsonl.gz": {
+      "sha256": "ae683fe6ef24e1be2e7bb14292760ef137c2935e11834f51e43026c5ee16317d",
+      "bytes": 66806
+    }
+  },
+  "audit_records": 176,
+  "counts": {
+    "provider_calls": 49,
+    "fresh_responses": 49,
+    "cache_hits": 0,
+    "forced": 26,
+    "failures": 2,
+    "synthetic_choices": 0,
+    "total_tokens": 75851,
+    "peak_parallel_calls": 4,
+    "customer_calls": 48,
+    "analyst_calls": 1,
+    "key_slots": {
+      "primary": 25,
+      "secondary": 24
+    },
+    "max_calls": 600,
+    "remaining_calls": 551,
+    "configured_key_slots": 2,
+    "concurrency": 4,
+    "peak_parallel": 4,
+    "stopped_after_failure": true,
+    "elapsed_seconds": 21.507
+  },
+  "claim": "Failed transport/decision validation attempt; not completed optimization evidence."
+}

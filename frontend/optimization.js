@@ -89,7 +89,7 @@ function priceProfit(tracks){
   const allRows=tracks.flatMap(t=>t.rounds.filter(r=>Number.isFinite(r.total_contribution)).map(r=>({...r,mode:t.mode})));
   const rows=allRows.filter(row=>row.price_evidence_qualified===true);
   text('optimization-price-evidence',!allRows.length?'Waiting for evaluated customer decisions.':!rows.length?'No member-price evidence: no usable member offer exposure was recorded. Financial audit rows below are not a price-response curve.':`${rows.length} tested prices had customer exposure to a member offer. ${allRows.length-rows.length} uninformative evaluations excluded. These are tested candidates; only independent validation can recommend an offer.`);
-  text('optimization-curve-protocol',state.data.config.price_comparison_protocol==='fixed-seat-profile-local-fare-v1'?'Pass fee, seat-protection profile and matched markets stay fixed across tested prices. Proposed forecast updates are recorded separately.':'Historical run: seat protection may differ by round; price effects are not isolated.');
+  text('optimization-curve-protocol',['fixed-seat-profile-local-fare-v1','fixed-seat-profile-local-fare-v2-whole-hkd'].includes(state.data.config.price_comparison_protocol)?'Pass fee, seat-protection profile and matched markets stay fixed across tested prices. Proposed forecast updates are recorded separately.':'Historical run: seat protection may differ by round; price effects are not isolated.');
   const width=Math.max(290,Math.round(svg.getBoundingClientRect().width)||700),height=320;
   svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
   svg.append(svgNode('title',{},'Member base price versus simulated flight contribution; point size represents member buyers'));
@@ -209,7 +209,7 @@ function formulaSummary(){
   const box=$('optimization-formula'),e=state.data?.config?.formula_estimate;box.hidden=!e;if(!e){box.replaceChildren();return;}
   const math=(state.data.tracks||[]).find(t=>t.mode==='math'),best=math?.best;
   const parts=[node('strong',`Formula estimate P* = ${money(e.p_star)}`),
-    document.createTextNode(` Scored ${num(e.prices_scored)} member fares from ${money(e.search_low)} to ${money(e.search_high)} (the 50% cap) for ${num(e.travellers_scored)} simulated travellers using the mathematical customer model's choice probabilities; expected ${signed(e.expected_incremental)} versus no offer. The full simulation then tests P* and ${num(e.grid.length-1)} nearby prices.`)];
+    document.createTextNode(` Scored ${num(e.prices_scored)} member fares from ${money(e.search_low)} to ${money(e.search_high)} (the saved fare cap) for ${num(e.travellers_scored)} simulated travellers using the mathematical customer model's choice probabilities; expected ${signed(e.expected_incremental)} versus no offer. The full simulation then tests P* and ${num(e.grid.length-1)} nearby prices.`)];
   if(best)parts.push(document.createTextNode(best.member_fare===e.p_star?` Simulation confirms P* as the best tested price.`:` Simulation moved the best tested price to ${money(best.member_fare)}.`));
   box.replaceChildren(...parts);
 }
@@ -253,7 +253,7 @@ async function loadScope(){
     if(!result.scope)throw new Error('This backend does not support flight-scoped optimization. Refresh after updating the server.');
     state.scope=result.scope;
     const scope=result.scope;
-    text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${num(scope.available_seats)} physical empty seats / ${num(scope.capacity)} capacity; ${num(scope.releasable_seats)} forecast member seats.`);
+    text('optimization-scope',`${scope.origin} → ${scope.destination} · ${scope.departure_date} · D${scope.as_of_day}. ${num(scope.available_seats)} physical empty seats / ${num(scope.capacity)} capacity; ${num(scope.releasable_seats)} forecast member seats. P₀ ${money(result.initial_member_fare)}; member fares are capped at 80% of the normal base fare.`);
     $('optimization-load-demo').hidden=scopeEligible(scope);
     showError('');
   }catch(error){if(token===state.scopeRequest)showError(error.message);}finally{if(token===state.scopeRequest)controls();}

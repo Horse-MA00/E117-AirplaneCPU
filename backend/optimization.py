@@ -19,9 +19,9 @@ import uuid
 from . import optimization_store as store
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'flight-policy-feedback-v6-formula-grid'
-FORMULA_GRID = 'formula-p-star-fine-grid-v1'
-CONTROLLED_PRICE_PROTOCOL = 'fixed-seat-profile-local-fare-v1'
+VERSION = 'flight-policy-feedback-v8-whole-hkd'
+FORMULA_GRID = 'formula-p-star-fine-grid-v2-whole-hkd'
+CONTROLLED_PRICE_PROTOCOL = 'fixed-seat-profile-local-fare-v2-whole-hkd'
 ROOT = Path(__file__).resolve().parents[1]
 _lock = threading.RLock()
 _active = set()
@@ -37,12 +37,20 @@ def validate(body):
     if not isinstance(body, dict):
         raise ValueError('JSON object required')
     scope = None
+    from .fare_policy import integer_price
+    for key in ('initial_member_fare', 'initial_membership_fee', 'fare_min', 'fare_max', 'fee_min', 'fee_max'):
+        # Scoped fees/bounds are server policy, not user input. Ignore overrides
+        # before validating executable prices; legacy requests keep validation.
+        if body.get('flight_id') and key in ('initial_membership_fee', 'fee_min', 'fee_max'):
+            continue
+        if key in body:
+            integer_price(body[key], key)
     if body.get('flight_id'):
         from backend.initial_policy import SCOPED_MEMBERSHIP_FEE, flight_scope
         scope = flight_scope(body['flight_id'], body.get('forecast_day', 28))
         body = {**body, 'initial_member_fare': scope['initial_member_fare'],
                 'initial_membership_fee': SCOPED_MEMBERSHIP_FEE, 'fee_min':0, 'fee_max':5000}
-        # Member fares never exceed 50% of the normal base fare; a wider requested
+        # Member fares never exceed 80% of the normal base fare; a wider requested
         # upper bound is narrowed to the cap so no candidate can be proposed above it.
         cap = scope['member_fare_cap']
         requested = body.get('fare_max', cap)
@@ -50,9 +58,9 @@ def validate(body):
     options = {
         'rounds': (5, 1, 12, True), 'customers': (14, 1, 100, True), 'flights': (6, 6, 12, True),
         'replicates': (1, 1, 3, True), 'seed': (117, 0, 2**31-100000, True),
-        'initial_member_fare': (70, 0, 2000, False), 'initial_membership_fee': (399, 0, 5000, False),
-        'fare_min': (0, 0, 2000, False), 'fare_max': (500, 0, 2000, False),
-        'fee_min': (0, 0, 5000, False), 'fee_max': (1500, 0, 5000, False),
+        'initial_member_fare': (70, 0, 2000, True), 'initial_membership_fee': (399, 0, 5000, True),
+        'fare_min': (0, 0, 2000, True), 'fare_max': (500, 0, 2000, True),
+        'fee_min': (0, 0, 5000, True), 'fee_max': (1500, 0, 5000, True),
         'release_fraction': (.5, 0, 1, False), 'min_service_rate': (.6, 0, 1, False),
         'program_cost': (1500, 0, 10000, False), 'max_calls': (60, 0, 120, True),
     }
@@ -64,10 +72,10 @@ def validate(body):
     for axis, initial in (('fare', 'initial_member_fare'), ('fee', 'initial_membership_fee')):
         if not cfg[axis + '_min'] <= cfg[initial] <= cfg[axis + '_max'] or cfg[axis + '_min'] >= cfg[axis + '_max']:
             raise ValueError(f'{axis} bounds must contain the initial price and have nonzero width')
-        if round(cfg[axis + '_max'] * 100) <= round(cfg[axis + '_min'] * 100):
-            raise ValueError(f'{axis} interval must span at least one cent')
+        if cfg[axis + '_max'] <= cfg[axis + '_min']:
+            raise ValueError(f'{axis} interval must span at least one HKD')
     for key in ('initial_member_fare', 'initial_membership_fee', 'fare_min', 'fare_max', 'fee_min', 'fee_max'):
-        cfg[key] = round(cfg[key], 2)
+        cfg[key] = integer_price(cfg[key], key)
     if scope:
         cfg.update(scope=scope, flight_id=scope['flight_id'], forecast_day=scope['as_of_day'], flights=1,
                    membership_fee_fixed=True, annual_fee_allocation=1/3,
@@ -122,7 +130,7 @@ def best_candidate(rows):
 
 
 def propose(config, rows, mode=None):
-    """Feedback-guided 2D pattern search, bounded and quantized to HKD cents."""
+    """Feedback-guided 2D pattern search, bounded and quantized to whole HKD."""
     if mode == 'math' and config.get('math_search') == FORMULA_GRID:
         grid = config['formula_estimate']['grid']
         if len(rows) >= len(grid):
@@ -135,42 +143,42 @@ def propose(config, rows, mode=None):
     if config.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL:
         return _propose_scoped(config, rows)
     best = best_candidate(rows)
-    seen = {(round(row['member_fare'] * 100), round(row['membership_fee'] * 100)) for row in rows}
+    seen = {(int(row['member_fare']), int(row['membership_fee'])) for row in rows}
     directions = [(-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]
     if config.get('membership_fee_fixed'):
         directions = [(-1, 0), (1, 0)]
     phase = (len(rows)-1) // len(directions)
     offset = (len(rows)-1) % len(directions)
-    bounds = [(round(config['fare_min']*100), round(config['fare_max']*100)),
-              (round(config['fee_min']*100), round(config['fee_max']*100))]
+    bounds = [(int(config['fare_min']), int(config['fare_max'])),
+              (int(config['fee_min']), int(config['fee_max']))]
     steps = [max(1, round((hi-lo) / (4 * 2**phase))) for lo, hi in bounds]
-    center = (round(best['member_fare']*100), round(best['membership_fee']*100))
+    center = (int(best['member_fare']), int(best['membership_fee']))
     for shift in range(len(directions)):
         direction = directions[(offset+shift) % len(directions)]
         point = tuple(max(lo, min(hi, c + sign*step)) for c, sign, step, (lo, hi) in zip(center, direction, steps, bounds))
         if point not in seen:
-            return {'member_fare': point[0]/100, 'membership_fee': point[1]/100}
+            return {'member_fare': point[0], 'membership_fee': point[1]}
     # On a bound, try progressively smaller moves before a deterministic broad probe.
     for divisor in (2, 4, 8, 16):
         for direction in directions:
             point = tuple(max(lo, min(hi, c+sign*max(1, step//divisor))) for c, sign, step, (lo, hi) in zip(center, direction, steps, bounds))
             if point not in seen:
-                return {'member_fare': point[0]/100, 'membership_fee': point[1]/100}
+                return {'member_fare': point[0], 'membership_fee': point[1]}
     for left in range(bounds[0][0], min(bounds[0][1]+1, bounds[0][0]+13)):
-        fees = [round(config['initial_membership_fee']*100)] if config.get('membership_fee_fixed') else range(bounds[1][0], min(bounds[1][1]+1,bounds[1][0]+13))
+        fees = [int(config['initial_membership_fee'])] if config.get('membership_fee_fixed') else range(bounds[1][0], min(bounds[1][1]+1,bounds[1][0]+13))
         for right in fees:
             if (left, right) not in seen:
-                return {'member_fare': left/100, 'membership_fee': right/100}
+                return {'member_fare': left, 'membership_fee': right}
     # A tiny complete domain may have fewer unique points than the requested budget.
     return None
 
 
 def _propose_scoped(config, rows):
     """Local probes first, then explicit bounded exploration; never rewrite prior tests."""
-    low, high = (round(config[k]*100) for k in ('fare_min','fare_max'))
-    initial = round(config['initial_member_fare']*100)
+    low, high = (int(config[k]) for k in ('fare_min','fare_max'))
+    initial = int(config['initial_member_fare'])
     fee = config['initial_membership_fee']
-    seen = {round(r['member_fare']*100) for r in rows}
+    seen = {int(r['member_fare']) for r in rows}
     # A zero P0 has no relative scale; use 5% of the permitted span as its step.
     step = max(1,round(initial*.25) if initial else round((high-low)*.05))
     probes = [(initial-step,'local_lower'),(initial+step,'local_upper'),
@@ -179,17 +187,17 @@ def _propose_scoped(config, rows):
     for point,label in probes:
         point = max(low,min(high,point))
         if point not in seen:
-            return {'member_fare':point/100,'membership_fee':fee,'search_step':label}
+            return {'member_fare':point,'membership_fee':fee,'search_step':label}
     best = best_candidate(rows)
-    center = round(best['member_fare']*100) if best else initial
+    center = int(best['member_fare']) if best else initial
     for divisor in (2,4,8,16,32):
         for sign in (-1,1):
             point=max(low,min(high,center+sign*max(1,step//divisor)))
             if point not in seen:
-                return {'member_fare':point/100,'membership_fee':fee,'search_step':'local_refinement'}
+                return {'member_fare':point,'membership_fee':fee,'search_step':'local_refinement'}
     for point in range(low,min(high+1,low+13)):
         if point not in seen:
-            return {'member_fare':point/100,'membership_fee':fee,'search_step':'bounded_exploration'}
+            return {'member_fare':point,'membership_fee':fee,'search_step':'bounded_exploration'}
     return None
 
 

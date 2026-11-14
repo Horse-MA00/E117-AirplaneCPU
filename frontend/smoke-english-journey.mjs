@@ -14,7 +14,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 try {
-  await page.goto(`${origin}/admin#customers`, { waitUntil: 'networkidle' });
+  await page.goto(`${origin}/admin#panel`, { waitUntil: 'networkidle' });
   assert.equal(await page.locator('#agent-count').inputValue(), '100');
   assert.equal(await page.locator('#agent-count').getAttribute('max'), '1000');
   if (!await page.locator('#live-mode-option').isDisabled()) {
@@ -58,7 +58,7 @@ try {
   assert.match(await scenario.innerText(), /4 \/ 0 \/ 1 member seats/);
   assert.match(await scenario.innerText(), /not purchases in this ledger/);
   await scenario.locator('summary').click();
-  await page.locator('#view-customers h1').scrollIntoViewIfNeeded();
+  await page.locator('#view-panel h1').scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${output}panel-admin-desktop.png`, fullPage: true });
 
   // Return a partial saved live panel only through fixtures. No model calls.
@@ -83,7 +83,7 @@ try {
 
   for (const width of [390, 768]) {
     await page.setViewportSize({width,height:900});
-    await page.locator('#view-customers h1').scrollIntoViewIfNeeded();
+    await page.locator('#view-panel h1').scrollIntoViewIfNeeded();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1),false);
     await page.screenshot({path:`${output}panel-admin-${width}.png`,fullPage:true});
   }

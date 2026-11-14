@@ -14,7 +14,7 @@ const history=f=>[28,14,7,1,0].map(days_to_departure=>({days_to_departure,capaci
 await page.route('**/*',async route=>{
   const request=route.request(),path=new URL(request.url()).pathname,reply=json=>route.fulfill({json});
   if(path==='/admin'||path==='/')return route.fulfill({contentType:'text/html',body:await readFile(new URL('./index.html',import.meta.url),'utf8')});
-  if(['/app.js','/optimization.js','/demand-filter.js','/contribution-explanation.js','/seat-status.js','/styles.css','/continuous.js','/price-chart.js'].includes(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
+  if(['/app.js','/experiments.js','/optimization.js','/demand-filter.js','/contribution-explanation.js','/seat-status.js','/styles.css','/continuous.js','/price-chart.js'].includes(path))return route.fulfill({contentType:path.endsWith('.css')?'text/css':'text/javascript',body:await readFile(new URL(`.${path}`,import.meta.url),'utf8')});
   if(path==='/api/summary')return reply({dataset:{catalog_rows:280364},llm:{configured:false}});
   if(path==='/api/member-portal/plan')return reply({membership:{fee:399,term_days:365}});
   if(path==='/api/flights')return reply({flights:catalogue()});
@@ -23,7 +23,7 @@ await page.route('**/*',async route=>{
   if(path==='/api/optimization/initial-policy'){
     const body=request.postDataJSON(),flight=catalogue().find(f=>f.flight_id===body.flight_id);
     scopeRequests.push(body);
-    return reply({initial_member_fare:flight.normal_base_fare*.5,initial_membership_fee:399,scope:{...flight,as_of_day:body.forecast_day,available_seats:110,normal_base_fare:flight.normal_base_fare,member_fare_cap:flight.normal_base_fare*.5,member_fare_cap_ratio:.5,releasable_seats:40,member_supply_exposure:40,optimization_eligible:true}});
+    return reply({initial_member_fare:Math.floor(flight.normal_base_fare*.8),initial_membership_fee:399,scope:{...flight,as_of_day:body.forecast_day,available_seats:110,normal_base_fare:flight.normal_base_fare,member_fare_cap:Math.floor(flight.normal_base_fare*.8),member_fare_cap_ratio:.8,releasable_seats:40,member_supply_exposure:40,optimization_eligible:true}});
   }
   if(path==='/api/optimization/runs'){if(request.method()==='POST')starts++;return reply({runs:[]});}
   if(path.startsWith('/api/'))return reply({runs:[],panels:[],segments:[],offers:[]});
@@ -54,6 +54,9 @@ try{
   await page.locator('[data-day="14"]').click();
   assert.equal(await page.locator('#forecast-demand').inputValue(),'high');
   assert.equal(await page.locator('#flight-select option').count(),1,'Moving the timeline must not reclassify D28 groups');
+  // D14 also refreshes the offer suggestion; settle both reads before counting
+  // requests caused by the later empty selection.
+  await page.waitForLoadState('networkidle');
   const calls=forecastCalls;
   await page.locator('#forecast-demand').selectOption('unknown');
   assert.equal(await page.locator('#flight-select').isDisabled(),true);

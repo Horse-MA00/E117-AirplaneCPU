@@ -123,6 +123,8 @@ class Store:
             raise ValueError('Quantity must be a positive integer')
         if any(isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or x < 0 for x in (fare, fees, max_release)):
             raise ValueError('Prices and release limit must be finite and nonnegative')
+        from .fare_policy import integer_price
+        fare = integer_price(fare, 'Member base fare')
         now = time.time()
         with self.connect() as c:
             c.execute('BEGIN IMMEDIATE')
@@ -154,6 +156,9 @@ class Store:
     def plan(self, fee=None):
         if fee is not None and (isinstance(fee, bool) or not isinstance(fee, (int, float)) or not math.isfinite(fee) or not 0 <= fee <= 5000):
             raise ValueError('Membership fee must be between HKD 0 and 5000')
+        from .fare_policy import integer_price
+        if fee is not None:
+            fee = integer_price(fee, 'Membership fee', 0, 5000)
         with self.connect() as c:
             if fee is not None:
                 c.execute('UPDATE membership_plan SET fee=? WHERE id=1', (fee,))

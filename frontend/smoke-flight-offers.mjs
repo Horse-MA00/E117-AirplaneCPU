@@ -21,7 +21,7 @@ await page.route('**/api/forecast',async route=>{
 await page.route('**/api/optimization/suggestions?**',async route=>{
   const url=new URL(route.request().url()),flight=url.searchParams.get('flight_id');
   const response={flight_id:flight,forecast_day:Number(url.searchParams.get('day')),current_release_limit:10,
-    suggestions:flight===a?[{run_id:'opt-browser-fixture',mode:'math',decision:'OFFER',member_fare:42.25,membership_fee:499,suggested_new_seats:3}]:[],
+    suggestions:flight===a?[{run_id:'opt-browser-fixture',mode:'math',decision:'OFFER',member_fare:42,membership_fee:499,suggested_new_seats:3}]:[],
     reason:flight===a?'':'No completed validated optimization for this exact flight and round.'};
   if(flight===b&&outcome!=='not_run'){
     if(outcome==='error')return route.fulfill({status:503,json:{error:'Temporary suggestion outage'}});
@@ -49,7 +49,7 @@ try{
   await page.locator('#offer-day').selectOption('14');
   await page.getByRole('button',{name:'Use this suggestion',exact:true}).waitFor();
   await page.getByRole('button',{name:'Use this suggestion',exact:true}).click();
-  assert.equal(await page.locator('#offer-fare').inputValue(),'42.25');
+  assert.equal(await page.locator('#offer-fare').inputValue(),'42');
   assert.equal(await page.locator('#offer-quantity').inputValue(),'3');
   assert.equal(await page.locator('#publish-button').isDisabled(),true,'Linked offer waits for the matching published pass fee');
   assert.match(await page.locator('#offer-binding-status').innerText(),/Save the HK\$499/);
@@ -59,7 +59,7 @@ try{
   assert.equal(await page.locator('#flight-select').inputValue(),forecastFlight,'Manage selection must not switch Forecast selection');
   await page.getByRole('link',{name:'Optimize prices',exact:true}).click();
   await page.getByRole('link',{name:'Manage offers',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('#offer-optimization-suggestion').getAttribute('aria-busy')==='false'&&document.querySelector('#offer-fare').value==='42.25');
+  await page.waitForFunction(()=>document.querySelector('#offer-optimization-suggestion').getAttribute('aria-busy')==='false'&&document.querySelector('#offer-fare').value==='42');
   assert.equal(await page.locator('#offer-quantity').inputValue(),'3','Returning to Manage retains a still-valid linked draft');
   assert.match(await page.locator('#offer-binding-status').innerText(),/Linked optimization/);
   assert.equal(submissions.length,0,'Returning to Manage never publishes the draft');
@@ -67,7 +67,7 @@ try{
   await page.locator('#publish-button').click();
   await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('fixture-published'));
   assert.equal(submissions.length,1);
-  assert.deepEqual(submissions[0],{flight_id:a,days_to_departure:14,quantity:3,base_fare:42.25,optimization_run_id:'opt-browser-fixture',optimization_mode:'math'});
+  assert.deepEqual(submissions[0],{flight_id:a,days_to_departure:14,quantity:3,base_fare:42,optimization_run_id:'opt-browser-fixture',optimization_mode:'math'});
   await page.locator('#offer-flight').selectOption(b);
   await page.waitForFunction(()=>document.querySelector('#offer-optimization-suggestion').textContent.includes('No completed validated optimization'));
   assert.equal(await page.locator('#offer-fare').inputValue(),'','Changing flight clears the old price draft');
