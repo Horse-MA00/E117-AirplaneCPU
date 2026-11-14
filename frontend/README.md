@@ -24,6 +24,8 @@ Member search supports a destination country/region and inclusive date range. `N
 
 Admin and Optimize share a sidebar, flight selector and locally served Inter fonts in `admin-shell.css`; the member portal keeps its current Helvetica design. Colours remain purple `#6F2C91`, cyan `#24BCDC` and white. See [Admin UI specification and contract](../docs/FRONTEND_UI.md). Controls have persistent labels, native keyboard behavior and explicit current-page navigation. API and LLM text is rendered as text, not untrusted HTML. Mobile layouts and checkout focus handling are covered by browser checks.
 
+`flight-picker.js` supplies Admin and Optimize with From / To filters using the full Client airport/country catalog. Both controls support Anywhere and country-wide choices; demand only filters matching flights. Flight labels contain the date and complete synthetic flight ID, plus the route when the place filters are broad. Empty matches keep the chosen filters and clear the previous flight scope. `place-search.js` adds a magnifier to each From / To control: typing a city, airport code or country filters that select's own options, and choosing one fires the select's normal `change` event.
+
 ## Browser checks
 
 With the native backend running:

@@ -55,8 +55,9 @@ try {
       }
     });
     assert.ok(availableFlight, 'Need an unused release round for transactional QA.');
-    // The flight box lists one route at a time; choose the route first.
-    await page.locator('#context-route').selectOption(availableFlight.route);
+    // The shared From / To fields filter the flight list.
+    const [from,to]=availableFlight.route.split(' → ');
+    await page.locator('#context-from').selectOption(from);await page.locator('#context-to').selectOption(to);
     await page.locator('#flight-select').selectOption(availableFlight.id); await waitForecast();
     await navigate('members');
     assert.equal(await page.locator('#publish-button').isDisabled(), false, 'Selected flight needs available member inventory for this optional test.');

@@ -20,7 +20,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 - [PITCHING_BRIEF](docs/PITCHING_BRIEF.md)：当前路演内容和证据限制。
 - [NHPP_V3_REVIEW](docs/NHPP_V3_REVIEW.md)、[NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：活动预测器及冻结验证。
 - [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin与会员端流程、两类示范登入和半年会员；[HK_EXPRESS_BOOKING_UI_REVIEW](docs/HK_EXPRESS_BOOKING_UI_REVIEW.md)：会员页订票界面规格。
-- [FRONTEND_UI](docs/FRONTEND_UI.md)：Admin设计、共用航班栏、Results与前端契约；改UI时核对现行契约，会员端保持独立。
+- [FRONTEND_UI](docs/FRONTEND_UI.md)：Admin设计、完整From／To与航班编号、Results及前端契约；改UI时核对现行契约，会员端保持独立。
 - [EXTENDED_VALIDATION](docs/EXTENDED_VALIDATION.md)：独立NHPP验证和发布完整性。
 - [DOCKER](docs/DOCKER.md)：容器配置和测试；本机开发优先原生运行。
 - [ITERATION_2_PROGRESS](docs/ITERATION_2_PROGRESS.md)：当前清理与验证记录。

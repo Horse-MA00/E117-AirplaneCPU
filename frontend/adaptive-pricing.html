@@ -15,7 +15,7 @@
 <a class="skip" href="#page-title">Skip to content</a>
 <div class="app-shell">
   <aside class="sidebar">
-    <a class="brand" href="/admin#flights" aria-label="UOption Admin home"><span class="brand-mark" aria-hidden="true"></span><span class="brand-text">UOption<small>Fly Pass · Admin</small></span></a>
+    <a class="brand" href="/admin#flights" aria-label="UOption Fly Pass Admin home"><span class="brand-word">UOption<span class="brand-pass">Fly Pass</span></span><span class="brand-role">Admin</span></a>
     <nav class="primary-nav" aria-label="Workspace">
       <span class="nav-group">Release workflow</span>
       <a href="/admin#flights" data-step="1" data-admin-view="flights">Forecast seats</a>
@@ -36,8 +36,12 @@
       <fieldset id="scope-fields" class="ctx-fieldset">
         <legend class="sr-only">Flight and release round</legend>
         <div class="ctx-field demand"><label for="opt-demand">Demand level</label><select id="opt-demand" disabled><option value="all">All demand</option></select></div>
-        <div class="ctx-field route"><label for="route">Route</label><select id="route" required disabled><option value="">Loading routes…</option></select></div>
-        <div class="ctx-field flight"><label for="flight">Flight</label><select id="flight" required disabled><option value="">Choose a route first</option></select></div>
+        <div class="ctx-places">
+          <div class="ctx-field place from"><label for="opt-from">From</label><select id="opt-from" name="origin" disabled><option value="HKG">Hong Kong (HKG)</option></select></div>
+          <svg class="flight-direction" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h16m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="ctx-field place to"><label for="opt-to">To</label><select id="opt-to" name="destination" disabled><option value="">Anywhere</option></select></div>
+        </div>
+        <div class="ctx-field flight"><label for="flight">Flight</label><select id="flight" required disabled><option value="">Loading flights…</option></select></div>
         <div class="ctx-round" role="group" aria-labelledby="opt-round-label"><span id="opt-round-label" class="ctx-label">Release round</span>
           <div class="round-buttons">
             <button type="button" data-round="28" aria-pressed="true">D28</button>

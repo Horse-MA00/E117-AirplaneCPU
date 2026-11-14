@@ -18,8 +18,8 @@ try{
   let creation;
   if(savedId){creation={run_id:savedId};}
   else{
-    await page.locator('#route:not([disabled])').waitFor();
-    await page.locator('#route').selectOption('HKG → KMQ');
+    await page.locator('#opt-from:not([disabled])').waitFor();
+    await page.locator('#opt-from').selectOption('HKG');await page.locator('#opt-to').selectOption('KMQ');
     const scopeResponse=page.waitForResponse(r=>r.url().endsWith('/api/adaptive-pricing/scope')&&r.request().method()==='POST');
     await page.locator('#flight').selectOption('NET-HKG-KMQ-20270518');
     const snapshot=await (await scopeResponse).json();

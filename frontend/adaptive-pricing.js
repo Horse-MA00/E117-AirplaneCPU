@@ -1,6 +1,7 @@
 import { releaseRound } from './thompson-navigation.js';
 import { matchesDemand, populateDemandFilter } from './demand-filter.js';
-import { attachRouteSearch } from './route-search.js';
+import { populatePlaces, matchesFlightPlaces, setFlightPlaces, flightOptionLabel } from './flight-picker.js';
+import { attachPlaceSearch } from './place-search.js';
 const $ = id => document.getElementById(id);
 const money = value => Number.isFinite(Number(value)) && value !== null && value !== undefined ? `HK$${Number(value).toLocaleString('en-HK', {minimumFractionDigits: Number(value) % 1 ? 2 : 0, maximumFractionDigits: 2})}` : '—';
 const numeric = value => typeof value === 'number' && Number.isFinite(value);
@@ -30,25 +31,13 @@ async function api(path, body) {
 function error(message = '') { $('page-error').textContent = message; $('page-error').hidden = !message; }
 function node(tag, text, className) { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; }
 function option(value, text) { const el = node('option', text); el.value = value; return el; }
-function routeKey(flight) { return `${flight.origin} → ${flight.destination}`; }
 function flightDate(flight) { return flight.departure_date || String(flight.departure_at || '').slice(0, 10); }
-function longDate(iso) {
-  const [y, m, d] = String(iso).split('-').map(Number);
-  if (!y || !m || !d) return iso || '—';
-  const date = new Date(Date.UTC(y, m - 1, d)), part = (o) => date.toLocaleDateString('en-GB', { ...o, timeZone: 'UTC' });
-  return `${part({ weekday: 'short' })} ${d} ${part({ month: 'short' })} ${y}`;
-}
 const inDemand = f => matchesDemand(f, $('opt-demand').value || 'all');
-function fillRoutes() {
-  const selected = $('route').value;
-  const keys = [...new Set(flights.filter(inDemand).map(routeKey))].sort();
-  $('route').replaceChildren(option('', 'Choose a route'), ...keys.map(key => option(key, key)));
-  $('route').disabled = false;
-  if (keys.includes(selected)) $('route').value = selected;
-}
-function fillFlights(selected = '') {
-  const matching = flights.filter(f => routeKey(f) === $('route').value && inDemand(f)).sort((a,b) => `${flightDate(a)}${a.flight_id}`.localeCompare(`${flightDate(b)}${b.flight_id}`));
-  $('flight').replaceChildren(option('', matching.length ? 'Choose a departure' : 'Choose a route first'), ...matching.map(f => option(f.flight_id, `${longDate(flightDate(f))} · ${Number(f.capacity) || '—'} seats`)));
+function fillFlights(selected = $('flight').value) {
+  const from = $('opt-from').value, to = $('opt-to').value;
+  const includeRoute = [from, to].some(place => !place || place.startsWith('region:'));
+  const matching = flights.filter(f => inDemand(f) && matchesFlightPlaces(f, from, to)).sort((a,b) => `${flightDate(a)}${a.flight_id}`.localeCompare(`${flightDate(b)}${b.flight_id}`));
+  $('flight').replaceChildren(option('', matching.length ? 'Choose a departure' : 'No matching flights'), ...matching.map(f => option(f.flight_id, flightOptionLabel(f, {includeRoute}))));
   $('flight').disabled = !matching.length;
   if (matching.some(f => f.flight_id === selected)) $('flight').value = selected;
 }
@@ -143,7 +132,8 @@ async function loadScope() {
     if (sequence !== scopeSequence) return;
     // Open the latest saved result before enabling anything, so the page settles in one step.
     const latest = !run && !submitting ? latestSavedFor(flightId, $('release-day').value) : null;
-    if (latest) { try { await showRun(latest.run_id); return; } catch { /* fall back to the live scope below */ } }
+    if (latest) { try { await showRun(latest.run_id, {restorePlaces:false}); return; } catch { /* fall back to the live scope below */ } }
+    if (sequence !== scopeSequence) return;
     renderScope(result.scope || result);
   } catch (e) { if (sequence === scopeSequence) { $('scope-message').textContent = 'Flight details could not be loaded.'; error(e.message); } }
 }
@@ -314,8 +304,11 @@ async function fetchRun(id, sequence=runSequence) {
   renderRun(value);
   if(active(value))pollTimer=setTimeout(()=>fetchRun(id,sequence).catch(e=>{if(sequence===runSequence){error(`Progress polling stopped: ${e.message} Use “Refresh saved progress” to retry.`);}}),1500);
 }
-async function showRun(id) {
+async function showRun(id, {restorePlaces=true} = {}) {
   if(!safeId(id))throw new Error('Choose a valid saved experiment.');
+  // An explicit saved-run selection supersedes any pending flight request.
+  // Otherwise its late scope response could start an automatic saved-run load.
+  if(restorePlaces)scopeSequence++;
   clearTimeout(pollTimer);const sequence=++runSequence;
   const value=await api(`/api/adaptive-pricing/runs/${id}`);
   if(sequence!==runSequence)return;
@@ -326,9 +319,10 @@ async function showRun(id) {
     const savedFlight=flights.find(f=>f.flight_id===value.scope.flight_id);
     // Opening a saved result must restore its actual flight, even when the
     // current demand filter excludes it. A matching filter remains intact.
-    if(savedFlight&&!inDemand(savedFlight)){$('opt-demand').value='all';fillRoutes();}
+    if(savedFlight&&!inDemand(savedFlight))$('opt-demand').value='all';
+    if(restorePlaces)setFlightPlaces($('opt-from'),$('opt-to'),savedFlight || value.scope);
     $('release-day').value=String(value.scope.as_of_day);
-    renderScope(value.scope);$('route').value=routeKey(value.scope);fillFlights(value.scope.flight_id);
+    fillFlights(value.scope.flight_id);renderScope($('flight').value ? value.scope : null);
     syncRound();updateNavLinks();
   }
   restoreNewExperimentWeights(value);
@@ -345,9 +339,8 @@ async function loadSaved() {
   if([...$('saved-run').options].some(o=>o.value===selected))$('saved-run').value=selected;
   $('load-run').disabled=!$('saved-run').value;
 }
-$('route').addEventListener('change',()=>{clearRun();fillFlights();loadScope();});
-attachRouteSearch($('route'));
-$('opt-demand').addEventListener('change',()=>{clearRun();fillRoutes();fillFlights($('flight').value);loadScope();});
+for(const id of ['opt-from','opt-to','opt-demand'])$(id).addEventListener('change',()=>{const selected=$('flight').value;clearRun();fillFlights(selected);loadScope();});
+attachPlaceSearch($('opt-from'),{label:'Search departure places'});attachPlaceSearch($('opt-to'),{label:'Search destination places'});
 for(const b of document.querySelectorAll('[data-round]'))b.addEventListener('click',()=>{if($('release-day').value===b.dataset.round)return;$('release-day').value=b.dataset.round;$('release-day').dispatchEvent(new Event('change'));});
 $('flight').addEventListener('change',()=>{clearRun();loadScope();});
 $('release-day').addEventListener('change',()=>{syncRound();clearRun();loadScope();});
@@ -378,7 +371,13 @@ $('experiment-form').addEventListener('submit',async event=>{
 });
 async function init(){
   const results=await Promise.allSettled([api('/api/flights'),api('/api/adaptive-pricing/status'),loadSaved()]);
-  if(results[0].status==='fulfilled'){flights=results[0].value.flights||[];populateDemandFilter($('opt-demand'),flights);fillRoutes();}else error(results[0].reason.message);
+  if(results[0].status==='fulfilled'){
+    flights=results[0].value.flights||[];
+    populateDemandFilter($('opt-demand'),flights);
+    populatePlaces($('opt-from'),flights,'HKG');populatePlaces($('opt-to'),flights,'');
+    $('opt-from').disabled=false;$('opt-to').disabled=false;
+    fillFlights();
+  }else error(results[0].reason.message);
   if(results[1].status==='fulfilled'){
     const value=results[1].value;liveConfigured=Boolean(value.live_configured);
     const opt=$('mode').querySelector('option[value="live"]');opt.disabled=!liveConfigured;opt.textContent=liveConfigured?'Live LLM':'Live LLM · not configured';
@@ -396,7 +395,7 @@ async function init(){
     const day=releaseRound(params.get('forecast_day')??params.get('day'));
     if(day!==null){$('release-day').value=String(day);syncRound();}
     const fid=params.get('flight_id'), f=flights.find(f=>f.flight_id===fid);
-    if(f){$('route').value=routeKey(f);fillFlights(fid);await loadScope();}
+    if(f){if(!inDemand(f))$('opt-demand').value='all';setFlightPlaces($('opt-from'),$('opt-to'),f);fillFlights(fid);await loadScope();}
   }
 }
 let lastChartWidth=0;

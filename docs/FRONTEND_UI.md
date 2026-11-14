@@ -1,6 +1,6 @@
 # 前端 UI 规格
 
-> 状态：现行 · 对应代码：`frontend/ui-contract.json`、`frontend/admin-shell.css`、`frontend/styles.css`、`frontend/adaptive-pricing.css`、`frontend/members/portal.css`、`tests/test_frontend_contract.py`
+> 状态：现行 · 对应代码：`frontend/ui-contract.json`、`frontend/flight-picker.js`、`frontend/place-search.js`、`frontend/admin-shell.css`、`frontend/styles.css`、`frontend/adaptive-pricing.css`、`frontend/members/portal.css`、`tests/test_frontend_contract.py`
 
 这份文档管前端**长什么样、怎么搭**：重构规则、冻结的功能与接口、设计系统、信息架构和设计决定。
 前端**做什么**（交互流程、产品取舍、面板上限）以 [ADMIN_AND_MEMBER_UX](ADMIN_AND_MEMBER_UX.md) 和 [CLIENT_FLEXIBLE_SEARCH](CLIENT_FLEXIBLE_SEARCH.md) 为准；接口返回的字段以 [CURRENT_IMPLEMENTATION](CURRENT_IMPLEMENTATION.md) 的路由表为准。
@@ -209,6 +209,7 @@ main 删除了 `smoke-continuous`、`smoke-contribution`、`smoke-english-journe
 - **主题**：只做浅色。投影和录屏都以浅色为准，不做深色模式。
 - **画布**：以 1920×1080 为主要验收尺寸；390px 和 768px 仍须无横向滚动（smoke 测试会检查）。
 - **语言**：界面只有英文，以后再考虑其他语言。
+- **左上角品牌**（2026-11-15 用户要求）：沿用会员端的字标——"UOption" 用 Helvetica Neue 800、紫色、紧字距，右侧青色竖线隔开小号大写的 "FLY PASS"；下一行灰色小号大写 "ADMIN" 标明这是后台。只有这个字标用会员端字体，其余仍是 Inter。
 
 ### 4.2 文件与 token（2026-11-15 已实现）
 
@@ -280,11 +281,15 @@ Admin（`index.html`）和 Optimize（`adaptive-pricing.html`）使用**同一�
 
 ### 5.2 共用的航班选择器
 
-页面顶部一条"当前航班"栏，在 4 个流程页面共用：需求档位 → 航线 → 航班 → 轮次（D28 / D14 / D7）。Member feedback 页面不显示这条栏。
+页面顶部一条"当前航班"栏，在 4 个流程页面共用：Demand → From → To → Flight → 轮次（D28 / D14 / D7）。Member feedback 页面不显示这条栏。
 
 - 在 Admin 的三个 hash 页面之间切换时，选择保存在页面状态里。
 - 去 Optimize 和从 Optimize 回来时，用已有的网址参数 `flight_id`、`forecast_day` 传递（`thompson-navigation.js` 已支持）。
-- 它替换现有的三套选择器：Forecast 的 `#forecast-demand`、`#flight-select`、`[data-day]`；Optimize 的 `#route`、`#flight`、`#release-day`；Manage offers 的航线 / 航班 / 轮次。这是本次重构里**唯一改变 JS 行为**的地方，要同步修改 `ui-contract.json` 和相关 smoke 测试，并在 §6 记录。
+- From / To 使用会员端 `members/airports.js` 的完整机场与国家目录，再补上当前航班目录中的额外机场。支持单个机场、整个国家／地区及 Anywhere；Demand 或另一端的选择不会删减机场列表。
+- 只有 Flight 按 From、To、Demand 三个条件共同筛选。无匹配时保留条件，显示 No matching flights，清除预测／发布／优化 scope，不能遗留上一个航班的操作。机场存在不代表任意两点都有模拟航班。
+- Flight 保留日期并显示完整合成航班编号，例如 `17 May 2027 · SYN-00017`；选国家或 Anywhere 时增加 `HKG → FUK`，同一天的不同航班也可辨认。不虚构真实航空公司的航班号。
+- From / To 框内有放大镜按钮（`place-search.js`，2026-11-15 用户要求在 main 的 From / To 上恢复搜索）：点开后输入城市、机场代码或国家／地区名（如 `tok`、`hnd`、`japan`）即时匹配，方向键选择、回车确认、Esc 关闭。结果就是下拉框自身的选项（含 Entire 国家和 Anywhere），选中后触发下拉框原有的 change 事件，筛选逻辑不变。
+- Admin 使用 `#context-from`、`#context-to`、`#flight-select`；Optimize 使用 `#opt-from`、`#opt-to`、`#flight`。共用逻辑在 `flight-picker.js`。手动加载已保存实验恢复其真实航班；自动读取当前航班最新实验保留用户的国家／Anywhere 范围。契约及 smoke 测试须同步这些选择器。
 
 ### 5.3 每页第一屏
 
@@ -341,7 +346,7 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-15 | 界面上不再出现 "NHPP"，改成白话（Forecast recommendation、Member seat quota、Forecast decision）；模型名只在"保护座位"的 ⓘ 里说明一次 | 用户问为什么强调 NHPP：对管理员和评委，模型缩写不帮助理解数字 |
 | 2026-11-15 | 卡片标签从 14.5px 浅灰改为 17px、半粗、深色；Optimize 和验证区的标签同样加深 | 用户反馈标签太小太浅，第一眼看不懂数字是什么 |
 | 2026-11-15 | Forecast 座位卡改为整行横条，两张图（预订、票价）并排上移到首屏；Results 的座位卡同样整行 | 用户指出座位卡右侧和下方空白太多 |
-| 2026-11-15 | Route 框加搜索按钮（`frontend/route-search.js`）：输入机场代码或城市名即可匹配，城市名在第一次打开时从 `members/airports.js` 读取；Admin 和 Optimize 都有 | 用户要求 |
+| 2026-11-15 | 曾为 Route 框加入搜索按钮，可按机场代码或城市名匹配 | 用户要求；后由 §7.5 的完整 From / To 取代，旧搜索脚本已删除 |
 | 2026-11-15 | 自查后顺手修：Route / Demand 文字被截断（加宽）、Optimize 结论卡下方空白（拉伸填满）、保本说明收进 ⓘ、座位条里 1 个座位的数字溢出（太窄时不显示数字，悬停可见）、Member feedback 重复的"不调用模型"说明、Forecast 图表高度适配首屏 | §1.4 第 5 条 |
 | 2026-11-15 | 座位图例改为"数字在上、标签在下"的小指标（21px 数字、15.5px 标签），标签改白话：Booked (normal + member)、Published, bookable now、Safe for members, not yet published；图表坐标、提示文字、表头、Optimize 对比条等小字统一加大加深 | 用户反馈图例字太小、看着费劲 |
 | 2026-11-15 | Optimize 无结果时，P0 卡与实验设置卡等高对齐 | 用户要求 |
@@ -349,6 +354,10 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-15 | 自查后修：Publish 预览改为两行排版、Results 图例对齐、费用来源按网站去重、手机上 Demand / Route 各占一行、图表标题在窄屏换行、Publish 左卡不再被拉高 | §1.4 第 5 条 |
 | 2026-11-15 | Admin 按屏幕宽度自动缩放（§4.4），大家统一用浏览器 100%；会员端不改 | 用户选方案 A：两页同网站共用缩放，Admin 在 75%、会员端在 100% 才合适；演示屏幕尺寸未知，所以用连续缩放而不是固定几档 |
 | 2026-11-15 | Results 座位图例隐藏数值为 0 的分类（会员已售和可订配额始终显示），与 Forecast 一致 | 自查：合并 main 后图例变成 7 项，含两个 0 |
+| 2026-11-15 | 合并 main（Route 改为完整 From / To，Flight 显示完整合成编号）；在 From / To 上恢复搜索按钮（§5.2） | 用户要求 |
+| 2026-11-15 | 左上角改用会员端的 UOption / FLY PASS 字标，下面加 ADMIN（§4.1） | 用户要求两端品牌字标一致，仍标明 Admin |
+| 2026-11-15 | 自查后修：main 的选择栏在 1700px 以下改为两行，与按屏宽缩放冲突（笔记本上缩放后布局宽仍是 1920，却被拆成两行）→ 断点改到 1359px；Demand、轮次按钮略收窄，地点和航班字号统一 16px，使 `Kota Kinabalu (BKI)` 和 `… · DEMO-HKG-BKI-20270515` 在 1920 / 1512 下都不被截断 | §1.4 第 5 条 |
+| 2026-11-15 | `smoke-demand-filter`：Tab 顺序加入两个可见的搜索按钮（From → 搜索 → To → 搜索 → Flight），并新增地点搜索的断言（名称、代码匹配、无结果、Esc 不改选择） | 新增按钮的直接结果，原断言含义不变 |
 | 2026-11-15 | 测试同步修改：`smoke-flight-offers` 改用共用选择栏；`smoke-demand-filter` 的 Tab 顺序加入 Route，并放行字体文件；`smoke-adaptive-pricing` 导航数改为 5，折叠区里的说明改读 `textContent` | 都是本次界面改动的直接结果，断言的业务含义不变 |
 
 ---
@@ -370,6 +379,7 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-15 | 第二轮反馈：座位区布局、卡片标签加深、去掉 NHPP 字样、Route 搜索；按 §1.4 第 5 条自查并修了 6 处 | 完成；10 个浏览器测试和 `check_container.py` 通过 |
 | 2026-11-15 | 第三轮：图例和小字可读性、P0 对齐、合并 main 并把费用明细和新会员卡样式带到 Admin、自查修 6 处 | 完成；11 个浏览器测试（含 main 新增的 `smoke-member-journey`）和 `check_container.py` 通过 |
 | 2026-11-15 | 合并 main（会员登录、6 个月会员、去掉 D1）；Admin 按屏宽缩放；在 1280 / 1366 / 1512 / 1920 / 2560 和手机宽度下检查 | 完成；12 个浏览器测试和 `check_container.py` 通过 |
+| 2026-11-15 | 合并 main（完整 From / To、航班编号）；From / To 搜索；会员端字标；自查修选择栏截断和断点 | 完成；12 个浏览器测试和 `check_container.py` 通过 |
 | — | 用户继续验收 | 进行中 |
 | — | 演示视频（§0.5） | 未开始，等 UI 定稿 |
 | — | 会员端重构 | 暂缓 |
@@ -393,3 +403,11 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 ### 7.4 2026-11-15 移除 D1 快捷入口
 
 按用户要求，Admin 与 Optimize 顶部只保留 D28／D14／D7；删除 D1 按钮及停用占位。Admin 不再从 `forecast_day=1` URL 选中 D1，改用默认 D28。Forecast 日线图与逐日观察滑杆、后端逐日预测和冻结数据保留；D1从来不是新增配额的发布轮次。
+
+### 7.5 2026-11-15 完整 From / To 与航班编号
+
+按用户要求，用与 Client 相同目录的 From / To 取代单个 Route，保留 Flight 并加入完整合成编号。桌面两端并排，窄屏顺序排列；默认 HKG → Anywhere。共享 helper 统一 Admin 与 Optimize 的地点过滤和日期／编号文案，旧 Route 搜索脚本及样式删除。Client、后端、NHPP、发布规则与冻结数据均未修改。
+
+### 7.6 2026-11-15 From / To 搜索与品牌字标
+
+合并 main `d2978f8` 无冲突。`place-search.js` 给 Admin 与 Optimize 的四个地点框加搜索（§5.2）；左上角改为会员端字标加 ADMIN（§4.1）。选择栏断点从 1700px 改为 1359px，保证按屏宽缩放时在笔记本和 1920 屏上都是一行。后端、会员端、契约 id 均未改动。
