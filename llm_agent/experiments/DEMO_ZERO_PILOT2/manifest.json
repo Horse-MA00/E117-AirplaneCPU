@@ -1,0 +1,84 @@
+{
+  "source": "adaptive_thompson_pricing",
+  "run_id": "adaptive-13f94e8449fd441e",
+  "synthetic": true,
+  "audit_records": 1624,
+  "counts": {
+    "provider_calls": 0,
+    "fresh_responses": 0,
+    "cache_hits": 0,
+    "forced": 670,
+    "failures": 0,
+    "synthetic_choices": 866,
+    "total_tokens": 0,
+    "peak_parallel_calls": 0,
+    "customer_calls": 0,
+    "analyst_calls": 0,
+    "analyst_retries": 0,
+    "analyst_unavailable": 0,
+    "key_slots": {
+      "primary": 0,
+      "secondary": 0
+    },
+    "max_calls": 0,
+    "remaining_calls": 0,
+    "configured_key_slots": 0,
+    "concurrency": 4,
+    "peak_parallel": 0,
+    "stopped_after_failure": false,
+    "elapsed_seconds": 13.943
+  },
+  "files": {
+    "report.json": {
+      "sha256": "73056affb8655c08238d9991652e18d134aecaf88e6e1a26fbc85de4214e1658",
+      "bytes": 15396211
+    },
+    "audit.jsonl.gz": {
+      "sha256": "1fc5a839d78554a463a47f7fcd008bfe73ec63f3dd5f16058e9fff7da781a83e",
+      "bytes": 609332
+    }
+  },
+  "customer_source": "synthetic",
+  "weight_source": "project_test_mixture_not_observed_hkexpress_shares",
+  "holdout_frozen_before_validation": true,
+  "scenario": {
+    "id": "low_fare_65",
+    "version": "zero-fare-stress-v1",
+    "flight_id": "DEMO-HKG-NGO-20270515",
+    "forecast_day": 7,
+    "normal_base_fare": 65,
+    "budget_multiplier": 0.1,
+    "label": "Constructed low-fare scenario \u00b7 HK$65 normal fare",
+    "source_scope": {
+      "flight_id": "DEMO-HKG-NGO-20270515",
+      "origin": "HKG",
+      "destination": "NGO",
+      "departure_date": "2027-05-15",
+      "as_of_day": 7,
+      "departure_at": "2027-05-15T17:00:00+08:00",
+      "departure_time": "17:00",
+      "capacity": 236,
+      "booked_seats": 83,
+      "available_seats": 153,
+      "empty_rate": 0.64830508,
+      "normal_base_fare": 600,
+      "observed_normal_base_fare": 600.0,
+      "price_increment_hkd": 1,
+      "mandatory_fees": 250.0,
+      "quote_age_days": 0,
+      "initial_member_fare": 480,
+      "initial_fare_source": "snapshot.normal_base_fare_x_member_cap",
+      "member_fare_cap": 480,
+      "member_fare_cap_ratio": 0.8,
+      "expected_remaining_demand": 6.964,
+      "releasable_seats": 112,
+      "member_supply_exposure": 112,
+      "optimization_eligible": true,
+      "optimization_unavailable_reason": null,
+      "history_sha256": "d1bbb9a7e1bf156b46b0bc62c1e5746318ae6edfc7b19ad0c2355a0530b5dadf"
+    },
+    "source_scope_sha256": "b5378a794655fd4d2694b0d8f3675e94d53fee2910344332f829b321884d6212",
+    "definition_sha256": "0de39aaa201e07bc435ac3034447d30cbe873c96d7228574bb6fb05ac97f8a0f",
+    "disclaimer": "Constructed low-fare stress scenario, not observed HK Express prices or budgets. The original flight inventory and NHPP quota are held fixed; NHPP is not reforecast for the assumed normal fare. A zero promotional quote does not override the independent revenue-adoption decision."
+  }
+}

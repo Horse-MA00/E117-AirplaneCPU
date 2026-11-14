@@ -1,6 +1,6 @@
 # Thompson Sampling：指定航班會員票價
 
-> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`public-member-response-v1`、`weighted-member-panel-v3-motivation`、`adaptive-member-decisions-v4-hypotheses`、`analyst-retry-v1`、`whole-hkd-quotes-v1`、`member-marketing-fare-v1`、`backend/forecast.py`
+> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`public-member-response-v1`、`weighted-member-panel-v3-motivation`、`adaptive-member-decisions-v4-hypotheses`、`analyst-retry-v1`、`whole-hkd-quotes-v1`、`member-marketing-fare-v1`、`backend/forecast.py`、`backend/pricing_scenarios.py`
 
 更新：2026-11-15。這份規格描述目前唯一的定價方法：**Thompson Sampling**。正常需求預測仍由 NHPP 負責；會員放票沿用 [D28／D14／D7 三輪規則](THREE_ROUND_RELEASE.md)。顧客已入會，票價實驗不再次收會費；結果是合成情境中的基本票款，不是航空公司淨利潤。
 
@@ -41,6 +41,28 @@ final_member_fare = 0 if ending9 < 30 else ending9
 | 259 | 259 |
 
 格式化不會加價，保留80%上限；HK$0只代表基本票價，沒有虛構宣傳收益。候選與初始備選都先格式化，再按實際報價驗證，不能把原價收益套在新價上。
+
+### Explicit low-fare demonstration inputs
+
+`zero-fare-stress-v1` is an optional, named pricing scenario, not a change to the Thompson model or the default eight customer groups. It tests whether learning can select a raw fare below HK$30 before the existing marketing conversion. It does not prescribe an answer or replace a failed customer response.
+
+| CLI `--demo-scenario` | Required source snapshot | Assumed normal base fare | P₀ / cap | Private ticket-budget multiplier |
+|---|---|---:|---:|---:|
+| `low_fare_55` | `SYN-00017`, D7 | 55 | 44 | 0.10 |
+| `low_fare_60` | `DEMO-HKG-OKA-20270515`, D14 | 60 | 48 | 0.10 |
+| `low_fare_65` | `DEMO-HKG-NGO-20270515`, D7 | 65 | 52 | 0.10 |
+
+These are deliberately constructed low-fare / low-disposable-budget demonstrations, not observed airline prices or estimated HK Express customer distributions. All three caps remain above HK$30. The original flight scope and history hash are saved; its inventory and NHPP quota stay fixed as experimental supply. The predictor is **not** recomputed under the assumed lower normal fare. The altered private budgets remain inside the customer environment and never enter the public-feature learner.
+
+Reports, exports and the UI retain the scenario definition, source scope and input assumptions. Ordinary flight selection and publishing suggestions exclude these experiments; an explicit saved-run selection can display them. A candidate such as `HK$20 → HK$0` demonstrates the marketing rule even if confirmation returns `NO_OFFER`. A zero promotional candidate is not relabelled as a zero retained fare or proven revenue improvement. Default experiments, frozen data, prompts and previous reports remain unchanged.
+
+Reproduce the first offline case with the ordinary runner:
+
+```bash
+python scripts/run_adaptive_pricing.py --mode synthetic --name DEMO_ZERO_PILOT0 --demo-scenario low_fare_55 --flight-id SYN-00017 --day 7 --rounds 20 --customers 32 --validation-repeats 3 --seed 26111501 --max-calls 0
+```
+
+The other cases use seeds `26111502` and `26111503` with their mapped snapshots. A currently authorized live replay uses `--mode live --max-calls 1800`; its complete preflight upper bound is 1,628 calls. A completed nonzero candidate or unsuccessful revenue comparison is retained as evidence, not retried to obtain a desired price.
 
 ## Adaptive member-only pricing
 
@@ -126,13 +148,21 @@ python scripts/benchmark_paired_pricing.py --output llm_agent/experiments/NEW_BE
 python scripts/member_choice_calibration.py --help
 ```
 
+CLI accepts an optional `--name DEMO_LLM0`; POST `/api/adaptive-pricing/runs` accepts the same `name`. Names are 1–64 ASCII letters, digits, spaces, underscores, dots or hyphens, starting with a letter or digit. They are stored as `config.name` and shown in the saved-experiment selectors on Optimize and Member feedback. The unique `adaptive-…` run ID remains the audit identity; retries may share a display name but never overwrite an earlier attempt. A completed `NO_OFFER`, `INCONCLUSIVE` or `KEEP_INITIAL` is a valid result, not an execution failure to retry.
+
 GET `/api/adaptive-pricing/status`, GET/POST `/api/adaptive-pricing/runs`, POST `/api/adaptive-pricing/scope`, and GET run `/events` or `/export` remain. Run state preserves profile, each search cohort, public training rows, separate prediction support, paired controls and final confirmation. Only current v5 experiments with the supported eight-group population are served; retained reports keep the prices and provenance recorded when they ran.
 
 ## 保存資料與目前證據
 
 `backend/adaptive_store.py` 以 SQLite 保存 run、round、event；資料庫位於忽略的 `data/private/`。環境控制合法動作、整數座位與預算，LLM 原始請求／回應及驗證結果可追查。對外匯出會移除密鑰，使用 report、壓縮 audit 和檔案 manifest。
 
+HTTP整份匯出仍保留32MiB上限。大型實驗可用CLI `--export-run-id RUN_ID --output NEW_DIRECTORY`：每頁讀取100筆既有審計，逐頁脫敏並串流壓縮，不會呼叫LLM。完整report、audit和manifest先寫臨時目錄，成功才改名；失敗清理臨時輸出，既有證據目錄不覆蓋。壓力情境的manifest亦保存scenario，方便辨別假設輸入。
+
 目前可公開實驗索引在 [Thompson v5 證據](../llm_agent/experiments/README.md)。保留符合 v5／八類客群的成功、保留初始價及無定論結果；不可只挑收益上升的實驗。既有報告使用當時記錄的來源雜湊，介面整理不重寫其原始結果，也不把舊模型的 Live 成績套到現行版本。
+
+公開集合現含24份保存結果：23完成及1失敗。服務啟動以`backend/published_experiments.py`讀取公開report／manifest，Saved experiments自動合併私有SQLite與公開目錄，同ID以私有為先；全新部署不需要API密鑰或匯入資料庫。公開文件只讀，審計按頁讀取，Analyst原始回覆按輪查詢；失敗結果保持失敗，沒有自動續跑或發布。檔案雜湊、版本、客群或終態不符合時回報錯誤，不以空白列表掩蓋。
+
+CLI新增`--include-failed`，只允許明確匯出failed／interrupted終態，manifest標記`evidence_kind=execution_failure`；未完成輪次及缺少確認如實保留，不捏造holdout。完成報告允許「Analyst首次失敗、重試成功」的非零failures，但發布驗證會從audit重算calls、responses、failures等計數，再與report／manifest逐項比對。預設匯出仍要求completed；running／queued不能發布為保存證據。
 
 NHPP 模型、生成資料、獨立驗證及失敗候選證據見 [NHPP v3](NHPP_V3_REVIEW.md)、[NHPP v2](NHPP_V2_REVIEW.md) 和 [擴大驗證](EXTENDED_VALIDATION.md)。它們驗證正常需求預測及保護，不直接證明 Thompson 的價格收益。
 

@@ -15,6 +15,11 @@ const safeId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,80}$/.tes
 const active = run => ['queued', 'running'].includes(run?.status);
 const CURRENT_VERSION = 'member-thompson-v5-marketing';
 const currentRun = value => value?.version === CURRENT_VERSION && value?.config?.profile === 'flexible_deal_seekers';
+const scenarioRun = value => Boolean(value?.scenario || value?.scope?.scenario || value?.config?.demo_scenario);
+function scenarioDescription(scenario) {
+  if (!scenario) return '';
+  return `${scenario.label || 'Low-fare stress test'} · Assumed normal base fare ${money(scenario.normal_base_fare)} · Ticket budgets ${count(Number(scenario.budget_multiplier)*100)}% of the standard scenario · Source NHPP quota ${count(scenario.source_scope?.releasable_seats)} seats held fixed from the ${money(scenario.source_scope?.normal_base_fare)} snapshot. These hypothetical inputs are not a new flight forecast.`;
+}
 const budgetUpper = (rounds,members,panels) => rounds*(2*members+3)+3*panels*members;
 const hypothesisLabel = status => ({supported:'Above initial revenue',not_supported:'Below initial revenue'}[status] || String(status||'not_tested').replaceAll('_',' '));
 let flights = [], segments = [], defaultWeights = {}, scope = null, run = null, liveConfigured = false;
@@ -32,6 +37,18 @@ async function api(path, body) {
 }
 function error(message = '') { $('page-error').textContent = message; $('page-error').hidden = !message; }
 function node(tag, text, className) { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el; }
+function renderScenarioNotice(scenario) {
+  let notice = $('scenario-notice');
+  if (!notice) {
+    notice = node('p', '', 'hint'); notice.id = 'scenario-notice';
+    $('flight-description').after(notice);
+  }
+  notice.hidden = !scenario;
+  notice.replaceChildren();
+  if (scenario) notice.append(
+    node('strong', 'Hypothetical low-fare scenario. '),
+    document.createTextNode(`Assumed normal base fare ${money(scenario.normal_base_fare)}. Ticket budgets ${count(Number(scenario.budget_multiplier)*100)}% of standard. Source NHPP quota ${count(scenario.source_scope?.releasable_seats)} seats held fixed; no new demand forecast.`));
+}
 function option(value, text) { const el = node('option', text); el.value = value; return el; }
 function flightDate(flight) { return flight.departure_date || String(flight.departure_at || '').slice(0, 10); }
 const inDemand = f => matchesDemand(f, $('opt-demand').value || 'all');
@@ -82,8 +99,9 @@ function renderScope(value) {
   $('scope-day').textContent = value ? `D${value.as_of_day}` : 'Choose a flight';
   $('flight-title').textContent = value ? `${value.origin} → ${value.destination}` : 'Your Selected Flight';
   $('flight-description').textContent = value ? `${value.departure_date} · ${value.flight_id} · ${value.departure_time || ''}` : 'A separate experiment is created for each flight and release round.';
+  renderScenarioNotice(value?.scenario);
   syncRound();
-  $('scope-message').textContent = value ? value.releasable_seats > 0 ? 'The starting price is the 80% member-fare cap, rounded down to whole HKD. The member seat quota is held fixed during price trials.' : 'No member quota is available at this release round. Choose another flight or round.' : 'Choose a flight to load its normal fare quote and member seat quota.';
+  $('scope-message').textContent = value?.scenario ? scenarioDescription(value.scenario) : value ? value.releasable_seats > 0 ? 'The starting price is the 80% member-fare cap, rounded down to whole HKD. The member seat quota is held fixed during price trials.' : 'No member quota is available at this release round. Choose another flight or round.' : 'Choose a flight to load its normal fare quote and member seat quota.';
   updateControls();
 }
 // Settings stay folded while a result is on screen; "New experiment" opens them. With no result they are the page.
@@ -107,14 +125,14 @@ function updateNavLinks() {
 function updatePublishLink(value) {
   const link = $('publish-link'), decision = value?.validation?.adoption_result || value?.validation?.decision;
   const fare = value?.validation?.retained_price ?? null, fid = value?.scope?.flight_id ?? value?.config?.flight_id;
-  const show = value?.status === 'completed' && numeric(fare) && decision !== 'NO_OFFER' && safeId(fid);
-  link.hidden = !show; if (!show) return;
+  const show = !scenarioRun(value) && value?.status === 'completed' && numeric(fare) && decision !== 'NO_OFFER' && safeId(fid);
+  link.hidden = !show; if (!show) { link.removeAttribute('href'); return; }
   link.href = `/admin?${new URLSearchParams({ flight_id: fid, forecast_day: String(value.scope?.as_of_day ?? value.config?.forecast_day ?? $('release-day').value) })}#members`;
   link.firstChild.textContent = `Publish at ${money(fare)} `;
 }
 // With no experiment in the URL, open the latest completed experiment for this flight and round.
 function latestSavedFor(flightId, day) {
-  return savedRuns.filter(r => r.status === 'completed' && (r.scope?.flight_id ?? r.config?.flight_id) === flightId && String(r.scope?.as_of_day ?? r.config?.forecast_day) === String(day))
+  return savedRuns.filter(r => !scenarioRun(r) && r.status === 'completed' && (r.scope?.flight_id ?? r.config?.flight_id) === flightId && String(r.scope?.as_of_day ?? r.config?.forecast_day) === String(day))
     .sort((a, b) => Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0))[0] || null;
 }
 async function loadScope() {
@@ -146,7 +164,7 @@ function updateControls() {
   $('setup-fields').disabled = busy;
   updateSetup();
   $('scope-fields').disabled = busy;
-  $('start').disabled = busy || !scope || !(scope.releasable_seats > 0) || !weightsValid || (isLive && !liveConfigured);
+  $('start').disabled = busy || scenarioRun(run) || !scope || !(scope.releasable_seats > 0) || !weightsValid || (isLive && !liveConfigured);
   $('start').textContent = submitting ? 'Starting experiment…' : isLive ? 'Start Thompson with live customers' : 'Start Thompson simulation';
   const n=Number($('rounds').value), m=Number($('customers').value), v=Number($('validation-repeats').value);
   const calls=budgetUpper(n,m,v);
@@ -263,7 +281,9 @@ function renderRun(value) {
   const seconds=value.elapsed_seconds??(value.updated_at&&value.created_at?value.updated_at-value.created_at:null);
   $('elapsed').textContent=numeric(seconds)?`${Math.floor(seconds/60)}m ${Math.floor(seconds%60)}s elapsed`:'Elapsed time pending';
   $('run-source').textContent=value.config?.mode==='live'?'Thompson Sampling · live LLM':'Thompson Sampling · offline customers';
-  $('run-cohort').textContent=`Flexible bargain travellers · ${value.population?.segments?.length||0} assumed customer groups · This result uses the experiment’s saved population.`;
+  const scenario=value.scenario||value.scope?.scenario;
+  renderScenarioNotice(scenario);
+  $('run-cohort').textContent=scenario ? scenarioDescription(scenario) : `Flexible bargain travellers · ${value.population?.segments?.length||0} assumed customer groups · This result uses the experiment’s saved population.`;
   const phase=String(['failed','interrupted','paused_at_budget'].includes(value.status)?value.status:value.progress?.phase||value.status||'').replaceAll('_',' ');
   $('run-status').textContent=value.error?`${phase}: ${value.error}`:value.status==='completed'?'Complete. Selection and independent validation are saved.':`${phase.charAt(0).toUpperCase()+phase.slice(1)}. Progress is saved; this page can be reopened.`;
   const counts=value.counts||{};
@@ -341,7 +361,7 @@ async function loadSaved() {
   const data=await api('/api/adaptive-pricing/runs');
   savedRuns=(data.runs||[]).filter(r=>safeId(r.run_id));
   const selected=$('saved-run').value;
-  $('saved-run').replaceChildren(option('','Choose a saved experiment'),...(data.runs||[]).filter(r=>safeId(r.run_id)).map(r=>option(r.run_id,`${r.config?.flight_id||r.scope?.flight_id||r.run_id} · ${r.status} · ${r.config?.mode==='live'?'Live LLM customers':'Offline customers'}`)));
+  $('saved-run').replaceChildren(option('','Choose a saved experiment'),...(data.runs||[]).filter(r=>safeId(r.run_id)).map(r=>option(r.run_id,`${r.config?.name ? `${r.config.name} · ` : ''}${r.config?.flight_id||r.scope?.flight_id||r.run_id} · ${r.status} · ${r.config?.mode==='live'?'Live LLM customers':'Offline customers'}`)));
   if([...$('saved-run').options].some(o=>o.value===selected))$('saved-run').value=selected;
   $('load-run').disabled=!$('saved-run').value;
 }
@@ -353,12 +373,15 @@ $('release-day').addEventListener('change',()=>{syncRound();clearRun();loadScope
 for(const id of ['mode','rounds','customers','validation-repeats'])$(id).addEventListener('input',updateControls);
 $('max-calls').addEventListener('input',()=>{$('max-calls').removeAttribute('aria-invalid');error();});
 $('reset-weights').addEventListener('click',()=>setWeights(defaultWeights));
-$('new-experiment').addEventListener('click',()=>{setupOpen=!setupOpen;updateSetup();if(setupOpen){$('setup-panel').scrollIntoView({block:'start',behavior:'smooth'});$('mode').focus({preventScroll:true});}});
+$('new-experiment').addEventListener('click',async()=>{
+  if(scenarioRun(run)){clearRun();await loadScope();setupOpen=true;}else setupOpen=!setupOpen;
+  updateSetup();if(setupOpen){$('setup-panel').scrollIntoView({block:'start',behavior:'smooth'});$('mode').focus({preventScroll:true});}
+});
 $('saved-run').addEventListener('change',()=>{$('load-run').disabled=!$('saved-run').value;});
 $('load-run').addEventListener('click',()=>showRun($('saved-run').value).catch(e=>error(e.message)));
 $('refresh-run').addEventListener('click',()=>{if(!safeId(run?.run_id))return;clearTimeout(pollTimer);const sequence=++runSequence;error();fetchRun(run.run_id,sequence).catch(e=>error(e.message));});
 $('experiment-form').addEventListener('submit',async event=>{
-  event.preventDefault();if(submitting||active(run)||!scope||!targetPopulation)return;
+  event.preventDefault();if(submitting||active(run)||scenarioRun(run)||!scope||!targetPopulation)return;
   if(!$('experiment-form').reportValidity())return;
   const weights=readWeights();if(Math.abs(Object.values(weights).reduce((a,b)=>a+b,0)-1)>0.00001){error('Customer weights must total 100%.');return;}
   const body={flight_id:scope.flight_id,forecast_day:Number($('release-day').value),mode:$('mode').value,profile:TARGET_PROFILE,weights};

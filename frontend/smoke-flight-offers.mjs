@@ -8,6 +8,10 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],
 page.on('pageerror',error=>errors.push(error.message));
 const flights=['2027-05-15','2027-05-18'].map(date=>({flight_id:`TEST-HKG-FUK-${date.replaceAll('-','')}`,origin:'HKG',destination:'FUK',departure_at:date+'T10:30:00+08:00',departure_date:date,capacity:180,demand_band:'low'}));
 const [a,b]=flights.map(f=>f.flight_id);
+const referenceRuns=[
+ {run_id:'adaptive-ordinary',status:'completed',created_at:1,config:{flight_id:a,forecast_day:14},validation:{adoption_result:'ADOPT_CANDIDATE',retained_price:199}},
+ ...[a,b].map((flight_id,index)=>({run_id:`adaptive-stress-${index}`,status:'completed',created_at:100,config:{flight_id,forecast_day:14,demo_scenario:'low_fare_60'},validation:{adoption_result:'ADOPT_CANDIDATE',retained_price:0}})),
+];
 let planFee=399,fail=false,late=false,lateSeen;
 // The Forecast view and the offer form each request a forecast for the shared selection; hold all of them.
 const lateWaiters=[];const releaseLate=()=>lateWaiters.splice(0).forEach(resolve=>resolve());
@@ -29,7 +33,7 @@ await page.route('**/*',async route=>{
  }
  if(path==='/api/member-portal/plan'){if(request.method()==='POST')planFee=request.postDataJSON().membership_fee;return route.fulfill({json:{membership:{fee:planFee,term_months:6,term_label:'6 months',term_days:181}}});}
  if(path==='/api/offers'){if(request.method()==='POST'){submissions.push(request.postDataJSON());return route.fulfill({json:{offer:{id:'fixture-published'}}});}return route.fulfill({json:{offers:[]}});}
- if(path==='/api/adaptive-pricing/runs')return route.fulfill({json:{runs:[]}});
+ if(path==='/api/adaptive-pricing/runs')return route.fulfill({json:{runs:referenceRuns}});
  if(path==='/api/adaptive-pricing/status')return route.fulfill({json:{population,live_configured:false}});
  if(path==='/api/adaptive-pricing/scope'){const body=request.postDataJSON();return route.fulfill({json:{population,scope:{...flights.find(f=>f.flight_id===body.flight_id),as_of_day:body.forecast_day,normal_base_fare:410,member_fare_cap:328,releasable_seats:10}}});}
  return route.fulfill({status:404});
@@ -40,6 +44,7 @@ try{
  // The shared flight bar drives Publish: no separate offer selectors remain.
  assert.equal(await page.locator('#offer-route,#offer-flight,#offer-day').count(),0);
  await page.selectOption('#flight-select',a);await page.locator('[data-day="14"]').click();await offerReady(a,14);
+ assert.match(await page.locator('#offer-guidance .thompson-ref').innerText(),/Latest Thompson result\s+HK\$199/,'A newer stress experiment cannot replace the ordinary flight reference');
  assert.equal(await page.locator('#offer-optimization-suggestion,#offer-binding-status').count(),0);
  await page.locator('#offer-fare').fill('249');await page.locator('#offer-quantity').fill('3');
  await page.getByRole('link',{name:'Member feedback',exact:true}).click();await page.getByRole('link',{name:'Publish offers',exact:true}).click();await offerReady(a,14);
@@ -53,6 +58,8 @@ try{
  assert.match(await page.locator('#offer-preview').innerText(),/Membership HKD 499 for 6 months/);
  assert.equal(await page.locator('label[for=member-fee]').innerText(),'6-month membership fee (HK$)');
  await page.selectOption('#flight-select',b);await offerReady(b,14);assert.equal(await page.locator('#offer-fare').inputValue(),'');
+ assert.equal(await page.locator('#offer-guidance .thompson-ref').count(),0,'A flight with only stress experiments has no ordinary price reference');
+ assert.match(await page.locator('#offer-guidance').innerText(),/No completed Thompson experiment/);
  const link=new URL(await page.getByRole('link',{name:'Optimize this flight',exact:true}).getAttribute('href'),origin);assert.equal(link.pathname,'/adaptive-pricing');assert.equal(link.searchParams.get('flight_id'),b);assert.equal(link.searchParams.get('forecast_day'),'14');
  await page.locator('#offer-fare').fill('99');await page.locator('#offer-quantity').fill('11');await page.locator('#publish-button').click();assert.equal(submissions.length,1,'Native maximum prevents excess quota');
  await page.locator('#offer-quantity').fill('2');await page.locator('#publish-button').click();await page.waitForFunction(()=>document.getElementById('notice').textContent.includes('fixture-published'));assert.equal(submissions.length,2);
@@ -78,5 +85,5 @@ try{
  await page.getByRole('link',{name:'Optimize this flight',exact:true}).click();await page.waitForFunction(()=>document.getElementById('scope-day')?.textContent==='D28');assert.equal(await page.locator('#flight').inputValue(),a);
  assert.equal(submissions.length,2);assert.deepEqual(retired,[]);assert.deepEqual(errors,[]);
  await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
- console.log('Manual offers passed: flight/day scoped quota, explicit fare/quantity, draft retention, six-month pass fee + immediate preview refresh, empty-demand stale-publication guard, native quota guard, forecast failure, stale response guard, Thompson link, no old optimizer calls. No persisted changes.');
+ console.log('Manual offers passed: flight/day scoped quota, explicit fare/quantity, draft retention, six-month pass fee + immediate preview refresh, empty-demand stale-publication guard, native quota guard, forecast failure, stale response guard, Thompson reference excludes hypothetical stress inputs, Thompson link, no old optimizer calls. No persisted changes.');
 }finally{await browser.close();}

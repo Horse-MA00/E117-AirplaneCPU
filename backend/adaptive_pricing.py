@@ -10,6 +10,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import threading
 import time
@@ -21,6 +22,7 @@ from . import adaptive_store as store
 from .fare_policy import member_fare_cap, final_member_fare, FINAL_MEMBER_FARE_VERSION
 from .initial_policy import flight_scope
 from .member_response import PurchasePosterior, recommend, learner_view, whole_price
+from .pricing_scenarios import apply_pricing_scenario, population_for_config, validate_scenario_request
 from llm_agent.adaptive_customers import (DecisionClient, prompt_metadata,
     ANALYST_MAX_ATTEMPTS, ANALYST_RETRY_POLICY_VERSION)
 from llm_agent.weighted_population import population, metadata, DEFAULT_PROFILE
@@ -55,9 +57,13 @@ def status():
 def scope(body):
     if not isinstance(body, dict):
         raise ValueError('JSON object required')
-    result = flight_scope(body.get('flight_id'), body.get('forecast_day', 28))
-    return {'scope':{k:v for k,v in result.items() if k != 'history'},
-            'population':metadata(body.get('weights'),profile=body.get('profile', DEFAULT_PROFILE))}
+    validate_scenario_request(body)
+    result = apply_pricing_scenario(body, flight_scope(body.get('flight_id'), body.get('forecast_day', 28)))
+    response = {'scope':{k:v for k,v in result.items() if k != 'history'},
+                'population':metadata(body.get('weights'),profile=body.get('profile', DEFAULT_PROFILE))}
+    if 'scenario' in result:
+        response['scenario'] = result['scenario']
+    return response
 
 
 def validate(body):
@@ -66,6 +72,9 @@ def validate(body):
     mode = body.get('mode', 'synthetic')
     if mode not in ('synthetic', 'live'):
         raise ValueError('mode must be synthetic or live')
+    name = body.get('name')
+    if name is not None and (not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}', name)):
+        raise ValueError('name must be 1..64 letters, digits, spaces, underscores, dots or hyphens')
     profile = body.get('profile', DEFAULT_PROFILE)
     meta = metadata(body.get('weights'),profile=profile)
     minimum_panel = sum(s['weight'] > 0 for s in meta['segments'])
@@ -78,7 +87,12 @@ def validate(body):
            'revenue_fraction':_number(body,'revenue_fraction',.95,.5,1),
            'flight_id':body.get('flight_id'), 'forecast_day':body.get('forecast_day',28),
            'weights':body.get('weights'), 'profile':profile}
-    selected = flight_scope(cfg['flight_id'], cfg['forecast_day'])
+    if name is not None:
+        cfg['name'] = name
+    if body.get('demo_scenario') is not None:
+        cfg['demo_scenario'] = body['demo_scenario']
+    validate_scenario_request(cfg)
+    selected = apply_pricing_scenario(cfg, flight_scope(cfg['flight_id'], cfg['forecast_day']))
     if selected['releasable_seats'] < 1 or member_fare_cap(selected['normal_base_fare']) < .01:
         raise ValueError('This snapshot has no positive-price member inventory. Choose another flight or release day.')
     cfg['analyst_max_attempts'] = ANALYST_MAX_ATTEMPTS
@@ -100,7 +114,7 @@ def _provenance():
              'simulation/generated/calibration_v2.json','simulation/generated/calibration_v3.json',
              'simulation/generated/calibration_v3_robust.json','simulation/generated/nhpp_v3_robust_final.json',
              'simulation/generate.py','simulation/evaluate_nhpp_v3.py','simulation/calibrate_nhpp_v3_robust.py',
-             'backend/fare_policy.py','backend/initial_policy.py','backend/release_policy.py',
+             'backend/fare_policy.py','backend/initial_policy.py','backend/release_policy.py','backend/pricing_scenarios.py',
              'backend/data.py','llm_agent/weighted_population.py','llm_agent/adaptive_customers.py',
              'llm_agent/provider_transport.py','llm_agent/audit.py','llm_agent/output_contract.py']
     paths += [item['path'] for item in prompt_metadata()['prompts'].values()]
@@ -332,8 +346,8 @@ def _worker(run):
                                     audit_callback=lambda record:store.record(run_id,record), seed=cfg['seed'],use_cache=True)
             # This independent support carries only declared public attributes.
             # Neither private wallets nor the new round's people influence proposals.
-            support = [learner_view(p) for p in population(cfg['prediction_support_size'],cfg['seed']+20000003,
-                       weights=cfg['weights'],scope=selected,profile=cfg['profile'])]
+            support = [learner_view(p) for p in population_for_config(cfg, cfg['prediction_support_size'],
+                       cfg['seed']+20000003, selected, factory=population)]
             run['prediction_population'] = support
             run['learner_fields'] = ['customer_id','segment','flexibility_days','population_weight']
             run['search_panels'] = []
@@ -356,7 +370,7 @@ def _worker(run):
                 if not 0 <= price <= member_fare_cap(selected['normal_base_fare']):
                     raise ValueError('Model proposed a price outside the whole-HKD 80% cap')
                 cohort_seed = cfg['seed']+1009*number
-                people = population(cfg['customers'],cohort_seed,weights=cfg['weights'],scope=selected,profile=cfg['profile'])
+                people = population_for_config(cfg, cfg['customers'], cohort_seed, selected, factory=population)
                 run['search_panels'].append({'round':number,'seed':cohort_seed,'people':people})
                 if i == 0:
                     # Compatibility display sample; all search cohorts live above.
@@ -450,7 +464,7 @@ def _worker(run):
             worlds = []
             for j in range(cfg['validation_repeats']):
                 validation_seed = cfg['seed']+500003+1009*j
-                heldout = population(cfg['customers'],validation_seed,weights=cfg['weights'],scope=selected,profile=cfg['profile'])
+                heldout = population_for_config(cfg, cfg['customers'], validation_seed, selected, factory=population)
                 replayed = {}
                 for policy,price in [('initial',initial_confirmation_price),('selected',chosen),('no_offer',None)]:
                     reused = price in replayed
@@ -508,6 +522,11 @@ def start(body, *, blocking=False):
                 'Weighted demand estimates and actual panel cash/seat transactions are reported separately.',
                 'Final member quotes round down to an amount ending in nine, with any result below HK$30 becoming HK$0; raw search prices remain recorded.',
                 'Independent validation compares the formatted initial fallback, formatted selected fare and no offer after freezing both final quotes; no refitting on holdout.']}
+    if 'scenario' in selected:
+        run['scenario'] = selected['scenario']
+        run['provenance']['scenario'] = {key: value for key, value in selected['scenario'].items()
+                                       if key != 'source_scope'}
+        run['assumptions'].append(selected['scenario']['disclaimer'])
     with _guard:
         if _active:
             raise ValueError('An adaptive experiment is already running; wait for its results')

@@ -1,6 +1,6 @@
 # 用 Docker 运行当前项目
 
-> 状态：现行 · 对应代码：`compose.yaml`、`Dockerfile`
+> 状态：现行 · 对应代码：`compose.yaml`、`Dockerfile`、`backend/published_experiments.py`、`backend/adaptive_store.py`
 
 容器包含当前 Admin／Client、NHPP 预测、Thompson 票价实验、SQLite、合成航班和当前证据。旧定价与用户场景引擎不再包含在工作树中。前端由 Python HTTP 服务直接提供，不需要额外 Node、Nginx、Redis 或数据库服务。
 
@@ -18,6 +18,18 @@ docker compose up --build -d --wait
 - Health：http://127.0.0.1:8000/api/health
 
 默认离线流程不需要密钥。容器以非root用户运行，宿主机端口仅发布至127.0.0.1；这不是生产身份验证、支付或公网部署。Linux容器提供`fcntl`，Windows开发者也可使用同一环境。
+
+### 直接演示 Saved experiments
+
+首次部署、没有`.env.local`及空白`app-data`卷也可打开Optimize prices的Saved experiments：启动时会验证并读取`llm_agent/experiments/*/manifest.json`及对应report／audit。当前包含24个现行v5实验（23完成、1失败），无需先运行优化或复制私人数据库。
+
+- `DEMO_LLM0`–`DEMO_LLM9`：十条航线的真实LLM角色扮演记录，含每轮价格、确认结果和顾客回馈。
+- `DEMO_ZERO0`–`DEMO_ZERO2`及三个`DEMO_ZERO_PILOT`：假设低票价／低预算的归零演示。显示HK$0候选与收入验证保留价的区别；不会自动发布免费票。
+- 其余历史现行v5实验及一次失败记录也保留，失败记录仍是失败，不会自动继续调用。
+
+从Optimize进入Member feedback可查看保存的理由；Analyst checks可按轮读取原始回覆和错误。浏览、切换轮次和读取审计均不发起LLM/OAG调用。公开目录只读，本机同ID实验优先，列表去重。新实验仍写入私有SQLite并依赖自己的持久卷；查看公开实验不复制全套审计到数据库。
+
+完整索引和报告见[公开实验](../llm_agent/experiments/README.md)。已有部署更新源码后需重建镜像，旧镜像不会自动获得新报告。损坏或缺失的公开证据应修复后重新部署，不能以空白列表掩盖发布不完整。
 
 镜像支持amd64／arm64，Python依赖固定在`requirements-docker.lock`。保留仓库LF规则，避免改变冻结模型或证据哈希。
 
@@ -46,7 +58,7 @@ docker compose start
 docker compose down
 ```
 
-本机`data/private`不会自动导入新容器。已提交的公开v5报告和NHPP证据随源码提供，但不等于所有私有运行状态自动还原。成员机器的卷也互不共享。
+本机`data/private`不会自动导入新容器。已提交的公开v5报告随源码自动出现在Saved experiments；NHPP证据及合成航班也随源码提供。账户、订单、已发布优惠及未导出的新实验只存在各自私有卷，不会由公开报告还原。成员机器的卷互不共享。
 
 仅在明确要清空全部示例记录时才使用`docker compose down --volumes`；它会删除会员、订单及实验。可先停止应用，用Docker Desktop导出卷备份；恢复时核对UID/GID10001的读写权限。
 

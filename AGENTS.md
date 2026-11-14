@@ -22,7 +22,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 - [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin与会员端流程、两类示范登入和半年会员；[HK_EXPRESS_BOOKING_UI_REVIEW](docs/HK_EXPRESS_BOOKING_UI_REVIEW.md)：会员页订票界面规格。
 - [FRONTEND_UI](docs/FRONTEND_UI.md)：Admin设计、完整From／To与航班编号、Results及前端契约；改UI时核对现行契约，会员端保持独立。
 - [EXTENDED_VALIDATION](docs/EXTENDED_VALIDATION.md)：独立NHPP验证和发布完整性。
-- [DOCKER](docs/DOCKER.md)：容器配置和测试；本机开发优先原生运行。
+- [DOCKER](docs/DOCKER.md)：部署、Saved experiments自动加载、持久卷和测试；本机开发优先原生运行。
 - [ITERATION_2_PROGRESS](docs/ITERATION_2_PROGRESS.md)：当前清理与验证记录。
 - 数据研究：[数据供应](docs/DATA_SUPPLIER_OPTIONS_2026-11-12.md)、[OAG API](docs/OAG_API_DATA_AUDIT_2026-11-11.md)、[OAG产品](docs/OAG_DATASET_PRODUCT_REVIEW_2026-11-11.md)、[文档检查](docs/OAG_DOCS_REVIEW_CHECKLIST_2026-11-11.md)。
 
@@ -32,6 +32,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 - 不用已见final holdout调参，不重跑v2 calibration覆盖证据。改模型须新版本和新验证种子。
 - `simulation/generated/`、`validation_extended/`、`network_generated/`、`member_demo_generated/` 保留原始字节；这些是当前预测器依赖的数据。
 - `llm_agent/experiments/`只发布现行v5／八类客群实验。报告、审计与manifest不可回填；新实验写新目录，失败和未改善结果也应如实报告。
+- 服务启动以只读方式加载公开实验，私有同ID记录优先；新增公开证据须测试空数据库、无密钥部署可查看Saved experiments及原始回覆，查看不调用provider。
 - 当前customer v4与analyst v2 prompt被实验哈希引用；修改提示须新增版本文件。报告中的旧来源哈希描述实际执行时源码，不能冒称由重构后的代码生成。
 - `simulation/demand_catalog.json`不手改；数据或预测器改变后用 `python scripts/build_demand_catalog.py`重建并重启服务。
 - `.env.local`不得读取输出、打印或提交；`data/private/`私有SQLite／缓存与OAG原始响应不得提交。只发布已脱敏的合成实验导出。
@@ -67,7 +68,7 @@ HTTP检查需先 `python -m backend.server`；`scripts/smoke_api.py`是无付费
 
 ## 模块与维护
 
-- `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal、demo_auth会话和唯一adaptive价格引擎；测试在backend/tests。
+- `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal、demo_auth及唯一adaptive价格引擎；published_experiments只读加载公开证据；测试在backend/tests。
 - `llm_agent/`：八类客群、最新提示、并行决策、provider transport及脱敏；experiments为现行公开实验。
 - `frontend/`：Admin／Thompson／会员端原生HTML/JS，无需构建；Experiments只读回馈，*.mjs为浏览器检查。
 - `simulation/`：合成航班数据生成、NHPP校准与验证；`scripts/`为当前运行、导出和发布工具；`apply_member_fee_reference.py`为演示票备份并写入有来源的费用明细。

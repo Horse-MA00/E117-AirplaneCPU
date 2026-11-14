@@ -303,6 +303,16 @@ class ExperimentTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'validation_repeats'):
             pricing.validate(self.config(validation_repeats=2))
 
+    def test_experiment_name_is_validated_and_saved_without_changing_run_identity(self):
+        for invalid in ('', 'x'*65, '<script>', 'bad\nname', 42):
+            with self.assertRaisesRegex(ValueError, 'name'):
+                pricing.validate(self.config(name=invalid))
+        report = pricing.start(self.config(name='DEMO_LLM0'), blocking=True)
+        self.assertEqual(report['status'], 'completed', report.get('error'))
+        self.assertEqual(report['config']['name'], 'DEMO_LLM0')
+        self.assertTrue(report['run_id'].startswith('adaptive-'))
+        self.assertEqual(adaptive_store.list_runs()[0]['config']['name'], 'DEMO_LLM0')
+
     def test_unavailable_analyst_keeps_customer_rounds_and_confirmation(self):
         failure = {'analysis': None, 'source': 'analysis_unavailable',
                    'analysis_status': 'unavailable',

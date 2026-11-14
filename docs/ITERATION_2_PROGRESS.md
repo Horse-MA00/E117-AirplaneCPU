@@ -99,3 +99,121 @@ Analyst仍不可用时存`analysis=null`、error、attempt metadata和unavailabl
 浏览器`test:analyst-diagnostics`、`test:adaptive-pricing`、真实服务`test:smoke`通过；额外在实际旧失败实验验证第10轮具体错误／原文及已保存顾客选择在两页均可读，未启动新实验。桌面／390px截图检查通过，包含恶意HTML作为纯文字、迟到响应隔离、加载失败重试。整个修复没有真实LLM／OAG调用或库存交易；确认无活动实验后重启原生8000服务。
 
 推送前发现main更新至`167d1d2`，合并保留新的地点搜索、屏宽缩放及品牌字标；唯一文档冲突保留双方章节。合并后240项完整检查再次通过；Analyst诊断、Optimize、Demand／地点搜索及真实Admin浏览器检查再次通过，没有覆盖远端UI改动。
+
+## 2026-11-15 · DEMO_LLM0–9 十航班 Live 演示实验
+
+按用户指定的十个航班与D28／D14／D7快照运行，名称固定为`DEMO_LLM0`至`DEMO_LLM9`。引擎为`member-thompson-v5-marketing`，provider model为`deepseek-flash`，保留八类`flexible_deal_seekers`默认假设权重。每航班10轮、每轮16位新模拟会员、3批各16位独立验证会员、并发4、seed117；单次尝试上限600次、整批含失败尝试上限10,000次调用。每个验证批比较格式化初始价、格式化候选价和no-offer。
+
+新增可选`config.name`与CLI `--name`，Optimize和Member feedback的已保存实验选单显示名称。内部run ID保持唯一，失败尝试不覆盖；完成但不采纳候选价的实验不会为追求改善而重跑。
+
+| 名称 | 香港出发目的地 | 航班 ID | 轮次 | 原始P₀ | 验证初始价 | 验证候选价 | 最终保留价 | 结论 | Live调用 |
+|---|---|---|---:|---:|---:|---:|---:|---|---:|
+| DEMO_LLM0 | 福冈 FUK | `SYN-00017` | D7 | 552 | 549 | 229 | 229 | ADOPT_CANDIDATE | 217 |
+| DEMO_LLM1 | 冲绳 OKA | `DEMO-HKG-OKA-20270515` | D14 | 528 | 519 | 229 | 229 | ADOPT_CANDIDATE | 232 |
+| DEMO_LLM2 | 名古屋 NGO | `DEMO-HKG-NGO-20270515` | D7 | 480 | 479 | 279 | 279 | ADOPT_CANDIDATE | 255 |
+| DEMO_LLM3 | 釜山 PUS | `DEMO-HKG-PUS-20270515` | D28 | 496 | 489 | 279 | 279 | ADOPT_CANDIDATE | 239 |
+| DEMO_LLM4 | 富国岛 PQC | `DEMO-HKG-PQC-20270515` | D28 | 480 | 479 | 279 | 279 | ADOPT_CANDIDATE | 251 |
+| DEMO_LLM5 | 札幌 CTS | `DEMO-HKG-CTS-20270515` | D7 | 408 | 399 | 289 | 399 | INCONCLUSIVE | 281 |
+| DEMO_LLM6 | 大阪 KIX | `DEMO-HKG-KIX-20270515` | D14 | 376 | 369 | 269 | 269 | ADOPT_CANDIDATE | 283 |
+| DEMO_LLM7 | 东京成田 NRT | `DEMO-HKG-NRT-20270515` | D7 | 368 | 359 | 259 | 259 | ADOPT_CANDIDATE | 291 |
+| DEMO_LLM8 | 首尔 ICN | `NET-HKG-ICN-20270521` | D14 | 632 | 629 | 279 | 279 | ADOPT_CANDIDATE | 180 |
+| DEMO_LLM9 | 岘港 DAD | `SYN-00367` | D28 | 472 | 469 | 279 | 279 | ADOPT_CANDIDATE | 257 |
+
+以上都是港币基本票价。P₀取正常基本票价80%整数上限；候选及初始备选均在独立验证前执行尾数9／低于30归零的现行规则。最终保留价与搜索候选价分开报告。
+
+| 名称 | 验证初始价加权平均票款 | 验证候选价加权平均票款 | 初始购买率 | 候选购买率 |
+|---|---:|---:|---:|---:|
+| DEMO_LLM0 | 897.92 | 2589.23 | 10.22% | 70.67% |
+| DEMO_LLM1 | 1005.71 | 2585.16 | 12.11% | 70.56% |
+| DEMO_LLM2 | 1336.94 | 2599.04 | 17.44% | 58.22% |
+| DEMO_LLM3 | 1208.37 | 2380.80 | 15.44% | 53.33% |
+| DEMO_LLM4 | 1183.66 | 2579.20 | 15.44% | 57.78% |
+| DEMO_LLM5 | 2206.03 | 2425.03 | 34.56% | 52.44% |
+| DEMO_LLM6 | 1948.32 | 2553.71 | 33.00% | 59.33% |
+| DEMO_LLM7 | 2176.34 | 2661.37 | 37.89% | 64.22% |
+| DEMO_LLM8 | 201.28 | 2658.56 | 2.00% | 59.56% |
+| DEMO_LLM9 | 1309.03 | 2480.00 | 17.44% | 55.56% |
+
+票款为每批16人的目标客群加权基本票价收入，取3个独立验证批均值，既不是整班售罄收入，也不是计入成本后的净利润。候选列即使有较高均值，也必须通过现行跨批确认门槛才会采用。札幌候选价289的加权平均改善为HK$219.00，但描述性跨批区间含负值，因此结果为INCONCLUSIVE，保留399，不把候选289当作最终推荐。
+
+全部10个实验完成；整次实验失败尝试0次。实际provider调用2486次（顾客2385、Analyst 101）；缓存0次，环境强制动作2015次，失败调用1次，Analyst重试1次，最终分析不可用0轮。DEMO_LLM0第4轮首次分析未通过校验，第二次通过；原始失败回覆保留。
+
+每个航班160位搜索会员和48位验证会员互不重叠；不同航班使用相同种子设置，不将跨航班的人物重复当成新的市场样本。部分动作由假设预算或资格直接限制，不能把所有动作均称为LLM自由选择，更不能把角色扮演视为真实HK Express客户证据。未为了改善结果更改prompt、权重、NHPP或价格算法。
+
+本机SQLite保存原始请求、回覆、重试与每轮结果；每个完成实验另外导出report、压缩audit和manifest至`data/private/demo_llm_batch_20261115/DEMO_LLM*/`，整批清单为同目录`batch.json`。数据保持本机私有；本次未发布优惠或改变会员购票库存。运行时源码哈希保存在每份报告，不能以未来代码覆盖其来源。
+
+验证：217项后端＋24项根目录测试，共241项通过；发布链接与冻结证据校验通过。命名UI的mock浏览器检查通过；真实Admin只读浏览器检查确认10个完成的Live实验在Optimize和Member feedback均按名称显示。另对全部10份导出逐一核对manifest、28项源码哈希、审计请求／响应／失败计数、搜索验证分离、配额、整数报价、实收及加权票款，均通过。
+
+| 名称 | 本机审计 run ID |
+|---|---|
+| DEMO_LLM0 | `adaptive-212f9b8009354aa2` |
+| DEMO_LLM1 | `adaptive-770a77ffdf744c26` |
+| DEMO_LLM2 | `adaptive-a16becb4c5a84a42` |
+| DEMO_LLM3 | `adaptive-128ca771fab84936` |
+| DEMO_LLM4 | `adaptive-ee1d9908431843be` |
+| DEMO_LLM5 | `adaptive-35be7f49b42541fa` |
+| DEMO_LLM6 | `adaptive-ce0a1b83a58b4656` |
+| DEMO_LLM7 | `adaptive-07bce337bd4b4574` |
+| DEMO_LLM8 | `adaptive-b58d9adf0b8645e4` |
+| DEMO_LLM9 | `adaptive-e1e48590ec734852` |
+
+## 2026-11-15 · 低价情境与算法归零示范
+
+新增显式`zero-fare-stress-v1`情境入口，并沿用相同Thompson、八类客群、冻结customer v4／analyst v2 prompt及宣传价函数。三个情境假设正常基本票价55／60／65、私人票价预算为默认值的10%，初始上限44／48／52仍高于30；没有写入目标输出价或购买标签。每组20轮、每轮32位新模拟会员、3批各32位独立确认、并发4，种子26111501／26111502／26111503。
+
+来源分别为SYN-00017 D7、DEMO-HKG-OKA-20270515 D14、DEMO-HKG-NGO-20270515 D7。保留各自原NHPP配额58／81／112作固定实验供给，并保存原scope及hash；没有在假设低正常价下重新做NHPP预测。预算仅在顾客环境缩放，公开learner仍只有原来的四个字段。默认航班与原有实验不使用这些假设。
+
+| 名称 | 顾客来源 | 假设正常价 | 初始P₀ | 算法原始候选 | 宣传价 | 收入验证保留价 | 验证结果 | 原价严格低于30 |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| DEMO_ZERO_PILOT0 | Offline | 55 | 44 | 18 | 0 | 39 | KEEP_INITIAL | 是 |
+| DEMO_ZERO_PILOT1 | Offline | 60 | 48 | 20 | 0 | 39 | KEEP_INITIAL | 是 |
+| DEMO_ZERO_PILOT2 | Offline | 65 | 52 | 18 | 0 | 49 | KEEP_INITIAL | 是 |
+| DEMO_ZERO0 | Live LLM | 55 | 44 | 30 | 0 | 39 | KEEP_INITIAL | 否：尾数9后的边界案例 |
+| DEMO_ZERO1 | Live LLM | 60 | 48 | 29 | 0 | 39 | KEEP_INITIAL | 是 |
+| DEMO_ZERO2 | Live LLM | 65 | 52 | 29 | 0 | 49 | KEEP_INITIAL | 是 |
+
+六个实验均真实运行并保存。离线三组满足严格的「算法原价<30→0」。Live结果依实际输出分类；原价30等边界值先按现行规则变29再归零，不能冒称算法选出了低于30。所有完成结果保留，不因未达到示范目标或收入未改善而重跑。
+
+**零元是自动转换后的宣传候选，不是收入验证保留价。** 这些实验的独立确认仍使用原有票款门槛，因此不会为了展示零元而篡改KEEP_INITIAL／NO_OFFER。也没有给宣传效果或未来收益捏造数值。
+
+Live新调用2082次（顾客2020、Analyst 62），缓存0次，环境强制动作2268次，失败调用2次，Analyst重试2次，最终分析不可用0轮。整次Live执行失败尝试0次。每次预算1800、整批含失败尝试7200；离线三组不发起provider调用。
+
+第一份Live实验完成后audit超过HTTP32MiB整份匯出限制，未重跑该实验。CLI改为每页100笔既有事件串流脱敏与gzip，先写临时目录、完整后改名；保留HTTP限制和不覆盖旧证据规则。修复后从SQLite补齐首份导出，并继续另外两组。
+
+Admin显式载入这些命名实验时显示假设价格、预算10%及固定来源NHPP配额。普通航班最新结果、发布参考和发布捷径排除此类情境；查看时不能误启动普通实验，New experiment先恢复原scope。Client库存与已发布优惠不被实验修改。
+
+验证：253项完整回归测试（223后端＋30根目录）、发布与冻结证据检查通过；两组mock浏览器检查、六份实际结果的只读网页检查通过。六份证据均核对manifest、源码hash、客群分离、预算缩放、库存与票款，且用保存的购买标签重播全部20轮Thompson及最终选价，再重新计算收入验证，结果一致。严格raw<30的示范判定与证据完整性分别报告；边界案例的判定不被改成通过。
+
+原始报告、audit及manifest保存在`data/private/zero_fare_demos_20261115_synthetic/`及`data/private/zero_fare_demos_20261115_live/`。它们是构造输入下的离线／LLM角色扮演，并非真实HK Express需求、价格或收益证据。
+
+| 名称 | 本机审计 run ID |
+|---|---|
+| DEMO_ZERO_PILOT0 | `adaptive-0e3e39e82042426c` |
+| DEMO_ZERO_PILOT1 | `adaptive-55a378142aa24343` |
+| DEMO_ZERO_PILOT2 | `adaptive-13f94e8449fd441e` |
+| DEMO_ZERO0 | `adaptive-ad921ba299364aef` |
+| DEMO_ZERO1 | `adaptive-82bc572307eb4e77` |
+| DEMO_ZERO2 | `adaptive-0b98e5068a1e4060` |
+
+
+## 2026-11-15 · 全部现行实验发布与无密钥部署演示
+
+交付集合包含本机全部24份现行v5／八类客群终态实验：23完成、1失败。保留原六份公开证据，新增DEMO_LLM0–9、DEMO_ZERO0–2、DEMO_ZERO_PILOT0–2，以及离线完成`adaptive-3858026a10104926`和Live失败`adaptive-c5c1ac811b2b4f9d`。本次只导出／复制既有数据，新provider调用0；失败结果没有重跑、补填确认或改成成功。
+
+全部report、脱敏audit.jsonl.gz及manifest约198.8MB，最大单文件约15.8MB。原六份公开文件和十六份已有私人导出保留原始字节；另外两份从保存SQLite串流导出。来源哈希描述运行时版本，不因本次重构改写。全部680,364条合成观测及冻结NHPP证据仍随仓库保留，未重生成或改动。私有SQLite、缓存、密钥、真实OAG原始回覆、用户账户／订单不上传。
+
+新增`backend/published_experiments.py`：服务启动核验目录完整性、manifest、SHA256、大小、版本、客群和终态，再把公开记录作为Saved experiments只读来源。私有同ID记录优先且列表去重；report按需读，audit按页流式读，原始Analyst回覆按轮查询。公开证据不导入数据库、不恢复运行、不自动发布优惠。缺失目录、未完整导出、重复ID、非终态、损坏文件及非有限JSON等明确失败，不能假装没有保存实验。
+
+导出新增显式`--include-failed`并保留历史错误；manifest区分completed／execution_failure，没有完成确认就不宣称holdout证据。验证器从audit重新核对调用、响应、失败、缓存、强制动作、token、轮次和确认结果。三次恢复的Analyst失败和一次终止失败都如实保留。24份历史累计4945次provider调用，不能误称本次发布产生了这些调用。
+
+验证结果：
+
+- `scripts/check_container.py`完整通过：238后端＋42根目录，共280项Python测试；链接、24份manifest、冻结NHPP证据与audit一致性通过。
+- 独立比对24份report、72页audit、24份Analyst汇总及15轮原始回覆，与本机SQLite相同（仅添加公开来源只读标记）；载入目录约0.92秒。查看公开记录后私有实验表和事件表仍为0行。
+- 从不包含`.env.local`或`data/private`的源码副本启动原生服务器，环境只含PATH／LANG／PYTHONNOUSERSITE，provider transport被测试明确禁止；不启动Docker。
+- 该干净部署的API smoke通过，1549班航班及预测可用。真实Chrome确认Saved experiments的24个选项、16个DEMO名称、正常Live结果、Offline／Live归零情境、一次恢复重试的两份原始回覆及旧失败轮的原始错误。新模型调用0，修改请求0。
+- 浏览器初次脚本点击早于Analyst异步metadata完成而超时；等待metadata请求完成后重测通过。未改变报告或伪造回覆以满足测试。
+
+演示：部署后打开`/adaptive-pricing`的Saved experiments，优先DEMO_LLM0／1；Member feedback查看理由。零价用DEMO_ZERO1／2，明确呈现29→0候选和39／49收入确认保留价。归零情境仍与普通航班推荐及发布隔离。操作和全部报告链接见[部署文档](DOCKER.md)及[公开实验索引](../llm_agent/experiments/README.md)。
+
+截图检查补充：归零情境的说明原位于完成后折叠的设置中，现移至结果价格上方的可见段落，列明假设票价、10%预算和固定来源NHPP配额。按modern-web-guidance accessibility指引保留原生可见文字；桌面／手机可见性、无横向溢出及切回普通实验清除标示均通过浏览器检查。

@@ -30,6 +30,10 @@ Admin UI源于`claude/frontend-fixes`的`5699a99`。2026-11-15整合到main时�
 
 **Experiments 是辅助证据，不在主线上。** 2026-11-15 起它只展示"What members said"：Thompson 实验每一轮里模拟会员（离线模型或 LLM 扮演）的购买和拒绝理由，只读。旧的 Customer panel 和 Shared market 已被队友删除。
 
+Optimize 与 Member feedback 的 Saved experiments 选单在存在 `config.name` 时以名称开头（如 `DEMO_LLM0`），仍保留航班、来源与运行状态；反馈内容标题同步显示名称。名称只作展示，选取、URL 与审计仍使用唯一 run ID，失败重试不会覆盖同名历史记录。
+
+显式低价压力测试在两页显示假设正常价、10%私有预算以及固定来源NHPP配额；算法原价→零元宣传报价与验证保留结果分别展示。此类报告只允许显式载入，不会自动替代普通航班最新结果、发布建议或发布捷径。查看期间不能直接开始普通实验；New experiment先恢复原始航班scope再启用Start。即使压力测试报告带有非空retained_price，仍不作为原航班的发布依据。
+
 **会员端是展示品**，但它和 Admin 共用库存与账目。这个闭环本身就是演示的亮点。
 
 ### 0.3 由此推出的设计原则

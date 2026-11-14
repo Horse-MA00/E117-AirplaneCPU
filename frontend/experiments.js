@@ -69,7 +69,9 @@ function renderRound() {
   const scope = selectedRun.scope || {};
   const route = scope.origin && scope.destination ? `${scope.origin} → ${scope.destination}` : selectedRun.config?.flight_id || scope.flight_id;
   const day = scope.as_of_day ?? selectedRun.config?.forecast_day;
-  $('feedback-context').textContent = [route, scope.departure_date || scope.departure_at?.slice(0, 10), day !== undefined ? `D${day}` : null, `Round ${roundNumber(round, index)}`, `Member base fare ${money(round.price)}`].filter(Boolean).join(' · ');
+  const scenario = selectedRun.scenario || scope.scenario;
+  const scenarioText = scenario ? `${scenario.label || 'Low-fare stress test'}: assumed normal fare ${money(scenario.normal_base_fare)}, ticket budgets ${Number(scenario.budget_multiplier)*100}% of standard; source NHPP quota ${scenario.source_scope?.releasable_seats ?? '—'} seats held fixed. Hypothetical inputs, not a new flight forecast.` : null;
+  $('feedback-context').textContent = [selectedRun.config?.name, route, scope.departure_date || scope.departure_at?.slice(0, 10), day !== undefined ? `D${day}` : null, `Round ${roundNumber(round, index)}`, `Member base fare ${money(round.price)}`, scenarioText].filter(Boolean).join(' · ');
   const hypothesis = round.hypothesis_test;
   $('feedback-hypothesis').hidden = !hypothesis;
   if (hypothesis) {
@@ -145,7 +147,7 @@ async function loadSaved() {
     const data = await get('/api/adaptive-pricing/runs');
     if (sequence !== requestSequence) return;
     const runs = (data.runs || []).filter(run => safeId(run.run_id));
-    $('feedback-run').replaceChildren(...runs.map(run => new Option(`${run.config?.flight_id || run.scope?.flight_id || run.run_id} · ${run.config?.mode === 'live' ? 'Live LLM' : 'Offline customers'} · ${String(run.status || 'saved').replaceAll('_', ' ')} · ${run.run_id.slice(-8)}`, run.run_id)));
+    $('feedback-run').replaceChildren(...runs.map(run => new Option(`${run.config?.name ? `${run.config.name} · ` : ''}${run.config?.flight_id || run.scope?.flight_id || run.run_id} · ${run.config?.mode === 'live' ? 'Live LLM' : 'Offline customers'} · ${String(run.status || 'saved').replaceAll('_', ' ')} · ${run.run_id.slice(-8)}`, run.run_id)));
     if (preferred && !runs.some(run => run.run_id === preferred)) $('feedback-run').prepend(new Option(`Selected experiment · ${preferred}`, preferred));
     const id = preferred || runs[0]?.run_id;
     if (!id) {

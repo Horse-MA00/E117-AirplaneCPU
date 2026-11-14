@@ -328,7 +328,7 @@ async function thompsonReference(flightId, day) {
   try {
     if (!state.thompsonRuns) state.thompsonRuns = (await api('/api/adaptive-pricing/runs')).runs || [];
   } catch { return null; }
-  const runs = state.thompsonRuns.filter((r) => r.status === 'completed' && (r.scope?.flight_id ?? r.config?.flight_id) === flightId && Number(r.scope?.as_of_day ?? r.config?.forecast_day) === day);
+  const runs = state.thompsonRuns.filter((r) => !r.scenario && !r.scope?.scenario && !r.config?.demo_scenario && r.status === 'completed' && (r.scope?.flight_id ?? r.config?.flight_id) === flightId && Number(r.scope?.as_of_day ?? r.config?.forecast_day) === day);
   const latest = runs.sort((a, b) => Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0))[0];
   if (!latest) return null;
   const decision = latest.validation?.adoption_result || latest.validation?.decision;

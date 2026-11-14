@@ -1,6 +1,6 @@
 # UOption Fly Pass 技術速讀與 Present 指南
 
-> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`analyst-retry-v1`、`public-member-response-v1`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`three-round-release-v1`、`member-marketing-fare-v1`
+> 状态：现行 · 对应代码：`member-thompson-v5-marketing`、`analyst-retry-v1`、`public-member-response-v1`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`three-round-release-v1`、`member-marketing-fare-v1`、`backend/published_experiments.py`
 
 更新：2026-11-15。Team Airplane CPU · E117。本文件涵蓋現行Admin、半年會員計劃、示範登入、From／To及Analyst有限重試；預測與定價數學沿用狀態行所列版本。主規格為 [Thompson 定價](FLIGHT_SCOPED_OPTIMIZATION.md)及[三輪放票](THREE_ROUND_RELEASE.md)。
 
@@ -177,6 +177,8 @@ $$
 
 一次實驗固定航班、日期、正常票價與供應。`flight_scope()`直接以合成快照預測配額，**不讀會員網站的交易庫存**。每個報價都是重置的對照世界，不會真的消耗Client的座位或會員預算；發布優惠時再核對Client狀態。
 
+另有明確標示的 `zero-fare-stress-v1` 宣傳價示範：假設正常基本票價為55／60／65，八類客群的私人票價預算乘0.10，初始上限仍為44／48／52。這些情境保留來源航班的配額作固定供應，不聲稱已在較低正常價下重新預測NHPP；來源scope、假設與雜湊均另存。它們沿用相同Thompson及歸零函式，並將「宣傳候選0」與「驗證保留價」分開。只讀展示不會取代一般航班推薦或發布建議；設定與重播命令見[現行定價規格](FLIGHT_SCOPED_OPTIMIZATION.md#explicit-low-fare-demonstration-inputs)。
+
 ### 5.2 學的不是「正確價格標籤」
 
 模型學的是不同價格下買會員票的機率 $q_i(p)$：
@@ -339,7 +341,7 @@ bootstrap以確認批次重抽2,000次，使用2.5%／97.5%分位。只有少量
 
 這次結果為ADOPT_CANDIDATE。新provider呼叫213次（顧客203、分析10），快取0、強制動作245、失敗0。強制動作不是LLM回答，兩者不能合計後稱為「458次LLM測試」。
 
-同時保留5份離線結果：2份無定論、3份保留初始價；它們不是隨機抽樣的六案例基準，不能用1／6推算成功率。以上Live結果是一次小樣本合成實驗，不能外推真實會員轉化或全年利潤。原始報告與審計見[v5證據索引](../llm_agent/experiments/README.md)。
+上述六份原始結果保持不變。現已公開全部24份現行v5實驗：23份完成、1份失敗，包含DEMO_LLM0–9、六份假設低價／低預算歸零情境，以及其他既有實驗。完成結果為11份採用候選、9份保留初始價、3份無定論；這是保存歷史，不是隨機抽樣基準，不能計算真實市場成功率。六份歸零情境的HK$0只是宣傳候選，收入確認仍保留39／39／49。原始報告與審計見[v5證據索引](../llm_agent/experiments/README.md)。
 
 ## 9 前後端與資料庫如何接起來
 
@@ -366,7 +368,8 @@ Client支援出發／目的機場、地區、日期範圍及彈性選擇。展�
 | `backend/data.py`、`simulation/` | 讀取合成歷史、航班目錄及需求分類；Low <60%、Medium 60%–<85%、High ≥85%取D28預測正常訂位率 |
 | `data/private/adaptive_pricing/experiments.sqlite3` | `adaptive_runs`保存設定、輪次、模型、確認結果；`adaptive_events`保存請求、回覆及審計事件 |
 | `data/private/demo.sqlite3` | `offers`、`members`、`bookings`、`flight_clocks`、`membership_plan`保存Client交易狀態；`demo_sessions`保存示範登入的token雜湊及到期時間 |
-| `llm_agent/experiments/` | 脫敏公開report、壓縮audit及SHA256 manifest；不是前端Saved experiment的自動匯入來源 |
+| `llm_agent/experiments/` | 脫敏公開report、壓縮audit及SHA256 manifest；服務啟動時自動成為Saved experiments只讀來源 |
+| `backend/published_experiments.py` | 驗證並讀取公開實驗；與私有SQLite結果合併去重，同ID以本機為先，按頁讀取原始審計 |
 
 發布和結帳使用SQLite `BEGIN IMMEDIATE`交易。發布檢查合法輪次、是否已發行、時間方向、最新保護和整數價格上限；購票API先核對會員確認的票款，Store再於交易內檢查會員有效性、有效批次與物理／風險庫存，扣席並保存訂單；同人同班唯一約束防止重複購買。新一輪發布推進該航班的示例時鐘；瀏覽較早預測不能倒退交易時鐘。Client目前沒有取消或退款操作。
 
@@ -410,7 +413,7 @@ Admin新版以共用航班欄串連Forecast、Optimize、Publish offers和Result
 | 3:30–4:30 | Publish offers → Client → 刷新庫存 | 「管理員決定是否發布；系統重新核對三輪配額。會員購買後，訂單和庫存一起更新。」 |
 | 4:30–5:00 | 證據限制及下一步 | 「這是合成資料上的可運行原型。接下來用真實訂位及會員曝光／購買記錄校準，進行受控試點。」 |
 
-現場用已保存結果，不必等候完整Live呼叫。本機可直接開[Live成功案例](http://127.0.0.1:8001/adaptive-pricing?run=adaptive-749c60ea38b34eb2)及[無定論對照](http://127.0.0.1:8001/adaptive-pricing?run=adaptive-771981d0c8f84850)；這些連結依賴本機SQLite，乾淨clone不會自動出現私有run，公開報告仍可從證據索引閱讀。
+現場用已保存結果，不必等候完整Live呼叫。乾淨clone／新部署即使沒有密鑰及私有資料庫，也會自動列出24份公開實驗。從Saved experiments選DEMO_LLM0或DEMO_LLM1演示正常定價，選DEMO_ZERO1／2演示HK$29→0候選與收入確認保留價的差別。Member feedback和Analyst checks讀取原始回饋、重試及錯誤；查看不呼叫模型，也不恢復失敗實驗或自動發布優惠。啟動／部署說明見[DOCKER](DOCKER.md)。
 
 演示前預先載入SYN-00017／D7、對應實驗和會員回饋。Client請選合成資料的實際日期，例如2027-05-15至21，或Any dates；Next month按現實香港日期計算，不會自動跳到合成月份。入會與購票是兩次確認，入會不保留座位；使用已啟用的示例會員則可直接展示購票。
 
@@ -431,7 +434,7 @@ Admin新版以共用航班欄串連Forecast、Optimize、Publish offers和Result
 
 ## 11 驗證與後續實作邊界
 
-`python scripts/check_container.py`覆蓋後端、根目錄、發布連結及證據校驗；`python scripts/smoke_api.py --url http://127.0.0.1:8000`為無付費呼叫的API檢查；瀏覽器測試見[frontend說明](../frontend/README.md)。最近完整驗證通過240項Python測試（216項後端、24項根目錄）；執行紀錄與瀏覽器驗證見[維護紀錄](ITERATION_2_PROGRESS.md)。軟件測試通過、合成效果改善、真人市場有效是三個不同層次。
+`python scripts/check_container.py`覆蓋後端、根目錄、發布連結及證據校驗；`python scripts/smoke_api.py --url http://127.0.0.1:8000`為無付費呼叫的API檢查；瀏覽器測試見[frontend說明](../frontend/README.md)。最近完整驗證通過280項Python測試（238項後端、42項根目錄）；執行紀錄與瀏覽器驗證見[維護紀錄](ITERATION_2_PROGRESS.md)。軟件測試通過、合成效果改善、真人市場有效是三個不同層次。
 
 下一步優先收集真實訂票／取消／可售庫存／報價歷史，以及隨機報價下的會員曝光、購買和不購買資料。接著校準需求和回應模型，測完整三輪策略與正常銷售替代，最後才擴展至全年會員使用、續會、會費和成本。
 

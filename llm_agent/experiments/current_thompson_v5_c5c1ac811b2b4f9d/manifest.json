@@ -1,0 +1,42 @@
+{
+  "source": "adaptive_thompson_pricing",
+  "run_id": "adaptive-c5c1ac811b2b4f9d",
+  "synthetic": true,
+  "audit_records": 671,
+  "counts": {
+    "provider_calls": 164,
+    "fresh_responses": 164,
+    "cache_hits": 0,
+    "forced": 150,
+    "failures": 1,
+    "synthetic_choices": 0,
+    "total_tokens": 336114,
+    "peak_parallel_calls": 4,
+    "customer_calls": 154,
+    "analyst_calls": 10,
+    "key_slots": {
+      "primary": 82,
+      "secondary": 82
+    },
+    "max_calls": 10000,
+    "remaining_calls": 9836,
+    "configured_key_slots": 2,
+    "concurrency": 4,
+    "peak_parallel": 4,
+    "stopped_after_failure": true,
+    "elapsed_seconds": 91.412
+  },
+  "files": {
+    "report.json": {
+      "sha256": "adb1c203eb7ea0eaaeefd3da685ef8b2ea8d841a0622c6b2831001ec1abedcf3",
+      "bytes": 4557237
+    },
+    "audit.jsonl.gz": {
+      "sha256": "9ca6f6891aa31614c4f184067f7c2f37817a0166e2ed65a1b06bf3d44fde914c",
+      "bytes": 410113
+    }
+  },
+  "customer_source": "live",
+  "weight_source": "project_test_mixture_not_observed_hkexpress_shares",
+  "evidence_kind": "execution_failure"
+}

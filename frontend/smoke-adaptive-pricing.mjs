@@ -19,7 +19,7 @@ const flights=[{...scope,capacity:180,departure_at:'2027-05-18T10:30:00+08:00',d
  {...scope,flight_id:'TEST-HKG-HND-HIGH',destination:'HND',demand_band:'high'}];
 const curve=[{price:0,expected_buyers:25,expected_member_revenue:0},{price:100,expected_buyers:20,expected_member_revenue:2000},{price:255,expected_buyers:16,expected_member_revenue:4080},{price:328,expected_buyers:8,expected_member_revenue:2624}];
 const rounds=[1,2,3].map(round=>({round,price:round===1?328:255,unique_customers:16,learning_updates:round*16,member_buyers:16,member_revenue:4080,weighted_conversion:.6,paired_delta_vs_initial:1456,curve,analysis_source:'provider_live',analysis:{summary:'Members liked the lower fare. <img src=x onerror=alert(1)>'},hypothesis_test:{source_round:round===1?null:round-1,direction:'lower',status:'supported',summary:'Fresh paired customers bought more.'},decisions:[{person:{segment_label:'Flexible budget traveller',customer_id:`TEST-${round}`},decision:{action:'BUY_MEMBER',reason:'This affordable fare fits my flexible trip. <img src=x onerror=alert(1)>'},source:'provider_live'}]}));
-let report={version:'member-thompson-v5-marketing',run_id:'adaptive-test-current',status:'completed',scope,population,config:{profile:'flexible_deal_seekers',final_member_fare_policy:'member-marketing-fare-v1',flight_id:scope.flight_id,forecast_day:28,mode:'synthetic',rounds:3,customers:16,concurrency:4,max_calls:600,seed:117,validation_repeats:3},rounds,counts:{provider_calls:20,cache_hits:2,forced:4,failures:0,peak_parallel:4},progress:{completed_rounds:3,total_rounds:3,cumulative_unique_customers:48},recommendation:{raw_price:255,price:249,revenue_max_price:255,volume_max_price:0,revenue_fraction:.95,model_curve:curve,marketing_adjustment:{policy:'member-marketing-fare-v1',initial_price_before_marketing:328,initial_price:319}},validation:{adoption_result:'ADOPT_CANDIDATE',retained_price:249,break_even_conversion:.82,observed_conversion:.6,initial_price_before_marketing:328,initial_price:319,selected_price_before_marketing:255,selected_price:249,delta_vs_initial:1432,delta_vs_no_offer:704,comparisons:[{policy:'initial',price:319,mean_buyers:8,mean_revenue:2552},{policy:'selected',price:249,mean_buyers:16,mean_revenue:3984},{policy:'no_offer',price:null,mean_buyers:8,mean_revenue:3280}]},elapsed_seconds:70};
+let report={version:'member-thompson-v5-marketing',run_id:'adaptive-test-current',status:'completed',scope,population,config:{name:'DEMO_LLM0',profile:'flexible_deal_seekers',final_member_fare_policy:'member-marketing-fare-v1',flight_id:scope.flight_id,forecast_day:28,mode:'synthetic',rounds:3,customers:16,concurrency:4,max_calls:600,seed:117,validation_repeats:3},rounds,counts:{provider_calls:20,cache_hits:2,forced:4,failures:0,peak_parallel:4},progress:{completed_rounds:3,total_rounds:3,cumulative_unique_customers:48},recommendation:{raw_price:255,price:249,revenue_max_price:255,volume_max_price:0,revenue_fraction:.95,model_curve:curve,marketing_adjustment:{policy:'member-marketing-fare-v1',initial_price_before_marketing:328,initial_price:319}},validation:{adoption_result:'ADOPT_CANDIDATE',retained_price:249,break_even_conversion:.82,observed_conversion:.6,initial_price_before_marketing:328,initial_price:319,selected_price_before_marketing:255,selected_price:249,delta_vs_initial:1432,delta_vs_no_offer:704,comparisons:[{policy:'initial',price:319,mean_buyers:8,mean_revenue:2552},{policy:'selected',price:249,mean_buyers:16,mean_revenue:3984},{policy:'no_offer',price:null,mean_buyers:8,mean_revenue:3280}]},elapsed_seconds:70};
 let starts=[],scopes=[],setup='ready',empty=false,failFeedback=false,apiReads=0;
 await page.route('**/api/**',async route=>{
  const request=route.request(),path=new URL(request.url()).pathname,method=request.method();apiReads++;
@@ -54,6 +54,7 @@ try{
  assert.match(await page.locator('#run-counts').innerText(),/20 provider calls · 2 cache hits · 4 forced decisions · 0 failures/);
  assert.equal(await page.locator('#feedback-section,#round-chart').count(),0);
  await page.reload();await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$249');assert.equal(starts.length,1);
+ assert.match(await page.locator('#saved-run option:checked').textContent(),/^DEMO_LLM0 · TEST-HKG-KMQ/);
  const completed=structuredClone(report);
  for(const [raw,price] of [[255,249],[30,0],[38,0],[39,39],[103,99],[259,259]]){
   report={...completed,recommendation:{...completed.recommendation,raw_price:raw,price},validation:{...completed.validation,selected_price_before_marketing:raw,selected_price:price,retained_price:price}};
@@ -61,7 +62,44 @@ try{
   assert.equal(await page.locator('#recommended-price').innerText(),`HK$${price}`);
   assert.equal(await page.locator('#round-table tr').nth(1).locator('td').first().innerText(),'HK$255','Final quote formatting never rewrites search evidence');
  }
- report=completed;await page.locator('#refresh-run').click();await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$249');
+ const stressScenario={id:'low_fare_60',version:'zero-fare-stress-v1',label:'Low-fare stress test',normal_base_fare:60,budget_multiplier:.10,source_scope:scope};
+ const zeroStress={...completed,scenario:stressScenario,scope:{...scope,normal_base_fare:60,member_fare_cap:48,initial_member_fare:48,scenario:stressScenario},config:{...completed.config,name:'DEMO_ZERO0',demo_scenario:'low_fare_60'},recommendation:{...completed.recommendation,raw_price:20,price:0,marketing_adjustment:{...completed.recommendation.marketing_adjustment,initial_price_before_marketing:48,initial_price:39}},validation:{...completed.validation,adoption_result:'NO_OFFER',retained_price:null,initial_price_before_marketing:48,initial_price:39,selected_price_before_marketing:20,selected_price:0}};
+ report=zeroStress;await page.goto(origin+`/adaptive-pricing?run=${report.run_id}`);
+ await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$0');
+ assert.match(await page.locator('#saved-run option:checked').textContent(),/^DEMO_ZERO0 ·/);
+ assert.equal(await page.locator('#setup-panel').isHidden(),true);
+ assert.equal(await page.locator('#scenario-notice').isVisible(),true,'Scenario assumptions remain visible with completed settings folded');
+ assert.match(await page.locator('#scenario-notice').innerText(),/Hypothetical low-fare scenario.*HK\$60.*Ticket budgets 10%.*Source NHPP quota 45 seats held fixed/);
+ await page.setViewportSize({width:390,height:844});
+ assert.equal(await page.locator('#scenario-notice').isVisible(),true);
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ await page.setViewportSize({width:1440,height:1000});
+ assert.match(await page.locator('#run-cohort').textContent(),/Assumed normal base fare HK\$60.*Ticket budgets 10%.*Source NHPP quota 45 seats held fixed.*HK\$410/);
+ assert.match(await page.locator('#scope-message').textContent(),/hypothetical inputs are not a new flight forecast/);
+ assert.equal(await page.locator('#normal-fare').textContent(),'HK$60');
+ assert.match(await page.locator('#marketing-fare-note').textContent(),/HK\$20 → promotional quote HK\$0/);
+ assert.equal(await page.locator('#retained-price-note').textContent(),'No member offer retained.');
+ assert.equal(await page.locator('#publish-link').isHidden(),true);assert.equal(await page.locator('#publish-link').getAttribute('href'),null);
+ assert.equal(await page.locator('#start').isDisabled(),true);
+ await page.locator('#experiment-form').evaluate(form=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));assert.equal(starts.length,1);
+ // Even an adopted stress-test price must not become an ordinary flight's
+ // publishing shortcut; the scenario assumptions differ from its quote.
+ report={...zeroStress,validation:{...zeroStress.validation,adoption_result:'ADOPT_CANDIDATE',retained_price:0}};
+ await page.locator('#refresh-run').click();await page.waitForFunction(()=>document.getElementById('retained-price-note').textContent.includes('HK$0'));
+ assert.equal(await page.locator('#publish-link').isHidden(),true);assert.equal(await page.locator('#publish-link').getAttribute('href'),null);
+ report=zeroStress;
+ await page.goto(origin+`/admin?run=${report.run_id}#customers`);await page.locator('#feedback-content:visible').waitFor();
+ assert.match(await page.locator('#feedback-context').textContent(),/DEMO_ZERO0.*assumed normal fare HK\$60, ticket budgets 10%.*quota 45 seats held fixed/);
+ await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ await page.setViewportSize({width:1440,height:1000});
+ // Start settings after a stress report restore the real source quote. The
+ // same stress report is not silently reloaded as the flight's latest result.
+ await page.goto(origin+`/adaptive-pricing?run=${report.run_id}`);await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$0');
+ await page.locator('#new-experiment').click();await page.waitForFunction(()=>document.getElementById('normal-fare').textContent==='HK$410');
+ assert.equal(await page.locator('#scenario-notice').isHidden(),true,'Source flight settings clear the hypothetical scenario notice');
+ assert.equal(await page.locator('#recommendation').isHidden(),true);assert.equal(starts.length,1);
+ report=completed;await page.goto(origin+`/adaptive-pricing?run=${report.run_id}`);await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$249');
+ assert.equal(await page.locator('#scenario-notice').isHidden(),true,'Normal saved experiments do not inherit scenario assumptions');
  // Loading a saved low-demand flight from a high-demand filter restores its
  // selectors and navigation together, without silently starting another run.
  await page.selectOption('#opt-demand','high');
@@ -111,6 +149,8 @@ try{
  assert.match(await page.locator('#page-error').innerText(),/call limit must be at least/);assert.equal(starts.length,1);
  await page.locator('#max-calls').fill('600');await page.locator('#start').click();await page.waitForFunction(()=>document.getElementById('recommended-price').textContent==='HK$249');assert.equal(starts.length,2);assert.equal(starts[1].mode,'live');
  await page.goto(origin+`/admin?run=${report.run_id}&round=1#customers`);await page.locator('#feedback-content:visible').waitFor();
+ assert.match(await page.locator('#feedback-run option:checked').textContent(),/^DEMO_LLM0 · TEST-HKG-KMQ/);
+ assert.match(await page.locator('#feedback-context').textContent(),/^DEMO_LLM0 · HKG → KMQ/);
  assert.equal(await page.locator('#feedback-round').inputValue(),'1');assert.match(await page.locator('#feedback-summary').innerText(),/<img src=x/);assert.equal(await page.locator('#view-customers img').count(),0);
  assert.match(await page.locator('#feedback-list').innerText(),/<img src=x/);assert.equal(await page.locator('#view-pricing,#view-panel,#view-market').count(),0);
  await page.selectOption('#feedback-round','3');await page.reload();await page.locator('#feedback-content:visible').waitFor();assert.equal(await page.locator('#feedback-round').inputValue(),'3');assert.equal(starts.length,2);
@@ -132,5 +172,5 @@ try{
   await page.locator('#experiment-form').evaluate(form=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));assert.equal(starts.length,2);
  }
  assert.deepEqual(errors,[]);
- console.log('Current Thompson v5 UI passed: fixed8groups, scoped starts, bounded live submit, raw-vs-promotional evidence, final 0/9 fares, saved reports, curves, confirmation, mobile, safe feedback, retired hashes unavailable without redirect, deleted assets404, removed reports404, configuration-failure guard. All APIs mocked; no paid calls.');
+ console.log('Current Thompson v5 UI passed: fixed8groups, scoped starts, bounded live submit, raw-vs-promotional evidence, final 0/9 fares, explicitly labelled zero-fare stress scenarios, stress publication guard and source-input reset, saved reports, curves, confirmation, mobile, safe feedback, retired hashes unavailable without redirect, deleted assets404, removed reports404, configuration-failure guard. All APIs mocked; no paid calls.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

@@ -130,6 +130,11 @@ def _experiment_manifests(root: Path, errors: list[str]) -> int:
                 if (report.get("version") != "member-thompson-v5-marketing"
                         or report.get("config", {}).get("profile") != "flexible_deal_seekers"):
                     errors.append(f"{label}: retired experiment version or customer profile")
+                from scripts.verify_artifacts import experiment_status
+                try:
+                    experiment_status(report, manifest)
+                except (AssertionError, KeyError, TypeError) as exc:
+                    errors.append(f"{label}: invalid terminal experiment evidence ({exc})")
             else:
                 errors.append(f"{label}: missing current Thompson report.json")
         except (OSError, UnicodeError, ValueError, TypeError, AttributeError) as exc:

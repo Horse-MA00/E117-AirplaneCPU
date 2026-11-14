@@ -26,9 +26,9 @@ class PublicationTests(unittest.TestCase):
         (self.root / "docs/extra.md").write_text("Evidence details", encoding="utf-8")
         experiment = self.root / "llm_agent/experiments/published"
         experiment.mkdir(parents=True)
-        payload = b'{"version":"member-thompson-v5-marketing","config":{"profile":"flexible_deal_seekers"}}'
+        payload = b'{"run_id":"test-published","status":"completed","version":"member-thompson-v5-marketing","config":{"profile":"flexible_deal_seekers"}}'
         (experiment / "report.json").write_bytes(payload)
-        (experiment / "manifest.json").write_text(json.dumps({"source":"adaptive_thompson_pricing", "files": {
+        (experiment / "manifest.json").write_text(json.dumps({"source":"adaptive_thompson_pricing", "run_id":"test-published", "files": {
             "report.json": {"sha256": hashlib.sha256(payload).hexdigest(), "bytes": len(payload)}}}))
         # Extended numerical consistency has its own real-data tests. These
         # fixtures exercise publication/link/archive paths without 400k CSV rows.

@@ -198,6 +198,8 @@ class Server(ThreadingHTTPServer):
 
 if __name__=='__main__':
  import argparse
- p=argparse.ArgumentParser();p.add_argument('--port',type=int,default=8000);p.add_argument('--host',choices=('127.0.0.1','0.0.0.0'),default='127.0.0.1');a=p.parse_args();store()
+ p=argparse.ArgumentParser();p.add_argument('--port',type=int,default=8000);p.add_argument('--host',choices=('127.0.0.1','0.0.0.0'),default='127.0.0.1');a=p.parse_args()
+ adaptive_store.enable_published_experiments()
+ store()
  print(f'UOption Fly Pass: http://127.0.0.1:{a.port}',flush=True)
  Server((a.host,a.port),Handler).serve_forever()
