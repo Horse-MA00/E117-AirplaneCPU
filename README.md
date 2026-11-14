@@ -165,6 +165,7 @@ For live experiments, create with `--modes live`, then use a bounded `--max-call
 
 ## Documentation
 
+- [Shared AI-assistant rules for Codex and Claude Code](AGENTS.md) (`CLAUDE.md` imports it; keep it updated)
 - [Joint optimisation, seat feedback, database and APIs](docs/OPTIMIZATION_ENGINE.md)
 - [Six-round math and actual DeepSeek integration evidence](docs/JOINT_OPTIMIZATION_VALIDATION.md)
 - [Portal redesign and differences from the incoming plan](docs/PORTAL_REDESIGN_AND_OPTIMIZATION.md)
