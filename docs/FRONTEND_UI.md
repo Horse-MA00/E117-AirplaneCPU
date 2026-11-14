@@ -357,6 +357,7 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-15 | 合并 main（Route 改为完整 From / To，Flight 显示完整合成编号）；在 From / To 上恢复搜索按钮（§5.2） | 用户要求 |
 | 2026-11-15 | 左上角改用会员端的 UOption / FLY PASS 字标，下面加 ADMIN（§4.1） | 用户要求两端品牌字标一致，仍标明 Admin |
 | 2026-11-15 | 自查后修：main 的选择栏在 1700px 以下改为两行，与按屏宽缩放冲突（笔记本上缩放后布局宽仍是 1920，却被拆成两行）→ 断点改到 1359px；Demand、轮次按钮略收窄，地点和航班字号统一 16px，使 `Kota Kinabalu (BKI)` 和 `… · DEMO-HKG-BKI-20270515` 在 1920 / 1512 下都不被截断 | §1.4 第 5 条 |
+| 2026-11-15 | From / To 里只有一个机场的国家／地区（如 Hong Kong）不再列出 "Entire …"，避免 "Entire Hong Kong" 和 "Hong Kong (HKG)" 两个相同选项；旧的 `region:HK` 选择自动换成该机场 | 用户反馈搜索结果里两个重复的 Hong Kong |
 | 2026-11-15 | `smoke-demand-filter`：Tab 顺序加入两个可见的搜索按钮（From → 搜索 → To → 搜索 → Flight），并新增地点搜索的断言（名称、代码匹配、无结果、Esc 不改选择） | 新增按钮的直接结果，原断言含义不变 |
 | 2026-11-15 | 测试同步修改：`smoke-flight-offers` 改用共用选择栏；`smoke-demand-filter` 的 Tab 顺序加入 Route，并放行字体文件；`smoke-adaptive-pricing` 导航数改为 5，折叠区里的说明改读 `textContent` | 都是本次界面改动的直接结果，断言的业务含义不变 |
 
