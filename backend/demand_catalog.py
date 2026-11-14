@@ -20,7 +20,7 @@ FORECAST_SEED = 117
 THRESHOLDS = {"low_below": .60, "high_at_least": .85}
 INDEX_PATH = "simulation/demand_catalog.json"
 SOURCE_FILES = (
-    "backend/nhpp.py", "backend/data.py", "backend/demand_catalog.py",
+    "backend/nhpp.py", "backend/nhpp_v3.py", "backend/forecast.py", "simulation/generated/calibration_v3_robust.json", "simulation/generated/nhpp_v3_robust_final.json", "simulation/evaluate_nhpp_v3.py", "simulation/calibrate_nhpp_v3_robust.py", "simulation/generated/calibration_v3.json", "backend/data.py", "backend/demand_catalog.py",
     "simulation/generated/calibration_v2.json",
     *tuple(f"simulation/{dataset}/{filename}"
            for dataset in ("generated", "network_generated", "member_demo_generated")
@@ -55,7 +55,7 @@ def source_hashes(root=ROOT):
 
 def forecast_record(flight_id, rows, predictor=None):
     if predictor is None:
-        from .nhpp import forecast
+        from .forecast import forecast
         predictor = forecast
     # Explicit pre-filter and field allowlist keep future rows and hidden labels
     # out even if a different loader later includes them in its records.
@@ -67,7 +67,8 @@ def forecast_record(flight_id, rows, predictor=None):
         raise ValueError(f"Invalid normal-demand forecast for {flight_id}")
     load = round(1-empty/capacity, 8)
     return {"flight_id": flight_id, "demand_band": classify(load),
-            "demand_expected_load_rate": load, "demand_reference_day": REFERENCE_DAY}
+            "demand_expected_load_rate": load, "demand_reference_day": REFERENCE_DAY,
+            "d28_releasable": prediction.get("releasable_seats")}
 
 
 def build_index(histories, root=ROOT, progress=None):
@@ -147,5 +148,9 @@ def enrich(flights, root=ROOT):
         row = records.get(flight["flight_id"])
         if row is not None:
             item.update({key: row[key] for key in ("demand_band", "demand_expected_load_rate", "demand_reference_day")})
+        if row is not None and flight.get('dataset') == 'member_demo_generated':
+            quota = row.get('d28_releasable')
+            if isinstance(quota, int) and not isinstance(quota, bool) and 0 <= quota <= flight.get('capacity', 0):
+                item['demo_d28_releasable'] = quota
         result.append(item)
     return result

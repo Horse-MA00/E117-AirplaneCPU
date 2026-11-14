@@ -23,7 +23,7 @@ def flight_scope(flight_id, day=28):
     quote = next((r for r in reversed(history) if r.get('normal_base_fare') is not None), None)
     if quote is None:
         raise ValueError('Selected flight has no observed base-fare quote at or before this release day')
-    from backend.nhpp import forecast
+    from backend.forecast import forecast
     prediction = forecast(history, day, seed=117)
     # Start at the highest permitted member fare: 50% of the observable normal
     # base fare. Historical 15% member-price columns are kept for reproducibility only.

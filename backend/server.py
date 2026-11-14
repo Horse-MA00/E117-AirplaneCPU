@@ -45,7 +45,7 @@ def _optimization_get(optimization,parts,query):
 
 @lru_cache(maxsize=96)
 def forecast_for(flight,day):
- from .nhpp import forecast
+ from .forecast import forecast
  return forecast(data.history(flight),days_to_departure=day,seed=117)
 
 def get(path,query=None):

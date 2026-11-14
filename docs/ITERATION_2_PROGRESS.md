@@ -203,3 +203,22 @@ Merged main at `a178b08` (documentation cleanup) into `feature/formula-grid-pric
 - Forecast seats adds an **NHPP recommended member seats** card (`available_seats − protection_p90`). A release round with no NHPP headroom shows an explicit "do not release" decision on Forecast and Optimize; Start is also disabled when the release share rounds the allowance down to zero.
 - Observed with zero programme cost on DEMO-ISG-HKG: the best tested fare (the HK$220 cap) still lost HK$480 against no offer because both member buyers would otherwise have bought normal fares (+HK$440 member revenue, −HK$920 normal revenue). The engine's decision was NO_OFFER.
 
+
+## 2026-11-14 — NHPP 平滑与收入风险校准
+
+用户要求实现近期趋势平滑及 P90/正常票收入风险校准。新增 `backend/nhpp_v3.py` 和活动入口 `backend/forecast.py`；冻结 v2 代码及报告保留。完整窗口/近期窗口按证据与样本量混合，完整窗口权重至少 20%。
+
+保留第一轮失败报告；第二轮使用 1200 班新校准与 600 班新测试。D14/D7 启用 v3；D28 的 v3 未通过突增组收入门槛，保留 v2 分布但启用独立通过的新 v2 guard。不得把保护覆盖当成原始 P90 覆盖，或声称所有时点都启用了 v3。
+
+当前保护覆盖 D28/D14/D7 为 99.17%/99.50%/99.83%；平均容量压力正常基础票价收入损失 HK$20.32/0/0，平均释放 2.76/9.01/14.74 座。更安全同时更保守。收入指标假设会员位立即售完，忽略取消和转买会员票，不是净利润或真实航空表现。
+
+详见 `docs/NHPP_V3_REVIEW.md`。修改已接入 API、共享市场、定价初始化、实验 provenance 和展示索引。当前分支保持不变，未合并、未推送。
+
+验证完成：Linux Docker 后端 248 项测试全部通过；模拟器测试共 26 项，25 通过、1 跳过；历史制品校验通过。新增 NHPP 专项 12 项测试通过，最终目录与活动模型匹配检查通过。原生 Windows 的 fcntl 限制未修改。
+
+
+## 2026-11-14 — 路演文档及 main 集成验证
+
+新增 PITCHING_BRIEF.md，涵盖当前方案、最终保护覆盖率、正常收入压力损失、中文与英文讲稿、七页 presentation 结构及评委问答。同步最新 main 文档整理，保留双方日志并使用 AGENTS.md 单一指引。修复 Git LF/CRLF 规范化导致的校准字节哈希兼容问题，仅接受换行等价，拒绝内容篡改，不改历史评分。
+
+最终合并前验证：Linux Docker 249 项后端测试通过；根目录 30 项通过、1 项 Git 检查跳过；本机全部 31 项根目录测试通过。发布与冻结制品校验通过，航班索引已重建。用户授权将当前方案和路演文档合并并推送 main。

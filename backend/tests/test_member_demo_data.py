@@ -28,8 +28,8 @@ class MemberDemoDataTests(unittest.TestCase):
         for flight in extra:
             self.assertTrue(flight['flight_id'].startswith('DEMO-'))
             self.assertEqual(flight['scenario'], SCENARIOS[flight['demo_priority']]['name'])
-            self.assertIn('demo_d28_releasable', flight)
-            self.assertGreaterEqual(flight['demo_d28_releasable'], 0)
+            self.assertIn('demo_v2_d28_releasable', flight)
+            self.assertGreaterEqual(flight['demo_v2_d28_releasable'], 0)
             rows = data.history(flight['flight_id'])
             self.assertEqual([r['days_to_departure'] for r in rows], list(range(180, -1, -1)))
             for row in rows:

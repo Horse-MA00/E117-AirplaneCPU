@@ -134,7 +134,7 @@ def optimize(config=None):
               for scenario in ("price_sensitive", "less_sensitive")]
     safe = winner is not None and validation["feasible"] and validation["incremental_contribution"] > 0
     files = ["backend/continuous_pricing.py", "backend/probabilistic_customer.py", "backend/shared_market.py",
-             "backend/nhpp.py", "simulation/generate.py", "simulation/generated/calibration_v2.json", "backend/release_policy.py", "llm_agent/population.py", "llm_agent/output_contract.py"]
+             "backend/nhpp.py", "backend/nhpp_v3.py", "backend/forecast.py", "simulation/generated/calibration_v3_robust.json", "simulation/generated/nhpp_v3_robust_final.json", "simulation/evaluate_nhpp_v3.py", "simulation/calibrate_nhpp_v3_robust.py", "simulation/generated/calibration_v3.json", "simulation/generate.py", "simulation/generated/calibration_v2.json", "backend/release_policy.py", "llm_agent/population.py", "llm_agent/output_contract.py"]
     root = Path(__file__).resolve().parents[1]
     provenance = {f: hashlib.sha256((root / f).read_bytes()).hexdigest() for f in files}
     return {"version": VERSION, "customer_model": CUSTOMER_VERSION, "config": cfg,

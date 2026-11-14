@@ -26,7 +26,7 @@ DEFAULT_POLICIES = [
 
 def implementation_hashes():
     root = Path(__file__).resolve().parents[1]
-    files = ("backend/shared_market.py", "backend/release_policy.py", "backend/nhpp.py", "simulation/generate.py", "simulation/generated/calibration_v2.json",
+    files = ("backend/shared_market.py", "backend/release_policy.py", "backend/nhpp.py", "backend/nhpp_v3.py", "backend/forecast.py", "simulation/generated/calibration_v3_robust.json", "simulation/generated/nhpp_v3_robust_final.json", "simulation/evaluate_nhpp_v3.py", "simulation/calibrate_nhpp_v3_robust.py", "simulation/generated/calibration_v3.json", "simulation/generate.py", "simulation/generated/calibration_v2.json",
              "llm_agent/market_adapter.py", "llm_agent/population.py", "llm_agent/output_contract.py", "backend/probabilistic_customer.py", "llm_agent/file_lock.py")
     return {name: hashlib.sha256((root/name).read_bytes()).hexdigest() for name in files}
 

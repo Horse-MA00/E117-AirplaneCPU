@@ -17,6 +17,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 - [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：Admin 流程、指定航班优化（v6：会员价上限为正常基本票价的 50%，P₀ = 上限；数学轨先用公式算 P*，再模拟附近 9 个价格）、需求筛选、座位口径、会计公式、SQLite 和 API。
 - [THREE_ROUND_RELEASE](docs/THREE_ROUND_RELEASE.md)：D28/D14/D7 放票规则；新一轮扣除前几轮仍有效的未售配额。
 - [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：整体架构、HTTP 路由表、与原计划的差异及限制。
+- [PITCHING_BRIEF](docs/PITCHING_BRIEF.md)：当前方案、路演讲稿、校准覆盖与证据边界。[NHPP_V3_REVIEW](docs/NHPP_V3_REVIEW.md)：平滑模型、收入校准、D28 回退及独立验证。
 - [NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：冻结的 NHPP v2 参数、输出和验证。
 - [SHARED_MARKET](docs/SHARED_MARKET.md)：共享市场引擎、财务账本和默认成本。[SHARED_MARKET_AGENT](docs/SHARED_MARKET_AGENT.md)：旅客 Agent、审计和 probe。
 - [LLM_SCENARIO_DESIGN](docs/LLM_SCENARIO_DESIGN.md)：六阶段旅程（Customer panel）和历史 v2.1 基线。
@@ -33,6 +34,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 ## 不能动的东西
 
 - **NHPP v2 已冻结**：不要改 `backend/nhpp.py`，`backend/evidence.py` 会校验它的 SHA；也不要改 `simulation/generated/calibration*.json`、`nhpp_v2_*.json`。
+- v3 新增报告也已冻结，失败尝试保留；活动入口 `backend/forecast.py` 在 D28 用 v2 分布和新 guard，在 D14/D7 用平滑 v3。不得改已见 final 来调参。
 - 不要运行 `python -m simulation.evaluate_nhpp_v2 calibration` 重新调参，也不要拿 final holdout 反复调参。要改模型，就新开版本，并使用新的验证种子。
 - 已提交的数据和 manifest 不要改：`simulation/generated/`、`simulation/validation_extended/`、`simulation/network_generated/`、`simulation/member_demo_generated/`、`simulation/continuous_price_validation/`。
 - **历史实验报告保持原样**：`llm_agent/experiments/` 里已有的目录、`docs/validation/`、`docs/*ATTESTATION*.json`。新实验写到新目录；不要回填或"修复"旧报告。
@@ -67,7 +69,7 @@ python scripts/verify_artifacts.py                # 实验与数据的 SHA256 �
 ## 目录与模块
 
 - `backend/`：stdlib HTTP API（`server.py`）和 SQLite 持久化（`store.py`、`optimization_store.py`）。
-  - 预测 `nhpp.py`（冻结）；放票 `release_policy.py`；座位口径 `seat_inventory.py`；指定航班优化 `optimization.py`、`scoped_market.py`、`initial_policy.py`；共享市场 `shared_market.py`；座位反馈 `seat_feedback.py`。
+  - 预测入口 `forecast.py`、候选 `nhpp_v3.py` 与冻结 `nhpp.py`；放票 `release_policy.py`；座位口径 `seat_inventory.py`；指定航班优化 `optimization.py`、`scoped_market.py`、`initial_policy.py`；共享市场 `shared_market.py`；座位反馈 `seat_feedback.py`。
   - 测试在 `backend/tests/`。
 - `frontend/`：Admin，原生 HTML/JS，路径 `/admin`；`frontend/members/` 是会员端，路径 `/members`。不需要构建，由后端直接提供；`*.mjs` 是浏览器 smoke 测试。
 - `simulation/`：合成数据生成器、NHPP 评估脚本和已提交的冻结数据集。

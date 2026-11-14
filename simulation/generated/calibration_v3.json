@@ -1,0 +1,63 @@
+{
+  "version": 3,
+  "model_version": "nhpp-smooth-mixture-v3",
+  "settings": {
+    "window_days": 35,
+    "beta_prior_mean": 0.012,
+    "beta_prior_sd": 0.025,
+    "price_elasticity": 0.8,
+    "future_persistent_probability_28d": 0.22,
+    "future_pulse_probability_28d": 0.1,
+    "shock_multiplier_range": [
+      2.0,
+      4.0
+    ],
+    "late_shock_prior_floor_fraction": 0.5,
+    "changepoint_log_lr_threshold": 5.0,
+    "max_beta": 0.1,
+    "min_beta": -0.08,
+    "recent_weight_cap": 0.8,
+    "recent_count_shrinkage": 20.0,
+    "recent_day_shrinkage": 3.0,
+    "change_evidence_scale": 5.0
+  },
+  "forecast_code_sha256": "a16cf26f06fd5133e8e982bc580f1964e784a7bf48937b1795d378abfba09fa8",
+  "source_hashes": {
+    "backend/nhpp.py": "2c5739a40c7ca6143f820e9a7ca6daad1c93b3ad1355a337a7517c0e7de7732b",
+    "backend/nhpp_v3.py": "a16cf26f06fd5133e8e982bc580f1964e784a7bf48937b1795d378abfba09fa8",
+    "simulation/generate.py": "ff95386b68b6d3a210c9d7d5257f4c17b2923819dd64755095b9a48f65d429fc",
+    "simulation/evaluate_nhpp_v3.py": "3ad53033881bbf27188326022a3e8c85974a431af8d06b25280383f3a9ee9267"
+  },
+  "relative_guard_by_horizon": {
+    "28": 0.5,
+    "14": 0.6,
+    "7": 1.6
+  },
+  "comparison_guards": {
+    "v2": {
+      "28": 0.5,
+      "14": 1.1,
+      "7": 1.6
+    },
+    "v3": {
+      "28": 0.5,
+      "14": 0.6,
+      "7": 1.6
+    }
+  },
+  "protocol": {
+    "target_group_coverage": 0.9,
+    "max_normal_revenue_loss_ratio": 0.005,
+    "guard_grid_step": 0.05,
+    "calibration_flights": 360,
+    "final_flights": 600,
+    "revenue_stress": "all_member_seats_sell_immediately_no_cancellations_no_switching_base_fare_only"
+  },
+  "seeds": {
+    "development": 20261201,
+    "calibration": 20261202,
+    "final": 20261203
+  },
+  "generation_seed": 20261202,
+  "method": "smallest global relative guard meeting per-scenario coverage and paired normal-base-revenue stress limits; labels never used at runtime"
+}

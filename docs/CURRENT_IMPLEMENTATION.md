@@ -1,6 +1,6 @@
 # NHPP 會員優惠平台技術實作
 
-> 状态：现行 · 对应代码：`flight-policy-feedback-v6-formula-grid`、`formula-scan-v1`、`nhpp-regime-mixture-v2`、`shared-market-v3`、`three-round-release-v1`
+> 状态：现行 · 对应代码：`flight-policy-feedback-v6-formula-grid`、`formula-scan-v1`、`nhpp-regime-mixture-v2`、`nhpp-smooth-mixture-v3`、`backend/forecast.py`、`shared-market-v3`、`three-round-release-v1`
 
 更新：2026-11-14。這份文件記錄現有程式；早期提案文件已刪除（Git 歷史可查），與原計劃的差異見下文「與原計劃的差異及限制」。使用者最新決定是先使用 NHPP，不使用 LightGBM。
 
@@ -14,7 +14,7 @@ Forecast seats 及 Optimize prices 均可按 Low／Medium／High demand 篩選�
 
 `backend/optimization.py` 的主流程版本為 `flight-policy-feedback-v6-formula-grid`，必須選擇航線、日期／航班及 D28／D14／D7。會員基本票價上限為所選時點最近可見正常基本票價的 50%（`backend/fare_policy.py`）；新實驗的 P₀ 等於此上限，不能手動覆寫，搜尋上限亦收窄至此值，發布優惠時再次檢查；V₀ 可填寫並在該次搜尋固定。數學及 Live LLM 都在同一指定航班的獨立反事實世界內運行，使用該班已訂位、空位、正常基本票價及歷史；不再以一般多航班市場代替所選航班。啟動前檢查所選輪次有正會員配額。數學軌先用 `backend/fare_estimate.py`（`formula-scan-v1`）以相同旅客、數學模型的選擇機率計算 0 至上限每隔 HK$1 的期望增量貢獻，取最高者為 P*（約 20 毫秒），再以完整模擬測試 P* 及附近 8 個價格；Live LLM 軌仍在 P₀ 附近先測試 ±25%，再做明示邊界探索。價格圖同時顯示貢獻、利潤率及會員買家，三項最大值分開標示，並以虛線顯示同一航班無會員優惠時的貢獻及逐點差額；結果不再重複顯示固定會費；普通票買家、入會、票數及報價曝光另列，無供應／無曝光不作價格排名。
 
-NHPP 本體及凍結校準保持不變；同一次價格搜尋和獨立驗證固定初始座位 profile，以免供應規則變化混入價格比較。完成市場仍根據正常需求誤差計算 proposed next calibration，僅記錄為下次實驗提案，不在本次套用。最後用兩個獨立種子驗證保留的價格候選。單航班收入分攤三分之一新年費／會員服務成本，實際現金仍收全額一次，因此不宣稱是最佳全年會費。詳見 [現行航班優化規格](FLIGHT_SCOPED_OPTIMIZATION.md)；修正經過見 [v3 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md) 及 [v4 原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)（v4 的原價 P₀ 已由 v5 的 50% 上限取代）。
+当前预测统一经 `backend/forecast.py`：D28 使用冻结 v2 需求分布及新校准的 v2 安全余量；D14/D7 使用完整窗口与近期窗口混合的 v3 及新余量。D28 的平滑候选未通过独立测试的突增组收入门槛，因此未启用。历史 v2 模型及报告保留，详见 [NHPP 平滑与校准](NHPP_V3_REVIEW.md) 和 [路演说明](PITCHING_BRIEF.md)。 同一次價格搜尋和獨立驗證固定初始座位 profile，以免供應規則變化混入價格比較。完成市場仍根據正常需求誤差計算 proposed next calibration，僅記錄為下次實驗提案，不在本次套用。最後用兩個獨立種子驗證保留的價格候選。單航班收入分攤三分之一新年費／會員服務成本，實際現金仍收全額一次，因此不宣稱是最佳全年會費。詳見 [現行航班優化規格](FLIGHT_SCOPED_OPTIMIZATION.md)；修正經過見 [v3 會員供應修正](MEMBER_SUPPLY_CORRECTIONS_2026-11-14.md) 及 [v4 原價起點](DEMAND_FILTER_AND_ORIGINAL_FARE.md)（v4 的原價 P₀ 已由 v5 的 50% 上限取代）。
 
 SQLite 保存 run、world、round、event。Scoped Live 現在可在指定總額度內自動跨越內部小批次；總額度耗盡或 provider 失敗仍停止，UI 可追加額度。Manage offers 自行選航班／輪次，只建議同航班同輪次、版本符合且獨立驗證接受的結果，發布時再扣除已售會員位及前輪有效未售配額。Client 主要金額顯示 base fare，下方小字顯示費用及總付款；結帳核價不變。
 
@@ -63,9 +63,15 @@ OAG回應與合成訂位資料沒有混成「真實訂位」。本地 HTTP 使�
 
 資料有多航線、日期、容量和需求形狀。truth獨立保存潛在需求、未接受需求及生成參數，只作評估。模型不讀情境名稱、最終結果或未來報價。航班索引的情境與最終結果是事後檢視資料，不是預測特徵。
 
-## NHPP v2與驗證
+## 当前 NHPP 与历史验证
 
-目前使用`nhpp-regime-mixture-v2`：歷史gross bookings似然、負／正beta、Gamma水準後驗、價格exposure假設、右截斷計數、變點後水準重估，以及未知未來持續／短暫跳變的混合路徑。給定每條強度路徑是NHPP，跨路徑是混合分布。取消與容量另行推進，未來真值與情境標籤不作輸入。
+当前预测统一经 `backend/forecast.py`：D28 使用冻结 v2 需求分布及新校准的 v2 安全余量；D14/D7 使用完整窗口与近期窗口混合的 v3 及新余量。D28 的平滑候选未通过独立测试的突增组收入门槛，因此未启用。历史 v2 模型及报告保留，详见 [NHPP 平滑与校准](NHPP_V3_REVIEW.md) 和 [路演说明](PITCHING_BRIEF.md)。
+
+新独立测试 600 班：实际启用策略的 D28/D14/D7 保护覆盖率为 99.17%/99.50%/99.83%，每班平均正常基础票价收入压力损失为 HK$20.32/0/0。保护覆盖不是原始 P90 覆盖；风险下降伴随释放量减少，不能当成真实市场准确率。
+
+以下 v2 段落与旧测试保留为历史方法和证据。
+
+冻结基线`nhpp-regime-mixture-v2`：歷史gross bookings似然、負／正beta、Gamma水準後驗、價格exposure假設、右截斷計數、變點後水準重估，以及未知未來持續／短暫跳變的混合路徑。給定每條強度路徑是NHPP，跨路徑是混合分布。取消與容量另行推進，未來真值與情境標籤不作輸入。
 
 原始需求P90與校準操作保護量分開；D28／D14／D7分別校準。校準需符合模型設定和原始碼hash。定價模組讀取`demand_curve`及`protection_curve`，避免只用單一beta重建尾段。
 
