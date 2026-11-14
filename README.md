@@ -77,6 +77,22 @@ Open **[Admin](http://127.0.0.1:8000/admin)** to forecast seats, compare prices,
 
 ## Evidence and limitations
 
+The evaluation reports, supporting documents and redacted synthetic experiments are
+part of this repository. Download the [complete main-branch source ZIP](https://github.com/Horse-MA00/E117-AirplaneCPU/archive/refs/heads/main.zip)
+or clone the repository; copying only `backend/` and `frontend/` omits required evidence.
+After extracting a ZIP or cloning, run `python scripts/check_publication.py` to check
+documentation links and the frozen extended-evaluation evidence. No API key or Git
+installation is needed for this check in an extracted source archive.
+
+The extended result is available directly in [the committed report](simulation/validation_extended/report.json)
+and through `/api/evaluation/extended`. Its **91.5%** figure is **183 of 200 D28
+sustained-surge flights** within the **1,200-flight synthetic evaluation**, not the
+coverage of every flight. The [evidence manifest](simulation/validation_extended/manifest.json)
+pins the report, individual forecast records and both source datasets. Missing
+required files or an invalid report/manifest returns HTTP503 with
+`status: unavailable` and an artifact path; it must not be presented as a pending
+evaluation. The publication check additionally verifies every payload checksum.
+
 This is a **synthetic-market decision prototype**, not a calibrated production revenue-management system or a representative survey of HK Express customers. OAG Flight Info supplies schedules and capacity estimates, not daily bookings or airfare history. All 640,182 simulation rows remain synthetic even when an OAG connection is available.
 
 On **240 fresh synthetic test flights**, v2's D28 sustained-surge protection coverage is **82.5%**. On the same flights, v1 with its original 16-seat margin scores **30.0%**, while v1 recalibrated using the same procedure scores **80.0%**. The historical 47.62% came from a different cohort. D14/D7 demand MAE improves, but D28 demand MAE worsens and D7 unseen-surges still have only 75% protection coverage. See the [full comparison and limitations](docs/NHPP_V2_REVIEW.md), [frozen final report](simulation/generated/nhpp_v2_final.json) and [calibration](simulation/generated/calibration_v2.json). Raw predictive bands and calibrated operational protection are separate.
@@ -107,6 +123,7 @@ The current **shared-market-v3** three-round policy has a separate **40-seed / 1
 python -m simulation.generate
 python -m unittest discover -s tests -v
 python -m unittest discover -s backend/tests -v
+python scripts/check_publication.py
 python scripts/verify_artifacts.py
 python -m backend.evaluate --flight SYN-00001 --day 28
 # With the local server running; creates synthetic demo transactions:

@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "source": "extended_frozen_model_validation",
+  "evaluated_flights": 1200,
+  "scored_predictions": 7200,
+  "generation_seeds": [
+    20261121,
+    20261122
+  ],
+  "additional_snapshot_rows": 400000,
+  "d28_surge": {
+    "model": "v2",
+    "covered": 183,
+    "flights": 200,
+    "coverage": 0.915
+  },
+  "files": {
+    "report.json": {
+      "bytes": 26570,
+      "sha256": "644cf1d78f7efe460c5cbf3a3ab71d73cc96260bc0ed1f3da85ae90faf18135a"
+    },
+    "forecast_records.jsonl.gz": {
+      "bytes": 231292,
+      "sha256": "f9f3586d99878015c6321f8cbc7d66a12bc66b15a86e45878ded9c4ef2f7ffc9"
+    },
+    "seed-20261121/manifest.json": {
+      "bytes": 2492,
+      "sha256": "5f4ce53a9835616728d3d5a4a2bc41b310e9dd3fe9f3fda671fa266724ff8186"
+    },
+    "seed-20261121/snapshots.csv.gz": {
+      "bytes": 2618598,
+      "sha256": "03962f6bb4dae21c6e6cbc0c2b1c8f80c77f803fa9a622858743cc796799212e"
+    },
+    "seed-20261121/truth.csv.gz": {
+      "bytes": 2503341,
+      "sha256": "d4e2d4e5546bfe5021a20b08e6dc371faeb3b182e7385b802850c0eb43fbe6e3"
+    },
+    "seed-20261121/flights.json": {
+      "bytes": 491666,
+      "sha256": "4a8b4ed239fedb06ac40cdaa6fd19c4c92a41aa0f10f980e0f658d0e7aa95e23"
+    },
+    "seed-20261121/sample.csv": {
+      "bytes": 28565,
+      "sha256": "5444fd2be4ddac362801aeba6d49555cf48e091378af29cc9e35823cc56b74c4"
+    },
+    "seed-20261122/manifest.json": {
+      "bytes": 2492,
+      "sha256": "bec9fefa1e333a798d3a6e580cf4a3d047d4944ca40438451d832d1d4e704836"
+    },
+    "seed-20261122/snapshots.csv.gz": {
+      "bytes": 2618671,
+      "sha256": "dd579809ec3048067220cb1f8eb2de7a36bb670251514eb4122d84aaaebee3f3"
+    },
+    "seed-20261122/truth.csv.gz": {
+      "bytes": 2503105,
+      "sha256": "a203e3c15084f49bfbc69716be096e5bff6b1570ffa7cbb2639c11162eb6e72a"
+    },
+    "seed-20261122/flights.json": {
+      "bytes": 491590,
+      "sha256": "07d9b792cfd728c90e3260e0d7d8d50f454e06db160bde33d06aebe8dcd60e9b"
+    },
+    "seed-20261122/sample.csv": {
+      "bytes": 28550,
+      "sha256": "8975addbfcc213ae108520182bf6579ca0676253d242e80369b6caf84d36dead"
+    }
+  }
+}

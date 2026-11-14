@@ -4,6 +4,7 @@
 !requirements.txt
 !requirements-docker.lock
 !README.md
+!agent.md
 !backend/
 !backend/**
 !frontend/
