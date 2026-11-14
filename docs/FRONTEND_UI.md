@@ -169,11 +169,11 @@ DOM 钩子：Admin 74 个、Optimize 74 个、会员端 53 个 id，见 `ui-cont
 
 ### 3.3 smoke 测试基线（2026-11-15 合并后）
 
-main 删除了 `smoke-continuous`、`smoke-contribution`、`smoke-english-journey`、`smoke-price-chart`，新增 `smoke-adaptive-pricing`。合并后在云端实测 10 个浏览器测试**全部通过**：`smoke`、`smoke-adaptive-pricing`、`smoke-demand-filter`、`smoke-flexible-search`、`smoke-flight-offers`、`smoke-member-portal`、`smoke-optimization`、`smoke-route-catalog`、`smoke-seat-supply`、`test-seat-status`。`scripts/check_container.py`（后端 182 项、根目录 24 项、发布与证据检查）也全部通过。
+main 删除了 `smoke-continuous`、`smoke-contribution`、`smoke-english-journey`、`smoke-price-chart`，新增 `smoke-adaptive-pricing`。合并后在云端实测 10 个浏览器测试**全部通过**（2026-11-15 再次合并 main 后增加 `smoke-member-journey`，共 11 个）：`smoke`、`smoke-adaptive-pricing`、`smoke-demand-filter`、`smoke-flexible-search`、`smoke-flight-offers`、`smoke-member-portal`、`smoke-optimization`、`smoke-route-catalog`、`smoke-seat-supply`、`test-seat-status`。`scripts/check_container.py`（后端 182 项、根目录 24 项、发布与证据检查）也全部通过。
 
 `smoke-demand-filter` 保留了 2026-11-14 加入的"等预测请求全部返回再计数"，修复了原先的时序问题。
 
-重构的标准：每次改动后这 10 个测试和 `check_container.py` 保持全部通过。
+重构的标准：每次改动后全部浏览器测试（现为 11 个）和 `check_container.py` 保持全部通过。
 
 ---|---|---|
 | `smoke.mjs`（含 `--transactions`） | 通过 | |
@@ -331,6 +331,10 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-15 | Forecast 座位卡改为整行横条，两张图（预订、票价）并排上移到首屏；Results 的座位卡同样整行 | 用户指出座位卡右侧和下方空白太多 |
 | 2026-11-15 | Route 框加搜索按钮（`frontend/route-search.js`）：输入机场代码或城市名即可匹配，城市名在第一次打开时从 `members/airports.js` 读取；Admin 和 Optimize 都有 | 用户要求 |
 | 2026-11-15 | 自查后顺手修：Route / Demand 文字被截断（加宽）、Optimize 结论卡下方空白（拉伸填满）、保本说明收进 ⓘ、座位条里 1 个座位的数字溢出（太窄时不显示数字，悬停可见）、Member feedback 重复的"不调用模型"说明、Forecast 图表高度适配首屏 | §1.4 第 5 条 |
+| 2026-11-15 | 座位图例改为"数字在上、标签在下"的小指标（21px 数字、15.5px 标签），标签改白话：Booked (normal + member)、Published, bookable now、Safe for members, not yet published；图表坐标、提示文字、表头、Optimize 对比条等小字统一加大加深 | 用户反馈图例字太小、看着费劲 |
+| 2026-11-15 | Optimize 无结果时，P0 卡与实验设置卡等高对齐 | 用户要求 |
+| 2026-11-15 | 合并 main（会员端订票流程改版、带来源的费用明细 `fee_breakdown`）。Admin 侧：已发布优惠的费用和 Results 的"Mandatory fees collected"用 ⓘ 显示费用明细、核对日期和来源；Publish 的会员预览改成新会员卡的样式（划掉的正常票价、Save … % off、Ticket total、含会员费的首次购买价，金额用 HKD） | 队友的新数据和新会员卡，按现有设计带到 Admin |
+| 2026-11-15 | 自查后修：Publish 预览改为两行排版、Results 图例对齐、费用来源按网站去重、手机上 Demand / Route 各占一行、图表标题在窄屏换行、Publish 左卡不再被拉高 | §1.4 第 5 条 |
 | 2026-11-15 | 测试同步修改：`smoke-flight-offers` 改用共用选择栏；`smoke-demand-filter` 的 Tab 顺序加入 Route，并放行字体文件；`smoke-adaptive-pricing` 导航数改为 5，折叠区里的说明改读 `textContent` | 都是本次界面改动的直接结果，断言的业务含义不变 |
 
 ---
@@ -350,6 +354,7 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 | 2026-11-15 | 实现 Admin 重构：Inter 与 token、侧边栏外壳（两个页面）、共用航班选择栏、Forecast / Optimize / Publish 首屏、新增 Results 页、Member feedback 换样式 | 完成；10 个浏览器测试和 `check_container.py` 全部通过；在真实服务上走通"发布 → 会员端订票 → 浏览器后退 → Results 显示已售"的闭环 |
 | 2026-11-15 | 第一轮反馈：信息分级与 ⓘ、标题大写、路线跟随、座位数默认上限、Optimize 空状态与设置收起 | 完成；10 个浏览器测试和 `check_container.py` 通过 |
 | 2026-11-15 | 第二轮反馈：座位区布局、卡片标签加深、去掉 NHPP 字样、Route 搜索；按 §1.4 第 5 条自查并修了 6 处 | 完成；10 个浏览器测试和 `check_container.py` 通过 |
+| 2026-11-15 | 第三轮：图例和小字可读性、P0 对齐、合并 main 并把费用明细和新会员卡样式带到 Admin、自查修 6 处 | 完成；11 个浏览器测试（含 main 新增的 `smoke-member-journey`）和 `check_container.py` 通过 |
 | — | 用户继续验收 | 进行中 |
 | — | 演示视频（§0.5） | 未开始，等 UI 定稿 |
 | — | 会员端重构 | 暂缓 |

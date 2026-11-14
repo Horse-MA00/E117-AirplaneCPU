@@ -43,7 +43,7 @@ try{
  await page.locator('#offer-fare').fill('249');await page.locator('#offer-quantity').fill('3');
  await page.getByRole('link',{name:'Member feedback',exact:true}).click();await page.getByRole('link',{name:'Publish offers',exact:true}).click();await offerReady(a,14);
  assert.equal(await page.locator('#offer-fare').inputValue(),'249');assert.equal(await page.locator('#offer-quantity').inputValue(),'3');assert.equal(submissions.length,0);
- assert.match(await page.locator('#offer-preview').innerText(),/HK\$249/,'The member preview follows the draft fare');
+ assert.match(await page.locator('#offer-preview').innerText(),/HKD 249/,'The member preview follows the draft fare, in the member site\'s HKD format');
  await page.locator('#publish-button').click();await page.waitForFunction(()=>document.getElementById('notice').textContent.includes('fixture-published'));
  assert.deepEqual(submissions[0],{flight_id:a,days_to_departure:14,quantity:3,base_fare:249});
  await page.locator('#member-fee').fill('499');await page.locator('#save-plan-button').click();await page.waitForFunction(()=>document.getElementById('membership-status').textContent.includes('499'));assert.equal(planFee,499);

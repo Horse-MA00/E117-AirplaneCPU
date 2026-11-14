@@ -49,7 +49,7 @@ try {
   assert.equal(await page.locator('#header-account').innerText(), 'Your demo account');
   assert.equal(await page.locator('a[href="/admin"]').count(), 1);
   assert.equal(await page.locator('#agent-form').count(), 0);
-  await page.locator('.search-specific summary').click();
+  assert.equal(await page.locator('#destination-region').count() + await page.locator('#departure-date').count(), 0);
   await page.locator('#destination').selectOption('FUK');
   // Changing a filter does not auto-submit or change the result count.
   assert.equal(await page.locator('.flight-card').count(), 2);
@@ -57,14 +57,19 @@ try {
   assert.equal(await page.locator('.flight-card').count(), 1);
   assert.match(await page.locator('.flight-card').innerText(), /HKD 320\.75/);
   assert.equal(await page.locator('.flight-price .total').innerText(),'HKD 70.25');
+  // The normal base fare is shown struck through, with an announced label and the saving.
+  assert.equal(await page.locator('.flight-price .was-price').evaluate(el => el.textContent), 'Normal base fare HKD 600');
+  assert.equal(await page.locator('.flight-price .was-price').evaluate(el => getComputedStyle(el).textDecorationLine), 'line-through');
+  assert.equal(await page.locator('.flight-price .fare-saving').innerText(), 'Save HKD 529.75 · 88% off normal base fare');
   assert.match(await page.locator('.flight-price .breakdown').innerText(), /fees HKD 250\.5.*total payable HKD 320\.75/);
-  await page.locator('#departure-date').fill('2027-05-31'); await page.locator('#search-button').click();
+  await page.locator('#departure-from').fill('2027-05-31'); await page.locator('#departure-to').fill('2027-05-31'); await page.locator('#search-button').click();
   assert.match(await page.locator('#flight-results').innerText(), /No matching flights/);
-  await page.locator('#departure-date').fill(''); await page.locator('#search-button').click();
+  await page.locator('#departure-from').fill(''); await page.locator('#departure-to').fill(''); await page.locator('#search-button').click();
   await page.screenshot({ path: `${output}member-portal-desktop.png`, fullPage: false });
   const select = page.locator('.choose-flight').first(); await select.click();
   assert.equal(await page.locator('#checkout').evaluate(el => el.matches(':modal')), true);
   assert.match(await page.locator('#checkout-content').innerText(), /HKD 719\.75/);
+  assert.equal(await page.locator('#checkout-content .price-lines .was-price').count(), 1);
   await page.keyboard.press('Escape'); assert.equal(await page.locator('#checkout').isVisible(), false);
   assert.equal(await select.evaluate(el => el === document.activeElement), true);
   await select.click(); await page.locator('#checkout-submit').click();
@@ -114,7 +119,7 @@ try {
   await page.waitForFunction(() => document.querySelector('#flight-results').textContent.includes('No member flights released yet'));
   assert.equal(await page.locator('.choose-flight').count(), 0);
   flights.push(...savedFlights);
-  await page.locator('#refresh-flights').click(); await page.waitForFunction(() => document.querySelectorAll('.flight-card').length === 2);
+  await page.locator('#refresh-flights').click(); await page.waitForFunction(() => document.querySelectorAll('.flight-card').length === 1);
 
   // Successful mutations remain confirmed if a subsequent account GET fails.
   bookingUnavailable = false; failAfterBook = true;

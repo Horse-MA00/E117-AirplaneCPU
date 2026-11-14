@@ -230,12 +230,38 @@ attachRouteSearch($('context-route'));
 async function loadOffers() {
   try { const data = await api('/api/offers'); state.offers = data.offers || (Array.isArray(data) ? data : []); state.offersLoaded = true; renderOffers(); renderResults(); } catch (e) { error(e.message); }
 }
+// ---- ⓘ tips built in script (same markup as the static ones in index.html) ----
+let tipCount = 0;
+function infoTip(label, title, nodes) {
+  const id = `tip-js-${++tipCount}`, wrap = element('span', undefined, 'info');
+  const button = element('button', 'i', 'info-btn'); button.type = 'button'; button.setAttribute('aria-label', label); button.setAttribute('aria-describedby', id);
+  const tip = element('span', undefined, 'info-tip'); tip.id = id; tip.setAttribute('role', 'tooltip');
+  tip.append(element('strong', title, 'info-title'), ...nodes); wrap.append(button, tip); return wrap;
+}
+// Sourced fee estimates written by scripts/apply_member_fee_reference.py (offers.fee_breakdown).
+function feeBreakdown(offer) {
+  try { const b = typeof offer.fee_breakdown === 'string' ? JSON.parse(offer.fee_breakdown) : offer.fee_breakdown; return b && Array.isArray(b.lines) && b.lines.length ? b : null; } catch { return null; }
+}
+function feeTip(breakdown) {
+  const nodes = breakdown.lines.map((line) => { const row = element('span', undefined, 'info-row'); row.append(element('span', line.label), element('strong', money(line.amount))); return row; });
+  nodes.push(element('small', `${breakdown.kind === 'reference_estimate' ? 'Reference estimate, not a quoted fare' : 'Fee breakdown'}${breakdown.checked_on ? ` · checked ${breakdown.checked_on}` : ''}`));
+  const bySite = new Map(); for (const c of breakdown.components || []) if (/^https:\/\//.test(c.source || '')) { const host = new URL(c.source).hostname; if (!bySite.has(host)) bySite.set(host, c.source); }
+  const sources = [...bySite.values()];
+  if (sources.length) {
+    const list = element('span', undefined, 'info-sources'); list.append(element('span', 'Sources: '));
+    sources.forEach((url, i) => { const a = element('a', new URL(url).hostname.replace(/^www\./, '')); a.href = url; a.target = '_blank'; a.rel = 'noopener'; list.append(...(i ? [document.createTextNode(' · ')] : []), a); });
+    nodes.push(list);
+  }
+  return infoTip('Fee breakdown', 'Mandatory fees per ticket', nodes);
+}
 function renderOffers() {
   $('offers-list').replaceChildren(...state.offers.map((offer) => {
     const card = element('article', undefined, 'offer-card'); card.dataset.offerId = offer.offer_id || offer.id; const knownFlight = state.flights.find((f) => f.flight_id === offer.flight_id) || {};
     const intro = element('div'); intro.append(element('h3', `${offer.origin || knownFlight.origin || '—'} → ${offer.destination || knownFlight.destination || '—'}`)); intro.append(element('p', (offer.departure_at || knownFlight.departure_at || '').slice(0, 10))); intro.append(element('p', offer.flight_id));
     const price = element('div'); price.append(element('div', money(offer.base_fare), 'offer-price'));
-    price.append(element('p', `Base fare · fees ${money(offer.mandatory_fees ?? offer.fees ?? 0)} · total payable ${money(offer.total_payable ?? (Number(offer.base_fare)+Number(offer.mandatory_fees??offer.fees??0)))}`, 'small muted'));
+    const feeLine = element('p', `Base fare · fees ${money(offer.mandatory_fees ?? offer.fees ?? 0)} · total payable ${money(offer.total_payable ?? (Number(offer.base_fare)+Number(offer.mandatory_fees??offer.fees??0)))}`, 'small muted');
+    const breakdown = feeBreakdown(offer); if (breakdown) feeLine.append(feeTip(breakdown));
+    price.append(feeLine);
     const inventory = element('div'); const remaining = offer.remaining ?? offer.remaining_seats ?? offer.available ?? offer.quantity;
     inventory.append(element('h3', `${number(remaining)} unspent quota`)); inventory.append(element('p', `D${offer.day} allocation · ${offer.release_version === 'three-round-release-v1' ? 'valid until cutoff' : 'historical expiry rule'}`));
     inventory.append(element('p', 'Subject to current protection and physical seats; checked on booking.'));
@@ -309,6 +335,8 @@ async function thompsonReference(flightId, day) {
   ref.append(element('span', 'Latest Thompson result'), element('strong', decision === 'NO_OFFER' ? 'No offer' : money(fare)), element('span', DECISIONS[decision] || 'Completed experiment', 'muted'));
   return ref;
 }
+const hkd = (value) => `HKD ${number(value, Number.isInteger(Number(value)) ? 0 : 2)}`;
+// Mirrors the member site's flight card (members/portal.js): struck normal fare, saving, ticket total, first purchase with pass.
 function renderPreview() {
   const box = $('offer-preview'); if (!box) return;
   const flight = state.flights.find((f) => f.flight_id === state.offerFlightId);
@@ -317,18 +345,24 @@ function renderPreview() {
   const fare = Number($('offer-fare').value), seats = Number($('offer-quantity').value);
   const fees = Number(quote.mandatory_fees ?? 0), normal = Number(quote.normal_base_fare);
   const hasFare = $('offer-fare').value !== '' && Number.isFinite(fare);
-  const [y, m, d] = flightDay(flight).split('-').map(Number);
+  const d = Number(flightDay(flight).split('-')[2]);
   const card = element('div', undefined, 'preview-card');
   const date = element('div', String(d || '—'), 'preview-date'); date.append(element('small', longDate(flightDay(flight)).replace(/ \d+ /, ' · ')));
   const middle = element('div'); const route = element('div', undefined, 'preview-route'); route.append(document.createTextNode(flight.origin), element('span', '→'), document.createTextNode(flight.destination));
-  middle.append(route, element('div', 'One way · 1 traveller', 'preview-meta'));
-  if (Number.isFinite(normal) && hasFare) { const save = element('div', `Normal base fare ${money(normal)} · `, 'preview-meta'); save.append(element('span', normal > fare ? `save ${money(normal - fare)}` : 'no saving', 'preview-save')); middle.append(save); }
-  const price = element('div', undefined, 'preview-price'); price.append(element('small', 'Member base fare'), element('strong', hasFare ? money(fare) : '—'), element('small', hasFare ? `+ fees ${money(fees)} · total ${money(fare + fees)}` : 'Enter a member fare'));
+  const time = String(flight.departure_at || '').slice(11, 16);
+  middle.append(route, element('div', 'One way · 1 member traveller', 'preview-meta'));
+  if (time) middle.append(element('div', `Departure ${time}`, 'preview-meta'));
+  if (Number.isFinite(seats) && seats > 0) middle.append(element('div', `${number(seats)} member seat${seats === 1 ? '' : 's'} available`, 'preview-seats'));
+  const price = element('div', undefined, 'preview-price'); price.append(element('small', 'Member base fare'));
+  const line = element('div', undefined, 'preview-fare');
+  if (Number.isFinite(normal) && hasFare && normal > fare) line.append(element('s', hkd(normal), 'preview-was'));
+  line.append(element('strong', hasFare ? hkd(fare) : '—')); price.append(line);
+  if (Number.isFinite(normal) && hasFare && normal > fare) price.append(element('div', `Save ${hkd(normal - fare)} · ${Math.round((1 - fare / normal) * 100)}% off normal base fare`, 'preview-save-badge'));
+  price.append(element('small', hasFare ? `+ fees ${hkd(fees)} · total payable ${hkd(fare + fees)}` : 'Enter a member fare'));
+  if (hasFare) price.append(element('div', `Ticket total: ${hkd(fare + fees)}`, 'preview-total'));
+  if (hasFare && state.planFee !== null) price.append(element('div', `First purchase incl. pass: ${hkd(fare + fees + state.planFee)}`, 'preview-pass'));
   card.append(date, middle, price);
-  const rows = [['Member pays', hasFare ? money(fare + fees) : '—'], ['Normal traveller pays', Number.isFinite(normal) ? money(normal + fees) : '—'], ['Member seats on sale', Number.isFinite(seats) && seats > 0 ? number(seats) : '—'], ['Membership', state.planFee !== null ? `${money(state.planFee)} / year, paid separately` : '—']];
-  const table = element('table', undefined, 'preview-table'); const body = element('tbody');
-  for (const [k, v] of rows) { const tr = element('tr'); tr.append(element('td', k), element('td', v)); body.append(tr); }
-  table.append(body); box.replaceChildren(card, table);
+  box.replaceChildren(card, element('p', `Membership ${state.planFee !== null ? hkd(state.planFee) : '—'} per year, paid once on first purchase. Every booking is checked again on the member site.`, 'hint'));
 }
 
 // ---- Results: member sales from /api/offers (sold = released − remaining) ----
@@ -347,6 +381,10 @@ function renderResults() {
   text('results-sold', number(sum('sold'))); text('results-sold-detail', released ? `of ${number(released)} member seats released` : 'No member seats released yet');
   text('results-remaining', number(sum('remaining')));
   text('results-revenue', money(sum('revenue'))); text('results-fees', money(sum('feeTotal')));
+  const sourced = mine.map((o) => feeBreakdown(o.offer)).find(Boolean);
+  $('results-fees-label').querySelector('.info')?.remove();
+  if (sourced) $('results-fees-label').append(feeTip(sourced));
+  text('results-fees-detail', sourced ? `${money(sourced.lines.reduce((t, l) => t + Number(l.amount || 0), 0))} per ticket · reference estimate` : 'Shown separately');
   text('results-updated', `Updated ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`);
   $('results-empty').hidden = mine.length > 0;
   $('results-flight-offers').replaceChildren(...mine.map((o) => { const tr = element('tr'); tr.append(element('td', `D${o.offer.day}`), element('td', number(o.released)), element('td', number(o.sold)), element('td', number(o.remaining)), element('td', money(o.fare))); return tr; }));
@@ -367,7 +405,7 @@ function renderResults() {
     { key: 'member-sold', label: 'Member sold', value: memberSold },
     { key: 'protected', label: 'Protected for normal demand', value: seats.protection },
     { key: 'published', label: 'Member quota left', value: seats.published },
-    { key: 'available', label: 'Unpublished headroom', value: seats.unpublished },
+    { key: 'available', label: 'Safe for members, not yet published', value: seats.unpublished },
   ];
   text('results-protected', `${number(seats.protection)} protected seats untouched`);
   const bar = $('results-composition');

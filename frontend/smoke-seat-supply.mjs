@@ -46,7 +46,7 @@ try{
   assert.equal(await page.locator('#release-value').innerText(),'0 seats');
   assert.equal(await page.locator('#bookable-value').innerText(),'0 seats');
   assert.match(await page.locator('#member-allocation-detail').innerText(),/7 seats of forecast headroom; next release D7/);
-  assert.match(await page.locator('#seat-composition-legend').innerText(),/Unpublished forecast headroom/);
+  assert.match(await page.locator('#seat-composition-legend').innerText(),/Safe for members, not yet published/);
   const sum=()=>page.locator('#seat-composition span').evaluateAll(parts=>parts.reduce((total,p)=>total+Number(p.dataset.seats),0));
   assert.equal(await sum(),180);await page.screenshot({path:'test-results/forecast-headroom-offround-desktop.png',fullPage:true});
   scenario='carry';await page.locator('[data-day="14"]').click();

@@ -30,7 +30,8 @@
 [data-opt-state=setup] .flight-summary .metrics>div{flex-direction:column;align-items:flex-start;border-top:0;padding:14px 18px;background:var(--ground);border-radius:var(--r-md)}
 [data-opt-state=setup] .flight-summary .metrics strong{font-size:40px}
 [data-opt-state=setup] #setup-panel{order:1;grid-column:1}
-[data-opt-state=setup] #empty-state{order:2;grid-column:2}
+[data-opt-state=setup] #empty-state{order:2;grid-column:2;align-self:stretch;display:flex;flex-direction:column}
+[data-opt-state=setup] #setup-panel{align-self:stretch}
 [data-opt-state=running] .flight-summary{grid-column:1/-1}
 
 /* Settings */
@@ -46,7 +47,7 @@
 .mix-hint{margin:0 0 4px}
 .weights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px;margin:12px 0}
 .weight-row{display:grid;grid-template-columns:minmax(0,1fr) 76px;gap:10px;align-items:center}
-.weight-row label{font-size:13px;line-height:1.4}
+.weight-row label{font-size:14.5px;line-height:1.4}
 .weight-row input{min-height:38px;padding:7px 9px;font-size:14px;text-align:right}
 .weight-total{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;font-size:13px}
 #call-estimate{margin:4px 0 12px}
@@ -70,7 +71,7 @@
 
 /* Flight summary */
 .flight-summary .section-line h2{font-size:18px}
-.flight-summary .hint{margin:4px 0 0}
+.flight-summary .hint{margin:4px 0 0;font-size:15px}
 .metrics{display:grid;grid-template-columns:minmax(0,1fr);gap:0;margin-top:14px}
 .metrics>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line-2)}
 .metrics span{font-size:16px;font-weight:600;color:var(--ink)}
@@ -101,7 +102,7 @@ progress::-webkit-progress-value{background:var(--purple)}
 .chart{margin:12px 0 0}
 .chart svg{display:block;width:100%;height:auto;overflow:visible}
 .chart figcaption{font-size:13px;line-height:1.55;color:var(--muted);margin-top:8px}
-.chart text{font-family:inherit;font-size:12px;fill:var(--muted)}
+.chart text{font-family:inherit;font-size:13.5px;fill:var(--ink-2)}
 .chart .axis-title{font-size:12px}
 .chart .grid{stroke:var(--line-2);stroke-width:1}
 .chart .model-line{fill:none;stroke:var(--purple);stroke-width:3}
@@ -121,14 +122,14 @@ progress::-webkit-progress-value{background:var(--purple)}
 .break-even-panel strong{display:block;font-size:24px;font-weight:700;color:var(--purple);margin-top:4px}
 .break-even-panel p{grid-column:1/-1;font-size:13px;color:var(--muted);margin:0}
 .comparison-bars{display:grid;gap:14px;padding:16px 18px;margin:10px 0;border-radius:var(--r-md);background:var(--ground)}
-.comparison-row{display:grid;grid-template-columns:110px minmax(0,1fr) 110px;gap:14px;align-items:center}
-.comparison-label{font-size:13px;font-weight:600}
+.comparison-row{display:grid;grid-template-columns:130px minmax(0,1fr) 140px;gap:14px;align-items:center}
+.comparison-label{font-size:15px;font-weight:600}
 .comparison-track{height:24px;border-radius:6px;background:var(--line);overflow:hidden;min-width:0}
 .comparison-fill{height:100%;background:#AAA4B1;min-width:1px}
 .comparison-row.selected .comparison-fill{background:var(--purple)}
 .comparison-row.no-offer .comparison-fill{background:var(--cyan)}
-.comparison-value{text-align:right;font-size:14px}
-.comparison-value small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.comparison-value{text-align:right;font-size:15.5px;font-weight:600}
+.comparison-value small{display:block;font-size:13.5px;font-weight:400;color:var(--ink-2);margin-top:2px}
 
 /* Narrow screens */
 @media (max-width:1300px){
