@@ -44,8 +44,14 @@ try{
   const response=await page.request.get(origin+`/api/optimization/runs/${creation.run_id}/export`);
   assert.equal(response.status(),200);
   const report=await response.json();assert.equal(report.status,'completed',report.error || 'Experiment not completed');
-  assert.equal(report.tracks[0].rounds.length,6);
-  assert.equal(await page.locator('#optimization-rounds-table tr').count(),6);
+  // Mathematical track: formula P* first, then the fixed fine grid (the rounds input applies to Live LLM only).
+  const grid=report.config.formula_estimate.grid;
+  assert.equal(report.tracks[0].rounds.length,grid.length);
+  assert.deepEqual(report.tracks[0].rounds.map(r=>r.member_fare),grid);
+  assert.equal(report.tracks[0].rounds[0].search_step,'formula_p_star');
+  assert.ok(report.tracks[0].rounds.every(r=>r.member_fare<=report.config.scope.member_fare_cap));
+  assert.match(await page.locator('#optimization-formula').innerText(),/Formula estimate P\* = HK\$/);
+  assert.equal(await page.locator('#optimization-rounds-table tr').count(),grid.length);
   assert.ok(report.tracks[0].rounds.some(r=>r.member_fare!==report.config.initial_member_fare));
   assert.ok(report.tracks[0].rounds.every(r=>r.membership_fee===report.config.initial_membership_fee));
   assert.equal(report.config.scope.flight_id,'NET-HKG-ICN-20270521');
@@ -77,8 +83,8 @@ try{
   await page.reload();
   await page.locator('#optimization-run-select').selectOption(creation.run_id);
   await page.waitForFunction(()=>document.getElementById('optimization-status').textContent==='Completed');
-  assert.equal(await page.locator('#optimization-rounds-table tr').count(),6);
+  assert.equal(await page.locator('#optimization-rounds-table tr').count(),grid.length);
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({status:'passed',run_id:creation.run_id,rounds:6,worlds:report.worlds.length,
+  console.log(JSON.stringify({status:'passed',run_id:creation.run_id,rounds:grid.length,worlds:report.worlds.length,
     decisions:report.counts,selected:report.tracks[0].best,decision:report.tracks[0].decision}));
 }finally{await browser.close();}

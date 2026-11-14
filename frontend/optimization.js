@@ -147,7 +147,7 @@ function renderCards(tracks) {
 function renderTable(tracks) {
   const rows=tracks.flatMap(track=>track.rounds.map(round=>({...round,mode:track.mode}))).sort((a,b)=>a.round-b.round||a.mode.localeCompare(b.mode));
   $('optimization-rounds-table').replaceChildren(...rows.map(row=>{
-    const tr=node('tr'),th=node('th',`${name(row.mode)} / ${row.round}`);th.scope='row';tr.append(th);
+    const tr=node('tr'),th=node('th',`${name(row.mode)} / ${row.round}${row.search_step==='formula_p_star'?' · formula P*':''}`);th.scope='row';tr.append(th);
     for(const item of [money(row.member_fare),money(row.total_contribution),num(row.mean_member_buyers,1),num(row.mean_regular_buyers,1),num(row.mean_new_members,1),`${num(row.mean_member_tickets,1)} / ${num(row.mean_regular_tickets,1)}`,`${num(row.member_supply_exposure,1)} seats / ${num(row.mean_member_offer_customers,1)} viewers`,pct(row.profit_margin),money(baselineOf(row)),signed(row.incremental_contribution)])tr.append(node('td',item));
     const result=node('td');result.append(node('span',row.price_evidence_qualified===false?evidenceLabel(row):row.accepted?'Retained test':row.feasible?'Tested':'Service unmet',row.accepted?'round-kept':'round-rejected'));tr.append(result);return tr;
   }));
@@ -202,7 +202,16 @@ function render(data){
   $('optimization-events').href=`/api/optimization/runs/${encodeURIComponent(data.run_id)}/events`;
   renderCards(tracks);renderTable(tracks);renderFinal(tracks);renderContributionExplanation($('optimization-contribution-content'),tracks);renderFeedback(tracks);draw();controls();
 }
-function draw(){if(!state.data)return;const tracks=state.data.tracks||[];chart('optimization-fare-chart',tracks,'member_fare',{initialKey:'initial_member_fare',caption:'Evaluated member fare by round'});chart('optimization-profit-chart',tracks,'incremental_contribution',{caption:'Evaluated incremental contribution compared with no offer'}); priceProfit(tracks);}
+// Mathematical track: closed-form scan picks P*, then the full simulation re-scores a fine grid around it.
+function formulaSummary(){
+  const box=$('optimization-formula'),e=state.data?.config?.formula_estimate;box.hidden=!e;if(!e){box.replaceChildren();return;}
+  const math=(state.data.tracks||[]).find(t=>t.mode==='math'),best=math?.best;
+  const parts=[node('strong',`Formula estimate P* = ${money(e.p_star)}`),
+    document.createTextNode(` Scored ${num(e.prices_scored)} member fares from ${money(e.search_low)} to ${money(e.search_high)} (the 50% cap) for ${num(e.travellers_scored)} simulated travellers using the mathematical customer model's choice probabilities; expected ${signed(e.expected_incremental)} versus no offer. The full simulation then tests P* and ${num(e.grid.length-1)} nearby prices.`)];
+  if(best)parts.push(document.createTextNode(best.member_fare===e.p_star?` Simulation confirms P* as the best tested price.`:` Simulation moved the best tested price to ${money(best.member_fare)}.`));
+  box.replaceChildren(...parts);
+}
+function draw(){if(!state.data)return;formulaSummary();const tracks=state.data.tracks||[];chart('optimization-fare-chart',tracks,'member_fare',{initialKey:'initial_member_fare',caption:'Evaluated member fare by round'});chart('optimization-profit-chart',tracks,'incremental_contribution',{caption:'Evaluated incremental contribution compared with no offer'}); priceProfit(tracks);}
 async function poll(id){
   const token=++state.request;clearTimeout(state.timer);
   try{const data=await api(`/api/optimization/runs/${encodeURIComponent(id)}`);if(id!==state.runId||token!==state.request)return;render(data);if(running(data.status))state.timer=setTimeout(()=>poll(id),1500);else listRuns(false);}

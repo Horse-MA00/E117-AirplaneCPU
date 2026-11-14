@@ -19,7 +19,8 @@ import uuid
 from . import optimization_store as store
 from llm_agent.file_lock import exclusive_lock
 
-VERSION = 'flight-policy-feedback-v5-member-fare-cap'
+VERSION = 'flight-policy-feedback-v6-formula-grid'
+FORMULA_GRID = 'formula-p-star-fine-grid-v1'
 CONTROLLED_PRICE_PROTOCOL = 'fixed-seat-profile-local-fare-v1'
 ROOT = Path(__file__).resolve().parents[1]
 _lock = threading.RLock()
@@ -82,6 +83,13 @@ def _modes(config):
     return ['math', 'live'] if config['mode'] == 'both' else [config['mode']]
 
 
+def _rounds(config, mode):
+    """The mathematical track evaluates the formula estimate P* and a fixed fine grid around it."""
+    if mode == 'math' and config.get('math_search') == FORMULA_GRID:
+        return len(config['formula_estimate']['grid'])
+    return config['rounds']
+
+
 def _id(run_id):
     if not isinstance(run_id, str) or not re.fullmatch(r'opt-[a-f0-9]{16}', run_id):
         raise ValueError('Invalid optimization run ID')
@@ -90,7 +98,7 @@ def _id(run_id):
 
 def provenance():
     files = ['backend/optimization.py', 'backend/optimization_store.py', 'backend/shared_market.py', 'backend/scoped_market.py', 'backend/initial_policy.py', 'backend/data.py', 'backend/contribution_explanation.py',
-             'backend/probabilistic_customer.py', 'backend/nhpp.py', 'backend/release_policy.py', 'backend/seat_feedback.py',
+             'backend/probabilistic_customer.py', 'backend/fare_estimate.py', 'backend/nhpp.py', 'backend/release_policy.py', 'backend/seat_feedback.py',
              'simulation/generate.py', 'simulation/generated/calibration_v2.json',
              'llm_agent/market_adapter.py', 'llm_agent/population.py', 'llm_agent/output_contract.py',
              'llm_agent/prompts/shared_market_v3_en.txt']
@@ -112,8 +120,14 @@ def best_candidate(rows):
                                       -row['membership_fee'], -row['member_fare']))
 
 
-def propose(config, rows):
+def propose(config, rows, mode=None):
     """Feedback-guided 2D pattern search, bounded and quantized to HKD cents."""
+    if mode == 'math' and config.get('math_search') == FORMULA_GRID:
+        grid = config['formula_estimate']['grid']
+        if len(rows) >= len(grid):
+            return None
+        return {'member_fare': grid[len(rows)], 'membership_fee': config['initial_membership_fee'],
+                'search_step': 'formula_p_star' if not rows else 'fine_grid'}
     if not rows:
         return {'member_fare': config['initial_member_fare'], 'membership_fee': config['initial_membership_fee'],
                 **({'search_step':'initial_snapshot'} if config.get('price_comparison_protocol') else {})}
@@ -354,11 +368,11 @@ def run_batch(run_id, max_calls=60):
     for mode in _modes(cfg):
         initial = {'member_fare': cfg['initial_member_fare'], 'membership_fee': cfg['initial_membership_fee'], 'seat_calibration': initial_profile()}
         baseline = [_world(run_id, mode, 'baseline', 0, seed, initial, False, budget) for seed in _seeds(cfg)]
-        for number in range(1, cfg['rounds']+1):
+        for number in range(1, _rounds(cfg, mode)+1):
             rows = store.rounds(run_id, mode)
             if len(rows) >= number:
                 continue
-            prices = propose(cfg, rows)
+            prices = propose(cfg, rows, mode)
             if prices is None:
                 break
             controlled = cfg.get('price_comparison_protocol') == CONTROLLED_PRICE_PROTOCOL
@@ -462,8 +476,13 @@ def start(body):
         raise ValueError('Live provider is not configured')
     run_id = 'opt-' + uuid.uuid4().hex[:16]
     modes = _modes(cfg)
-    progress = {'completed_rounds': 0, 'total_rounds': cfg['rounds']*len(modes), 'completed_worlds': 0,
-                'total_worlds': len(modes)*(cfg['replicates']*(cfg['rounds']+1)+4),
+    if cfg.get('scope') and 'math' in modes:
+        # Mathematical track: closed-form scan over every fare, then simulate P* and a fine grid.
+        from backend.fare_estimate import estimate
+        cfg['math_search'] = FORMULA_GRID
+        cfg['formula_estimate'] = estimate(cfg, _seeds(cfg))
+    progress = {'completed_rounds': 0, 'total_rounds': sum(_rounds(cfg, m) for m in modes), 'completed_worlds': 0,
+                'total_worlds': sum(cfg['replicates']*(_rounds(cfg, m)+1)+4 for m in modes),
                 'active_mode': None, 'phase': 'queued', 'active_round': 0}
     counts = dict.fromkeys(('provider_calls', 'cache_hits', 'forced', 'math_choices', 'failures', 'live_attempts'), 0)
     with store.connection() as db:

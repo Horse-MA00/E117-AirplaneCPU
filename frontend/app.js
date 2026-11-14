@@ -124,7 +124,13 @@ function renderForecast() {
   text('empty-detail', `${percent(f.expected_empty_rate)} expected unsold in the normal-sales baseline; member bookings excluded`);
   text('protection-value', `${number(f.protection_p90)} seats`);
   text('chart-caption', `Normal-demand baseline only. Solid: observed normal bookings; dashed: expected normal bookings to departure. Member demo bookings are excluded. Shading: model forecast range.`); text('release-value', `${number(seats.newSeats)} seats`);
-  text('headroom-value', `${number(seats.headroom)} seats`);text('bookable-value', `${number(seats.published)} seats`);
+  text('headroom-value', `${number(seats.headroom)} seats`);
+  // The NHPP model's own recommendation: empty seats minus P90 normal demand and its safety allowance.
+  const nhppSeats=Math.max(0,Math.floor(Number(f.risk_release_ceiling??f.releasable_seats)||0));
+  text('nhpp-release-value',`${number(nhppSeats)} seat${nhppSeats===1?'':'s'}`);
+  text('nhpp-release-detail',Number.isFinite(Number(f.protection_p90))&&Number.isFinite(Number(f.available_seats))
+    ?`${number(f.available_seats)} empty − ${number(f.protection_p90)} protected for normal demand (P90 ${number(f.raw_protection_p90??f.protection_p90)}${Number(f.protection_allowance)?` + ${number(f.protection_allowance)} safety allowance`:''}) at D${state.day}. Total for this flight, before earlier rounds and sold member seats are deducted.`
+    :'Empty seats minus seats protected for normal demand at this date.');text('bookable-value', `${number(seats.published)} seats`);
   text('member-allocation-detail', seats.reason);text('headroom-detail', `${number(seats.unpublished)} unpublished + ${number(seats.published)} published and bookable${seats.heldPublished?` + ${number(seats.heldPublished)} published on hold`:''}`);
   text('bookable-detail',seats.published?'Existing usable quota; checked again when booking':'No published seats can be booked now.');
   renderReleaseStatus(f,seats);
