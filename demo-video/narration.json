@@ -1,0 +1,31 @@
+{
+  "voice": "af_heart",
+  "speed": 1.15,
+  "lines": [
+    {
+      "id": "forecast",
+      "caption": "Hong Kong to Fukuoka, one week out. First, we protect the seats normal travellers will still buy, leaving 58 seats we can safely open to members.",
+      "say": "Hong Kong to Fukuoka, one week out. First, we protect the seats normal travellers will still buy — leaving fifty-eight seats we can safely open to members!"
+    },
+    {
+      "id": "optimize",
+      "caption": "Thompson Sampling tests fares on simulated members and learns which price they respond to. HK$229 wins: on fresh test panels, it brings in HK$2,589 more than no offer.",
+      "say": "Thompson Sampling tests fares on simulated members, and learns which price they respond to. Two twenty-nine wins! On fresh test panels, it brings in about twenty-six hundred dollars more than no offer."
+    },
+    {
+      "id": "publish",
+      "caption": "The manager types in the price and publishes the seats.",
+      "say": "The manager types in the price, and publishes the seats."
+    },
+    {
+      "id": "member",
+      "caption": "On the member site, the deal is clear: HK$690, now HK$229. One click, and the seat is booked!",
+      "say": "On the member site, the deal is clear: six-ninety, now just two twenty-nine. One click, and the seat is booked!"
+    },
+    {
+      "id": "results",
+      "caption": "Back in Admin, the sale shows up instantly: one seat sold, HK$229 in member revenue.",
+      "say": "Back in Admin, the sale shows up instantly: one seat sold, and two hundred twenty-nine dollars in member revenue."
+    }
+  ]
+}
