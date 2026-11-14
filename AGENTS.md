@@ -16,7 +16,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 
 - [FLIGHT_SCOPED_OPTIMIZATION](docs/FLIGHT_SCOPED_OPTIMIZATION.md)：唯一现行 Thompson 流程、数学、客群、价格规则、审计和实验结果。
 - [THREE_ROUND_RELEASE](docs/THREE_ROUND_RELEASE.md)：D28/D14/D7放票及有效未售配额扣减。
-- [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：当前模块、HTTP路由及数据边界。
+- [CURRENT_IMPLEMENTATION](docs/CURRENT_IMPLEMENTATION.md)：技术速读与Present指南，含数据生成、预测／放票／定价公式、LLM、会计、演示与HTTP路由。
 - [PITCHING_BRIEF](docs/PITCHING_BRIEF.md)：当前路演内容和证据限制。
 - [NHPP_V3_REVIEW](docs/NHPP_V3_REVIEW.md)、[NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：活动预测器及冻结验证。
 - [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin与会员端流程、两类示范登入和半年会员；[HK_EXPRESS_BOOKING_UI_REVIEW](docs/HK_EXPRESS_BOOKING_UI_REVIEW.md)：会员页订票界面规格。

@@ -121,7 +121,7 @@ DOM 钩子可以**移动**到新的位置、换外层结构，但不能删除或
 | 页面 | 功能 | 接口 |
 |---|---|---|
 | 公共 | 数据集标签、LLM 是否已配置 | `GET /api/summary`、`GET /api/flights` |
-| Forecast | 需求档位筛选、航班选择、D28/D14/D7/D1、四个座位指标、座位分配条、正常预订与票价图、去 Optimize（带航班和轮次） | `GET /api/flights/{id}`、`POST /api/forecast` |
+| Forecast | 需求档位筛选、航班选择、D28/D14/D7、四个座位指标、座位分配条、正常预订与票价图、去 Optimize（带航班和轮次） | `GET /api/flights/{id}`、`POST /api/forecast` |
 | Optimize | 航线、航班、放票轮次；顾客决策来源（离线模拟 / Live LLM）；轮数、每轮人数；折叠的客群权重、并行数、调用上限、种子、验证批数；开始实验；已保存实验选择；进度；建议票价（含尾数 9 的最终宣传价）；逐轮表；价格与预期收入曲线；独立验证（对比初始价和不放票）；导出；去 Experiments 看会员回馈 | `GET /api/adaptive-pricing/status`、`POST /api/adaptive-pricing/scope`、`GET/POST /api/adaptive-pricing/runs`、`GET /api/adaptive-pricing/runs/{id}`、链接 `…/{id}/export` |
 | Experiments | 选择已保存实验和轮次，阅读该轮摘要和每位会员的购买 / 拒绝理由；只读，不发起调用 | `GET /api/adaptive-pricing/runs`、`GET /api/adaptive-pricing/runs/{id}`、链接 `…/{id}/export` |
 | Manage offers | 手动选择航线、航班、轮次，输入座位数和会员票价并发布（后端核对当前配额和 80% 上限）；去 Optimize 优化这班航班；设置会费；已发布优惠列表 | `POST /api/forecast`、`GET/POST /api/offers`、`GET/POST /api/member-portal/plan` |
@@ -272,7 +272,7 @@ Admin（`index.html`）和 Optimize（`adaptive-pricing.html`）使用**同一�
 
 ### 5.2 共用的航班选择器
 
-页面顶部一条"当前航班"栏，在 4 个流程页面共用：需求档位 → 航线 → 航班 → 轮次（D28 / D14 / D7；Forecast 另可看 D1）。Member feedback 页面不显示这条栏。
+页面顶部一条"当前航班"栏，在 4 个流程页面共用：需求档位 → 航线 → 航班 → 轮次（D28 / D14 / D7）。Member feedback 页面不显示这条栏。
 
 - 在 Admin 的三个 hash 页面之间切换时，选择保存在页面状态里。
 - 去 Optimize 和从 Optimize 回来时，用已有的网址参数 `flight_id`、`forecast_day` 传递（`thompson-navigation.js` 已支持）。
@@ -378,3 +378,7 @@ Publish → 在同一标签页打开会员端 → 会员订票 → **用浏览�
 ### 7.3 2026-11-15 main整合
 
 导入Admin UI时保留main后端和整个`frontend/members/`原始字节，包括半年方案、两类登录账号及圆角。旧分支的年度方案文案改为6 months，前端契约同步当前登录接口，不恢复任意ID账号。修复空筛选遗留发布航班、会费修改后预览过期、已保存实验与需求筛选不一致，以及Results把未使用配额称为可订和漏掉暂扣座位的问题。验证结果追加到[维护记录](ITERATION_2_PROGRESS.md)。
+
+### 7.4 2026-11-15 移除 D1 快捷入口
+
+按用户要求，Admin 与 Optimize 顶部只保留 D28／D14／D7；删除 D1 按钮及停用占位。Admin 不再从 `forecast_day=1` URL 选中 D1，改用默认 D28。Forecast 日线图与逐日观察滑杆、后端逐日预测和冻结数据保留；D1从来不是新增配额的发布轮次。

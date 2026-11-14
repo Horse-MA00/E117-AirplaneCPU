@@ -40,7 +40,6 @@ function setView() {
   if (name === 'unavailable') { text('dataset-label','No data loaded'); return true; }
   if (name === 'members') { loadOffers(); loadMemberPlan(); if(state.loadedFlightId)selectOffer(state.loadedFlightId,state.day,false); }
   if (name === 'results') loadOffers();
-  for (const button of document.querySelectorAll('[data-day="1"]')) button.disabled = name !== 'flights';
   if (name === 'flights' && state.forecast) requestAnimationFrame(renderForecast);
   if (name === 'flights' && state.flights.length && !state.loadedFlightId && $('flight-select').value) loadFlight();
   document.dispatchEvent(new CustomEvent('uoption:view', { detail: { name } }));
@@ -432,7 +431,7 @@ async function init() {
     // Optimize and the sidebar pass the current selection back as ?flight_id=&forecast_day=.
     const params = new URL(location.href).searchParams, wanted = state.flights.find(f => f.flight_id === params.get('flight_id'));
     const wantedDay = Number(params.get('forecast_day'));
-    if ([28, 14, 7, 1].includes(wantedDay)) { state.day = wantedDay; $('day-slider').value = 28 - wantedDay; text('day-number', wantedDay); document.querySelectorAll('[data-day]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.day) === wantedDay))); }
+    if (RELEASE_DAYS.includes(wantedDay)) { state.day = wantedDay; $('day-slider').value = 28 - wantedDay; text('day-number', wantedDay); document.querySelectorAll('[data-day]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.day) === wantedDay))); }
     if(fillForecastFlights(wanted?.flight_id) && location.hash !== '#customers')await loadFlight();
     loadMemberPlan();
 

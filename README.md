@@ -84,7 +84,7 @@ This runs the project tests, documentation/publication checks and artifact verif
 
 - [Current Thompson specification](docs/FLIGHT_SCOPED_OPTIMIZATION.md)
 - [D28/D14/D7 release accounting](docs/THREE_ROUND_RELEASE.md)
-- [Architecture and HTTP routes](docs/CURRENT_IMPLEMENTATION.md)
+- [Technical walkthrough and presentation guide (Chinese)](docs/CURRENT_IMPLEMENTATION.md)
 - [Admin and member guide](docs/ADMIN_AND_MEMBER_UX.md)
 - [Pitching brief and evidence boundaries](docs/PITCHING_BRIEF.md)
 - [Current maintenance record](docs/ITERATION_2_PROGRESS.md)
