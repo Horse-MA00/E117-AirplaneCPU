@@ -54,6 +54,10 @@ try{
   await page.locator('[data-day="14"]').click();
   assert.equal(await page.locator('#forecast-demand').inputValue(),'high');
   assert.equal(await page.locator('#flight-select option').count(),1,'Moving the timeline must not reclassify D28 groups');
+  // Each day change sends one forecast for the Forecast view and one for the offer form.
+  // Let both land before taking the baseline, so a late D14 reply is not counted as a stale request.
+  const settleForecasts=async()=>{for(let previous=-1;previous!==forecastCalls;){previous=forecastCalls;await page.waitForTimeout(300);}};
+  await settleForecasts();
   const calls=forecastCalls;
   await page.locator('#forecast-demand').selectOption('unknown');
   assert.equal(await page.locator('#flight-select').isDisabled(),true);
@@ -61,6 +65,7 @@ try{
   assert.equal(await page.locator('#flight-filter-empty').isVisible(),true);
   assert.equal(await page.locator('#go-pricing').isDisabled(),true);
   await page.locator('[data-day="7"]').click();
+  await settleForecasts();
   assert.equal(forecastCalls,calls,'Empty selection must not request a stale flight');
   await page.locator('#forecast-demand').selectOption('low');
   await page.waitForFunction(()=>!document.getElementById('flight-main').hidden&&document.getElementById('headroom-value').textContent==='40 seats');

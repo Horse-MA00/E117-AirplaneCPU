@@ -88,6 +88,8 @@ try {
     await page.screenshot({path:`${output}panel-admin-${width}.png`,fullPage:true});
   }
   await page.locator('.primary-nav a[href="#members"]').click();
+  // The view switches on hashchange, after the click resolves; wait for it instead of sampling once.
+  await page.locator('#member-plan-form').waitFor({state:'visible'});
   assert.equal(await page.locator('#member-plan-form').isVisible(),true);
   assert.equal(await page.locator('#join-button').count(),0);assert.equal(await page.locator('#customer-id').count(),0);
   assert.equal(await page.locator('.portal-link').getAttribute('href'),'/members');
