@@ -9,6 +9,16 @@ export function inRegion(airport, region) {
   return !region || Boolean(regions[region]?.airports.includes(airport));
 }
 
+// A place is '' (anywhere), an airport code, or 'region:XX' for every airport
+// in a country / region. Origin and destination use the same picker.
+export const REGION_PREFIX = 'region:';
+export function placeRegion(place) { return String(place || '').startsWith(REGION_PREFIX) ? place.slice(REGION_PREFIX.length) : ''; }
+export function matchesPlace(airport, place) {
+  if (!place) return true;
+  const region = placeRegion(place);
+  return region ? inRegion(airport, region) : airport === place;
+}
+
 export function nextMonthRange(now = Date.now()) {
   const today = temporal.Instant.fromEpochMilliseconds(now).toZonedDateTimeISO('Asia/Hong_Kong').toPlainDate();
   const first = today.with({ day: 1 }).add({ months: 1 });
@@ -30,9 +40,9 @@ export function reversedRange(from, to) {
 
 export function matchesSearch(flight, filters) {
   const date = temporal.PlainDate.from(flight.departure_date);
-  return (!filters.origin || flight.origin === filters.origin)
+  return matchesPlace(flight.origin, filters.origin)
     && inRegion(flight.destination, filters.region)
-    && (!filters.destination || flight.destination === filters.destination)
+    && matchesPlace(flight.destination, filters.destination)
     && (!filters.from || temporal.PlainDate.compare(date, filters.from) >= 0)
     && (!filters.to || temporal.PlainDate.compare(date, filters.to) <= 0);
 }

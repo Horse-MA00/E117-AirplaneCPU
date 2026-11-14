@@ -21,7 +21,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）的做法
 - [NHPP_V2_REVIEW](docs/NHPP_V2_REVIEW.md)：冻结的 NHPP v2 参数、输出和验证。
 - [SHARED_MARKET](docs/SHARED_MARKET.md)：共享市场引擎、财务账本和默认成本。[SHARED_MARKET_AGENT](docs/SHARED_MARKET_AGENT.md)：旅客 Agent、审计和 probe。
 - [LLM_SCENARIO_DESIGN](docs/LLM_SCENARIO_DESIGN.md)：六阶段旅程（Customer panel）和历史 v2.1 基线。
-- [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin 和会员端的交互、面板上限、会员搜索。
+- [ADMIN_AND_MEMBER_UX](docs/ADMIN_AND_MEMBER_UX.md)、[CLIENT_FLEXIBLE_SEARCH](docs/CLIENT_FLEXIBLE_SEARCH.md)：Admin 和会员端的交互、面板上限、会员搜索。[HK_EXPRESS_BOOKING_UI_REVIEW](docs/HK_EXPRESS_BOOKING_UI_REVIEW.md)：官网 UI 调研与会员订票改进。
 - [CONTINUOUS_PRICING](docs/CONTINUOUS_PRICING.md)：全期连续定价，**只是参考工具**。[DOCKER](docs/DOCKER.md)：容器运行和测试。
 
 ### 证据与记录
@@ -74,7 +74,7 @@ python scripts/verify_artifacts.py                # 实验与数据的 SHA256 �
 - `frontend/`：Admin，原生 HTML/JS，路径 `/admin`；`frontend/members/` 是会员端，路径 `/members`。不需要构建，由后端直接提供；`*.mjs` 是浏览器 smoke 测试。
 - `simulation/`：合成数据生成器、NHPP 评估脚本和已提交的冻结数据集。
 - `llm_agent/`：旅客 Agent、prompt、provider 适配、审计；`experiments/` 是可公开的合成实验证据。
-- `scripts/`：发布检查、证据校验、HTTP/容器 smoke、导出工具。`tests/`：根目录的发布和模拟器测试。
+- `scripts/`：发布检查、证据校验、HTTP/容器 smoke、导出工具；`apply_member_fee_reference.py` 为六班演示票备份并应用有来源的费用明细。`tests/`：根目录的发布和模拟器测试。
 - `docs/`：现行规格、证据记录和日志，见上面的文档索引。
 
 ## 其他约定

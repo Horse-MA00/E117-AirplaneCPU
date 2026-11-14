@@ -25,6 +25,32 @@ class Store:
             columns = {row['name'] for row in c.execute('PRAGMA table_info(offers)')}
             if 'release_version' not in columns:
                 c.execute("ALTER TABLE offers ADD COLUMN release_version TEXT NOT NULL DEFAULT 'legacy-daily-demo'")
+            if 'fee_breakdown' not in columns:
+                c.execute("ALTER TABLE offers ADD COLUMN fee_breakdown TEXT")
+
+    def set_offer_fee_breakdown(self, offer_id, breakdown):
+        """Apply a sourced demo estimate only while the offer has no receipts."""
+        import json
+        from decimal import Decimal, ROUND_HALF_UP
+        lines = breakdown.get('lines', [])
+        if not lines or breakdown.get('currency') != 'HKD':
+            raise ValueError('An HKD fee breakdown with lines is required')
+        amounts = [Decimal(str(line['amount'])) for line in lines]
+        if any(not a.is_finite() or a < 0 or a != a.quantize(Decimal('.01')) for a in amounts):
+            raise ValueError('Fee amounts must be nonnegative finite cents')
+        total = float(sum(amounts).quantize(Decimal('.01'), rounding=ROUND_HALF_UP))
+        payload = json.dumps(breakdown, sort_keys=True)
+        with self.connect() as c:
+            c.execute('BEGIN IMMEDIATE')
+            offer = c.execute('SELECT * FROM offers WHERE id=?', (offer_id,)).fetchone()
+            if not offer:
+                raise ValueError('Offer not found')
+            if offer['fee_breakdown'] == payload and offer['fees'] == total:
+                return total
+            if c.execute('SELECT 1 FROM bookings WHERE offer_id=?', (offer_id,)).fetchone():
+                raise ValueError('Cannot reprice an offer with existing bookings')
+            c.execute('UPDATE offers SET fees=?,fee_breakdown=? WHERE id=?', (total, payload, offer_id))
+        return total
 
     @contextmanager
     def connect(self):
@@ -180,11 +206,11 @@ class Store:
         with self.connect() as c:
             member = c.execute('SELECT * FROM members WHERE customer_id=?', (customer_id,)).fetchone()
             membership = {**dict(member), 'active': member['expires'] > time.time()} if member else None
-            bookings = [dict(row) for row in c.execute('''SELECT b.*,o.base_fare,o.fees AS mandatory_fees
+            bookings = [dict(row) for row in c.execute('''SELECT b.*,o.base_fare,o.fees AS mandatory_fees,o.fee_breakdown
                 FROM bookings b JOIN offers o ON o.id=b.offer_id WHERE b.customer_id=? ORDER BY b.created DESC''', (customer_id,))]
             return {'customer_id': customer_id, 'membership': membership, 'bookings': bookings, 'simulated': True}
 
-    def book(self, offer_id, customer_id, day=None, max_release=None):
+    def book(self, offer_id, customer_id, day=None, max_release=None, expected_total=None):
         with self.connect() as c:
             c.execute('BEGIN IMMEDIATE')
             member = c.execute('SELECT * FROM members WHERE customer_id=? AND expires>?', (customer_id, time.time())).fetchone()
@@ -193,6 +219,8 @@ class Store:
             offer = c.execute('SELECT * FROM offers WHERE id=? AND expires>?', (offer_id, time.time())).fetchone()
             if not offer or offer['remaining'] < 1:
                 raise ValueError('Offer unavailable or sold out')
+            if expected_total is not None and expected_total != round(offer['base_fare'] + offer['fees'], 2):
+                raise ValueError('The flight price changed. Refresh and review the current total before booking.')
             clock = c.execute('SELECT * FROM flight_clocks WHERE flight_id=?', (offer['flight_id'],)).fetchone()
             day = day if day is not None else clock['day'] if clock else offer['day']
             self._day(day)
@@ -206,7 +234,7 @@ class Store:
                 raise ValueError('This customer already booked this flight')
             self._advance(c, offer['flight_id'], day, int(limit))
             id = str(uuid.uuid4())
-            total = offer['base_fare'] + offer['fees']
+            total = round(offer['base_fare'] + offer['fees'], 2)
             c.execute('UPDATE offers SET remaining=remaining-1 WHERE id=? AND remaining>0', (offer_id,))
             c.execute('INSERT INTO bookings VALUES(?,?,?,?,?,?)', (id, offer_id, offer['flight_id'], customer_id, total, time.time()))
             return {'booking': dict(c.execute('SELECT * FROM bookings WHERE id=?', (id,)).fetchone()),

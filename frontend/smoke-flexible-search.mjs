@@ -84,7 +84,7 @@ try {
 
   // Draft filters leave the current result set and its summary unchanged.
   const initialSummary = await summary();
-  await page.locator('#destination-region').selectOption('JP');
+  await page.locator('#destination').selectOption('region:JP');
   await dates('2027-05-01', '2027-05-31');
   assert.equal(await page.locator('.flight-card').count(), fixtures.length);
   assert.equal(await summary(), initialSummary);
@@ -101,7 +101,7 @@ try {
   await page.locator('#refresh-flights').click();
   await page.waitForFunction(() => document.querySelector('#flight-results').getAttribute('aria-busy') === 'false');
   assert.ok(flightReads > readsBeforeRefresh);
-  assert.equal(await page.locator('#destination-region').inputValue(), 'JP');
+  assert.equal(await page.locator('#destination').inputValue(), 'region:JP');
   await expectDates('2027-05-01', '2027-05-31');
   assert.equal(await summary(), appliedSummary);
   await expectFlights(['FUK-FIRST', 'KIX-LAST']);
@@ -121,13 +121,11 @@ try {
   await submit();
   await expectFlights(['FUK-BEFORE', 'FUK-FIRST', 'KIX-LAST', 'NRT-AFTER']);
 
-  // Exact airport/date refinements remain usable inside their disclosure.
-  await revealControl('destination');
-  const japanAirports = await page.locator('#destination option').evaluateAll(options => options.map(option => option.value).filter(Boolean).sort());
+  // The same picker offers each country's airports; one day is a same-date range.
+  const japanAirports = await page.locator('#destination optgroup[label="Japan"] option').evaluateAll(options => options.map(option => option.value).filter(value => !value.startsWith('region:')).sort());
   assert.deepEqual(japanAirports, ['CTS', 'FUK', 'HIJ', 'HND', 'ISG', 'KIX', 'KMQ', 'NGO', 'NRT', 'OKA', 'SDJ', 'TAK']);
   await page.locator('#destination').selectOption('FUK');
-  await revealControl('departure-date');
-  await page.locator('#departure-date').fill('2027-05-01');
+  await dates('2027-05-01', '2027-05-01');
   await submit();
   await expectFlights(['FUK-FIRST']);
   // An offer disappearing cannot silently replace the applied airport/date.
@@ -135,9 +133,7 @@ try {
   releasedFlights = fixtures.filter(flight => flight.destination !== 'FUK');
   await page.locator('#refresh-flights').click();
   await page.waitForFunction(() => document.querySelector('#flight-results').getAttribute('aria-busy') === 'false');
-  assert.equal(await page.locator('#destination-region').inputValue(), 'JP');
   assert.equal(await page.locator('#destination').inputValue(), 'FUK');
-  assert.equal(await page.locator('#departure-date').inputValue(), '2027-05-01');
   await expectDates('2027-05-01', '2027-05-01');
   assert.equal(await summary(), exactSummary);
   await expectFlights([]);
@@ -147,32 +143,37 @@ try {
   await page.waitForFunction(() => document.querySelector('#flight-results').getAttribute('aria-busy') === 'false');
   await expectFlights(['FUK-FIRST']);
   await page.locator('#any-dates').click();
-  assert.equal(await page.locator('#departure-date').inputValue(), '');
+  await expectDates('', '');
   await submit();
   await expectFlights(['FUK-BEFORE', 'FUK-FIRST']);
 
-  // Country changes clear an incompatible exact airport before submission.
-  await page.locator('#destination-region').selectOption('KR');
-  assert.equal(await page.locator('#destination').inputValue(), '');
-  assert.equal(await page.locator('#destination option[value="FUK"]').count(), 0);
+  // Choosing a whole country replaces the single airport in the same picker.
+  await page.locator('#destination').selectOption('region:KR');
+  assert.equal(await page.locator('#destination').inputValue(), 'region:KR');
   await submit();
   await expectFlights(['ICN-MIDDLE']);
-  await page.locator('#destination-region').selectOption('VN');
+  await page.locator('#destination').selectOption('region:VN');
   await submit();
   await expectFlights(['DAD-MIDDLE']);
   assert.match(await summary(), /Vietnam/);
 
+  // A whole country also works as the origin.
+  await page.locator('#clear-search').click();
+  await page.locator('#origin').selectOption('region:JP');
+  await submit();
+  await expectFlights([]);
+  assert.match(await summary(), /Japan \(all airports\) → Anywhere/);
+
   // Unknown airports are selectable without being assigned an invented country.
   await page.locator('#clear-search').click();
   assert.equal(await page.locator('.flight-card').count(), fixtures.length);
-  await revealControl('destination');
   await page.locator('#destination').selectOption('ZZZ');
   await submit();
   await expectFlights(['UNKNOWN-MIDDLE']);
   await page.locator('#clear-search').click();
 
   // Reversed ranges fail native validation and keep the last applied search.
-  await page.locator('#destination-region').selectOption('JP');
+  await page.locator('#destination').selectOption('region:JP');
   await dates('2027-05-01', '2027-05-31');
   await submit();
   const validSummary = await summary();
@@ -215,12 +216,12 @@ try {
   assert.match(await page.locator('#flight-results').innerText(), /No matching flights/);
   assert.match(await summary(), /Japan/);
   await page.locator('#clear-search').click();
-  for (const id of ['origin', 'destination-region', 'destination', 'departure-date', 'departure-from', 'departure-to']) assert.equal(await page.locator(`#${id}`).inputValue(), '', `${id} must reset.`);
+  for (const id of ['origin', 'destination', 'departure-from', 'departure-to']) assert.equal(await page.locator(`#${id}`).inputValue(), '', `${id} must reset.`);
   assert.equal(await page.locator('.flight-card').count(), fixtures.length);
   assert.equal(await page.locator('#flight-search').evaluate(form => form.checkValidity()), true);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator('#destination-region').selectOption('JP');
+  await page.locator('#destination').selectOption('region:JP');
   await dates('2027-05-01', '2027-05-31');
   await submit();
   await expectFlights(['FUK-FIRST', 'KIX-LAST']);

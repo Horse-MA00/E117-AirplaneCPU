@@ -300,3 +300,98 @@ dialog::backdrop { background: #21102e99; }
   .flight-price .button { grid-column: 1 / -1; grid-row: auto; width: 100%; margin-top: 5px; }
   .flight-price .total { font-size: 1.5rem; }
 }
+
+/* Fare transparency and post-purchase returns. */
+.fare-rights { margin:28px 0; padding:28px; border:1px solid #e3d8e9; border-radius:20px; background:#fff; scroll-margin-top:24px; }
+.rights-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-top:20px; }
+.first-purchase { display:block; font-size:.8rem; color:#44314f; margin:8px 0; }.return-suggestion { margin-top:22px; padding:16px; background:#f7f2fb; border-radius:12px; }
+.flight-card details { font-size:.7rem; color:#655d6b; margin-top:8px; }.rights-grid p { line-height:1.6; }
+@media(max-width:760px){.rights-grid{grid-template-columns:1fr}.fare-rights{padding:20px}.first-purchase{grid-column:1/-1}}
+
+.fee-summary { display:grid; gap:6px; font-size:.78rem; grid-column:1/-1; }
+.fee-reference { margin:14px 0; font-size:.78rem; line-height:1.55; overflow-wrap:anywhere; }
+.fee-reference summary { cursor:pointer; color:var(--purple,#6f2c91); }
+.fee-reference p { margin:8px 0; }
+
+/* Booking-first layout, informed by the HK Express search interaction review. */
+.booking-hero { grid-template-columns:1fr auto; padding:30px 32px 48px; gap:24px; border-radius:16px 16px 0 0; }
+.booking-hero::after { display:none; }
+.booking-hero h1 { font-size:clamp(1.8rem,3vw,2.65rem); letter-spacing:-.04em; line-height:1.15; }
+.booking-hero .hero-copy { margin:10px 0 0; font-size:.85rem; }
+.pass-compact { display:grid; gap:6px; text-decoration:none; padding:16px 20px; border:1px solid #ffffff66; border-radius:10px; font-size:.72rem; min-width:220px; }
+.pass-compact #hero-fee { font-size:1.5rem; }
+.search-panel { margin:-20px 16px 0; border-radius:12px; box-shadow:0 8px 24px #28213308; padding:22px; }
+#flight-search { display:block; }
+.primary-search { display:grid; grid-template-columns:minmax(0,1.15fr) 42px minmax(0,1.15fr) minmax(145px,.8fr) minmax(145px,.8fr) auto; align-items:start; gap:12px; }
+.primary-search .field label { color:var(--ink); font-weight:600; }
+.primary-search #search-button,.swap-airports { margin-top:23px; }
+.swap-airports { min-height:48px; border:1px solid var(--line); border-radius:50%; color:var(--purple); background:white; font-size:1.3rem; }
+.search-extras { margin-top:10px; padding-top:6px; border-top:1px solid var(--line); }
+.search-extras .search-help { margin:4px 0 6px; }
+.date-shortcut { min-height:38px; padding:6px 12px; font-size:.75rem; }
+.date-shortcuts { align-items:center; }
+.date-shortcuts #clear-search { margin-left:auto; }
+.search-summary-row { display:flex; align-items:center; gap:16px; justify-content:space-between; }
+.search-summary-row .text-link { flex:none; }
+.date-fares { margin:16px 0 20px; }
+.date-fares h3 { font-size:.9rem; }
+.date-options { display:flex; gap:8px; overflow-x:auto; padding:4px 4px 10px; scroll-snap-type:x proximity; }
+.date-fare { flex:0 0 auto; min-width:142px; display:grid; gap:8px; text-align:left; padding:13px; color:var(--ink); background:white; border:1px solid var(--line); border-radius:8px; font-size:.72rem; scroll-snap-align:start; }
+.date-fare strong { font-size:.86rem; color:var(--purple); }
+.date-fare[aria-pressed=true] { background:#f6effa; border:2px solid var(--purple); padding:12px; }
+.flight-card { border-radius:12px; grid-template-columns:65px minmax(0,1fr) 225px; gap:18px; }
+.flight-price .total { font-size:1.2rem; }
+.flight-price .ticket-total { font-size:1.2rem; color:var(--purple); line-height:1.5; margin-top:5px; }
+.fee-summary { gap:5px; }
+.flight-price .first-purchase { background:#f5f1f8; padding:8px; border-radius:5px; line-height:1.5; }
+.membership-panel { border-radius:12px; }
+.booking-steps { padding:20px 16px; }
+.booking-steps li > span { background:#f4eff7; border:0; }
+.checkout-progress { list-style:none; padding:14px 0; display:flex; gap:10px; margin:0; border-bottom:1px solid var(--line); }
+.checkout-progress li { flex:1; font-size:.7rem; color:var(--muted); line-height:1.5; }
+.checkout-progress .is-current { color:var(--purple); font-weight:700; }
+#checkout[data-stage=complete] .checkout-progress { display:none; }
+#checkout { padding-bottom:0; }
+.checkout-actions { position:sticky; bottom:0; padding:14px 0 18px; background:white; border-top:1px solid var(--line); box-shadow:0 -8px 12px #ffffffed; }
+.checkout-actions .fine-print { margin-top:8px; font-size:.65rem; }
+@media(min-width:1100px){.membership-panel{position:sticky;top:20px}}
+@media(max-width:1000px){
+ .primary-search { grid-template-columns:minmax(0,1fr) 42px minmax(0,1fr); }
+ .primary-search .field:has(#departure-from) { grid-column:1; }
+ .primary-search .field:has(#departure-to) { grid-column:3; }
+ .primary-search #search-button { grid-column:1/-1; margin-top:0; }
+ .flight-card { grid-template-columns:55px minmax(0,1fr); }
+ .flight-price { grid-column:2; display:flex; align-items:stretch; padding:12px 0 0; border:0; border-top:1px dashed var(--line); }
+ .flight-price .breakdown { text-align:left; }
+}
+@media(max-width:760px){
+ .booking-hero { padding:22px 20px 38px; grid-template-columns:1fr; gap:14px; }
+ .booking-hero .hero-copy { font-size:.78rem; }
+ .pass-compact { display:flex; align-items:center; gap:12px; padding:10px 12px; min-width:0; flex-wrap:wrap; }
+ .pass-compact #hero-fee { font-size:1.05rem; }
+ .pass-compact>span:first-child { display:none; }
+ .search-panel { margin-inline:0; padding:18px; }
+ .primary-search { grid-template-columns:minmax(0,1fr) 38px minmax(0,1fr); gap:10px; }
+ .primary-search #search-button { width:100%; }
+ .date-shortcuts #clear-search { margin-left:0; }
+ .search-summary-row { align-items:flex-start; }
+ .search-summary-row .text-link { margin-top:18px; }
+ .flight-card { padding:18px 14px; }
+ .checkout-progress { gap:6px; }
+}
+@media(prefers-reduced-motion:reduce){:root{scroll-behavior:auto}}
+
+#checkout[data-kind=membership] .checkout-progress { display:none; }
+
+/* Non-member checkout: the button shows the whole trip, the note what this click charges. */
+#checkout-submit { flex-direction:column; gap:3px; }
+#checkout-submit .submit-main { font-size:.95rem; }
+#checkout-submit .submit-note { color:#fff; opacity:.85; font-size:.7rem; font-weight:400; }
+
+/* Normal base fare struck through beside the member fare. */
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.fare-compare { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.was-price { color:var(--muted); font-size:.95rem; text-decoration-thickness:2px; text-decoration-color:#a32339; white-space:nowrap; }
+.fare-saving { display:inline-block; background:#fdeef1; color:#a32339; font-size:.68rem; font-weight:600; padding:3px 8px; border-radius:4px; }
+.price-lines .was-price { font-size:.8rem; margin-right:4px; }
+@media(max-width:1000px){ .fare-compare { justify-content:flex-start; } }
