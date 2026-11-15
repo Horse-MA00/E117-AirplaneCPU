@@ -83,8 +83,8 @@ python -m unittest backend.tests.test_nhpp_v3 -v
 docker compose --profile test run --rm --build tests
 ```
 
-Windows 原生完整测试仍受既有 `fcntl` 限制；保留该模块，完整回归在 Linux Docker 执行。
+本节验证时，Windows 原生完整测试受当时的 `fcntl` 限制，完整回归在 Linux Docker 执行。现行锁已按平台选择 `fcntl`／`msvcrt`；2026-11-15的路径、编码及依赖维护见[运行可靠性](RUNTIME_RELIABILITY.md)，不改变下面历史测试的执行平台或数量。
 
-验证完成：Linux Docker 后端 248 项测试全部通过；模拟器测试共 26 项，25 通过、1 跳过；历史制品校验通过。新增 NHPP 专项 12 项测试通过，最终目录与活动模型匹配检查通过。原生 Windows 的 fcntl 限制未修改。
+当时验证完成：Linux Docker 后端 248 项测试全部通过；模拟器测试共 26 项，25 通过、1 跳过；历史制品校验通过。新增 NHPP 专项 12 项测试通过，最终目录与活动模型匹配检查通过；该次模型验证未处理原生Windows限制。
 
 Git 合并兼容：原始 JSON 报告保持原有数值与哈希声明；活动入口仅允许同一校准文本的 LF/CRLF 字节形式匹配原始哈希，任何内容修改仍拒绝。补充回归覆盖换行等价及数值篡改拒绝。

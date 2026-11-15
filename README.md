@@ -57,7 +57,7 @@ See [Docker setup and persistence](docs/DOCKER.md). The member site charges its 
 
 ## Data and evidence
 
-The repository retains **680,364 daily synthetic observations**: 200,000 original demo rows, two 40,182-row route/date supplements and 400,000 additional validation rows. The served catalogue contains 1,549 flights and 280,364 observations. Data generation, observation timing and hidden truth are described in [simulation](simulation/README.md).
+The repository retains **740,690 daily synthetic observations**: 200,000 original demo rows, two 40,182-row route/date supplements, a 60,326-row near-term supplement and 400,000 additional validation rows. The served catalogue contains 1,915 flights and 340,690 observations, including 366 near-term flights whose observations stop at the fixed 15 November 2026 dataset cutoff. Data generation, observation timing and hidden truth are described in [simulation](simulation/README.md).
 
 The active forecast uses the frozen NHPP v2 distribution with a newer guard at D28, and smooth v3 at D14/D7. In the separate 600-flight synthetic test, calibrated protection covered **99.17%, 99.50% and 99.83%** of future normal demand at those horizons. These are protection-coverage figures, not prediction accuracy or real-market guarantees; higher protection also releases fewer seats. Failed candidate results remain available in the [NHPP review](docs/NHPP_V3_REVIEW.md).
 
@@ -92,3 +92,4 @@ This runs the project tests, documentation/publication checks and artifact verif
 - [Admin and member guide](docs/ADMIN_AND_MEMBER_UX.md)
 - [Pitching brief and evidence boundaries](docs/PITCHING_BRIEF.md)
 - [Current maintenance record](docs/ITERATION_2_PROGRESS.md)
+- [Compact experiment reads, simulation time and Windows support](docs/RUNTIME_RELIABILITY.md)

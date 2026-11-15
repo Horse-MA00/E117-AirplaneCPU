@@ -105,7 +105,7 @@ def verify_extended(root):
             if dataset['files'][name] != manifest['files'][f'seed-{seed}/{name}']:
                 _fail(folder + '/' + name, 'dataset and publication manifests disagree')
         try:
-            with gzip.open(root / folder / 'snapshots.csv.gz', 'rt', newline='') as handle:
+            with gzip.open(root / folder / 'snapshots.csv.gz', 'rt', encoding='utf-8', newline='') as handle:
                 count = sum(1 for _ in csv.DictReader(handle))
         except (OSError, EOFError, UnicodeError, csv.Error):
             _fail(folder + '/snapshots.csv.gz', 'invalid compressed snapshot data')
@@ -115,7 +115,7 @@ def verify_extended(root):
     if manifest['files']['forecast_records.jsonl.gz']['sha256'] != report.get('records_sha256'):
         _fail(records_name, 'report and publication checksums disagree')
     try:
-        with gzip.open(root / records_name, 'rt') as handle:
+        with gzip.open(root / records_name, 'rt', encoding='utf-8') as handle:
             records = [json.loads(line) for line in handle]
         identities = [(r['generator_seed'], r['flight_id'], r['model'], r['day']) for r in records]
         flights = Counter((r['generator_seed'], r['flight_id']) for r in records)

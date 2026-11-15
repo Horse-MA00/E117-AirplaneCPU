@@ -17,7 +17,7 @@ docker compose up --build -d --wait
 - Client：http://127.0.0.1:8000/members
 - Health：http://127.0.0.1:8000/api/health
 
-默认离线流程不需要密钥。容器以非root用户运行，宿主机端口仅发布至127.0.0.1；这不是生产身份验证、支付或公网部署。Linux容器提供`fcntl`，Windows开发者也可使用同一环境。
+默认离线流程不需要密钥。容器以非root用户运行，宿主机端口仅发布至127.0.0.1；这不是生产身份验证、支付或公网部署。文件锁在Unix使用`fcntl`、在Windows使用`msvcrt`。Windows也可原生运行Python 3.11+；安装requirements会补齐`tzdata`，不再依赖未使用的Matplotlib。
 
 ### 直接演示 Saved experiments
 
@@ -71,3 +71,5 @@ docker compose --profile test run --rm --build tests
 测试入口与本机`python scripts/check_container.py`相同，检查当前后端、数据、文档及证据。测试服务不挂载演示数据卷，不注入服务密钥且无外网。当前清理的实际验证以[维护记录](ITERATION_2_PROGRESS.md)为准，不沿用已删除工具的旧Docker测试数量。
 
 可选Playwright通过`APP_URL`指向容器；普通使用无需安装Node。当前页面与浏览器命令见[frontend说明](../frontend/README.md)。本次维护按项目要求使用原生环境测试，没有重新启动Docker。
+
+运行时的轻量实验读取、时间版本及旧数据库兼容行为见[运行可靠性](RUNTIME_RELIABILITY.md)。已保存报告不改写；私有数据库新增的摘要缓存可由原报告重建。

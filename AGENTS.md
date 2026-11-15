@@ -23,6 +23,7 @@ UOption Fly Pass（Cathay Hackathon 2026，Team Airplane CPU · E117）以 NHPP 
 - [FRONTEND_UI](docs/FRONTEND_UI.md)：Admin设计、完整From／To与航班编号、Results及前端契约；改UI时核对现行契约，会员端保持独立。
 - [EXTENDED_VALIDATION](docs/EXTENDED_VALIDATION.md)：独立NHPP验证和发布完整性。
 - [DOCKER](docs/DOCKER.md)：部署、Saved experiments自动加载、持久卷和测试；本机开发优先原生运行。
+- [RUNTIME_RELIABILITY](docs/RUNTIME_RELIABILITY.md)：修改實驗列表／進度／畫面投影、模擬時鐘、舊資料庫遷移或Windows支援時必讀。
 - [ITERATION_2_PROGRESS](docs/ITERATION_2_PROGRESS.md)：当前清理与验证记录。
 - 数据研究：[数据供应](docs/DATA_SUPPLIER_OPTIONS_2026-11-12.md)、[OAG API](docs/OAG_API_DATA_AUDIT_2026-11-11.md)、[OAG产品](docs/OAG_DATASET_PRODUCT_REVIEW_2026-11-11.md)、[文档检查](docs/OAG_DOCS_REVIEW_CHECKLIST_2026-11-11.md)。
 
@@ -65,11 +66,11 @@ python scripts/verify_artifacts.py
 
 `check_container.py`覆盖完整后端、根目录、发布与证据检查；模型、会计、HTTP、UI修改提交前至少运行一次。
 HTTP检查需先 `python -m backend.server`；`scripts/smoke_api.py`是无付费调用的当前路由检查。浏览器测试在frontend安装依赖后运行 `npm run test:*`。
-未经授权不要运行任何 `--live` 命令。Windows缺少fcntl时使用文档中的容器测试命令。
+未经授权不要运行任何 `--live` 命令。Windows原生使用msvcrt文件锁；requirements按平台安装tzdata。
 
 ## 模块与维护
 
-- `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal、demo_auth及唯一adaptive价格引擎；published_experiments只读加载公开证据；data_horizon按航班最新快照拒绝尚未到达的预测／放票／定价轮次（完整历史不受影响，Admin与Optimize同步置灰并提示）；测试在backend/tests。
+- `backend/`：stdlib HTTP、SQLite交易，NHPP预测、三轮配额、会员Portal、demo_auth及唯一adaptive价格引擎；published_experiments只读加载公开证据，experiment_views派生摘要／进度／画面投影；simulation_clock区分新航班相对时钟与既有wall-clock记录，会员有效期用真实时间；data_horizon按航班最新快照拒绝尚未到达的预测／放票／定价轮次（完整历史不受影响，Admin与Optimize同步置灰并提示）；测试在backend/tests。
 - `llm_agent/`：八类客群、最新提示、并行决策、provider transport及脱敏；experiments为现行公开实验。
 - `frontend/`：Admin／Thompson／会员端原生HTML/JS，无需构建；Experiments只读回馈，*.mjs为浏览器检查。
 - `simulation/`：合成航班数据生成、NHPP校准与验证；`scripts/`为当前运行、导出和发布工具；`apply_member_fee_reference.py`为演示票备份并写入有来源的费用明细。

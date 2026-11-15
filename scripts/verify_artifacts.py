@@ -176,7 +176,7 @@ def _verify_experiment(contents, manifest, audit, label):
 
 
 def verify(manifest_path):
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     folder = manifest_path.parent
     files = manifest.get('files', {})
     for name, expected in files.items():
@@ -186,11 +186,11 @@ def verify(manifest_path):
         assert digest == (expected['sha256'] if isinstance(expected, dict) else expected), path
         if isinstance(expected, dict) and 'bytes' in expected:
             assert path.stat().st_size == expected['bytes'], path
-    label = str(folder.relative_to(ROOT)) if folder.is_relative_to(ROOT) else str(folder)
+    label = folder.relative_to(ROOT).as_posix() if folder.is_relative_to(ROOT) else str(folder)
     result = {'path': label, 'verified_files': len(files)}
     snapshots = folder / 'snapshots.csv.gz'
     if snapshots.exists():
-        with gzip.open(snapshots, 'rt', newline='') as stream:
+        with gzip.open(snapshots, 'rt', encoding='utf-8', newline='') as stream:
             count = sum(1 for _ in csv.DictReader(stream))
         assert count == manifest['rows'], snapshots
         result['snapshot_rows'] = count
@@ -198,20 +198,25 @@ def verify(manifest_path):
         assert {'report.json', 'audit.jsonl.gz'} <= files.keys(), 'Experiment manifest must hash report and audit'
         assert manifest.get('synthetic') is True, 'Experiment population provenance is missing'
         report = folder / 'report.json'
-        contents = json.loads(report.read_text())
+        contents = json.loads(report.read_text(encoding='utf-8'))
         audit = _audit_summary(folder / 'audit.jsonl.gz', contents['run_id'])
         result.update(_verify_experiment(contents, manifest, audit, report))
     return result
 
 
-if __name__ == '__main__':
+def main():
     # Required evidence must not disappear silently when a directory glob is empty.
     from backend.evidence import verify_extended
     extended = verify_extended(ROOT)
-    manifests = [ROOT / 'simulation/generated/manifest.json']
+    manifests = [ROOT / 'simulation/generated/manifest.json',
+                 ROOT / 'simulation/hkx_recent_generated/manifest.json']
     manifests += sorted((ROOT / 'simulation/network_generated').glob('manifest.json'))
     manifests += sorted((ROOT / 'simulation/member_demo_generated').glob('manifest.json'))
     manifests += sorted((ROOT / 'simulation/validation_extended').glob('seed-*/manifest.json'))
     manifests += sorted((ROOT / 'llm_agent/experiments').glob('*/manifest.json'))
     results = [verify(path) for path in manifests]
     print(json.dumps({'status': 'passed', 'extended_evaluation': extended, 'artifacts': results}, indent=2))
+
+
+if __name__ == '__main__':
+    main()

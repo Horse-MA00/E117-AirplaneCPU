@@ -12,7 +12,7 @@ The Python backend directly serves the committed HTML/CSS/JavaScript; no fronten
 | `/members/login` | Two public demo logins: prepaid member and initially nonmember |
 | `/members` | Signed-in flexible search, six-month membership, checkout and saved trips |
 
-Optimize fixes the population to eight flexible bargain groups, with editable weights. Offline simulated customer decisions and live LLM decisions use the same Thompson method. The page keeps rounds, price/revenue estimates, the final promotional quote and independent confirmation. Viewing results does not start experiments or spend provider budget.
+Optimize fixes the population to eight flexible bargain groups, with editable weights. Offline simulated customer decisions and live LLM decisions use the same Thompson method. The page keeps rounds, price/revenue estimates, the final promotional quote and independent confirmation. Viewing results does not start experiments or spend provider budget. Lists use compact summaries; running experiments poll `/progress`, and `/view` loads display details only at saved-round/result boundaries or on manual refresh. Full reports and exports remain available.
 
 Analyst failures permit two retries within the explicit budget, then show **Analysis unavailable** while Thompson continues on valid purchase decisions. Optimize and Member feedback show concrete attempt errors; native disclosures load redacted raw replies on demand through the read-only `analysis-attempts` API. Unavailable analysis is never presented as a successful summary. Customer failures still stop the experiment. The budget estimate includes all three possible analyst attempts per round.
 

@@ -41,7 +41,6 @@ export function reversedRange(from, to) {
 export function matchesSearch(flight, filters) {
   const date = temporal.PlainDate.from(flight.departure_date);
   return matchesPlace(flight.origin, filters.origin)
-    && inRegion(flight.destination, filters.region)
     && matchesPlace(flight.destination, filters.destination)
     && (!filters.from || temporal.PlainDate.compare(date, filters.from) >= 0)
     && (!filters.to || temporal.PlainDate.compare(date, filters.to) <= 0);

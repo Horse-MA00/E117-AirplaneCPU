@@ -5,6 +5,8 @@ from pathlib import Path
 import sqlite3
 import time
 
+from . import experiment_views as views
+
 BASE = Path(__file__).resolve().parents[1] / 'data/private/adaptive_pricing'
 MAX_EXPORT_BYTES = 32 * 1024 * 1024
 _published = None
@@ -45,6 +47,15 @@ def connection():
         id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL,
         recorded_at REAL NOT NULL, record TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS adaptive_event_run ON adaptive_events(run_id,id);
+      CREATE TABLE IF NOT EXISTS adaptive_run_views (
+        run_id TEXT PRIMARY KEY, view_version INTEGER NOT NULL,
+        summary TEXT NOT NULL, progress TEXT NOT NULL);
+      CREATE TRIGGER IF NOT EXISTS adaptive_views_insert AFTER INSERT ON adaptive_runs
+        BEGIN DELETE FROM adaptive_run_views WHERE run_id=NEW.run_id; END;
+      CREATE TRIGGER IF NOT EXISTS adaptive_views_update AFTER UPDATE ON adaptive_runs
+        BEGIN DELETE FROM adaptive_run_views WHERE run_id=OLD.run_id OR run_id=NEW.run_id; END;
+      CREATE TRIGGER IF NOT EXISTS adaptive_views_delete AFTER DELETE ON adaptive_runs
+        BEGIN DELETE FROM adaptive_run_views WHERE run_id=OLD.run_id; END;
     ''')
     try:
         yield db
@@ -66,6 +77,40 @@ def save(run):
         db.execute('INSERT INTO adaptive_runs VALUES (?,?,?,?) ON CONFLICT(run_id) '
                    'DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at',
                    (safe['run_id'], encode(safe), safe['created_at'], safe['updated_at']))
+        _save_views(db, safe)
+
+
+def _save_views(db, run):
+    db.execute('INSERT OR REPLACE INTO adaptive_run_views VALUES (?,?,?,?)',
+               (run['run_id'], views.VIEW_VERSION, encode(views.summary(run)), encode(views.progress(run))))
+
+
+def _projection_rows(db, run_id=None, limit=100):
+    """Read small persisted views; backfill old rows once without rewriting evidence.
+
+    A separate table preserves the original four-column report schema. Triggers
+    invalidate projections even when an older writer updates a report directly.
+    There is no process-local schema cache: recreated databases initialize safely.
+    """
+    from llm_agent.audit import sanitize
+    where, args = ('WHERE r.run_id=?', (run_id,)) if run_id is not None else ('', ())
+    query = ('''SELECT r.run_id,v.summary,v.progress FROM adaptive_runs r
+        LEFT JOIN adaptive_run_views v ON v.run_id=r.run_id AND v.view_version=? '''
+        + where + ' ORDER BY r.created_at DESC,r.run_id DESC LIMIT ?')
+    args = (views.VIEW_VERSION, *args, limit)
+    rows = db.execute(query, args).fetchall()
+    if any(row['summary'] is None for row in rows):
+        # Re-read after obtaining the write lock, so a concurrent save cannot
+        # be replaced by an older projection captured before migration began.
+        db.execute('BEGIN IMMEDIATE')
+        rows = db.execute(query, args).fetchall()
+        for row in rows:
+            if row['summary'] is None:
+                payload = db.execute('SELECT payload FROM adaptive_runs WHERE run_id=?',
+                                     (row['run_id'],)).fetchone()[0]
+                _save_views(db, sanitize(json.loads(payload)))
+        rows = db.execute(query, args).fetchall()
+    return rows
 
 
 def read(run_id):
@@ -84,14 +129,30 @@ def list_runs(limit=30):
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
         raise ValueError('Invalid run-list limit')
     with connection() as db:
-        rows = db.execute('SELECT payload FROM adaptive_runs ORDER BY created_at DESC LIMIT ?', (limit,)).fetchall()
+        rows = _projection_rows(db, limit=limit)
         local_ids = {row[0] for row in db.execute('SELECT run_id FROM adaptive_runs')} if _published is not None else set()
-    runs = [{k: r.get(k) for k in ('run_id','version','status','created_at','updated_at','config','scope','counts','recommendation','validation')}
-            for r in (json.loads(row['payload']) for row in rows)]
+    runs = [json.loads(row['summary']) for row in rows]
     if _published is not None:
         runs.extend(run for run in _published.summaries() if run['run_id'] not in local_ids)
         runs.sort(key=lambda run: (run['created_at'], run['run_id']), reverse=True)
     return sanitize(runs[:limit])
+
+
+def read_progress(run_id):
+    """Read the persisted heartbeat without parsing the full report."""
+    from llm_agent.audit import sanitize
+    with connection() as db:
+        rows = _projection_rows(db, run_id=run_id, limit=1)
+    if rows:
+        return sanitize(json.loads(rows[0]['progress']))
+    if _published is not None:
+        return sanitize(_published.progress(run_id))
+    raise ValueError('Adaptive pricing run not found')
+
+
+def read_view(run_id):
+    """Compact detail is derived from the full, integrity-checked saved report."""
+    return views.detail(read(run_id))
 
 
 def record(run_id, value):

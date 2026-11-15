@@ -78,7 +78,7 @@ From／To 使用 Client 的完整機場／國家目錄，也支持 Anywhere；�
 
 會員plan、優惠批次、訂位及session共用SQLite；Thompson實驗則使用隔離的合成世界。帳本核對含必要費用，只有票價實驗的收入指標排除稅費與成本。
 
-瀏覽器檢查涵蓋導航、當前v5回饋、空狀態、手機版、價格格式、表單和購票核價；實際檢查紀錄見[維護紀錄](ITERATION_2_PROGRESS.md)。API清單見[技術實作](CURRENT_IMPLEMENTATION.md#http介面)。
+瀏覽器檢查涵蓋導航、當前v5回饋、空狀態、手機版、價格格式、表單和購票核價；實際檢查紀錄見[維護紀錄](ITERATION_2_PROGRESS.md)。API清單見[技術實作](CURRENT_IMPLEMENTATION.md#93-http查詢表)。
 
 ## Results（`#results`）
 

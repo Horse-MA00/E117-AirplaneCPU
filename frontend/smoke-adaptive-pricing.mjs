@@ -21,6 +21,13 @@ const curve=[{price:0,expected_buyers:25,expected_member_revenue:0},{price:100,e
 const rounds=[1,2,3].map(round=>({round,price:round===1?328:255,unique_customers:16,learning_updates:round*16,member_buyers:16,member_revenue:4080,weighted_conversion:.6,paired_delta_vs_initial:1456,curve,analysis_source:'provider_live',analysis:{summary:'Members liked the lower fare. <img src=x onerror=alert(1)>'},hypothesis_test:{source_round:round===1?null:round-1,direction:'lower',status:'supported',summary:'Fresh paired customers bought more.'},decisions:[{person:{segment_label:'Flexible budget traveller',customer_id:`TEST-${round}`},decision:{action:'BUY_MEMBER',reason:'This affordable fare fits my flexible trip. <img src=x onerror=alert(1)>'},source:'provider_live'}]}));
 let report={version:'member-thompson-v5-marketing',run_id:'adaptive-test-current',status:'completed',scope,population,config:{name:'DEMO_LLM0',profile:'flexible_deal_seekers',final_member_fare_policy:'member-marketing-fare-v1',flight_id:scope.flight_id,forecast_day:28,mode:'synthetic',rounds:3,customers:16,concurrency:4,max_calls:600,seed:117,validation_repeats:3},rounds,counts:{provider_calls:20,cache_hits:2,forced:4,failures:0,peak_parallel:4},progress:{completed_rounds:3,total_rounds:3,cumulative_unique_customers:48},recommendation:{raw_price:255,price:249,revenue_max_price:255,volume_max_price:0,revenue_fraction:.95,model_curve:curve,marketing_adjustment:{policy:'member-marketing-fare-v1',initial_price_before_marketing:328,initial_price:319}},validation:{adoption_result:'ADOPT_CANDIDATE',retained_price:249,break_even_conversion:.82,observed_conversion:.6,initial_price_before_marketing:328,initial_price:319,selected_price_before_marketing:255,selected_price:249,delta_vs_initial:1432,delta_vs_no_offer:704,comparisons:[{policy:'initial',price:319,mean_buyers:8,mean_revenue:2552},{policy:'selected',price:249,mean_buyers:16,mean_revenue:3984},{policy:'no_offer',price:null,mean_buyers:8,mean_revenue:3280}]},elapsed_seconds:70};
 let starts=[],scopes=[],setup='ready',empty=false,failFeedback=false,apiReads=0;
+let extraRuns=[],holdResponse=null;
+const runReads=[];
+const heartbeat=value=>Object.fromEntries([...['run_id','version','status','config','counts','progress','error','elapsed_seconds'].map(key=>[key,value[key]]),['saved_rounds',value.rounds.length],['has_recommendation',Boolean(value.recommendation)],['has_validation',Boolean(value.validation)]]);
+const deferred=()=>{let resolve;const promise=new Promise(done=>resolve=done);return {promise,resolve};};
+const hold=path=>holdResponse={path,started:deferred(),release:deferred()};
+const waitHeld=async pending=>{let timer;try{await Promise.race([pending.started.promise,new Promise((_,reject)=>timer=setTimeout(()=>reject(new Error(`Expected request did not start: ${pending.path}`)),5000))]);}finally{clearTimeout(timer);}};
+const reads=(id,kind)=>runReads.filter(path=>path===`/api/adaptive-pricing/runs/${id}/${kind}`).length;
 await page.route('**/api/**',async route=>{
  const request=route.request(),path=new URL(request.url()).pathname,method=request.method();apiReads++;
  if(path==='/api/flights')return route.fulfill({json:{flights}});
@@ -28,9 +35,15 @@ await page.route('**/api/**',async route=>{
  if(path==='/api/member-portal/plan')return route.fulfill({json:{membership:{fee:399,term_months:6,term_label:'6 months',term_days:181}}});
  if(path==='/api/adaptive-pricing/status')return route.fulfill(setup==='failed'?{status:503,json:{error:'Setup unavailable'}}:{json:{live_configured:true,population:setup==='ready'?population:null,populations:setup==='ready'?[population]:[]}});
  if(path==='/api/adaptive-pricing/scope'){const body=request.postDataJSON();scopes.push(body);return route.fulfill({json:{population,scope:{...scope,flight_id:body.flight_id,as_of_day:body.forecast_day,releasable_seats:body.flight_id.endsWith('ZERO')?0:45}}});}
- if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill(failFeedback?{status:503,json:{error:'Saved feedback unavailable'}}:{json:{runs:empty?[]:[report]}});
+ if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill(failFeedback?{status:503,json:{error:'Saved feedback unavailable'}}:{json:{runs:empty?[]:[report,...extraRuns]}});
  if(path==='/api/adaptive-pricing/runs'&&method==='POST'){const body=request.postDataJSON();starts.push(body);report={...report,config:{...report.config,...body}};return route.fulfill({json:report});}
- if(path===`/api/adaptive-pricing/runs/${report.run_id}`)return route.fulfill({json:report});
+ if(path.startsWith('/api/adaptive-pricing/runs/'))runReads.push(path);
+ const saved=[report,...extraRuns].find(value=>path.startsWith(`/api/adaptive-pricing/runs/${value.run_id}/`));
+ if(saved&&(path.endsWith('/view')||path.endsWith('/progress'))){
+  const payload=structuredClone(path.endsWith('/progress')?heartbeat(saved):saved);
+  if(holdResponse?.path===path){const pending=holdResponse;holdResponse=null;pending.started.resolve();await pending.release.promise;}
+  return route.fulfill({json:payload});
+ }
  return route.fulfill({status:404,json:{error:'Not found'}});
 });
 try{
@@ -171,6 +184,70 @@ try{
   assert.equal(await page.locator('#start').isDisabled(),true);assert.equal(await page.locator('#weights input').count(),0);
   await page.locator('#experiment-form').evaluate(form=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));assert.equal(starts.length,2);
  }
+ // Active runs fetch only heartbeat metadata until a saved result changes.
+ setup='ready';
+ const activeId=completed.run_id;
+ report={...completed,status:'running',rounds:completed.rounds.slice(0,1),recommendation:null,validation:null,elapsed_seconds:1,progress:{completed_rounds:1,total_rounds:3,phase:'searching'}};
+ await page.goto(origin+`/adaptive-pricing?run=${activeId}`);
+ await page.waitForFunction(()=>document.getElementById('elapsed').textContent==='0m 1s elapsed');
+ let views=reads(activeId,'view'),progressReads=reads(activeId,'progress');
+ const poll=async()=>{
+  report={...report,elapsed_seconds:report.elapsed_seconds+1};
+  const elapsed=report.elapsed_seconds;
+  await page.waitForFunction(seconds=>document.getElementById('elapsed').textContent===`0m ${seconds}s elapsed`,elapsed);
+  assert.equal(reads(activeId,'progress'),++progressReads);
+ };
+ for(let i=0;i<2;i++){
+  await poll();assert.equal(reads(activeId,'view'),views,'A steady heartbeat must not fetch saved detail');
+  assert.equal(await page.locator('#round-table tr').count(),1);
+ }
+ report={...report,rounds:completed.rounds.slice(0,2),progress:{...report.progress,completed_rounds:2}};
+ await poll();assert.equal(reads(activeId,'view'),++views,'A newly saved round fetches detail once');
+ assert.equal(await page.locator('#round-table tr').count(),2);
+ report={...report,recommendation:completed.recommendation};
+ await poll();assert.equal(reads(activeId,'view'),++views,'A saved recommendation fetches detail');
+ assert.equal(await page.locator('#recommended-price').innerText(),'HK$249');
+ report={...report,validation:completed.validation};
+ await poll();assert.equal(reads(activeId,'view'),++views,'Saved confirmation fetches detail');
+ assert.equal(await page.locator('#delta-initial').innerText(),'+HK$1,432');
+ report={...report,status:'completed'};
+ await poll();assert.equal(reads(activeId,'view'),++views,'A terminal state fetches its final detail');
+ assert.match(await page.locator('#run-status').innerText(),/^Complete/);
+ const terminalPolls=reads(activeId,'progress');
+ await page.waitForTimeout(1700);
+ assert.equal(reads(activeId,'progress'),terminalPolls,'Terminal runs stop polling');
+ const refreshed=page.waitForResponse(response=>new URL(response.url()).pathname===`/api/adaptive-pricing/runs/${activeId}/view`);
+ await page.locator('#refresh-run').click();await (await refreshed).finished();
+ assert.equal(reads(activeId,'view'),++views,'Manual refresh always reloads saved detail');
+
+ // Responses captured for an old selection cannot overwrite a newer run.
+ const other={...completed,run_id:'adaptive-test-other',config:{...completed.config,name:'OTHER_RUN'},recommendation:{...completed.recommendation,raw_price:199,price:199}};
+ extraRuns=[other];report={...report,status:'running',recommendation:null,validation:null};
+ await page.goto(origin+`/adaptive-pricing?run=${activeId}`);
+ await page.waitForFunction(()=>document.getElementById('run-status').textContent.startsWith('Searching'));
+ const selectOther=async()=>{
+  await page.selectOption('#saved-run',other.run_id);await page.locator('#load-run').click();
+  await page.waitForFunction(id=>document.getElementById('export-run').getAttribute('href').includes(id)&&!document.getElementById('recommendation').hidden&&document.getElementById('recommended-price').textContent==='HK$199',other.run_id);
+ };
+ const releaseStale=async pending=>{
+  const response=page.waitForResponse(value=>new URL(value.url()).pathname===pending.path);
+  pending.release.resolve();await (await response).finished();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  assert.equal(await page.locator('#recommended-price').innerText(),'HK$199');
+  assert.match(await page.locator('#export-run').getAttribute('href'),/adaptive-test-other\/export$/);
+  assert.equal(new URL(page.url()).searchParams.get('run'),other.run_id);
+ };
+ let pending=hold(`/api/adaptive-pricing/runs/${activeId}/progress`);
+ await waitHeld(pending);
+ views=reads(activeId,'view');await selectOther();await releaseStale(pending);
+ assert.equal(reads(activeId,'view'),views,'An obsolete heartbeat must not trigger a detail request');
+ await page.selectOption('#saved-run',activeId);await page.locator('#load-run').click();
+ await page.waitForFunction(id=>document.getElementById('export-run').getAttribute('href').includes(id),activeId);
+ pending=hold(`/api/adaptive-pricing/runs/${activeId}/view`);
+ await page.locator('#refresh-run').click();await waitHeld(pending);
+ await selectOther();await releaseStale(pending);
+ assert.equal(runReads.some(path=>/^\/api\/adaptive-pricing\/runs\/[^/]+$/.test(path)),false,'UI reads never fetch complete audit reports');
+ assert.equal(starts.length,2,'Heartbeat, refresh and saved-run switching remain read-only');
  assert.deepEqual(errors,[]);
- console.log('Current Thompson v5 UI passed: fixed8groups, scoped starts, bounded live submit, raw-vs-promotional evidence, final 0/9 fares, explicitly labelled zero-fare stress scenarios, stress publication guard and source-input reset, saved reports, curves, confirmation, mobile, safe feedback, retired hashes unavailable without redirect, deleted assets404, removed reports404, configuration-failure guard. All APIs mocked; no paid calls.');
+ console.log('Current Thompson v5 UI passed: fixed8groups, scoped starts, bounded live submit, raw-vs-promotional evidence, final 0/9 fares, explicitly labelled zero-fare stress scenarios, stress publication guard and source-input reset, saved reports, curves, confirmation, mobile, safe feedback, retired hashes unavailable without redirect, deleted assets404, removed reports404, configuration-failure guard, lightweight heartbeat polling, result-boundary/manual detail refresh and stale-response isolation. All APIs mocked; no paid calls.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

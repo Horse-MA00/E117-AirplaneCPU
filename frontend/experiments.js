@@ -122,7 +122,7 @@ async function loadRun(id, preferredRound) {
   $('feedback-empty').hidden = true;
   $('feedback-status').textContent = 'Loading saved member feedback…';
   try {
-    const run = await get(`/api/adaptive-pricing/runs/${id}`);
+    const run = await get(`/api/adaptive-pricing/runs/${id}/view`);
     if (sequence !== requestSequence) return;
     renderRun(run, preferredRound);
   } catch (error) {

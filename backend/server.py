@@ -6,6 +6,7 @@ from pathlib import Path
 from functools import lru_cache
 from . import data,data_horizon,member_portal,adaptive_pricing,adaptive_store,demo_auth
 from .store import Store
+from .simulation_clock import catalogue_schedule
 from .evidence import EvidenceUnavailable,read_evaluation
 from .errors import NotFound
 from .oag import load_env
@@ -14,7 +15,7 @@ _store=None
 
 def store():
  global _store
- if _store is None:_store=Store(ROOT/'data/private/demo.sqlite3')
+ if _store is None:_store=Store(ROOT/'data/private/demo.sqlite3',schedule_resolver=catalogue_schedule)
  return _store
 
 def number(x,name,lo,hi,integer=False):
@@ -48,10 +49,12 @@ def get(path,query=None):
   parts=path.strip('/').split('/')
   try:
    if len(parts)==4:return adaptive_pricing.read(ident(parts[3]))
+   if len(parts)==5 and parts[4]=='progress':return adaptive_pricing.progress(ident(parts[3]))
+   if len(parts)==5 and parts[4]=='view':return adaptive_pricing.view(ident(parts[3]))
    if len(parts)==5 and parts[4]=='export':return adaptive_pricing.export_run(ident(parts[3]))
    if len(parts)==5 and parts[4]=='events':return adaptive_pricing.events(ident(parts[3]),query_int(query or {},('limit',),100),query_int(query or {},('offset',),0))
    if len(parts)==5 and parts[4]=='analysis-attempts':
-    run_id=ident(parts[3]);adaptive_pricing.read(run_id)
+    run_id=ident(parts[3]);adaptive_pricing.progress(run_id)
     return adaptive_store.analysis_attempts(run_id,query_int(query or {},('round',),None))
   except ValueError as e:
    if str(e)=='Adaptive pricing run not found':raise NotFound(str(e)) from None
@@ -65,7 +68,9 @@ def get(path,query=None):
  if path.startswith('/api/member-portal/accounts/'):
   if len(path.strip('/').split('/'))!=4:raise NotFound('Account endpoint not found')
   return member_portal.account(store(),ident(path.split('/')[-1]))
- if path=='/api/summary':return {'dataset':{'rows':data.manifest()['rows'],'catalog_rows':data.manifest().get('catalog_rows',data.manifest()['rows']),'flights':len(data.flights()),'source':'synthetic','manifest':data.manifest()},'model':'NHPP','llm':adaptive_pricing.status()}
+ if path=='/api/summary':
+  manifest=data.manifest()
+  return {'dataset':{'rows':manifest['rows'],'catalog_rows':manifest.get('catalog_rows',manifest['rows']),'flights':len(data.flights()),'source':'synthetic','manifest':manifest},'model':'NHPP','llm':adaptive_pricing.status()}
  if path=='/api/evaluation':
   return read_evaluation(ROOT)
  if path=='/api/evaluation/extended':
@@ -73,14 +78,14 @@ def get(path,query=None):
  if path=='/api/oag':
   result=[]
   for p in (ROOT/'data/private').glob('oag-*.json'):
-   cached=json.loads(p.read_text())
+   cached=json.loads(p.read_text(encoding='utf-8'))
    for row in cached.get('records',[]):
     result.append({'carrier':row.get('carrier',{}).get('iata'),'flight_number':row.get('flightNumber'),'origin':row.get('departure',{}).get('airport',{}).get('iata'),'destination':row.get('arrival',{}).get('airport',{}).get('iata'),'date':row.get('departure',{}).get('date',{}).get('local'),'predicted_capacity':row.get('seatingCapacity',{}).get('predicted',{}).get('totalSeats'),'source':'oag_live_cached_capacity_estimate'})
   return {'flights':result,'limitation':'Capacity estimates only, no observed fares or occupancy.'}
  if path=='/api/status':
   records=[]
   for p in (ROOT/'data/private').glob('oag-*.json'):
-   r=json.loads(p.read_text());records.append({'date':r['date'],'state':r['state'],'record_count':len(r['records']),'attempts':r['attempts']})
+   r=json.loads(p.read_text(encoding='utf-8'));records.append({'date':r['date'],'state':r['state'],'record_count':len(r['records']),'attempts':r['attempts']})
   return {'model':'NHPP','llm':adaptive_pricing.status(),'oag':records,'simulated_booking':True}
  if path=='/api/flights':return {'flights':data.flights()}
  if path.startswith('/api/flights/'):
@@ -114,6 +119,7 @@ def post(path,body):
    current=dict(f); release=store().release_status(flight,day,f['releasable_seats'])
    current['risk_release_ceiling']=f['releasable_seats']
    current['release_status']=release
+   current['simulation_clock']={key:release.get(key) for key in ('clock_version','time_basis','simulation_as_of','sales_cutoff_at','observed_through_day','membership_time_basis')}
    from .seat_inventory import describe
    current['seat_inventory']=describe(f,release,day)
    current['releasable_seats']=release['new_release_limit']
@@ -127,7 +133,7 @@ def post(path,body):
   if quote is None:raise ValueError('No observable normal base fare to cap the member fare')
   from .fare_policy import check_member_fare
   check_member_fare(fare,quote['normal_base_fare'])
-  maxq=int(f.get('releasable',f.get('releasable_seats',f.get('max_member_seats',0))))
+  maxq=int(f['releasable_seats'])
   if day==0:raise ValueError('Sales are closed')
   return {'offer':store().offer(flight,day,quantity,fare,row['mandatory_fees'] if row['mandatory_fees'] is not None else 250,maxq),'simulated':True}
  raise NotFound('Not found')
@@ -141,7 +147,7 @@ class Handler(BaseHTTPRequestHandler):
   if length is not None:self.send_header('Content-Length',str(length))
   self.send_header('Content-Type',ctype);self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Referrer-Policy','no-referrer');self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'");self.end_headers()
  def json(self,status,payload,extra_headers=None):
-  content=json.dumps(payload,ensure_ascii=False,allow_nan=False,default=lambda x:x.item() if hasattr(x,'item') else str(x)).encode();self.send_response_headers(status,'application/json; charset=utf-8',len(content),extra_headers=extra_headers);self.wfile.write(content)
+  content=json.dumps(payload,ensure_ascii=False,allow_nan=False,separators=(',',':'),default=lambda x:x.item() if hasattr(x,'item') else str(x)).encode();self.send_response_headers(status,'application/json; charset=utf-8',len(content),extra_headers=extra_headers);self.wfile.write(content)
  def allowed_host(self):
   try:host=urlsplit('//'+self.headers.get('Host','')).hostname
   except ValueError:return False

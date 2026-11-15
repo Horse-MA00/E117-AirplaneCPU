@@ -35,6 +35,11 @@
  "api": [
   {
    "method": "GET",
+   "path": "/api/adaptive-pricing/runs/{run_id}/progress",
+   "used_by": ["adaptive-pricing.js"]
+  },
+  {
+   "method": "GET",
    "path": "/api/summary",
    "used_by": [
     "app.js"
@@ -153,7 +158,7 @@
   },
   {
    "method": "GET",
-   "path": "/api/adaptive-pricing/runs/{run_id}",
+   "path": "/api/adaptive-pricing/runs/{run_id}/view",
    "used_by": [
     "adaptive-pricing.js",
     "experiments.js"

@@ -14,12 +14,12 @@ from pathlib import Path
 import re
 import threading
 
+from . import experiment_views as views
+
 
 ROOT = Path(__file__).resolve().parents[1] / 'llm_agent/experiments'
 VERSION = 'member-thompson-v5-marketing'
 PROFILE = 'flexible_deal_seekers'
-SUMMARY_KEYS = ('run_id', 'version', 'status', 'created_at', 'updated_at',
-                'config', 'scope', 'counts', 'recommendation', 'validation')
 MAX_MANIFEST_BYTES = 1024 * 1024
 MAX_REPORT_BYTES = 64 * 1024 * 1024
 MAX_COMPRESSED_BYTES = 128 * 1024 * 1024
@@ -67,6 +67,7 @@ class _Entry:
     directory: Path
     manifest: dict
     summary: dict
+    progress: dict
     fingerprints: dict
     audit_checked: bool = False
     audit_record_bytes: int = 0
@@ -158,7 +159,7 @@ class PublishedExperiments:
             raise ValueError('Published evidence kind does not match report status')
         if not _timestamp(report.get('created_at')) or not _timestamp(report.get('updated_at')):
             raise ValueError('Invalid published experiment timestamps')
-        entry = _Entry(directory, manifest, {k: report.get(k) for k in SUMMARY_KEYS}, fingerprints)
+        entry = _Entry(directory, manifest, views.summary(report), views.progress(report), fingerprints)
         self._unchanged(entry)
         self._entries[run_id] = entry
 
@@ -184,6 +185,9 @@ class PublishedExperiments:
 
     def summaries(self):
         return [self._marked(copy.deepcopy(self._entry(run_id).summary)) for run_id in self._entries]
+
+    def progress(self, run_id):
+        return self._marked(copy.deepcopy(self._entry(run_id).progress))
 
     def read(self, run_id):
         entry = self._entry(run_id)

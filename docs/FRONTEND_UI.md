@@ -126,8 +126,8 @@ DOM 钩子可以**移动**到新的位置、换外层结构，但不能删除或
 |---|---|---|
 | 公共 | 数据集标签、LLM 是否已配置 | `GET /api/summary`、`GET /api/flights` |
 | Forecast | 需求档位筛选、航班选择、D28/D14/D7、四个座位指标、座位分配条、正常预订与票价图、去 Optimize（带航班和轮次） | `GET /api/flights/{id}`、`POST /api/forecast` |
-| Optimize | 航线、航班、放票轮次；顾客决策来源（离线模拟 / Live LLM）；轮数、每轮人数；折叠的客群权重、并行数、调用上限、种子、验证批数；开始实验；已保存实验选择；进度；建议票价（含尾数 9 的最终宣传价）；逐轮表；价格与预期收入曲线；独立验证（对比初始价和不放票）；导出；去 Experiments 看会员回馈 | `GET /api/adaptive-pricing/status`、`POST /api/adaptive-pricing/scope`、`GET/POST /api/adaptive-pricing/runs`、`GET /api/adaptive-pricing/runs/{id}`、链接 `…/{id}/export` |
-| Experiments | 选择已保存实验和轮次，阅读该轮摘要和每位会员的购买 / 拒绝理由；只读，不发起调用 | `GET /api/adaptive-pricing/runs`、`GET /api/adaptive-pricing/runs/{id}`、链接 `…/{id}/export` |
+| Optimize | 航线、航班、放票轮次；顾客决策来源（离线模拟 / Live LLM）；轮数、每轮人数；折叠的客群权重、并行数、调用上限、种子、验证批数；开始实验；已保存实验选择；进度；建议票价（含尾数 9 的最终宣传价）；逐轮表；价格与预期收入曲线；独立验证（对比初始价和不放票）；导出；去 Experiments 看会员回馈 | `GET /api/adaptive-pricing/status`、`POST /api/adaptive-pricing/scope`、`GET/POST /api/adaptive-pricing/runs`、`GET /api/adaptive-pricing/runs/{id}/progress`、`/{id}/view`、链接 `…/{id}/export` |
+| Experiments | 选择已保存实验和轮次，阅读该轮摘要和每位会员的购买 / 拒绝理由；只读，不发起调用 | `GET /api/adaptive-pricing/runs`、`GET /api/adaptive-pricing/runs/{id}/view`、链接 `…/{id}/export` |
 | Manage offers | 手动选择航线、航班、轮次，输入座位数和会员票价并发布（后端核对当前配额和 80% 上限）；去 Optimize 优化这班航班；设置会费；已发布优惠列表 | `POST /api/forecast`、`GET/POST /api/offers`、`GET/POST /api/member-portal/plan` |
 
 ### 2.3 页面之间的联系、URL 与存储
@@ -427,3 +427,7 @@ Optimize显示具体分析错误、重试计数和无分析轮数；round table�
 ### 7.8 2026-11-15 移除日期滑杆，只用放票轮次（用户要求）
 
 Forecast 页 Normal Bookings Through Departure 的任意日期滑杆（`day-slider`）已删除，从冻结清单移除；D28／D14／D7 按钮是唯一的日期控制，图表上方只显示当前轮次。轮次之间的日子（如 D13）不再能在 Admin 查看。若航班的预订数据只到今天，尚未到达的轮次置灰，点击时提示还差几天（`backend/data_horizon.py` 在后端同样拒绝）。`smoke.mjs` 与 `smoke-seat-supply.mjs` 改为断言没有滑杆，历史视图改由轮次按钮触发。
+
+## 2026-11-15 · 實驗傳輸與模擬時間
+
+Optimize與Member feedback改讀 `/{run_id}/view`，持續進度用 `/{run_id}/progress`。完整報告僅供直接讀取或匯出，不用於輪詢；原始回覆仍按需讀取。前端契約新增兩個投影端點，結果和所有曲線點的意義不變。Forecast顯示航班相對的Simulation as of（HKT）；既有優惠顯示原時鐘標記。資料截止用 dataset cutoff，不當作即時今天。詳見[可靠性說明](RUNTIME_RELIABILITY.md)。

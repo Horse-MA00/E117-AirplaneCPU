@@ -52,7 +52,7 @@ def _canonical(value):
 def prompt_metadata():
     return {"version": VERSION,
             "analyst_retry_policy": {"version": ANALYST_RETRY_POLICY_VERSION, "max_attempts": ANALYST_MAX_ATTEMPTS},
-            "prompts": {key: {"path": str(path.relative_to(Path(__file__).resolve().parents[1])),
+            "prompts": {key: {"path": path.relative_to(Path(__file__).resolve().parents[1]).as_posix(),
              "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for key, path in PROMPTS.items()}}
 
 

@@ -1,6 +1,6 @@
 # D28、D14、D7 三輪會員放票
 
-> 状态：现行 · 对应代码：`three-round-release-v1`、`backend/release_policy.py`、`backend/seat_inventory.py`、`backend/store.py`
+> 状态：现行 · 对应代码：`three-round-release-v1`、`backend/release_policy.py`、`backend/seat_inventory.py`、`backend/store.py`、`flight-as-of-v1`、`backend/simulation_clock.py`
 
 更新：2026-11-15。每班航班在起飛前28、14、7天各有一輪新增會員配額。第二輪扣除第一輪仍有效的未售量，第三輪扣除前兩輪仍有效的未售量。這是發布與庫存規則，並非Thompson的價格探索輪次。
 
@@ -38,7 +38,9 @@
 
 合成正常訂位快照不含使用者在畫面新建立的會員訂位。`store.py` 的 `Store._status()` 因此從快照風險上限扣除示例已售會員位一次，再處理有效未售配額；不能將這個補帳省略，也不能重扣。`seat_inventory.py` 的 `describe()` 使用這個結果，分開顯示正常訂位、會員訂位、保護量及可發布／可訂座位。
 
-`store.py`以SQLite交易發布優惠並扣減旅客選定的批次。每輪保存發行量、已消耗量、有效期及剩餘量；同一班沿D28→D14→D7前進。新批次使用共同停售期限，歷史只讀預測不會讓交易時間倒退。
+`store.py`以SQLite交易發布優惠並扣減旅客選定的批次。每輪保存發行量、已消耗量、有效期及剩餘量；同一班沿D28→D14→D7前進。新航班使用 `flight-as-of-v1`：D28／D14／D7分別對應航班起飛時間減28／14／7天，D0對應起飛前兩小時。所有新批次固定於同一個「起飛前兩小時」停售，與程式何時啟動無關；歷史只讀預測不會讓交易時間倒退。
+
+既有資料保留 `legacy-wall-clock-v0`：原到期值、訂單、價格不重新解釋。API回傳 `clock_version`、`simulation_as_of`、`sales_cutoff_at` 說明採用的時間；會員有效期、登入及審計仍是實際時間。近期資料只可前進至固定資料截止已觀測的輪次，不會隨電腦日期自動補資料。
 
 會員端查詢同航班多個有效批次時，使用最便宜的可售批次；各批次共享相同保護上限，不能相加每批的可成交量。買票時重新核對最新庫存和價格，並阻止同人同班重複購買。現行Client沒有退款或取消操作。
 

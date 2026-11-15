@@ -206,7 +206,8 @@ def main():
         from backend.initial_policy import flight_scope
         print(json.dumps(write_study(make_study(flight_scope(args.flight_id, args.day), args.participants, args.seed), args.output)))
     else:
-        result = summarize(json.loads(args.study.read_text()), json.loads(args.responses.read_text()))
+        result = summarize(json.loads(args.study.read_text(encoding='utf-8')),
+                           json.loads(args.responses.read_text(encoding='utf-8')))
         target = args.output or DEFAULT_DIRECTORY / (result["study_id"]+"-summary.json")
         target.parent.mkdir(parents=True, exist_ok=True)
         _write_new(target, result)

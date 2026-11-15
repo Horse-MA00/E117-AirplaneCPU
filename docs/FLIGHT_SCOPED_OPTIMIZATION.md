@@ -178,3 +178,7 @@ APP_URL=http://127.0.0.1:8000 npm run test:flight-offers
 ```
 
 瀏覽器檢查使用離線或 mocked 顧客；只有明確授權並設置有限 `--max-calls` 才進行真實 LLM 實驗。發布檢查驗證相對連結、NHPP 凍結證據與目前實驗 manifest；實際執行結果記於 [維護紀錄](ITERATION_2_PROGRESS.md)。
+
+## 輕量畫面讀取
+
+`GET /api/adaptive-pricing/runs` 回傳摘要；`/{id}/progress` 只回傳進度與結果可用性；`/{id}/view` 保留顯示所需價格、曲線和顧客理由。前端每1.5秒輪詢心跳，新增已保存輪次、候選／確認可用或狀態改變時才取畫面詳情；手動刷新強制更新詳情。完整GET、export及按輪原始回覆仍可讀取。投影不重算Thompson，不改報告內容；資料庫和公開報告策略見[可靠性說明](RUNTIME_RELIABILITY.md)。

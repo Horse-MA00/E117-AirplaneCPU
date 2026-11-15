@@ -32,9 +32,9 @@ class DataHorizonTests(unittest.TestCase):
     def test_feed_stopping_today_rejects_later_rounds(self):
         self.assertEqual(data_horizon.observed_through('NEAR-TERM'), 28)
         self.assertEqual(data_horizon.require_observed('NEAR-TERM', 28), 28)
-        with self.assertRaisesRegex(ValueError, r'D14 has not been reached yet .* runs to D28 \(today\); D14 is 14 days away'):
+        with self.assertRaisesRegex(ValueError, r'D14 has not been reached yet .* runs to D28 \(dataset cutoff\); D14 is 14 days beyond that cutoff'):
             data_horizon.require_observed('NEAR-TERM', 14)
-        with self.assertRaisesRegex(ValueError, 'D27 is 1 day away'):
+        with self.assertRaisesRegex(ValueError, 'D27 is 1 day beyond that cutoff'):
             data_horizon.require_observed('NEAR-TERM', 27)
 
     def test_unknown_flights_are_left_to_the_caller(self):

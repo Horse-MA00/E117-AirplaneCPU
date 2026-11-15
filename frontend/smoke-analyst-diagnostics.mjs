@@ -39,7 +39,8 @@ await page.route('**/api/**',async route=>{
  if(path==='/api/adaptive-pricing/scope'){const body=request.postDataJSON();scopes.push(body);return route.fulfill({json:{population,scope:{...scope,flight_id:body.flight_id,as_of_day:body.forecast_day,releasable_seats:body.flight_id.endsWith('ZERO')?0:45}}});}
  if(path==='/api/adaptive-pricing/runs'&&method==='GET')return route.fulfill(failFeedback?{status:503,json:{error:'Saved feedback unavailable'}}:{json:{runs:empty?[]:[report]}});
  if(path==='/api/adaptive-pricing/runs'&&method==='POST'){const body=request.postDataJSON();starts.push(body);report={...report,config:{...report.config,...body}};return route.fulfill({json:report});}
- if(path===`/api/adaptive-pricing/runs/${report.run_id}`)return route.fulfill({json:report});
+ if(path===`/api/adaptive-pricing/runs/${report.run_id}/view`)return route.fulfill({json:report});
+ if(path===`/api/adaptive-pricing/runs/${report.run_id}/progress`)return route.fulfill({json:{run_id:report.run_id,version:report.version,status:report.status,config:report.config,counts:report.counts,progress:report.progress,elapsed_seconds:report.elapsed_seconds,saved_rounds:report.rounds.length,has_recommendation:Boolean(report.recommendation),has_validation:Boolean(report.validation)}});
  return route.fulfill({status:404,json:{error:'Not found'}});
 });
 try{

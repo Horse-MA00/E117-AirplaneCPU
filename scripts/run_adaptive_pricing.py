@@ -21,7 +21,7 @@ def configure_provider():
     # included in provenance, logs, exports or source control.
     path = ROOT/'data/private/adaptive-secondary.key'
     if path.is_file() and not os.environ.get('LLM_API_KEY_SECONDARY'):
-        os.environ['LLM_API_KEY_SECONDARY'] = path.read_text().strip()
+        os.environ['LLM_API_KEY_SECONDARY'] = path.read_text(encoding='utf-8').strip()
 
 
 def export(run_id, output, *, include_failed=False):

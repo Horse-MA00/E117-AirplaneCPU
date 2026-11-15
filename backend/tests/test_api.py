@@ -27,11 +27,14 @@ class StoreTests(unittest.TestCase):
   with patch('backend.store.time.time',return_value=1000):
    o=s.offer('f',7,2,30,250,3);s.join_plan('c',399)
    self.assertEqual(o['expires'],1000+7*86400-7200)
-   self.assertEqual(s.committed('f',7),2)
-   self.assertIsNone(s.committed('f',14))
-   s.book(o['id'],'c');self.assertEqual(s.committed('f',7),2)
+   status=s.release_status('f',7,3)
+   self.assertEqual((status['member_sold'],status['total_active_unsold']),(0,2))
+   self.assertTrue(s.release_status('f',14,3)['historical_view'])
+   s.book(o['id'],'c');status=s.release_status('f',7,3)
+   self.assertEqual((status['member_sold'],status['total_active_unsold']),(1,1))
   with patch('backend.store.time.time',return_value=1000+7*86400):
-   self.assertEqual(s.committed('f',7),1)
+   status=s.release_status('f',7,3)
+   self.assertEqual((status['member_sold'],status['total_active_unsold']),(1,0))
   with patch('backend.store.time.time',return_value=1000+366*86400):
    with self.assertRaisesRegex(ValueError,'expired'):s.join_plan('c',399)
  def test_numeric_validation(self):

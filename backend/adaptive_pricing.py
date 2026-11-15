@@ -7,7 +7,6 @@ counterfactual market, not another charge against the previous round's wallet.
 from __future__ import annotations
 
 import hashlib
-import json
 import math
 import os
 import re
@@ -43,10 +42,14 @@ def _number(body, key, default, low, high, integer=False):
     return int(value) if integer else float(value)
 
 
-def status():
+def configure_live_credentials():
+    """Load the optional local key only for an explicitly requested live run."""
     secondary = ROOT/'data/private/adaptive-secondary.key'
     if secondary.is_file() and not os.environ.get('LLM_API_KEY_SECONDARY'):
-        os.environ['LLM_API_KEY_SECONDARY'] = secondary.read_text().strip()
+        os.environ['LLM_API_KEY_SECONDARY'] = secondary.read_text(encoding='utf-8').strip()
+
+
+def status():
     return {'version':VERSION, 'live_configured':all(os.environ.get(k) for k in ('LLM_API_URL','LLM_API_KEY','LLM_MODEL')),
             'model':os.environ.get('LLM_MODEL'), 'population':metadata(),
             'populations':[metadata()],
@@ -105,6 +108,8 @@ def validate(body):
         raise ValueError(f"max_calls must cover this complete experiment's upper bound of {cfg['estimated_calls_upper_bound']} calls; reduce rounds/customers or increase the explicit budget")
     if mode == 'live' and not status()['live_configured']:
         raise ValueError('Live provider is not configured')
+    if mode == 'live':
+        configure_live_credentials()
     return cfg, selected, meta
 
 
@@ -118,7 +123,7 @@ def _provenance():
              'backend/data.py','llm_agent/weighted_population.py','llm_agent/adaptive_customers.py',
              'llm_agent/provider_transport.py','llm_agent/audit.py','llm_agent/output_contract.py']
     paths += [item['path'] for item in prompt_metadata()['prompts'].values()]
-    paths += [str(p.relative_to(ROOT)) for p in (ROOT/'simulation').glob('*/manifest.json')]
+    paths += [p.relative_to(ROOT).as_posix() for p in (ROOT/'simulation').glob('*/manifest.json')]
     from urllib.parse import urlsplit
     return {'files':{p:hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in paths},
             'model':os.environ.get('LLM_MODEL'), 'customer_data':'synthetic_only',
@@ -544,13 +549,12 @@ def start(body, *, blocking=False):
     return store.read(run_id)
 
 
-def read(run_id):
-    run = store.read(run_id)
+def _read_checked(run_id, reader):
+    run = reader(run_id)
     if not _current(run):
         from .errors import NotFound
         raise NotFound('Thompson experiment not found')
     if run['status'] in ('queued','running'):
-        run['elapsed_seconds'] = round(time.time()-run['created_at'],3)
         # Another process can legitimately own the active run. Only declare an
         # orphan after its heartbeat is stale and the cross-process lock is free.
         with _guard:
@@ -558,12 +562,31 @@ def read(run_id):
         if not local and time.time()-run['updated_at'] > 120:
             try:
                 with exclusive_lock(store.BASE/'active.lock'):
-                    run['status'] = 'interrupted'
-                    run['error'] = 'The experiment process stopped. Completed decisions remain saved; no calls resume automatically.'
-                    store.save(run)
+                    # A projection must never overwrite the full audit report.
+                    # Re-read under the lock in case its heartbeat just advanced.
+                    complete = store.read(run_id)
+                    if complete['status'] in ('queued','running') and time.time()-complete['updated_at'] > 120:
+                        complete['status'] = 'interrupted'
+                        complete['error'] = 'The experiment process stopped. Completed decisions remain saved; no calls resume automatically.'
+                        store.save(complete)
+                    run = reader(run_id)
             except ValueError:
                 pass
+    if run['status'] in ('queued','running'):
+        run['elapsed_seconds'] = round(time.time()-run['created_at'],3)
     return run
+
+
+def read(run_id):
+    return _read_checked(run_id, store.read)
+
+
+def progress(run_id):
+    return _read_checked(run_id, store.read_progress)
+
+
+def view(run_id):
+    return _read_checked(run_id, store.read_view)
 
 
 def _current(run):
@@ -575,7 +598,7 @@ def list_runs():
 
 
 def events(run_id, limit=100, offset=0):
-    read(run_id)
+    progress(run_id)
     return store.events(run_id, limit, offset)
 
 

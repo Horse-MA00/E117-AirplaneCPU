@@ -65,7 +65,7 @@ def main():
     (args.output/'report.json').write_bytes(payload)
     manifest = {'source':PROTOCOL,'synthetic':True,'provider_calls':0,
                 'files':{'report.json':{'sha256':hashlib.sha256(payload).hexdigest(),'bytes':len(payload)}}}
-    (args.output/'manifest.json').write_text(json.dumps(manifest,indent=2))
+    (args.output/'manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
     print(json.dumps({'elapsed_seconds':report['elapsed_seconds'],**report['summary']}))
 
 

@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from .release_policy import RELEASE_DAYS, VERSION as RELEASE_VERSION, release_budget
+from . import simulation_clock
 
 
 MEMBERSHIP_MONTHS = 6
@@ -31,8 +32,12 @@ def membership_expiry(created):
 
 
 class Store:
-    def __init__(self, path):
+    def __init__(self, path, schedule_resolver=None):
         self.path = str(path)
+        # Runtime supplies the catalogue resolver. No resolver keeps standalone
+        # legacy fixtures/scripts compatible; persisted absolute clocks remain
+        # absolute even when opened without a resolver.
+        self.schedule_resolver = schedule_resolver
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as c:
             c.executescript('''
@@ -48,6 +53,14 @@ class Store:
                 c.execute("ALTER TABLE offers ADD COLUMN release_version TEXT NOT NULL DEFAULT 'legacy-daily-demo'")
             if 'fee_breakdown' not in columns:
                 c.execute("ALTER TABLE offers ADD COLUMN fee_breakdown TEXT")
+            clock_columns = {row['name'] for row in c.execute('PRAGMA table_info(flight_clocks)')}
+            for name, definition in (
+                ('clock_version', "TEXT NOT NULL DEFAULT 'legacy-wall-clock-v0'"),
+                ('departure_at', 'REAL'), ('simulation_as_of', 'REAL'),
+                ('observed_through_day', 'INTEGER'),
+            ):
+                if name not in clock_columns:
+                    c.execute(f'ALTER TABLE flight_clocks ADD COLUMN {name} {definition}')
 
     def set_offer_fee_breakdown(self, offer_id, breakdown):
         """Apply a sourced demo estimate only while the offer has no receipts."""
@@ -88,11 +101,55 @@ class Store:
         if isinstance(day, bool) or not isinstance(day, int) or not 0 <= day <= 28:
             raise ValueError('Simulation day must be an integer from 0 to 28')
 
+    def _time_context(self, c, flight, day, rows=None, clock=None):
+        """Resolve simulation time without mutating the clock on a preview."""
+        self._day(day)
+        if rows is None:
+            rows = c.execute('SELECT * FROM offers WHERE flight_id=?', (flight,)).fetchall()
+        if clock is None:
+            clock = c.execute('SELECT * FROM flight_clocks WHERE flight_id=?', (flight,)).fetchone()
+        absolute = (clock and clock['clock_version'] == simulation_clock.VERSION) or (
+            not clock and not rows and self.schedule_resolver is not None)
+        if absolute:
+            schedule = self.schedule_resolver(flight) if self.schedule_resolver else {
+                'departure_at': clock['departure_at'], 'observed_through_day': clock['observed_through_day']}
+            departure = simulation_clock.timestamp(schedule['departure_at'])
+            if clock and departure != clock['departure_at']:
+                raise ValueError('Flight departure changed; an existing simulation clock cannot be reinterpreted')
+            observed = schedule['observed_through_day']
+            simulation_clock.require_observed(day, observed)
+            return {'clock_version': simulation_clock.VERSION, 'departure_at': departure,
+                    'as_of': simulation_clock.as_of_timestamp(departure, day),
+                    'cutoff': departure - simulation_clock.SALES_CUTOFF_SECONDS,
+                    'observed_through_day': observed}
+        # Existing offers/clocks are not relabelled with catalogue timestamps:
+        # their stored entitlement expiry keeps its original wall-clock meaning.
+        return {'clock_version': simulation_clock.LEGACY_VERSION, 'departure_at': None,
+                'as_of': time.time(), 'cutoff': clock['cutoff'] if clock else None,
+                'observed_through_day': None}
+
+    @staticmethod
+    def _time_metadata(context):
+        absolute = context['clock_version'] == simulation_clock.VERSION
+        return {'clock_version': context['clock_version'],
+                'time_basis': 'flight_simulation' if absolute else 'legacy_wall_clock',
+                'simulation_as_of': simulation_clock.iso_timestamp(context['as_of']) if absolute else None,
+                'sales_cutoff_at': simulation_clock.iso_timestamp(context['cutoff']),
+                'observed_through_day': context['observed_through_day'],
+                'membership_time_basis': 'real_time'}
+
+    def _offer_info(self, c, row):
+        clock = c.execute('SELECT * FROM flight_clocks WHERE flight_id=?', (row['flight_id'],)).fetchone()
+        day = clock['day'] if clock else row['day']
+        context = self._time_context(c, row['flight_id'], day, clock=clock)
+        return {**dict(row), 'sim_day': day, **self._time_metadata(context)}
+
     def _status(self, c, flight, day, max_release):
         self._day(day)
-        now = time.time()
         rows = c.execute('SELECT * FROM offers WHERE flight_id=? ORDER BY day DESC,created', (flight,)).fetchall()
         clock = c.execute('SELECT * FROM flight_clocks WHERE flight_id=?', (flight,)).fetchone()
+        context = self._time_context(c, flight, day, rows, clock)
+        now = context['as_of']
         last_day = clock['day'] if clock else min((r['day'] for r in rows), default=28)
         sold = sum(r['quantity'] - r['remaining'] for r in rows)
         active = [r for r in rows if day > 0 and r['day'] >= day and r['expires'] > now]
@@ -100,7 +157,7 @@ class Store:
         carry = sum(r['remaining'] for r in active if r['day'] > day)
         issued = any(r['day'] == day for r in rows)
         historical = bool(rows or clock) and day > last_day
-        cutoff_passed = bool(clock and clock['cutoff'] <= now)
+        cutoff_passed = context['cutoff'] is not None and context['cutoff'] <= now
         reason = ('Sales cutoff has passed; no further release is allowed.' if cutoff_passed else
                   'This simulation has already advanced; earlier dates are read-only.' if historical else
                   'New quota is issued only at D28, D14 and D7.' if day not in RELEASE_DAYS else
@@ -123,44 +180,44 @@ class Store:
                 'protection_shortfall': max(0, outstanding - remaining_ceiling),
                 'next_release_day': None if cutoff_passed else next((d for d in RELEASE_DAYS if d < day and d <= last_day and not any(r['day'] == d for r in rows)), None),
                 'simulation_day': last_day, 'blocked_reason': reason, 'round_history': history,
-                'historical_view': historical, 'sales_cutoff_passed': cutoff_passed}
+                'historical_view': historical, 'sales_cutoff_passed': cutoff_passed,
+                **self._time_metadata(context)}
 
     def release_status(self, flight, day, max_release):
         with self.connect() as c:
             return self._status(c, flight, day, max_release)
 
-    def committed(self, flight, day):
-        with self.connect() as c:
-            status = self._status(c, flight, day, 0)
-            if day > status['simulation_day']:
-                return None
-            return status['member_sold'] + status['total_active_unsold']
-
     def _advance(self, c, flight, day, risk_limit):
-        now = time.time()
         clock = c.execute('SELECT * FROM flight_clocks WHERE flight_id=?', (flight,)).fetchone()
-        cutoff = now + max(0, day * 86400 - 7200)
-        if clock:
-            if day > clock['day']:
-                raise ValueError('Cannot rewind the simulation after an issued round or booking')
-            cutoff = min(cutoff, clock['cutoff'])
-        c.execute('INSERT OR REPLACE INTO flight_clocks VALUES(?,?,?,?)', (flight, day, risk_limit, cutoff))
-        c.execute('UPDATE offers SET expires=MIN(expires,?) WHERE flight_id=?', (cutoff, flight))
+        if clock and day > clock['day']:
+            raise ValueError('Cannot rewind the simulation after an issued round or booking')
+        context = self._time_context(c, flight, day, clock=clock)
+        cutoff = context['cutoff']
+        if context['clock_version'] == simulation_clock.LEGACY_VERSION:
+            cutoff = context['as_of'] + max(0, day * 86400 - 7200)
+            if clock:
+                cutoff = min(cutoff, clock['cutoff'])
+            c.execute('UPDATE offers SET expires=MIN(expires,?) WHERE flight_id=?', (cutoff, flight))
+        c.execute('''INSERT OR REPLACE INTO flight_clocks
+            (flight_id,day,risk_limit,cutoff,clock_version,departure_at,simulation_as_of,observed_through_day)
+            VALUES(?,?,?,?,?,?,?,?)''', (flight, day, risk_limit, cutoff, context['clock_version'],
+                context['departure_at'], context['as_of'] if context['departure_at'] is not None else None,
+                context['observed_through_day']))
         return cutoff
 
     def offers(self):
         with self.connect() as c:
-            return [dict(r) for r in c.execute('''SELECT o.*, COALESCE(f.day,o.day) AS sim_day
-                FROM offers o LEFT JOIN flight_clocks f ON f.flight_id=o.flight_id
-                WHERE o.expires>? ORDER BY o.created DESC''', (time.time(),))]
+            rows = c.execute('''SELECT o.* FROM offers o LEFT JOIN flight_clocks f ON f.flight_id=o.flight_id
+                WHERE o.expires > CASE WHEN f.clock_version=? THEN f.simulation_as_of ELSE ? END
+                ORDER BY o.created DESC''', (simulation_clock.VERSION, time.time())).fetchall()
+            return [self._offer_info(c, row) for row in rows]
 
     def offer_info(self, offer_id):
         with self.connect() as c:
-            row = c.execute('''SELECT o.*, COALESCE(f.day,o.day) AS sim_day FROM offers o
-                LEFT JOIN flight_clocks f ON f.flight_id=o.flight_id WHERE o.id=?''', (offer_id,)).fetchone()
+            row = c.execute('SELECT * FROM offers WHERE id=?', (offer_id,)).fetchone()
             if row is None:
                 raise NotFound('Offer not found')
-            return dict(row)
+            return self._offer_info(c, row)
 
     def offer(self, flight, day, quantity, fare, fees, max_release):
         self._day(day)
@@ -184,7 +241,7 @@ class Store:
             id = str(uuid.uuid4())
             c.execute('INSERT INTO offers(id,flight_id,day,quantity,remaining,base_fare,fees,created,expires,release_version) VALUES(?,?,?,?,?,?,?,?,?,?)',
                       (id, flight, day, quantity, quantity, fare, fees, now, cutoff, RELEASE_VERSION))
-            return dict(c.execute('SELECT * FROM offers WHERE id=?', (id,)).fetchone())
+            return self._offer_info(c, c.execute('SELECT * FROM offers WHERE id=?', (id,)).fetchone())
 
     def plan(self, fee=None):
         if fee is not None and (isinstance(fee, bool) or not isinstance(fee, (int, float)) or not math.isfinite(fee) or not 0 <= fee <= 5000):
@@ -233,7 +290,7 @@ class Store:
             member = c.execute('SELECT * FROM members WHERE customer_id=? AND expires>?', (customer_id, time.time())).fetchone()
             if not member:
                 raise ValueError('An active demo membership is required')
-            offer = c.execute('SELECT * FROM offers WHERE id=? AND expires>?', (offer_id, time.time())).fetchone()
+            offer = c.execute('SELECT * FROM offers WHERE id=?', (offer_id,)).fetchone()
             if not offer or offer['remaining'] < 1:
                 raise ValueError('Offer unavailable or sold out')
             if expected_total is not None and expected_total != round(offer['base_fare'] + offer['fees'], 2):
@@ -241,6 +298,9 @@ class Store:
             clock = c.execute('SELECT * FROM flight_clocks WHERE flight_id=?', (offer['flight_id'],)).fetchone()
             day = day if day is not None else clock['day'] if clock else offer['day']
             self._day(day)
+            context = self._time_context(c, offer['flight_id'], day, clock=clock)
+            if offer['expires'] <= context['as_of']:
+                raise ValueError('Offer unavailable or sold out')
             if day == 0 or day > (clock['day'] if clock else offer['day']):
                 raise ValueError('Booking is closed or the simulation date would rewind')
             limit = max_release if max_release is not None else clock['risk_limit'] if clock else offer['quantity']

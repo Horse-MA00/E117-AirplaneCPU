@@ -30,7 +30,9 @@ def flights(store, forecast_for):
                'bookable_seats': min(offer['remaining'], status['currently_bookable']),
                'normal_total': snapshot['normal_total_fare'] if snapshot else None,
                'normal_base_fare': snapshot.get('normal_base_fare') if snapshot else None,
-               'expires': offer['expires'], 'source': 'synthetic'}
+               'expires': offer['expires'], 'source': 'synthetic',
+               **{key: offer[key] for key in ('clock_version', 'time_basis', 'simulation_as_of',
+                                              'sales_cutoff_at', 'membership_time_basis')}}
         row['fee_breakdown'] = json.loads(offer['fee_breakdown']) if offer.get('fee_breakdown') else None
         if row['fee_breakdown']:
             row['normal_total'] = (round(row['normal_base_fare'] + offer['fees'], 2)

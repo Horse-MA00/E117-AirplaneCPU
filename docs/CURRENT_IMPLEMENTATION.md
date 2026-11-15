@@ -66,7 +66,7 @@ flowchart TD
 | `normal_base_fare`、`mandatory_fees` | 500、250 | 下一時段的基本報價、另付費用 |
 | `quote_status` | open／sold_out／closed | 可售、售罄或停售；缺失票價不等於免費 |
 
-售票目錄有 **1,549班、280,364筆**觀測：原200,000筆加兩批各40,182筆的航線補充。另400,000筆用於擴大驗證，總共保留680,364筆。原始航班大多從D180逐日記到D0，所有航班都有完整D28–D0。D0代表起飛前兩小時停售，沒有模擬no-show，因此「空座率」是未售比例，不是登機後空座率。
+售票目錄有 **1,915班、340,690筆**觀測：原200,000筆、兩批各40,182筆航線補充，以及近期366班的60,326筆。另400,000筆用於擴大驗證，共保留740,690筆。原始及兩批補充航班都有完整D28–D0；近期批次固定於2026-11-15截止，只能使用已到達的輪次。D0代表起飛前兩小時停售，沒有模擬no-show，因此「空座率」是未售比例，不是登機後空座率。
 
 ### 2.2 生成一班航班的順序
 
@@ -366,18 +366,18 @@ Client支援出發／目的機場、地區、日期範圍及彈性選擇。展�
 |---|---|
 | `backend/server.py` | Python標準庫HTTP，同一服務提供原生HTML／JS和JSON API；前端不需Node建置 |
 | `backend/data.py`、`simulation/` | 讀取合成歷史、航班目錄及需求分類；Low <60%、Medium 60%–<85%、High ≥85%取D28預測正常訂位率 |
-| `data/private/adaptive_pricing/experiments.sqlite3` | `adaptive_runs`保存設定、輪次、模型、確認結果；`adaptive_events`保存請求、回覆及審計事件 |
+| `data/private/adaptive_pricing/experiments.sqlite3` | `adaptive_runs`保存設定、輪次、模型、確認結果；`adaptive_events`保存請求、回覆及審計事件；`adaptive_run_views`保存可重建的列表／心跳摘要 |
 | `data/private/demo.sqlite3` | `offers`、`members`、`bookings`、`flight_clocks`、`membership_plan`保存Client交易狀態；`demo_sessions`保存示範登入的token雜湊及到期時間 |
 | `llm_agent/experiments/` | 脫敏公開report、壓縮audit及SHA256 manifest；服務啟動時自動成為Saved experiments只讀來源 |
 | `backend/published_experiments.py` | 驗證並讀取公開實驗；與私有SQLite結果合併去重，同ID以本機為先，按頁讀取原始審計 |
 
-發布和結帳使用SQLite `BEGIN IMMEDIATE`交易。發布檢查合法輪次、是否已發行、時間方向、最新保護和整數價格上限；購票API先核對會員確認的票款，Store再於交易內檢查會員有效性、有效批次與物理／風險庫存，扣席並保存訂單；同人同班唯一約束防止重複購買。新一輪發布推進該航班的示例時鐘；瀏覽較早預測不能倒退交易時鐘。Client目前沒有取消或退款操作。
+發布和結帳使用SQLite `BEGIN IMMEDIATE`交易。發布檢查合法輪次、是否已發行、時間方向、最新保護和整數價格上限；購票API先核對會員確認的票款，Store再於交易內檢查會員有效性、有效批次與物理／風險庫存，扣席並保存訂單；同人同班唯一約束防止重複購買。新航班使用 `flight-as-of-v1`：D日對應起飛前D天、D0對應起飛前兩小時；共同停售時間固定為起飛前兩小時。新一輪發布推進該航班的示例時鐘；瀏覽較早預測不能倒退交易時鐘。既有優惠維持 `legacy-wall-clock-v0` 與原到期值，不自動遷移交易。會員、session及審計仍用真實時間；資料截止不是每天自動更新。Client目前沒有取消或退款操作。
 
 會員計劃預設HK$399／六個曆月：`backend.store.membership_expiry`依香港時間加六個月（月底夾限），新入會保存確切到期時刻；既有會員保留原紀錄。`plan()`提供`term_months=6`和`term_label="6 months"`，`term_days`僅為查詢當日的相容估算。
 
 `backend/demo_auth.py`提供兩個公開示範帳戶（詳見[登入操作](ADMIN_AND_MEMBER_UX.md#client-portal)）。伺服器產生隨機session token，只存SHA256雜湊，Cookie為HttpOnly、SameSite=Lax、24小時有效；登出撤銷session。會員帳戶僅首次登入初始化會籍；Guest入會後狀態持續保存。HTTP層對保留帳戶核對session，拒絕跨帳戶讀取、入會及購票。現有任意ID開發介面仍只供本機測試。
 
-Admin新版以共用航班欄串連Forecast、Optimize、Publish offers和Results，Member feedback保持只讀。From／To採用Client完整機場與國家目錄，支持Anywhere；需求分類只篩選Flight，Flight顯示日期及完整合成航班編號。無匹配時保留條件並清除舊航班scope。Results從既有優惠計算已售會員位及基本票款，保留暫扣座位分類；後端與Client Portal沿用`55506db`版本。
+Admin新版以共用航班欄串連Forecast、Optimize、Publish offers和Results，Member feedback保持只讀。From／To採用Client完整機場與國家目錄，支持Anywhere；需求分類只篩選Flight，Flight顯示日期及完整合成航班編號。無匹配時保留條件並清除舊航班scope。Results從既有優惠計算已售會員位及基本票款，保留暫扣座位分類；現行執行期改進見[可靠性說明](RUNTIME_RELIABILITY.md)。
 
 目前是本機模擬身份、付款及訂單，沒有航空出票、真實支付或生產登入。密鑰、私有SQLite及OAG原始回應不公開；對外只匯出脫敏合成證據。
 
@@ -393,7 +393,9 @@ Admin新版以共用航班欄串連Forecast、Optimize、Publish offers和Result
 | GET `/api/adaptive-pricing/status` | 當前版本、八類權重及provider設定狀態 |
 | POST `/api/adaptive-pricing/scope` | 航班／時點的P₀、原價及實驗配額 |
 | GET／POST `/api/adaptive-pricing/runs` | 讀取當前v5列表／明確開始新實驗 |
-| GET `/api/adaptive-pricing/runs/{id}`、`/{id}/events`、`/{id}/export` | 進度、結果、回饋及匯出 |
+| GET `/api/adaptive-pricing/runs/{id}/progress` | 小型心跳；不讀取完整私有報告 |
+| GET `/api/adaptive-pricing/runs/{id}/view` | 畫面所需價格、曲線、結果及會員理由；省略posterior和重複提示 |
+| GET `/api/adaptive-pricing/runs/{id}`、`/{id}/events`、`/{id}/export` | 完整報告、分頁審計及匯出；原始證據保留 |
 | GET `/api/adaptive-pricing/runs/{id}/analysis-attempts`、`?round=N` | 分析嘗試摘要；指定輪次時提供已脫敏原始回覆，只讀審計 |
 | GET／POST `/api/offers` | 讀優惠／人工發布 |
 | GET `/api/member-portal/config`、`/plan`、`/flights`、`/accounts/{id}` | 會員plan、可訂優惠及訂單 |

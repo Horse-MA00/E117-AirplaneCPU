@@ -1,9 +1,9 @@
 """How far each flight's published booking data reaches.
 
 Synthetic catalogues carry complete D180..D0 histories, so every day is
-observable. A feed that stops at the present (as a real airline feed does)
-ends at today's days to departure; later release rounds have not been reached
-and must not be forecast, published or priced.
+observable. A truncated feed ends at its dataset cutoff; later release rounds
+have not been observed and must not be forecast, published or priced. Wall-clock
+time passing does not extend that frozen observation window.
 
 Kept apart from backend/data.py so the loader, and the demand-index
 fingerprint that hashes it, stay unchanged.
@@ -25,6 +25,6 @@ def require_observed(flight_id, day):
     latest = observed_through(flight_id)
     if day < latest:
         gap = latest - day
-        raise ValueError(f'D{day} has not been reached yet for this flight. Booking data runs to D{latest} (today); '
-                         f'D{day} is {gap} day{"s" if gap != 1 else ""} away.')
+        raise ValueError(f'D{day} has not been reached yet for this flight. Booking data runs to D{latest} (dataset cutoff); '
+                         f'D{day} is {gap} day{"s" if gap != 1 else ""} beyond that cutoff.')
     return latest

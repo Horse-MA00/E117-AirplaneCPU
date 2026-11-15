@@ -217,3 +217,23 @@ Admin显式载入这些命名实验时显示假设价格、预算10%及固定来
 演示：部署后打开`/adaptive-pricing`的Saved experiments，优先DEMO_LLM0／1；Member feedback查看理由。零价用DEMO_ZERO1／2，明确呈现29→0候选和39／49收入确认保留价。归零情境仍与普通航班推荐及发布隔离。操作和全部报告链接见[部署文档](DOCKER.md)及[公开实验索引](../llm_agent/experiments/README.md)。
 
 截图检查补充：归零情境的说明原位于完成后折叠的设置中，现移至结果价格上方的可见段落，列明假设票价、10%预算和固定来源NHPP配额。按modern-web-guidance accessibility指引保留原生可见文字；桌面／手机可见性、无横向溢出及切回普通实验清除标示均通过浏览器检查。
+
+## 2026-11-15 · JSON傳輸、模擬時鐘與Windows可靠性
+
+按核實結果完成修正，範圍見[執行期可靠性](RUNTIME_RELIABILITY.md)。增加實驗摘要／progress／view投影，私有SQLite衍生快取與舊資料庫惰性補建；Optimize只輪詢小型心跳，在已保存輪次／結果邊界才取view，完整報告及原始回覆保留。24個公開實驗列表由1,858,258降至145,109 bytes（−92.19%）；詳情合計由135,433,147降至4,769,569 bytes（−96.48%）。查閱不發起provider呼叫。
+
+新發布航班採flight-as-of-v1，依目錄起飛日計算D28／D14／D7，停售固定在起飛前兩小時；D0精確對齊停售點。既有優惠保留legacy-wall-clock-v0與既有expiry、訂單及會籍。會員／登入／審計仍用真實時間。近期資料限制改稱dataset cutoff，避免將固定2026-11-15當成每天的今天。
+
+Windows修正包括POSIX來源路徑、UTF-8讀寫、按平台安裝tzdata；原有msvcrt檔案鎖保留。verify_artifacts新增近期366班／60,326筆校驗。刪除退役shared-market摘要、舊Math attestation、呼叫404接口的smoke_three_round_api、無執行期呼叫的Store.committed，以及未使用的Matplotlib依賴／環境變數和前端旗標。文檔數量對齊目前1,915班／340,690筆目錄觀測，含驗證共740,690筆。
+
+八組瀏覽器檢查通過：adaptive-pricing、analyst-diagnostics、demand-filter、flight-offers、flexible-search、member-journey、member-login、smoke。涵蓋穩定心跳不下載view、輪次／結果刷新、手動刷新、切換實驗的過時回覆隔離、原始分析回覆、搜尋／發布、真實demo session與手機尺寸。
+
+隔離原生HTTP驗證使用DEMO-HKG-HND-20270515：D28／D14／D7的as-of依次為2027-04-17／05-01／05-08 08:00 HKT，三輪共同停售2027-05-15 06:00 HKT；正常風險配額34／15／63，新可發布量34／12／58，包含先前有效配額與成交扣減。跨輪購買、重複購買拒絕、重開資料庫、D0邊界及近期資料未到達輪次均通過。空資料庫無密鑰可讀24份公開view／progress，完整匯出與原報告一致並包含196筆審計。scripts/smoke_api.py通過1,915班。測試服務已關閉，暫存資料已清除。
+
+NHPP、Thompson計算、價格規則、客群和提示版本未改；凍結數據、24份現行實驗及manifest保持原始位元組。未使用現有private資料庫進行驗證、未呼叫LLM／OAG、未啟動Docker。Windows僅做PureWindowsPath／CP950相容性回歸，未在Windows實機執行。此次修改留在本地工作樹，未commit／push。
+
+最終完整 `python scripts/check_container.py` 通過 **275項後端＋49項根目錄測試（合計324項）**、發布檢查及全部凍結檔案校驗；`git diff --check`通過。
+
+## 2026-11-15 · 可靠性修正獨立提交驗證
+
+依使用者要求，只提交JSON傳輸、模擬時鐘、Windows相容性、清理和相關文檔；五班示範票腳本、測試、npm命令及其文檔另留原工作樹。獨立checkout執行 `scripts/check_container.py` 通過 **273項後端＋49項根目錄測試（共322項）**、發布檢查和凍結檔案校驗；前節324項為包含兩項示範票測試的原工作樹結果。重新執行adaptive-pricing與analyst-diagnostics兩組mocked瀏覽器檢查均通過，未發出provider呼叫。原工作樹54個快照路徑在準備提交時逐一雜湊一致。

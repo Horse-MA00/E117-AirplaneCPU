@@ -19,7 +19,7 @@ def main():
     obj = build_index(data.histories(), progress=progress)
     path = ROOT/INDEX_PATH
     temporary = path.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(obj, indent=2, ensure_ascii=False)+"\n")
+    temporary.write_text(json.dumps(obj, indent=2, ensure_ascii=False)+"\n", encoding='utf-8')
     temporary.replace(path)
     print(json.dumps({"path": INDEX_PATH, "flights": obj["flight_count"],
                       "counts": obj["counts"], "seconds": round(time.monotonic()-started, 2)}), flush=True)

@@ -69,6 +69,8 @@ class PublishedExperimentsTests(unittest.TestCase):
             loaded = adaptive_pricing.read(report['run_id'])
             self.assertEqual(loaded['storage'], {'source': 'published_export', 'read_only': True})
             self.assertEqual({k: v for k, v in loaded.items() if k != 'storage'}, report)
+            self.assertEqual(store.read_progress(report['run_id'])['saved_rounds'], 0)
+            self.assertEqual(store.read_view(report['run_id'])['storage'], loaded['storage'])
             self.assertEqual(adaptive_pricing.events(report['run_id'], 1, 1)['events'], events[1:2])
             self.assertEqual(store.events(report['run_id'], 2, 100)['events'], [])
             summary = store.analysis_attempts(report['run_id'])['attempts'][0]
@@ -96,6 +98,9 @@ class PublishedExperimentsTests(unittest.TestCase):
         self.assertEqual([r['run_id'] for r in store.list_runs(1)], ['adaptive-newer'])
         self.assertEqual(store.read(local['run_id'])['rounds'], [{'local': True}])
         self.assertNotIn('storage', store.read(local['run_id']))
+        self.assertEqual(store.read_progress(local['run_id'])['saved_rounds'], 1)
+        self.assertNotIn('storage', store.read_progress(local['run_id']))
+        self.assertNotIn('storage', store.read_view(local['run_id']))
         self.assertEqual(len(store.events(local['run_id'])['events']), 1)
         self.assertEqual(store.analysis_attempts(local['run_id'], 2)['attempts'][0]['raw_response_text'], 'local raw')
         self.assertEqual(len(store.export_run(local['run_id'])['events']), 1)
@@ -114,6 +119,10 @@ class PublishedExperimentsTests(unittest.TestCase):
                 self.assertEqual(run['status'], status)
                 self.assertIsNone(run['recommendation'])
                 self.assertIsNone(run['validation'])
+                progress = store.read_progress(run['run_id'])
+                self.assertEqual(progress['status'], status)
+                self.assertFalse(progress['has_validation'])
+                self.assertIsNone(store.read_view(run['run_id'])['recommendation'])
         self.assertEqual(len(store.list_runs()), 2)
 
     def test_legacy_completed_manifest_is_accepted_but_failed_needs_evidence_kind(self):
@@ -193,9 +202,24 @@ class PublishedExperimentsTests(unittest.TestCase):
         catalog = published.PublishedExperiments(self.root)
         with (directory / 'report.json').open('a') as target:
             target.write(' ')
-        for method in (catalog.summaries, lambda: catalog.read(report['run_id'])):
+        for method in (catalog.summaries, lambda: catalog.read(report['run_id']),
+                       lambda: catalog.progress(report['run_id'])):
             with self.assertRaisesRegex(ValueError, 'changed after validation'):
                 method()
+
+    def test_published_summary_and_progress_use_validated_cache_without_report_decode(self):
+        report, _, _ = self.write(report_changes={
+            'recommendation': {'price': 99, 'curve': [{'price': 99}] * 100,
+                               'model_curve': [{'price': 99}] * 100, 'posterior': {'large': True}}})
+        store.enable_published_experiments(self.root)
+        with patch.object(published, '_json', side_effect=AssertionError('Report decoded while polling')):
+            for _ in range(2):
+                self.assertEqual(store.list_runs()[0]['recommendation'], {'price': 99})
+                progress = store.read_progress(report['run_id'])
+                self.assertTrue(progress['has_recommendation'])
+                self.assertEqual(progress['storage']['source'], 'published_export')
+        progress['config']['name'] = 'Caller mutation'
+        self.assertEqual(store.read_progress(report['run_id'])['config']['name'], 'DEMO_LLM0')
 
     def test_audit_count_ids_run_id_and_gzip_integrity_checked_before_first_page(self):
         for issue in ('count', 'ordering', 'run_id', 'gzip'):
@@ -264,7 +288,8 @@ class PublishedExperimentsTests(unittest.TestCase):
                                            'raw_response_text': secret}], report_changes={'error': secret})
         store.enable_published_experiments(self.root)
         with patch.dict('os.environ', {'LLM_API_KEY': secret}):
-            for result in (store.list_runs(), store.read(report['run_id']), store.events(report['run_id']),
+            for result in (store.list_runs(), store.read(report['run_id']), store.read_progress(report['run_id']),
+                           store.read_view(report['run_id']), store.events(report['run_id']),
                            store.export_run(report['run_id']), store.analysis_attempts(report['run_id'], 1)):
                 self.assertNotIn(secret, json.dumps(result))
         with self.assertRaisesRegex(ValueError, 'not found'):

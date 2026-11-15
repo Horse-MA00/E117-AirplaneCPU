@@ -27,8 +27,8 @@ const TARGET_PROFILE = 'flexible_deal_seekers';
 let targetPopulation = null;
 let scopeSequence = 0, runSequence = 0, pollTimer = null, submitting = false, savedRuns = [], setupOpen = false, shownRunId = null;
 
-async function api(path, body) {
-  const options = body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)};
+async function api(path, body, fetchOptions = {}) {
+  const options = body === undefined ? fetchOptions : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), ...fetchOptions};
   const response = await fetch(path, options);
   let data;
   try { data = await response.json(); } catch { throw new Error(`The server returned an unreadable response (${response.status}).`); }
@@ -114,11 +114,11 @@ function updateSetup() {
   $('new-experiment').setAttribute('aria-expanded', String(!folded));
   $('new-experiment').textContent = folded ? 'New experiment' : 'Hide settings';
 }
-// Near-term feeds stop at today: observed_through_day is the flight's days to departure today.
+// Near-term feeds stop at their fixed dataset cutoff: observed_through_day is the flight's days to departure at that cutoff.
 function asOfDay() { return Number(flights.find(f => f.flight_id === $('flight').value)?.observed_through_day) || 0; }
 function notReachedMessage(day, asOf) {
   const gap = asOf - day;
-  return `D${day} has not been reached yet for this flight. Booking data runs to D${asOf} (today); D${day} is ${gap} day${gap === 1 ? '' : 's'} away.`;
+  return `D${day} has not been reached yet for this flight. Booking data runs to D${asOf} (dataset cutoff); D${day} is ${gap} day${gap === 1 ? '' : 's'} away.`;
 }
 function syncRound() {
   const asOf = asOfDay();
@@ -126,7 +126,7 @@ function syncRound() {
     b.setAttribute('aria-pressed', String(b.dataset.round === $('release-day').value));
     const future = Number(b.dataset.round) < asOf;
     b.classList.toggle('not-reached', future);
-    if (future) { b.setAttribute('aria-disabled', 'true'); b.title = `Not reached yet · booking data runs to D${asOf} (today)`; }
+    if (future) { b.setAttribute('aria-disabled', 'true'); b.title = `Not reached yet · booking data runs to D${asOf} (dataset cutoff)`; }
     else { b.removeAttribute('aria-disabled'); b.removeAttribute('title'); }
   }
 }
@@ -344,8 +344,14 @@ function renderRun(value) {
   updateSetup();
   updateControls();
 }
-async function fetchRun(id, sequence=runSequence) {
-  const value=await api(`/api/adaptive-pricing/runs/${id}`);
+async function fetchRun(id, sequence=runSequence, forceView=false) {
+  const heartbeat=await api(`/api/adaptive-pricing/runs/${id}/progress`);
+  if(sequence!==runSequence)return;
+  // Detail changes at saved-round/result boundaries, not on every heartbeat.
+  const needsView=forceView || run?.run_id!==id || heartbeat.saved_rounds!==(run.rounds?.length??0)
+    || heartbeat.has_recommendation!==Boolean(run.recommendation)
+    || heartbeat.has_validation!==Boolean(run.validation) || heartbeat.status!==run.status;
+  const value=needsView ? await api(`/api/adaptive-pricing/runs/${id}/view`) : {...run,...heartbeat};
   if(sequence!==runSequence)return;
   renderRun(value);
   if(active(value))pollTimer=setTimeout(()=>fetchRun(id,sequence).catch(e=>{if(sequence===runSequence){error(`Progress polling stopped: ${e.message} Use “Refresh saved progress” to retry.`);}}),1500);
@@ -356,7 +362,7 @@ async function showRun(id, {restorePlaces=true} = {}) {
   // Otherwise its late scope response could start an automatic saved-run load.
   if(restorePlaces)scopeSequence++;
   clearTimeout(pollTimer);const sequence=++runSequence;
-  const value=await api(`/api/adaptive-pricing/runs/${id}`);
+  const value=await api(`/api/adaptive-pricing/runs/${id}/view`);
   if(sequence!==runSequence)return;
   if(!currentRun(value))throw new Error('This experiment is no longer available. Choose a current Thompson Sampling experiment.');
   const url=new URL(location.href);if(url.searchParams.get('run')!==id)url.searchParams.delete('round');url.searchParams.set('run',id);history.replaceState(null,'',url);if([...$('saved-run').options].some(o=>o.value===id)){$('saved-run').value=id;$('load-run').disabled=false;}
@@ -375,10 +381,10 @@ async function showRun(id, {restorePlaces=true} = {}) {
   for(const[id,key]of [['rounds','rounds'],['customers','customers'],['concurrency','concurrency'],['max-calls','max_calls'],['seed','seed'],['validation-repeats','validation_repeats']])if(value.config?.[key]!==undefined)$(id).value=String(value.config[key]);
   if(['synthetic','live'].includes(value.config?.mode))$('mode').value=value.config.mode;
   renderRun(value);error();
-  if(active(value))pollTimer=setTimeout(()=>fetchRun(id,sequence).catch(e=>error(e.message)),1500);
+  if(active(value))pollTimer=setTimeout(()=>fetchRun(id,sequence).catch(e=>{if(sequence===runSequence)error(e.message);}),1500);
 }
-async function loadSaved() {
-  const data=await api('/api/adaptive-pricing/runs');
+async function loadSaved(background=false) {
+  const data=await api('/api/adaptive-pricing/runs',undefined,background?{priority:'low'}:{});
   savedRuns=(data.runs||[]).filter(r=>safeId(r.run_id));
   const selected=$('saved-run').value;
   $('saved-run').replaceChildren(option('','Choose a saved experiment'),...(data.runs||[]).filter(r=>safeId(r.run_id)).map(r=>option(r.run_id,`${r.config?.name ? `${r.config.name} · ` : ''}${r.config?.flight_id||r.scope?.flight_id||r.run_id} · ${r.status} · ${r.config?.mode==='live'?'Live LLM customers':'Offline customers'}`)));
@@ -399,7 +405,7 @@ $('new-experiment').addEventListener('click',async()=>{
 });
 $('saved-run').addEventListener('change',()=>{$('load-run').disabled=!$('saved-run').value;});
 $('load-run').addEventListener('click',()=>showRun($('saved-run').value).catch(e=>error(e.message)));
-$('refresh-run').addEventListener('click',()=>{if(!safeId(run?.run_id))return;clearTimeout(pollTimer);const sequence=++runSequence;error();fetchRun(run.run_id,sequence).catch(e=>error(e.message));});
+$('refresh-run').addEventListener('click',()=>{if(!safeId(run?.run_id))return;clearTimeout(pollTimer);const sequence=++runSequence;error();fetchRun(run.run_id,sequence,true).catch(e=>{if(sequence===runSequence)error(e.message);});});
 $('experiment-form').addEventListener('submit',async event=>{
   event.preventDefault();if(submitting||active(run)||scenarioRun(run)||!scope||!targetPopulation)return;
   if(!$('experiment-form').reportValidity())return;
@@ -411,11 +417,11 @@ $('experiment-form').addEventListener('submit',async event=>{
   submitting=true;updateControls();error();
   try{
     const value=await api('/api/adaptive-pricing/runs',body);
-    clearTimeout(pollTimer);runSequence++;
+    clearTimeout(pollTimer);const sequence=++runSequence;
     if(safeId(value.run_id)){const url=new URL(location.href);url.searchParams.delete('round');url.searchParams.set('run',value.run_id);history.replaceState(null,'',url);}
     renderRun(value);
-    if(safeId(value.run_id)&&active(value))pollTimer=setTimeout(()=>fetchRun(value.run_id).catch(e=>error(e.message)),1500);
-    loadSaved().catch(()=>{});
+    if(safeId(value.run_id)&&active(value))pollTimer=setTimeout(()=>fetchRun(value.run_id,sequence).catch(e=>{if(sequence===runSequence)error(e.message);}),1500);
+    loadSaved(true).catch(()=>{});
   }catch(e){error(e.message);}finally{submitting=false;updateControls();}
 });
 async function init(){
